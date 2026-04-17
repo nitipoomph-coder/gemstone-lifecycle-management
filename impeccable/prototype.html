@@ -1,0 +1,1833 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MRP Stone Inventory — ระบบสต๊อกพลอย</title>
+  <meta name="description"
+    content="Material Requirements Planning — ระบบวางแผนความต้องการวัตถุดิบและส่วนประกอบสำหรับอุตสาหกรรมอัญมณี">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Anuphan:wght@300;400;500;600;700&family=Bai+Jamjuree:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap"
+    rel="stylesheet">
+  <style>
+    /* ============================================
+       DESIGN TOKENS
+       ============================================ */
+    :root {
+      /* Brand Hue: Warm amber (≈75 in oklch hue) */
+      --hue-brand: 75;
+      --hue-accent: 160;
+      --hue-danger: 25;
+      --hue-success: 150;
+
+      /* Primary / Accent */
+      --color-primary: oklch(0.58 0.14 var(--hue-brand));
+      --color-primary-hover: oklch(0.52 0.15 var(--hue-brand));
+      --color-primary-subtle: oklch(0.93 0.04 var(--hue-brand));
+      --color-primary-ghost: oklch(0.96 0.02 var(--hue-brand));
+
+      --color-accent: oklch(0.55 0.10 var(--hue-accent));
+      --color-accent-subtle: oklch(0.92 0.03 var(--hue-accent));
+
+      --color-danger: oklch(0.55 0.15 var(--hue-danger));
+      --color-danger-subtle: oklch(0.93 0.03 var(--hue-danger));
+      --color-success: oklch(0.60 0.12 var(--hue-success));
+      --color-success-subtle: oklch(0.93 0.03 var(--hue-success));
+
+      /* Sidebar */
+      --sidebar-bg: oklch(0.24 0.015 var(--hue-brand));
+      --sidebar-bg-hover: oklch(0.30 0.02 var(--hue-brand));
+      --sidebar-text: oklch(0.78 0.01 var(--hue-brand));
+      --sidebar-text-active: oklch(0.97 0.005 var(--hue-brand));
+      --sidebar-accent: oklch(0.72 0.14 var(--hue-brand));
+      --sidebar-divider: oklch(0.32 0.015 var(--hue-brand));
+      --sidebar-width: 272px;
+
+      /* Surface */
+      --surface-0: oklch(0.97 0.005 var(--hue-brand));
+      --surface-1: oklch(0.99 0.003 var(--hue-brand));
+      --surface-2: oklch(0.995 0.002 var(--hue-brand));
+
+      /* Text */
+      --text-primary: oklch(0.22 0.01 var(--hue-brand));
+      --text-secondary: oklch(0.48 0.01 var(--hue-brand));
+      --text-tertiary: oklch(0.62 0.008 var(--hue-brand));
+      --text-inverse: oklch(0.97 0.005 var(--hue-brand));
+
+      /* Border */
+      --border-light: oklch(0.90 0.008 var(--hue-brand));
+      --border-default: oklch(0.85 0.01 var(--hue-brand));
+      --border-strong: oklch(0.75 0.01 var(--hue-brand));
+
+      /* Space (4pt scale) */
+      --space-xs: 4px;
+      --space-sm: 8px;
+      --space-md: 12px;
+      --space-base: 16px;
+      --space-lg: 24px;
+      --space-xl: 32px;
+      --space-2xl: 48px;
+      --space-3xl: 64px;
+
+      /* Radius */
+      --radius-sm: 4px;
+      --radius-md: 8px;
+      --radius-lg: 12px;
+      --radius-xl: 16px;
+
+      /* Typography */
+      --font-display: 'Anuphan', sans-serif;
+      --font-body: 'Bai Jamjuree', sans-serif;
+
+      --text-xs: 0.75rem;
+      --text-sm: 0.8125rem;
+      --text-base: 0.875rem;
+      --text-md: 1rem;
+      --text-lg: 1.125rem;
+      --text-xl: 1.375rem;
+      --text-2xl: 1.75rem;
+      --text-3xl: 2.25rem;
+
+      /* Shadows */
+      --shadow-sm: 0 1px 2px oklch(0.22 0.01 var(--hue-brand) / 0.06);
+      --shadow-md: 0 2px 8px oklch(0.22 0.01 var(--hue-brand) / 0.08);
+      --shadow-lg: 0 8px 24px oklch(0.22 0.01 var(--hue-brand) / 0.10);
+
+      /* Transitions */
+      --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+      --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+      --duration-fast: 150ms;
+      --duration-normal: 250ms;
+      --duration-slow: 400ms;
+    }
+
+    /* ============================================
+       RESET & BASE
+       ============================================ */
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      font-size: 16px;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    body {
+      font-family: var(--font-body);
+      font-size: var(--text-base);
+      line-height: 1.6;
+      color: var(--text-primary);
+      background: var(--surface-0);
+      display: flex;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+      font-family: var(--font-display);
+      font-weight: 600;
+      line-height: 1.3;
+    }
+
+    button {
+      font-family: inherit;
+      font-size: inherit;
+      border: none;
+      background: none;
+      cursor: pointer;
+      color: inherit;
+    }
+
+    input,
+    select,
+    textarea {
+      font-family: var(--font-body);
+      font-size: var(--text-base);
+      color: var(--text-primary);
+    }
+
+    /* ============================================
+       LAYOUT
+       ============================================ */
+    .app-layout {
+      display: flex;
+      width: 100%;
+      height: 100vh;
+    }
+
+    /* ============================================
+       SIDEBAR
+       ============================================ */
+    .sidebar {
+      width: var(--sidebar-width);
+      min-width: var(--sidebar-width);
+      background: var(--sidebar-bg);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .sidebar-header {
+      padding: var(--space-lg) var(--space-lg) var(--space-base);
+      display: flex;
+      align-items: center;
+      gap: var(--space-md);
+    }
+
+    .sidebar-logo {
+      width: 36px;
+      height: 36px;
+      background: var(--sidebar-accent);
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: var(--text-lg);
+      flex-shrink: 0;
+    }
+
+    .sidebar-brand {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sidebar-brand-name {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: var(--text-md);
+      color: var(--sidebar-text-active);
+      letter-spacing: -0.01em;
+      line-height: 1.2;
+    }
+
+    .sidebar-brand-sub {
+      font-size: var(--text-xs);
+      color: var(--sidebar-text);
+      opacity: 0.6;
+      line-height: 1.3;
+    }
+
+    .sidebar-nav {
+      flex: 1;
+      overflow-y: auto;
+      padding: var(--space-sm) var(--space-md);
+      scrollbar-width: thin;
+      scrollbar-color: var(--sidebar-divider) transparent;
+    }
+
+    .sidebar-nav::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .sidebar-nav::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .sidebar-nav::-webkit-scrollbar-thumb {
+      background: var(--sidebar-divider);
+      border-radius: 2px;
+    }
+
+    /* Nav Group */
+    .nav-group {
+      margin-bottom: var(--space-xs);
+    }
+
+    .nav-group-header {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      padding: var(--space-sm) var(--space-md);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: background var(--duration-fast) var(--ease-out-quart);
+      user-select: none;
+      width: 100%;
+      text-align: left;
+    }
+
+    .nav-group-header:hover {
+      background: var(--sidebar-bg-hover);
+    }
+
+    .nav-group-icon {
+      font-size: var(--text-md);
+      width: 24px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    .nav-group-label {
+      flex: 1;
+      font-family: var(--font-display);
+      font-size: var(--text-sm);
+      font-weight: 500;
+      color: var(--sidebar-text);
+      transition: color var(--duration-fast) var(--ease-out-quart);
+      line-height: 1.4;
+    }
+
+    .nav-group-header:hover .nav-group-label {
+      color: var(--sidebar-text-active);
+    }
+
+    .nav-group.active>.nav-group-header .nav-group-label {
+      color: var(--sidebar-text-active);
+    }
+
+    .nav-group-chevron {
+      font-size: 10px;
+      color: var(--sidebar-text);
+      opacity: 0.5;
+      transition: transform var(--duration-normal) var(--ease-out-expo);
+      flex-shrink: 0;
+    }
+
+    .nav-group.open>.nav-group-header .nav-group-chevron {
+      transform: rotate(90deg);
+    }
+
+    .nav-group-items {
+      overflow: hidden;
+      max-height: 0;
+      transition: max-height var(--duration-slow) var(--ease-out-expo);
+    }
+
+    .nav-group.open>.nav-group-items {
+      max-height: 600px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      padding: 6px var(--space-md) 6px 44px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all var(--duration-fast) var(--ease-out-quart);
+      width: 100%;
+      text-align: left;
+    }
+
+    .nav-item:hover {
+      background: var(--sidebar-bg-hover);
+    }
+
+    .nav-item-label {
+      font-size: var(--text-sm);
+      color: var(--sidebar-text);
+      transition: color var(--duration-fast) var(--ease-out-quart);
+      line-height: 1.5;
+    }
+
+    .nav-item:hover .nav-item-label {
+      color: var(--sidebar-text-active);
+    }
+
+    .nav-item.active {
+      background: oklch(0.30 0.025 var(--hue-brand));
+    }
+
+    .nav-item.active .nav-item-label {
+      color: var(--sidebar-accent);
+      font-weight: 500;
+    }
+
+    .nav-item-code {
+      font-size: var(--text-xs);
+      color: var(--sidebar-text);
+      opacity: 0.4;
+      font-family: var(--font-body);
+      font-weight: 400;
+      flex-shrink: 0;
+    }
+
+    .sidebar-footer {
+      padding: var(--space-base) var(--space-lg);
+      border-top: 1px solid var(--sidebar-divider);
+      display: flex;
+      align-items: center;
+      gap: var(--space-md);
+    }
+
+    .sidebar-user-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--sidebar-bg-hover);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: var(--text-sm);
+      color: var(--sidebar-text-active);
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .sidebar-user-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .sidebar-user-name {
+      font-size: var(--text-sm);
+      font-weight: 500;
+      color: var(--sidebar-text-active);
+      line-height: 1.3;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .sidebar-user-role {
+      font-size: var(--text-xs);
+      color: var(--sidebar-text);
+      opacity: 0.6;
+      line-height: 1.3;
+    }
+
+    /* ============================================
+       MAIN CONTENT
+       ============================================ */
+    .main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Top Bar */
+    .topbar {
+      height: 56px;
+      min-height: 56px;
+      display: flex;
+      align-items: center;
+      padding: 0 var(--space-xl);
+      background: var(--surface-1);
+      border-bottom: 1px solid var(--border-light);
+      gap: var(--space-base);
+    }
+
+    .topbar-breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      font-size: var(--text-sm);
+      color: var(--text-tertiary);
+    }
+
+    .topbar-breadcrumb-sep {
+      font-size: 10px;
+      opacity: 0.4;
+    }
+
+    .topbar-breadcrumb-current {
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+
+    .topbar-spacer {
+      flex: 1;
+    }
+
+    .topbar-search {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      padding: var(--space-sm) var(--space-md);
+      background: var(--surface-0);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-md);
+      min-width: 240px;
+      transition: border-color var(--duration-fast) var(--ease-out-quart);
+    }
+
+    .topbar-search:focus-within {
+      border-color: var(--color-primary);
+    }
+
+    .topbar-search-icon {
+      font-size: var(--text-sm);
+      color: var(--text-tertiary);
+    }
+
+    .topbar-search input {
+      border: none;
+      outline: none;
+      background: transparent;
+      width: 100%;
+      font-size: var(--text-sm);
+    }
+
+    .topbar-search input::placeholder {
+      color: var(--text-tertiary);
+    }
+
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+    }
+
+    .topbar-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-secondary);
+      transition: all var(--duration-fast) var(--ease-out-quart);
+      position: relative;
+    }
+
+    .topbar-btn:hover {
+      background: var(--surface-0);
+      color: var(--text-primary);
+    }
+
+    .topbar-btn-badge {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      width: 8px;
+      height: 8px;
+      background: var(--color-danger);
+      border-radius: 50%;
+      border: 2px solid var(--surface-1);
+    }
+
+    /* Content Area */
+    .content-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: var(--space-xl);
+    }
+
+    /* ============================================
+       DASHBOARD VIEW
+       ============================================ */
+    .dashboard-header {
+      margin-bottom: var(--space-xl);
+    }
+
+    .dashboard-header h1 {
+      font-size: var(--text-2xl);
+      font-weight: 700;
+      margin-bottom: var(--space-xs);
+      color: var(--text-primary);
+    }
+
+    .dashboard-header p {
+      color: var(--text-secondary);
+      font-size: var(--text-base);
+    }
+
+    /* Stat Cards */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: var(--space-base);
+      margin-bottom: var(--space-xl);
+    }
+
+    .stat-card {
+      background: var(--surface-1);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-lg);
+      padding: var(--space-lg);
+      transition: border-color var(--duration-fast) var(--ease-out-quart);
+    }
+
+    .stat-card:hover {
+      border-color: var(--border-default);
+    }
+
+    .stat-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--space-md);
+    }
+
+    .stat-card-label {
+      font-size: var(--text-sm);
+      color: var(--text-secondary);
+      font-weight: 400;
+    }
+
+    .stat-card-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: var(--text-md);
+    }
+
+    .stat-card-icon.procurement {
+      background: var(--color-primary-subtle);
+    }
+
+    .stat-card-icon.orders {
+      background: var(--color-accent-subtle);
+    }
+
+    .stat-card-icon.production {
+      background: oklch(0.93 0.03 280);
+    }
+
+    .stat-card-icon.stock {
+      background: var(--color-success-subtle);
+    }
+
+    .stat-card-value {
+      font-family: var(--font-display);
+      font-size: var(--text-2xl);
+      font-weight: 700;
+      line-height: 1.1;
+      margin-bottom: var(--space-xs);
+    }
+
+    .stat-card-change {
+      font-size: var(--text-xs);
+      display: flex;
+      align-items: center;
+      gap: var(--space-xs);
+    }
+
+    .stat-card-change.up {
+      color: var(--color-success);
+    }
+
+    .stat-card-change.down {
+      color: var(--color-danger);
+    }
+
+    /* Content Sections */
+    .content-grid {
+      display: grid;
+      grid-template-columns: 1.4fr 1fr;
+      gap: var(--space-lg);
+    }
+
+    .content-section {
+      background: var(--surface-1);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-base) var(--space-lg);
+      border-bottom: 1px solid var(--border-light);
+    }
+
+    .section-header h3 {
+      font-size: var(--text-md);
+      font-weight: 600;
+    }
+
+    .section-header-action {
+      font-size: var(--text-sm);
+      color: var(--color-primary);
+      font-weight: 500;
+      padding: var(--space-xs) var(--space-sm);
+      border-radius: var(--radius-sm);
+      transition: background var(--duration-fast) var(--ease-out-quart);
+    }
+
+    .section-header-action:hover {
+      background: var(--color-primary-ghost);
+    }
+
+    /* Recent Activity Table */
+    .activity-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .activity-table th {
+      font-size: var(--text-xs);
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: var(--space-md) var(--space-lg);
+      text-align: left;
+      background: var(--surface-0);
+      border-bottom: 1px solid var(--border-light);
+    }
+
+    .activity-table td {
+      padding: var(--space-md) var(--space-lg);
+      border-bottom: 1px solid var(--border-light);
+      font-size: var(--text-sm);
+    }
+
+    .activity-table tbody tr {
+      transition: background var(--duration-fast) var(--ease-out-quart);
+    }
+
+    .activity-table tbody tr:hover {
+      background: var(--color-primary-ghost);
+    }
+
+    .activity-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .doc-code {
+      font-weight: 600;
+      color: var(--color-primary);
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-xs);
+      padding: 2px var(--space-sm);
+      border-radius: 100px;
+      font-size: var(--text-xs);
+      font-weight: 500;
+    }
+
+    .status-badge.pending {
+      background: oklch(0.94 0.04 var(--hue-brand));
+      color: oklch(0.45 0.12 var(--hue-brand));
+    }
+
+    .status-badge.complete {
+      background: var(--color-success-subtle);
+      color: oklch(0.40 0.10 var(--hue-success));
+    }
+
+    .status-badge.processing {
+      background: oklch(0.93 0.03 230);
+      color: oklch(0.45 0.10 230);
+    }
+
+    /* Pending Orders List */
+    .pending-list {
+      padding: var(--space-sm) 0;
+    }
+
+    .pending-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-md);
+      padding: var(--space-md) var(--space-lg);
+      transition: background var(--duration-fast) var(--ease-out-quart);
+      cursor: pointer;
+    }
+
+    .pending-item:hover {
+      background: var(--color-primary-ghost);
+    }
+
+    .pending-item-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .pending-item-indicator.urgent {
+      background: var(--color-danger);
+    }
+
+    .pending-item-indicator.normal {
+      background: var(--color-primary);
+    }
+
+    .pending-item-indicator.low {
+      background: var(--text-tertiary);
+    }
+
+    .pending-item-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .pending-item-title {
+      font-size: var(--text-sm);
+      font-weight: 500;
+      margin-bottom: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .pending-item-meta {
+      font-size: var(--text-xs);
+      color: var(--text-tertiary);
+    }
+
+    .pending-item-count {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: var(--text-lg);
+      color: var(--text-primary);
+      flex-shrink: 0;
+    }
+
+    /* ============================================
+       FORM VIEW (SIR Example)
+       ============================================ */
+    .form-view {
+      display: none;
+    }
+
+    .form-view.active {
+      display: block;
+    }
+
+    .dashboard-view.active {
+      display: block;
+    }
+
+    .form-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--space-xl);
+    }
+
+    .form-header-left {
+      display: flex;
+      align-items: center;
+      gap: var(--space-base);
+    }
+
+    .form-header h1 {
+      font-size: var(--text-xl);
+      font-weight: 700;
+    }
+
+    .form-doc-status {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-xs);
+      padding: var(--space-xs) var(--space-md);
+      border-radius: 100px;
+      font-size: var(--text-xs);
+      font-weight: 500;
+      background: oklch(0.94 0.04 var(--hue-brand));
+      color: oklch(0.45 0.12 var(--hue-brand));
+    }
+
+    .form-actions {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-sm);
+      padding: var(--space-sm) var(--space-base);
+      border-radius: var(--radius-md);
+      font-size: var(--text-sm);
+      font-weight: 500;
+      font-family: var(--font-display);
+      transition: all var(--duration-fast) var(--ease-out-quart);
+      white-space: nowrap;
+    }
+
+    .btn-primary {
+      background: var(--color-primary);
+      color: var(--text-inverse);
+    }
+
+    .btn-primary:hover {
+      background: var(--color-primary-hover);
+    }
+
+    .btn-secondary {
+      background: var(--surface-1);
+      border: 1px solid var(--border-default);
+      color: var(--text-primary);
+    }
+
+    .btn-secondary:hover {
+      background: var(--surface-0);
+      border-color: var(--border-strong);
+    }
+
+    .btn-ghost {
+      color: var(--text-secondary);
+    }
+
+    .btn-ghost:hover {
+      background: var(--surface-0);
+      color: var(--text-primary);
+    }
+
+    .btn-danger {
+      background: var(--color-danger-subtle);
+      color: var(--color-danger);
+    }
+
+    .btn-danger:hover {
+      background: oklch(0.90 0.05 var(--hue-danger));
+    }
+
+    /* Form Layout */
+    .form-body {
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      gap: var(--space-lg);
+    }
+
+    /* Document List */
+    .doc-list-panel {
+      background: var(--surface-1);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      max-height: calc(100vh - 220px);
+    }
+
+    .doc-list-search {
+      padding: var(--space-md);
+      border-bottom: 1px solid var(--border-light);
+    }
+
+    .doc-list-search input {
+      width: 100%;
+      padding: var(--space-sm) var(--space-md);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-md);
+      background: var(--surface-0);
+      font-size: var(--text-sm);
+      outline: none;
+      transition: border-color var(--duration-fast) var(--ease-out-quart);
+    }
+
+    .doc-list-search input:focus {
+      border-color: var(--color-primary);
+    }
+
+    .doc-list-items {
+      flex: 1;
+      overflow-y: auto;
+      padding: var(--space-xs);
+    }
+
+    .doc-list-item {
+      padding: var(--space-sm) var(--space-md);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all var(--duration-fast) var(--ease-out-quart);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .doc-list-item:hover {
+      background: var(--surface-0);
+    }
+
+    .doc-list-item.active {
+      background: var(--color-primary-subtle);
+    }
+
+    .doc-list-item-code {
+      font-size: var(--text-sm);
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .doc-list-item.active .doc-list-item-code {
+      color: var(--color-primary);
+      font-weight: 600;
+    }
+
+    .doc-list-item-date {
+      font-size: var(--text-xs);
+      color: var(--text-tertiary);
+    }
+
+    /* Form Detail Panel */
+    .form-detail-panel {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-lg);
+    }
+
+    .form-section {
+      background: var(--surface-1);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+
+    .form-section-header {
+      padding: var(--space-md) var(--space-lg);
+      border-bottom: 1px solid var(--border-light);
+      background: var(--surface-0);
+      font-family: var(--font-display);
+      font-size: var(--text-sm);
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .form-fields {
+      padding: var(--space-lg);
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: var(--space-base) var(--space-lg);
+    }
+
+    .form-field {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-xs);
+    }
+
+    .form-field.span-2 {
+      grid-column: span 2;
+    }
+
+    .form-field label {
+      font-size: var(--text-xs);
+      font-weight: 500;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .form-field input,
+    .form-field select {
+      padding: var(--space-sm) var(--space-md);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-md);
+      background: var(--surface-2);
+      outline: none;
+      transition: border-color var(--duration-fast) var(--ease-out-quart);
+    }
+
+    .form-field input:focus,
+    .form-field select:focus {
+      border-color: var(--color-primary);
+    }
+
+    .form-field input[readonly] {
+      color: var(--text-secondary);
+      background: var(--surface-0);
+    }
+
+    /* Data Table */
+    .data-table-container {
+      overflow-x: auto;
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .data-table th {
+      font-size: var(--text-xs);
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: var(--space-md) var(--space-base);
+      text-align: left;
+      background: var(--surface-0);
+      border-bottom: 1px solid var(--border-light);
+      white-space: nowrap;
+      position: sticky;
+      top: 0;
+    }
+
+    .data-table th.num {
+      text-align: right;
+    }
+
+    .data-table td {
+      padding: var(--space-sm) var(--space-base);
+      border-bottom: 1px solid var(--border-light);
+      font-size: var(--text-sm);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .data-table td.num {
+      text-align: right;
+      font-weight: 500;
+    }
+
+    .data-table tbody tr {
+      transition: background var(--duration-fast) var(--ease-out-quart);
+    }
+
+    .data-table tbody tr:hover {
+      background: var(--color-primary-ghost);
+    }
+
+    .data-table tbody tr.selected {
+      background: var(--color-primary-subtle);
+    }
+
+    .data-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .data-table tfoot td {
+      padding: var(--space-md) var(--space-base);
+      font-weight: 600;
+      background: var(--surface-0);
+      border-top: 2px solid var(--border-default);
+      font-size: var(--text-sm);
+    }
+
+    .stone-code {
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .unit-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 1px 6px;
+      background: var(--surface-0);
+      border-radius: var(--radius-sm);
+      font-size: var(--text-xs);
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    /* Form Footer Stats */
+    .form-footer-stats {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: var(--space-xl);
+      padding: var(--space-base) var(--space-lg);
+      background: var(--surface-0);
+      border-top: 1px solid var(--border-light);
+    }
+
+    .form-stat {
+      display: flex;
+      align-items: baseline;
+      gap: var(--space-sm);
+    }
+
+    .form-stat-label {
+      font-size: var(--text-xs);
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .form-stat-value {
+      font-family: var(--font-display);
+      font-size: var(--text-lg);
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .form-stat-value.total {
+      color: var(--color-primary);
+      font-size: var(--text-xl);
+    }
+
+    /* ============================================
+       ENTRANCE ANIMATIONS
+       ============================================ */
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(12px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .animate-in {
+      animation: fadeInUp var(--duration-slow) var(--ease-out-expo) both;
+    }
+
+    .animate-in:nth-child(1) {
+      animation-delay: 0ms;
+    }
+
+    .animate-in:nth-child(2) {
+      animation-delay: 60ms;
+    }
+
+    .animate-in:nth-child(3) {
+      animation-delay: 120ms;
+    }
+
+    .animate-in:nth-child(4) {
+      animation-delay: 180ms;
+    }
+
+    .stagger-in>* {
+      animation: fadeInUp var(--duration-slow) var(--ease-out-expo) both;
+    }
+
+    .stagger-in>*:nth-child(1) {
+      animation-delay: 0ms;
+    }
+
+    .stagger-in>*:nth-child(2) {
+      animation-delay: 50ms;
+    }
+
+    .stagger-in>*:nth-child(3) {
+      animation-delay: 100ms;
+    }
+
+    .stagger-in>*:nth-child(4) {
+      animation-delay: 150ms;
+    }
+
+    .stagger-in>*:nth-child(5) {
+      animation-delay: 200ms;
+    }
+
+    .stagger-in>*:nth-child(6) {
+      animation-delay: 250ms;
+    }
+
+    .stagger-in>*:nth-child(7) {
+      animation-delay: 300ms;
+    }
+
+    /* ============================================
+       SCROLLBAR
+       ============================================ */
+    .content-area::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .content-area::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .content-area::-webkit-scrollbar-thumb {
+      background: var(--border-default);
+      border-radius: 3px;
+    }
+
+    /* ============================================
+       VIEW TOGGLE
+       ============================================ */
+    .view {
+      display: none;
+    }
+
+    .view.active {
+      display: block;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app-layout">
+    <!-- ====== SIDEBAR ====== -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">💎</div>
+        <div class="sidebar-brand">
+          <div class="sidebar-brand-name">Stone Inventory</div>
+          <div class="sidebar-brand-sub">MRP — ระบบสต๊อกพลอย v11.0</div>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav" id="sidebarNav">
+        <!-- 1. Procurement & Receiving -->
+        <div class="nav-group open active">
+          <button class="nav-group-header" onclick="toggleGroup(this)">
+            <span class="nav-group-icon">📥</span>
+            <span class="nav-group-label">จัดซื้อและรับเข้า</span>
+            <span class="nav-group-chevron">▶</span>
+          </button>
+          <div class="nav-group-items">
+            <button class="nav-item" onclick="showView('dashboard')">
+              <span class="nav-item-label">บันทึกสั่งซื้อพลอย</span>
+              <span class="nav-item-code">SPA</span>
+            </button>
+            <button class="nav-item" onclick="showView('dashboard')">
+              <span class="nav-item-label">บันทึกรับพลอย</span>
+              <span class="nav-item-code">SRA</span>
+            </button>
+            <button class="nav-item" onclick="showView('dashboard')">
+              <span class="nav-item-label">บันทึกรับพลอย B</span>
+              <span class="nav-item-code">SRB</span>
+            </button>
+            <button class="nav-item" onclick="showView('dashboard')">
+              <span class="nav-item-label">ตรวจสอบรับพลอยจากสั่งซื้อ</span>
+            </button>
+            <button class="nav-item active" onclick="showView('sir-form')">
+              <span class="nav-item-label">บันทึกคืนพลอย</span>
+              <span class="nav-item-code">SIR</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 2. Order & Requisition -->
+        <div class="nav-group">
+          <button class="nav-group-header" onclick="toggleGroup(this)">
+            <span class="nav-group-icon">📋</span>
+            <span class="nav-group-label">ออเดอร์และการเบิก</span>
+            <span class="nav-group-chevron">▶</span>
+          </button>
+          <div class="nav-group-items">
+            <button class="nav-item" onclick="showView('dashboard')">
+              <span class="nav-item-label">บันทึกออเดอร์พลอย</span>
+              <span class="nav-item-code">SOA</span>
+            </button>
+            <button class="nav-item" onclick="showView('dashboard')">
+              <span class="nav-item-label">ส่งข้อมูลออเดอร์ / Confirm Order</span>
+            </button>
+            <button class="nav-item" onclick="showView('dashboard')">
+              <span class="nav-item-label">บันทึกเบิกออเดอร์</span>
+            </button>
+            <button class="nav-item" onclick="showView('dashboard')">
+              <span class="nav-item-label">ตรวจสอบเบิกออเดอร์พลอย</span>
+            </button>
+            <button class="nav-item" onclick="showView('dashboard')">
+              <span class="nav-item-label">บันทึกเบิกพลอย</span>
+              <span class="nav-item-code">SIA</span>
+            </button>
+            <button class="nav-item" onclick="showView('dashboard')">
+              <span class="nav-item-label">บันทึกเบิกพลอย B</span>
+              <span class="nav-item-code">SIB</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 3. Production & Dispatch -->
+        <div class="nav-group">
+          <button class="nav-group-header" onclick="toggleGroup(this)">
+            <span class="nav-group-icon">🏭</span>
+            <span class="nav-group-label">จ่ายงานผลิตและแผนก</span>
+            <span class="nav-group-chevron">▶</span>
+          </button>
+          <div class="nav-group-items">
+            <button class="nav-item" onclick="showView('dashboard')">
+              <span class="nav-item-label">บันทึกส่งพลอย งานออเดอร์</span>
+              <span class="nav-item-code">SIS</span>
+            </button>
+            <button class="nav-item" onclick="showView('dashboard')">
+              <span class="nav-item-label">ตรวจสอบส่งพลอยงานออเดอร์</span>
+            </button>
+            <button class="nav-item" onclick="showView('dashboard')">
+              <span class="nav-item-label">ออเดอร์พลอย แผนกเจียระไน</span>
+            </button>
+            <button class="nav-item" onclick="showView('dashboard')">
+              <span class="nav-item-label">ส่งพลอย แผนกเจียระไน</span>
+            </button>
+            <button class="nav-item" onclick="showView('dashboard')">
+              <span class="nav-item-label">บันทึกเบิกพลอย งานซ่อม</span>
+              <span class="nav-item-code">SIP</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 4. Sample Room -->
+        <div class="nav-group">
+          <button class="nav-group-header" onclick="toggleGroup(this)">
+            <span class="nav-group-icon">🧪</span>
+            <span class="nav-group-label">ห้องตัวอย่าง</span>
+            <span class="nav-group-chevron">▶</span>
+          </button>
+          <div class="nav-group-items">
+            <button class="nav-item" onclick="showView('dashboard')">
+              <span class="nav-item-label">บันทึกออเดอร์พลอย ห้องตัวอย่าง</span>
+              <span class="nav-item-code">SSA</span>
+            </button>
+            <button class="nav-item" onclick="showView('dashboard')">
+              <span class="nav-item-label">ส่งพลอย งานห้องตัวอย่าง</span>
+              <span class="nav-item-code">SIM</span>
+            </button>
+            <button class="nav-item" onclick="showView('dashboard')">
+              <span class="nav-item-label">ตรวจสอบเบิก ห้องตัวอย่าง</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 5. Inventory Control & Audit -->
+        <div class="nav-group">
+          <button class="nav-group-header" onclick="toggleGroup(this)">
+            <span class="nav-group-icon">📊</span>
+            <span class="nav-group-label">ควบคุมและตรวจสอบสต๊อก</span>
+            <span class="nav-group-chevron">▶</span>
+          </button>
+          <div class="nav-group-items">
+            <button class="nav-item" onclick="showView('dashboard')">
+              <span class="nav-item-label">ตรวจสอบสต๊อกพลอย</span>
+            </button>
+            <button class="nav-item" onclick="showView('dashboard')">
+              <span class="nav-item-label">Confirm Stock</span>
+            </button>
+            <button class="nav-item" onclick="showView('dashboard')">
+              <span class="nav-item-label">ตรวจสอบสถานะพลอย</span>
+            </button>
+            <button class="nav-item" onclick="showView('dashboard')">
+              <span class="nav-item-label">ตรวจสอบสั่งซื้อพลอย</span>
+            </button>
+            <button class="nav-item" onclick="showView('dashboard')">
+              <span class="nav-item-label">บันทึกตรวจนับสต๊อกพลอย</span>
+            </button>
+            <button class="nav-item" onclick="showView('dashboard')">
+              <span class="nav-item-label">Stone Center</span>
+            </button>
+          </div>
+        </div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="sidebar-user-avatar">สม</div>
+        <div class="sidebar-user-info">
+          <div class="sidebar-user-name">สมชาย วงศ์อัญมณี</div>
+          <div class="sidebar-user-role">ฝ่ายจัดซื้อ</div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ====== MAIN CONTENT ====== -->
+    <main class="main-content">
+      <!-- Top Bar -->
+      <header class="topbar">
+        <div class="topbar-breadcrumb">
+          <span>ระบบสต๊อกพลอย</span>
+          <span class="topbar-breadcrumb-sep">›</span>
+          <span class="topbar-breadcrumb-current" id="breadcrumbCurrent">แดชบอร์ด</span>
+        </div>
+        <div class="topbar-spacer"></div>
+        <div class="topbar-search">
+          <span class="topbar-search-icon">🔍</span>
+          <input type="text" placeholder="ค้นหาเอกสาร, รหัสพลอย...">
+        </div>
+        <div class="topbar-actions">
+          <button class="topbar-btn" title="การแจ้งเตือน">
+            🔔
+            <span class="topbar-btn-badge"></span>
+          </button>
+          <button class="topbar-btn" title="ตั้งค่า">⚙️</button>
+        </div>
+      </header>
+
+      <!-- Content -->
+      <div class="content-area">
+
+        <!-- ===== DASHBOARD VIEW ===== -->
+        <div class="view active" id="view-dashboard">
+          <div class="dashboard-header animate-in">
+            <h1>แดชบอร์ด</h1>
+            <p>ภาพรวมระบบสต๊อกพลอย — วันที่ 9 เมษายน 2569</p>
+          </div>
+
+          <div class="stats-row stagger-in">
+            <div class="stat-card">
+              <div class="stat-card-header">
+                <span class="stat-card-label">รอรับพลอย</span>
+                <div class="stat-card-icon procurement">📥</div>
+              </div>
+              <div class="stat-card-value">23</div>
+              <div class="stat-card-change up">↑ 12% จากเดือนก่อน</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-header">
+                <span class="stat-card-label">ออเดอร์ค้าง</span>
+                <div class="stat-card-icon orders">📋</div>
+              </div>
+              <div class="stat-card-value">147</div>
+              <div class="stat-card-change down">↓ 5% จากเดือนก่อน</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-header">
+                <span class="stat-card-label">งานผลิตวันนี้</span>
+                <div class="stat-card-icon production">🏭</div>
+              </div>
+              <div class="stat-card-value">38</div>
+              <div class="stat-card-change up">↑ 8% จากเดือนก่อน</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-header">
+                <span class="stat-card-label">มูลค่าสต๊อก (฿)</span>
+                <div class="stat-card-icon stock">📊</div>
+              </div>
+              <div class="stat-card-value">2.4M</div>
+              <div class="stat-card-change up">↑ 3% จากเดือนก่อน</div>
+            </div>
+          </div>
+
+          <div class="content-grid">
+            <!-- Recent Activity -->
+            <div class="content-section animate-in">
+              <div class="section-header">
+                <h3>เอกสารล่าสุด</h3>
+                <button class="section-header-action">ดูทั้งหมด →</button>
+              </div>
+              <table class="activity-table">
+                <thead>
+                  <tr>
+                    <th>เลขที่เอกสาร</th>
+                    <th>ประเภท</th>
+                    <th>วันที่</th>
+                    <th>ผู้ดำเนินการ</th>
+                    <th>สถานะ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><span class="doc-code">SPA2604001</span></td>
+                    <td>สั่งซื้อพลอย</td>
+                    <td>09/04/2569</td>
+                    <td>สมชาย ว.</td>
+                    <td><span class="status-badge pending">● รอดำเนินการ</span></td>
+                  </tr>
+                  <tr>
+                    <td><span class="doc-code">SRA2604012</span></td>
+                    <td>รับพลอย</td>
+                    <td>08/04/2569</td>
+                    <td>วิภา ก.</td>
+                    <td><span class="status-badge complete">● เสร็จสิ้น</span></td>
+                  </tr>
+                  <tr>
+                    <td><span class="doc-code">SIS2604008</span></td>
+                    <td>ส่งพลอยงานออเดอร์</td>
+                    <td>08/04/2569</td>
+                    <td>ประยุทธ์ ส.</td>
+                    <td><span class="status-badge processing">● กำลังดำเนินการ</span></td>
+                  </tr>
+                  <tr>
+                    <td><span class="doc-code">SIR2604003</span></td>
+                    <td>คืนพลอย</td>
+                    <td>07/04/2569</td>
+                    <td>สมชาย ว.</td>
+                    <td><span class="status-badge complete">● เสร็จสิ้น</span></td>
+                  </tr>
+                  <tr>
+                    <td><span class="doc-code">SOA2604045</span></td>
+                    <td>ออเดอร์พลอย</td>
+                    <td>07/04/2569</td>
+                    <td>นภา จ.</td>
+                    <td><span class="status-badge pending">● รอดำเนินการ</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Pending Tasks -->
+            <div class="content-section animate-in">
+              <div class="section-header">
+                <h3>งานที่ต้องดำเนินการ</h3>
+                <button class="section-header-action">ดูทั้งหมด →</button>
+              </div>
+              <div class="pending-list">
+                <div class="pending-item">
+                  <span class="pending-item-indicator urgent"></span>
+                  <div class="pending-item-content">
+                    <div class="pending-item-title">พลอยรอตรวจรับจาก Supplier</div>
+                    <div class="pending-item-meta">BRIGHT FUTURE GEMS — เกินกำหนด 2 วัน</div>
+                  </div>
+                  <span class="pending-item-count">5</span>
+                </div>
+                <div class="pending-item">
+                  <span class="pending-item-indicator urgent"></span>
+                  <div class="pending-item-content">
+                    <div class="pending-item-title">ออเดอร์รอ Confirm</div>
+                    <div class="pending-item-meta">ลูกค้า 3 ราย — ครบกำหนดพรุ่งนี้</div>
+                  </div>
+                  <span class="pending-item-count">12</span>
+                </div>
+                <div class="pending-item">
+                  <span class="pending-item-indicator normal"></span>
+                  <div class="pending-item-content">
+                    <div class="pending-item-title">เบิกพลอยรอตรวจสอบ</div>
+                    <div class="pending-item-meta">แผนกเจียระไน — ขอเบิกเมื่อวาน</div>
+                  </div>
+                  <span class="pending-item-count">8</span>
+                </div>
+                <div class="pending-item">
+                  <span class="pending-item-indicator normal"></span>
+                  <div class="pending-item-content">
+                    <div class="pending-item-title">ห้องตัวอย่างรอส่งพลอย</div>
+                    <div class="pending-item-meta">SSA2604002 — ขอเมื่อ 2 วันก่อน</div>
+                  </div>
+                  <span class="pending-item-count">3</span>
+                </div>
+                <div class="pending-item">
+                  <span class="pending-item-indicator low"></span>
+                  <div class="pending-item-content">
+                    <div class="pending-item-title">นับสต๊อกประจำเดือน</div>
+                    <div class="pending-item-meta">กำหนด 15/04/2569</div>
+                  </div>
+                  <span class="pending-item-count">—</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== SIR FORM VIEW ===== -->
+        <div class="view" id="view-sir-form">
+          <div class="form-header animate-in">
+            <div class="form-header-left">
+              <h1>บันทึกคืนพลอย</h1>
+              <span class="form-doc-status">● ฉบับร่าง</span>
+            </div>
+            <div class="form-actions">
+              <button class="btn btn-ghost" onclick="showView('dashboard')">← ย้อนกลับ</button>
+              <button class="btn btn-danger">🗑 ลบ</button>
+              <button class="btn btn-secondary">🖨 พิมพ์</button>
+              <button class="btn btn-primary">💾 บันทึก</button>
+            </div>
+          </div>
+
+          <div class="form-body">
+            <!-- Document List -->
+            <div class="doc-list-panel animate-in">
+              <div class="doc-list-search">
+                <input type="text" placeholder="ค้นหาเลขที่...">
+              </div>
+              <div class="doc-list-items">
+                <button class="doc-list-item active">
+                  <span class="doc-list-item-code">SIR2603107</span>
+                  <span class="doc-list-item-date">31/03</span>
+                </button>
+                <button class="doc-list-item">
+                  <span class="doc-list-item-code">SIR2603108</span>
+                  <span class="doc-list-item-date">31/03</span>
+                </button>
+                <button class="doc-list-item">
+                  <span class="doc-list-item-code">SIR2603109</span>
+                  <span class="doc-list-item-date">30/03</span>
+                </button>
+                <button class="doc-list-item">
+                  <span class="doc-list-item-code">SIR2603110</span>
+                  <span class="doc-list-item-date">29/03</span>
+                </button>
+                <button class="doc-list-item">
+                  <span class="doc-list-item-code">SIR2603111</span>
+                  <span class="doc-list-item-date">28/03</span>
+                </button>
+                <button class="doc-list-item">
+                  <span class="doc-list-item-code">SIR2603112</span>
+                  <span class="doc-list-item-date">27/03</span>
+                </button>
+                <button class="doc-list-item">
+                  <span class="doc-list-item-code">SIR2603113</span>
+                  <span class="doc-list-item-date">26/03</span>
+                </button>
+                <button class="doc-list-item">
+                  <span class="doc-list-item-code">SIR2603114</span>
+                  <span class="doc-list-item-date">25/03</span>
+                </button>
+                <button class="doc-list-item">
+                  <span class="doc-list-item-code">SIR2603115</span>
+                  <span class="doc-list-item-date">24/03</span>
+                </button>
+                <button class="doc-list-item">
+                  <span class="doc-list-item-code">SIR2603116</span>
+                  <span class="doc-list-item-date">23/03</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Detail Panel -->
+            <div class="form-detail-panel">
+              <!-- Document Info -->
+              <div class="form-section animate-in">
+                <div class="form-section-header">ข้อมูลเอกสาร</div>
+                <div class="form-fields">
+                  <div class="form-field">
+                    <label>เลขที่</label>
+                    <input type="text" value="SIR2603107" readonly>
+                  </div>
+                  <div class="form-field">
+                    <label>วันที่เอกสาร</label>
+                    <input type="date" value="2026-03-31">
+                  </div>
+                  <div class="form-field">
+                    <label>เลขที่อ้างอิง (SRA)</label>
+                    <input type="text" value="SRA2602380" readonly>
+                  </div>
+                  <div class="form-field">
+                    <label>ประเภท</label>
+                    <select>
+                      <option value="A" selected>A</option>
+                      <option value="B">B</option>
+                      <option value="C">C</option>
+                    </select>
+                  </div>
+                  <div class="form-field span-2">
+                    <label>ผู้ขาย</label>
+                    <input type="text" value="A139 — BRIGHT FUTURE GEMS CO.,LTD.">
+                  </div>
+                  <div class="form-field">
+                    <label>สกุลเงิน</label>
+                    <select>
+                      <option value="THB" selected>THB — บาท</option>
+                      <option value="USD">USD — ดอลลาร์</option>
+                    </select>
+                  </div>
+                  <div class="form-field">
+                    <label>อัตราแลกเปลี่ยน</label>
+                    <input type="number" value="1.00" step="0.01">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Items Table -->
+              <div class="form-section animate-in">
+                <div class="form-section-header">รายการพลอย</div>
+                <div class="data-table-container">
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        <th>ลำดับ</th>
+                        <th>รหัสพลอย</th>
+                        <th>หน่วย</th>
+                        <th>สุง</th>
+                        <th class="num">น้ำหนัก</th>
+                        <th class="num">คืน</th>
+                        <th class="num">ราคา</th>
+                        <th class="num">รวม</th>
+                        <th>คลัง</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr class="selected">
+                        <td>1</td>
+                        <td><span class="stone-code">SWTBG2.5*5PRI-A</span></td>
+                        <td><span class="unit-badge">PCS</span></td>
+                        <td></td>
+                        <td class="num">4.9500</td>
+                        <td class="num">18</td>
+                        <td class="num">18.0000</td>
+                        <td class="num">324.0000</td>
+                        <td>C</td>
+                      </tr>
+                    </tbody>
+                    <tfoot>
+                      <tr>
+                        <td colspan="4"></td>
+                        <td class="num">4.9500</td>
+                        <td class="num">18</td>
+                        <td></td>
+                        <td class="num">324.0000</td>
+                        <td></td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+                <div class="form-footer-stats">
+                  <div class="form-stat">
+                    <span class="form-stat-label">รายการ</span>
+                    <span class="form-stat-value">1</span>
+                  </div>
+                  <div class="form-stat">
+                    <span class="form-stat-label">จำนวนรวม</span>
+                    <span class="form-stat-value">18</span>
+                  </div>
+                  <div class="form-stat">
+                    <span class="form-stat-label">มูลค่ารวม</span>
+                    <span class="form-stat-value total">324.0000</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // Toggle navigation group
+    function toggleGroup(btn) {
+      const group = btn.closest('.nav-group');
+      group.classList.toggle('open');
+    }
+
+    // Show view
+    function showView(viewId) {
+      // Hide all views
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+
+      // Show target view
+      const target = document.getElementById('view-' + viewId);
+      if (target) {
+        target.classList.add('active');
+      }
+
+      // Update breadcrumb
+      const breadcrumb = document.getElementById('breadcrumbCurrent');
+      const viewNames = {
+        'dashboard': 'แดชบอร์ด',
+        'sir-form': 'จัดซื้อและรับเข้า › บันทึกคืนพลอย (SIR)'
+      };
+      breadcrumb.textContent = viewNames[viewId] || 'แดชบอร์ด';
+
+      // Update active nav item
+      document.querySelectorAll('.nav-item').forEach(item => {
+        item.classList.remove('active');
+      });
+      if (event && event.target) {
+        const navItem = event.target.closest('.nav-item');
+        if (navItem) navItem.classList.add('active');
+      }
+
+      // Re-trigger animations
+      target.querySelectorAll('.animate-in').forEach(el => {
+        el.style.animation = 'none';
+        el.offsetHeight; // trigger reflow
+        el.style.animation = '';
+      });
+      target.querySelectorAll('.stagger-in').forEach(el => {
+        el.querySelectorAll(':scope > *').forEach(child => {
+          child.style.animation = 'none';
+          child.offsetHeight;
+          child.style.animation = '';
+        });
+      });
+    }
+
+    // Doc list item click
+    document.querySelectorAll('.doc-list-item').forEach(item => {
+      item.addEventListener('click', () => {
+        document.querySelectorAll('.doc-list-item').forEach(i => i.classList.remove('active'));
+        item.classList.add('active');
+      });
+    });
+  </script>
+</body>
+
+</html>

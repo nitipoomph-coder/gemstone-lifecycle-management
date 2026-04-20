@@ -54,4 +54,23 @@ export const menuConfig: NavMenuGroup[] = [
       { id: 'check-status', label: 'ตรวจสอบสถานะพลอย', path: '/inventory/check-status' },
     ],
   },
+
+  // ─── Entity 5: สต็อกอะไหล่ ───
+  {
+    id: 'spare-parts',
+    label: 'ระบบสต็อกอะไหล่',
+    icon: 'wrench',
+    items: [
+      { id: 'sp-order', label: 'บันทึกออเดอร์อะไหล่', path: '/spare-parts/order' },
+      { id: 'sp-issue', label: 'บันทึกเบิกอะไหล่', path: '/spare-parts/issue' },
+      { id: 'sp-receive', label: 'บันทึกรับอะไหล่', path: '/spare-parts/receive' },
+      { id: 'sp-pr', label: 'บันทึกขอสั่งซื้ออะไหล่', path: '/spare-parts/purchase-request' },
+      { id: 'sp-po', label: 'บันทึกสั่งซื้ออะไหล่', path: '/spare-parts/purchase-order' },
+      { id: 'sp-check-order', label: 'ตรวจสอบออเดอร์อะไหล่', path: '/spare-parts/check-order' },
+      { id: 'sp-check-stock', label: 'ตรวจสอบสต็อกคงเหลือ', path: '/spare-parts/check-stock' },
+      { id: 'sp-summary-stock', label: 'สรุปสต็อกคงเหลือ', path: '/spare-parts/summary-stock' },
+      { id: 'sp-check-item', label: 'ตรวจสอบอะไหล่', path: '/spare-parts/check-item' },
+      { id: 'sp-check-status', label: 'ตรวจสอบสถานะอะไหล่', path: '/spare-parts/check-status' },
+    ],
+  },
 ];

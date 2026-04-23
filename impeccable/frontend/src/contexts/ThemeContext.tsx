@@ -14,7 +14,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     // Check localStorage first
     const savedTheme = localStorage.getItem('app-theme') as Theme;
     if (savedTheme) return savedTheme;
-    return 'modern-dark'; // Default
+    return 'dark-gold'; // Default
   });
 
   useEffect(() => {

@@ -1,7 +1,16 @@
 import type { NavMenuGroup } from '../types';
 
-// โครงสร้างเมนู 4 กลุ่ม ตาม DFD Level 0 External Entities
+
 export const menuConfig: NavMenuGroup[] = [
+
+  // ─── Entity 0:  ───
+  {
+    id: 'home',
+    label: 'ภาพรวม',
+    icon: 'home',
+    path: '/',
+  },
+
   // ─── Entity 1: จัดการออเดอร์และการสั่งซื้อ ───
   {
     id: 'procurement',

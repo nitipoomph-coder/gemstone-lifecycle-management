@@ -12,7 +12,8 @@ export interface NavMenuGroup {
   id: string;
   label: string;
   icon: string;
-  items: NavMenuItem[];
+  path?: string;
+  items?: NavMenuItem[];
 }
 
 // ============================================

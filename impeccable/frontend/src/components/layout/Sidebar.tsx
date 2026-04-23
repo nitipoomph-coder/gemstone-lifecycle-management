@@ -15,14 +15,14 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
 
   // Accordion: only one group open at a time
   const activeGroupId = menuConfig.find(g =>
-    g.items.some(item => item.path === location.pathname)
+    g.path ? g.path === location.pathname : (g.items || []).some(item => item.path === location.pathname)
   )?.id || 'procurement';
 
   const [openGroupId, setOpenGroupId] = useState<string>(activeGroupId);
 
   useEffect(() => {
     const found = menuConfig.find(g =>
-      g.items.some(item => item.path === location.pathname)
+      g.path ? g.path === location.pathname : (g.items || []).some(item => item.path === location.pathname)
     );
     if (found) {
       setOpenGroupId(found.id);

@@ -6,6 +6,7 @@ import {
   Factory,
   FlaskConical,
   BarChart3,
+  Home,
 } from 'lucide-react';
 import type { NavMenuGroup } from '../../types';
 
@@ -15,6 +16,7 @@ const iconComponents: Record<string, React.ElementType> = {
   'factory': Factory,
   'flask-conical': FlaskConical,
   'bar-chart-3': BarChart3,
+  'home': Home,
 };
 
 interface NavGroupProps {
@@ -28,7 +30,10 @@ export default function NavGroup({ group, isOpen, onToggle, collapsed = false }:
   const navigate = useNavigate();
   const location = useLocation();
 
-  const isGroupActive = group.items.some(item => location.pathname === item.path);
+  const items = group.items || [];
+  const isGroupActive = group.path
+    ? location.pathname === group.path
+    : items.some(item => location.pathname === item.path);
   const IconComponent = iconComponents[group.icon] || PackageCheck;
 
   // Collapsed mode — icon only with tooltip
@@ -36,7 +41,13 @@ export default function NavGroup({ group, isOpen, onToggle, collapsed = false }:
     return (
       <div className="mb-1 flex justify-center">
         <button
-          onClick={onToggle}
+          onClick={() => {
+            if (group.path) {
+              navigate(group.path);
+            } else {
+              onToggle();
+            }
+          }}
           className={`flex h-9 w-9 items-center justify-center rounded-lg transition-colors duration-150 hover:bg-[var(--color-sidebar-hover)] ${
             isGroupActive ? 'bg-[var(--color-sidebar-hover)]' : ''
           }`}
@@ -59,7 +70,13 @@ export default function NavGroup({ group, isOpen, onToggle, collapsed = false }:
     <div className="mb-0.5">
       {/* Group Header */}
       <button
-        onClick={onToggle}
+        onClick={() => {
+          if (group.path) {
+            navigate(group.path);
+          } else {
+            onToggle();
+          }
+        }}
         className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left transition-colors duration-150 hover:bg-[var(--color-sidebar-hover)]"
       >
         <span className="flex w-5 shrink-0 items-center justify-center">
@@ -82,24 +99,26 @@ export default function NavGroup({ group, isOpen, onToggle, collapsed = false }:
         >
           {group.label}
         </span>
-        <ChevronRight
-          size={12}
-          className={`shrink-0 text-[var(--color-sidebar-text)] opacity-50 transition-transform duration-300 ${
-            isOpen ? 'rotate-90' : ''
-          }`}
-          style={{ transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)' }}
-        />
+        {items.length > 0 && (
+          <ChevronRight
+            size={12}
+            className={`shrink-0 text-[var(--color-sidebar-text)] opacity-50 transition-transform duration-300 ${
+              isOpen ? 'rotate-90' : ''
+            }`}
+            style={{ transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)' }}
+          />
+        )}
       </button>
 
       {/* Group Items — accordion animation */}
       <div
         className="overflow-hidden transition-all duration-300"
         style={{
-          maxHeight: isOpen ? `${group.items.length * 36}px` : '0px',
+          maxHeight: isOpen ? `${items.length * 36}px` : '0px',
           transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)',
         }}
       >
-        {group.items.map(item => {
+        {items.map(item => {
           const isActive = location.pathname === item.path;
           return (
             <button

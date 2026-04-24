@@ -7,6 +7,7 @@ import {
   FlaskConical,
   BarChart3,
   Home,
+  Wrench,
 } from 'lucide-react';
 import type { NavMenuGroup } from '../../types';
 
@@ -17,6 +18,7 @@ const iconComponents: Record<string, React.ElementType> = {
   'flask-conical': FlaskConical,
   'bar-chart-3': BarChart3,
   'home': Home,
+  'wrench': Wrench,
 };
 
 interface NavGroupProps {

@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import AppLayout from './components/layout/AppLayout';
 import Dashboard from './pages/Dashboard';
+import DashboardDetail from './pages/DashboardDetail';
 import SIRPage from './pages/SIRPage';
 import SIMPage from './pages/SIMPage';
 import PlaceholderPage from './pages/PlaceholderPage';
@@ -12,6 +13,7 @@ export default function App() {
         <Route element={<AppLayout />}>
           {/* Dashboard */}
           <Route path="/" element={<Dashboard />} />
+          <Route path="/dashboard/detail" element={<DashboardDetail />} />
 
           {/* 1. จัดซื้อและรับเข้า — SPA, SRA, SRB, SIR (CHK-SPA รวมเป็น view ใน SPA) */}
           <Route path="/procurement/purchase" element={<PlaceholderPage />} />
@@ -38,8 +40,20 @@ export default function App() {
           <Route path="/inventory/check-stock" element={<PlaceholderPage />} />
           <Route path="/inventory/check-status" element={<PlaceholderPage />} />
 
+          {/* 5. สต็อกอะไหล่ */}
+          <Route path="/spare-parts/order" element={<PlaceholderPage />} />
+          <Route path="/spare-parts/issue" element={<PlaceholderPage />} />
+          <Route path="/spare-parts/receive" element={<PlaceholderPage />} />
+          <Route path="/spare-parts/purchase-request" element={<PlaceholderPage />} />
+          <Route path="/spare-parts/purchase-order" element={<PlaceholderPage />} />
+          <Route path="/spare-parts/check-order" element={<PlaceholderPage />} />
+          <Route path="/spare-parts/check-stock" element={<PlaceholderPage />} />
+          <Route path="/spare-parts/summary-stock" element={<PlaceholderPage />} />
+          <Route path="/spare-parts/check-item" element={<PlaceholderPage />} />
+          <Route path="/spare-parts/check-status" element={<PlaceholderPage />} />
+
           {/* Fallback */}
-          <Route path="*" element={<Dashboard />} />
+          <Route path="*" element={<PlaceholderPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

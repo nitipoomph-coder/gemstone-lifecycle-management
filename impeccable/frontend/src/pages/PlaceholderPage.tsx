@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   FilePlus, Save, Pencil, Search, Trash2, Printer, FileSpreadsheet, X,
-  Construction, SearchIcon, Undo2,
+  Construction, SearchIcon, Undo2, AlertTriangle,
 } from 'lucide-react';
 import Topbar from '../components/layout/Topbar';
 import { menuConfig } from '../config/menuConfig';
@@ -14,6 +14,7 @@ const groupFirstPath: Record<string, string> = {
   orders: '/orders/create',
   sample: '/sample/order',
   inventory: '/inventory/check-dispatch',
+  'spare-parts': '/spare-parts/order',
 };
 
 // Toolbar buttons
@@ -56,7 +57,7 @@ export default function PlaceholderPage() {
   let itemCode = '';
 
   for (const group of menuConfig) {
-    const found = group.items.find(item => item.path === location.pathname);
+    const found = (group.items || []).find(item => item.path === location.pathname);
     if (found) {
       groupLabel = group.label;
       groupId = group.id;
@@ -111,69 +112,35 @@ export default function PlaceholderPage() {
 
         {/* Body */}
         <div className="flex flex-1 gap-4 p-5">
-          {/* Document List — empty, waiting for DB connection */}
-          {!isCheckPage && (
-            <div
-              className="animate-fade-in-up flex w-[180px] min-w-[180px] flex-col overflow-hidden rounded-xl"
-              style={{ background: 'var(--color-surface-1)', border: '1px solid var(--color-border-light)', maxHeight: 'calc(100vh - 170px)' }}
-            >
-              <div className="px-2 py-2" style={{ borderBottom: '1px solid var(--color-border-light)' }}>
-                <div className="px-2 py-1 text-[11px] font-semibold text-[var(--color-text-secondary)]" style={{ fontFamily: 'var(--font-display)' }}>
-                  เลขที่
-                </div>
-                <input
-                  type="text"
-                  placeholder="ค้นหา..."
-                  value={searchDoc}
-                  onChange={e => setSearchDoc(e.target.value)}
-                  className="w-full rounded-lg border px-2 py-1.5 text-xs outline-none transition-colors focus:border-[var(--color-brand-500)]"
-                  style={{ background: 'var(--color-surface-0)', borderColor: 'var(--color-border-light)' }}
-                />
-              </div>
-              <div className="custom-scrollbar flex flex-1 items-center justify-center overflow-y-auto p-4">
-                <span className="text-center text-[11px] text-[var(--color-text-tertiary)]">
-                  รอเชื่อมต่อฐานข้อมูล
-                </span>
-              </div>
+          <div className="flex-1 flex flex-col items-center justify-center rounded-xl" style={{ background: 'var(--color-surface-1)', border: '1px solid var(--color-border-light)' }}>
+            <div className="flex items-center justify-center mb-6 w-20 h-20 rounded-full" style={{ background: 'var(--color-warning-50)', border: '2px solid var(--color-warning-100)' }}>
+               <AlertTriangle size={36} className="text-[var(--color-warning-600)]" />
             </div>
-          )}
-
-          {/* Form Area */}
-          <div className="flex flex-1 flex-col gap-4">
-
-            {/* ─── Confirm Stock: Special Layout ─── */}
-            {isConfirmStock ? (
-              <ConfirmStockLayout config={config} />
-            ) : (
-              <>
-                {/* ─── Header Fields ─── */}
-                <FormSection title="ข้อมูลเอกสาร">
-                  <div className="grid grid-cols-[repeat(auto-fit,minmax(170px,1fr))] gap-x-4 gap-y-3 p-4">
-                    {(config?.headerFields || defaultHeaderFields(isCheckPage)).map(field => (
-                      <div key={field.name} className={field.colSpan === 2 ? 'col-span-2' : ''}>
-                        <FormField field={field} />
-                      </div>
-                    ))}
-                  </div>
-                </FormSection>
-
-                {/* ─── Stone Fields (if configured) ─── */}
-                {config?.stoneFields && (
-                  <FormSection title="ข้อมูลพลอย">
-                    <div className="grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-x-4 gap-y-3 p-4">
-                      {config.stoneFields.map(field => (
-                        <div key={field.name} className={field.colSpan === 2 ? 'col-span-2' : ''}>
-                          <FormField field={field} />
-                        </div>
-                      ))}
-                    </div>
-                  </FormSection>
-                )}
-
-                {/* ─── Data Table ─── */}
-                <DataTable config={config} />
-              </>
-            )}
+            <h2 className="text-2xl font-bold tracking-[0.1em] text-[var(--color-text-primary)] mb-3 text-center" style={{ fontFamily: 'var(--font-logo)' }}>
+              SYSTEM INTEGRATION PENDING
+            </h2>
+            <div className="text-center px-6">
+              <p className="text-[15px] font-medium text-[var(--color-text-secondary)] mb-2" style={{ fontFamily: 'var(--font-display)' }}>
+                {itemLabel ? (
+                  <>เมนู <span className="text-[var(--color-brand-600)] font-bold">{itemCode ? `${itemLabel} (${itemCode})` : itemLabel}</span></>
+                ) : (
+                  <>หน้านี้</>
+                )} อยู่ระหว่างการพัฒนา
+              </p>
+              <p className="text-[13px] text-[var(--color-text-tertiary)] max-w-md mx-auto leading-relaxed">
+                สถานะตอนนี้ยังไม่ได้เชื่อมต่อกับฐานข้อมูลระบบ <strong className="text-[var(--color-text-secondary)]">CLL Jewelry</strong> <br />
+                ฟังก์ชันนี้จะเปิดให้ใช้งานอย่างเต็มรูปแบบในเฟสถัดไป
+              </p>
+            </div>
+            
+            <button 
+              onClick={() => navigate('/')}
+              className="mt-8 px-6 py-2.5 rounded-lg text-sm font-semibold transition-all hover:opacity-90 active:scale-95 flex items-center gap-2"
+              style={{ background: 'var(--color-brand-600)', color: 'var(--color-text-inverse)', fontFamily: 'var(--font-display)' }}
+            >
+              <Undo2 size={16} />
+              กลับหน้าภาพรวม
+            </button>
           </div>
         </div>
       </div>

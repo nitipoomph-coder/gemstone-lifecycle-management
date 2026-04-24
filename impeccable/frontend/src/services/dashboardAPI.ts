@@ -23,10 +23,19 @@ export interface LiveTracking {
   time: string;
 }
 
+export interface MaterialAlert {
+  item: string;
+  type: 'Gold' | 'Gemstone' | 'Part';
+  currentStock: string;
+  minStock: string;
+  status: 'low' | 'critical';
+}
+
 export interface DashboardData {
   productionStats: ProductionStat[];
   delayOrders: DelayOrder[];
   liveTracking: LiveTracking[];
+  materialAlerts: MaterialAlert[];
 }
 
 /**
@@ -56,6 +65,12 @@ export const fetchDashboardData = async (): Promise<DashboardData> => {
           { no: 'OD-2405-00124', item: 'N-0021', process: 'Setting', location: 'แผนกประกอบ', time: '10:45:10' },
           { no: 'OD-2405-00125', item: 'B-0105', process: 'QC', location: 'แผนกตรวจ', time: '10:44:58' },
           { no: 'OD-2405-00126', item: 'P-0055', process: 'Packing', location: 'แผนกแพ็ค', time: '10:44:30' },
+        ],
+        materialAlerts: [
+          { item: 'Gold 18K Yellow', type: 'Gold', currentStock: '120g', minStock: '500g', status: 'critical' },
+          { item: 'Ruby 3mm Round', type: 'Gemstone', currentStock: '45 pcs', minStock: '100 pcs', status: 'low' },
+          { item: 'Silver 925', type: 'Gold', currentStock: '1.2kg', minStock: '2.0kg', status: 'low' },
+          { item: 'Spring Ring 5mm', type: 'Part', currentStock: '12 pcs', minStock: '50 pcs', status: 'critical' },
         ]
       });
     }, 500);

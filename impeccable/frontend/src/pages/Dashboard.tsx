@@ -1,17 +1,19 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Topbar from '../components/layout/Topbar';
 import { fetchDashboardData, type DashboardData } from '../services/dashboardAPI';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 
 // ─── Loading skeleton shimmer animation ───────────────────────────────────────
 const shimmerStyle: React.CSSProperties = {
-  background: 'linear-gradient(90deg, oklch(0.22 0.03 250) 25%, oklch(0.28 0.04 250) 50%, oklch(0.22 0.03 250) 75%)',
+  background: 'linear-gradient(90deg, var(--color-surface-1) 25%, var(--color-surface-2) 50%, var(--color-surface-1) 75%)',
   backgroundSize: '400% 100%',
   animation: 'skeletonShimmer 1.6s ease-in-out infinite',
   borderRadius: '2px',
 };
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -52,98 +54,45 @@ export default function Dashboard() {
   // ─── Phase 1 + 2: Logo animation + Skeleton (data loading) ───────────────
   if (loading) {
     return (
-      <>
-        <style>{`
-          @keyframes skeletonShimmer {
-            0%   { background-position: 200% 0; }
-            100% { background-position: -200% 0; }
-          }
-          @keyframes logoReveal {
-            0%   { opacity: 0; letter-spacing: 0.35em; filter: blur(6px); }
-            60%  { opacity: 1; letter-spacing: 0.2em;  filter: blur(0); }
-            100% { opacity: 1; letter-spacing: 0.2em;  filter: blur(0); }
-          }
-          @keyframes subReveal {
-            0%   { opacity: 0; transform: translateY(6px); }
-            100% { opacity: 1; transform: translateY(0); }
-          }
-          @keyframes barPulse {
-            0%, 100% { opacity: 0.3; transform: scaleX(0.6); }
-            50%       { opacity: 1;   transform: scaleX(1); }
-          }
-        `}</style>
-
-        <div
-          className="flex h-full w-full flex-col items-center justify-center gap-10"
-          style={{ background: 'oklch(0.18 0.03 250)' }}
-        >
-          {/* Logo */}
-          <div className="flex flex-col items-center gap-3">
-            <div style={{
-              fontFamily: 'var(--font-logo)',
-              fontSize: 'clamp(1.8rem, 5vw, 3rem)',
-              fontWeight: 700,
-              color: 'oklch(0.68 0.14 245)',
-              letterSpacing: '0.2em',
-              animation: logoVisible ? 'logoReveal 1.1s cubic-bezier(0.16,1,0.3,1) both' : 'none',
-              opacity: logoVisible ? undefined : 0,
-            }}>
-              JEWELRY
+      <div
+        className="flex h-full w-full flex-col p-6"
+        style={{ background: 'var(--color-surface-0)' }}
+      >
+        <div className="mx-auto w-full max-w-[1400px]">
+          {/* Header Skeleton */}
+          <div className="mb-6 flex items-end justify-between border-b-[3px] border-[var(--color-border-light)] pb-4">
+            <div>
+              <div style={{ height: '36px', width: '300px', ...shimmerStyle }} className="mb-2" />
+              <div style={{ height: '20px', width: '150px', ...shimmerStyle }} />
             </div>
-            <div style={{
-              fontFamily: 'var(--font-display)',
-              fontSize: '0.72rem',
-              fontWeight: 600,
-              color: 'oklch(0.75 0.02 250)',
-              letterSpacing: '0.35em',
-              animation: logoVisible ? 'subReveal 0.7s 0.5s cubic-bezier(0.16,1,0.3,1) both' : 'none',
-              opacity: logoVisible ? undefined : 0,
-            }}>
-              SMART FACTORY
+            <div className="flex flex-col items-end gap-2">
+              <div style={{ height: '16px', width: '120px', ...shimmerStyle }} />
+              <div style={{ height: '26px', width: '200px', ...shimmerStyle }} />
             </div>
           </div>
 
-          {/* Loading bar */}
-          <div style={{
-            width: '180px', height: '2px',
-            background: 'oklch(0.28 0.03 250)',
-            borderRadius: '1px', overflow: 'hidden',
-            opacity: logoVisible ? 1 : 0,
-            transition: 'opacity 0.4s 0.6s',
-          }}>
-            <div style={{
-              height: '100%', width: '60%',
-              background: 'oklch(0.68 0.14 245)',
-              borderRadius: '1px',
-              animation: 'barPulse 1.4s ease-in-out infinite',
-              transformOrigin: 'left',
-            }} />
+          {/* Stats Row Skeleton */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: '1rem', marginBottom: '1rem' }}>
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} style={{ height: '96px', ...shimmerStyle }} />
+            ))}
           </div>
 
-          {/* Skeleton cards */}
-          <div style={{
-            width: '100%', maxWidth: '1100px', padding: '0 2rem',
-            opacity: logoVisible ? 1 : 0,
-            transition: 'opacity 0.5s 0.9s',
-          }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: '1rem', marginBottom: '1rem' }}>
-              {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} style={{ height: '96px', ...shimmerStyle, animationDelay: `${i * 0.08}s` }} />
-              ))}
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.5fr', gap: '1rem', marginBottom: '1rem' }}>
-              {[140, 140, 180].map((h, i) => (
-                <div key={i} style={{ height: `${h}px`, ...shimmerStyle, animationDelay: `${0.4 + i * 0.08}s` }} />
-              ))}
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '1rem' }}>
-              {[160, 160].map((h, i) => (
-                <div key={i} style={{ height: `${h}px`, ...shimmerStyle, animationDelay: `${0.7 + i * 0.08}s` }} />
-              ))}
-            </div>
+          {/* Middle Row Skeleton */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.5fr', gap: '1rem', marginBottom: '1rem' }}>
+            {[140, 140, 180].map((h, i) => (
+              <div key={i} style={{ height: `${h}px`, ...shimmerStyle }} />
+            ))}
+          </div>
+
+          {/* Bottom Row Skeleton */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '1rem' }}>
+            {[160, 160].map((h, i) => (
+              <div key={i} style={{ height: `${h}px`, ...shimmerStyle }} />
+            ))}
           </div>
         </div>
-      </>
+      </div>
     );
   }
 
@@ -215,7 +164,8 @@ export default function Dashboard() {
             {data!.productionStats.map((stat, i) => (
               <div
                 key={i}
-                className={`relative flex flex-col justify-between p-4 border bg-[var(--color-surface-1)] ${stat.isAlert ? 'border-[var(--color-danger-500)]' : 'border-[var(--color-border-strong)]'}`}
+                onClick={() => navigate('/dashboard/detail')}
+                className={`cursor-pointer hover:-translate-y-1 hover:shadow-lg transition-all duration-300 relative flex flex-col justify-between p-4 border bg-[var(--color-surface-1)] ${stat.isAlert ? 'border-[var(--color-danger-500)]' : 'border-[var(--color-border-strong)]'}`}
                 style={{ borderRadius: '2px', borderTopWidth: '4px', borderTopColor: stat.isAlert ? 'var(--color-danger-500)' : 'var(--color-border-strong)' }}
               >
                 <div className="text-xs font-bold tracking-widest text-[var(--color-text-tertiary)] flex justify-between items-center">
@@ -346,17 +296,33 @@ export default function Dashboard() {
               </table>
             </div>
 
-            {/* Factory Floor Plan */}
-            <div className="flex flex-col border border-[var(--color-border-strong)] bg-[var(--color-surface-2)] p-4 relative overflow-hidden" style={{ borderRadius: '2px' }}>
-              <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'linear-gradient(var(--color-text-tertiary) 1px, transparent 1px), linear-gradient(90deg, var(--color-text-tertiary) 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
-              <div className="relative z-10 flex h-full flex-col justify-end gap-2 pb-2 px-2">
-                <div className="text-xl font-bold tracking-[0.2em] text-[var(--color-text-tertiary)] opacity-30 absolute top-4 left-4" style={{ fontFamily: 'var(--font-logo)' }}>FACTORY FLOOR PLAN</div>
-                <div className="flex gap-2 h-20 w-full items-end pb-2">
-                  <div className="h-full flex-1 bg-[var(--color-info-500)]/20 border border-[var(--color-info-500)]/50 rounded flex items-center justify-center text-[10px] uppercase font-bold text-[var(--color-info-500)]">Casting</div>
-                  <div className="h-2/3 flex-1 bg-[var(--color-brand-600)]/20 border border-[var(--color-brand-600)]/50 rounded flex items-center justify-center text-[10px] uppercase font-bold text-[var(--color-brand-600)]">Polishing</div>
-                  <div className="h-4/5 flex-1 bg-[var(--color-success-500)]/20 border border-[var(--color-success-500)]/50 rounded flex items-center justify-center text-[10px] uppercase font-bold text-[var(--color-success-500)]">Setting</div>
-                  <div className="h-1/2 w-16 bg-[var(--color-danger-500)]/20 border border-[var(--color-danger-500)]/50 rounded flex items-center justify-center text-[10px] uppercase font-bold text-[var(--color-danger-500)]">QC</div>
+            {/* Low Material Stock Alerts */}
+            <div className="flex flex-col border border-[var(--color-border-strong)] bg-[var(--color-surface-1)] p-0" style={{ borderRadius: '2px' }}>
+              <div className="flex items-center justify-between p-4 border-b border-[var(--color-border-light)]">
+                <div className="flex items-center gap-2">
+                  <div className="text-xs font-bold tracking-widest text-[var(--color-text-secondary)] uppercase">Material Alerts</div>
+                  <span className="flex h-2 w-2 rounded-full bg-[var(--color-danger-500)] animate-pulse" />
                 </div>
+                <button className="text-[10px] font-bold text-[var(--color-brand-600)] hover:text-[var(--color-brand-500)] uppercase tracking-widest transition-colors">Request PO</button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
+                {data!.materialAlerts.map((alert, i) => (
+                  <div key={i} className="flex items-center justify-between p-3 rounded bg-[var(--color-surface-0)] border border-[var(--color-border-light)] transition-colors hover:border-[var(--color-brand-500)]">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-1.5 h-8 rounded-full ${alert.status === 'critical' ? 'bg-[var(--color-danger-500)]' : 'bg-[var(--color-accent-500)]'}`} />
+                      <div className="flex flex-col">
+                        <span className="text-sm font-bold text-[var(--color-text-primary)]">{alert.item}</span>
+                        <span className="text-[10px] text-[var(--color-text-tertiary)] uppercase tracking-wider">{alert.type}</span>
+                      </div>
+                    </div>
+                    <div className="text-right flex flex-col">
+                      <span className={`text-sm font-bold font-mono ${alert.status === 'critical' ? 'text-[var(--color-danger-500)]' : 'text-[var(--color-accent-500)]'}`}>
+                        {alert.currentStock}
+                      </span>
+                      <span className="text-[10px] text-[var(--color-text-tertiary)] font-mono">Min: {alert.minStock}</span>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           </div>

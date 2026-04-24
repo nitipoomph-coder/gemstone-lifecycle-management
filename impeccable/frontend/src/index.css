@@ -110,29 +110,49 @@
     --color-sidebar-divider: oklch(0.22 0.01 80);
   }
 
-  /* UI THEME: INDUSTRIAL (override — เปิดใช้ทีหลัง) */
-  .theme-industrial {
-    --color-brand-400: oklch(0.65 0.16 70);
-    --color-brand-500: oklch(0.75 0.16 70);
+  /* UI THEME: ROYAL WHITE (override — default) */
+  .theme-royal-white {
+    /* Brand Hues (Royal Blue - Better contrast for primary UI) */
+    --color-brand-50: oklch(0.96 0.02 260);
+    --color-brand-100: oklch(0.92 0.04 260);
+    --color-brand-200: oklch(0.85 0.06 260);
+    --color-brand-300: oklch(0.75 0.08 260);
+    --color-brand-400: oklch(0.65 0.12 260);
+    --color-brand-500: oklch(0.40 0.16 260); /* Main Royal Blue */
+    --color-brand-600: oklch(0.30 0.14 260);
+    --color-brand-700: oklch(0.25 0.10 260);
+    --color-brand-800: oklch(0.20 0.08 260);
+    --color-brand-900: oklch(0.15 0.06 260);
 
-    --color-surface-0: oklch(0.30 0.002 260);
-    --color-surface-1: oklch(0.35 0.002 260);
-    --color-surface-2: oklch(0.40 0.002 260);
+    /* Accent Hues (Gold - For highlights) */
+    --color-accent-50: oklch(0.98 0.02 80);
+    --color-accent-100: oklch(0.95 0.05 80);
+    --color-accent-500: oklch(0.65 0.16 80); /* Rich Gold */
+    --color-accent-600: oklch(0.55 0.14 80);
 
-    --color-text-primary: oklch(0.95 0.005 260);
-    --color-text-secondary: oklch(0.82 0.005 260);
-    --color-text-tertiary: oklch(0.68 0.005 260);
+    /* Surface (White & Light Gray) */
+    --color-surface-0: oklch(0.99 0.002 260);
+    --color-surface-1: oklch(0.97 0.005 260);
+    --color-surface-2: oklch(0.94 0.010 260);
 
-    --color-border-light: oklch(0.42 0.005 260);
-    --color-border-default: oklch(0.48 0.005 260);
-    --color-border-strong: oklch(0.55 0.005 260);
+    /* Text (Darker for light background) */
+    --color-text-primary: oklch(0.15 0.02 260);
+    --color-text-secondary: oklch(0.35 0.02 260);
+    --color-text-tertiary: oklch(0.50 0.01 260);
+    --color-text-inverse: oklch(0.99 0.01 260);
 
-    --color-sidebar: oklch(0.26 0.002 260);
-    --color-sidebar-hover: oklch(0.32 0.002 260);
-    --color-sidebar-text: oklch(0.78 0.005 260);
-    --color-sidebar-text-active: oklch(0.95 0.005 260);
-    --color-sidebar-accent: oklch(0.75 0.16 70);
-    --color-sidebar-divider: oklch(0.40 0.005 260);
+    /* Border */
+    --color-border-light: oklch(0.92 0.01 260);
+    --color-border-default: oklch(0.85 0.01 260);
+    --color-border-strong: oklch(0.75 0.02 260);
+
+    /* Sidebar (Crisp White with Gold/Blue accents) */
+    --color-sidebar: oklch(1.0 0 0);
+    --color-sidebar-hover: oklch(0.96 0.01 260);
+    --color-sidebar-text: oklch(0.40 0.02 260);
+    --color-sidebar-text-active: oklch(0.25 0.10 260); /* Darker blue active text */
+    --color-sidebar-accent: oklch(0.65 0.16 80); /* Gold icons */
+    --color-sidebar-divider: oklch(0.94 0.01 260);
   }
 }
 
@@ -173,6 +193,11 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* Animations */
+@keyframes skeletonShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
 @keyframes fadeInUp {
   from {
     opacity: 0;

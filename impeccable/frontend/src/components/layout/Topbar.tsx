@@ -125,18 +125,18 @@ export default function Topbar({ breadcrumb }: TopbarProps) {
                 UI Themes
               </div>
               <button
+                onClick={() => { setTheme('royal-white'); setShowThemeMenu(false); }}
+                className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors ${theme === 'royal-white' ? 'bg-[var(--color-brand-100)] text-[var(--color-brand-600)] font-bold' : 'text-[var(--color-text-primary)] hover:bg-[var(--color-surface-0)]'}`}
+              >
+                <span className="h-3 w-3 rounded-full bg-white border border-slate-300 shadow-sm"></span>
+                Royal White
+              </button>
+              <button
                 onClick={() => { setTheme('dark-gold'); setShowThemeMenu(false); }}
                 className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors ${theme === 'dark-gold' ? 'bg-[var(--color-brand-100)] text-[var(--color-brand-600)] font-bold' : 'text-[var(--color-text-primary)] hover:bg-[var(--color-surface-0)]'}`}
               >
                 <span className="h-3 w-3 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]"></span>
                 Dark Gold
-              </button>
-              <button
-                onClick={() => { setTheme('industrial'); setShowThemeMenu(false); }}
-                className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors ${theme === 'industrial' ? 'bg-[var(--color-brand-100)] text-[var(--color-brand-600)] font-bold' : 'text-[var(--color-text-primary)] hover:bg-[var(--color-surface-0)]'}`}
-              >
-                <span className="h-3 w-3 rounded-full bg-orange-500 border border-slate-600"></span>
-                Industrial
               </button>
               <button
                 onClick={() => { setTheme('modern-dark'); setShowThemeMenu(false); }}

@@ -2,11 +2,10 @@ import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   FilePlus, Save, Pencil, Search, Trash2, Printer, FileSpreadsheet, X,
-  Construction, SearchIcon, Undo2, AlertTriangle,
+  Undo2, AlertTriangle,
 } from 'lucide-react';
 import Topbar from '../components/layout/Topbar';
 import { menuConfig } from '../config/menuConfig';
-import { formConfigMap, type FormFieldDef, type TableColumnDef, type FormConfig } from '../config/formConfigs';
 
 // Map group id to first item's path for breadcrumb (4 กลุ่มตาม DFD)
 const groupFirstPath: Record<string, string> = {
@@ -67,17 +66,13 @@ export default function PlaceholderPage() {
     }
   }
 
-  const config: FormConfig | undefined = itemCode ? formConfigMap[itemCode] : undefined;
   const isCheckPage = itemLabel.includes('ตรวจสอบ') || itemLabel.includes('Confirm');
-  const isConfirmStock = itemCode === 'CFM-STK';
 
   const breadcrumb = [
     { label: 'JEWELRY SMART FACTORY', path: '/' },
     { label: groupLabel, path: groupFirstPath[groupId] || '/' },
     { label: itemCode ? `${itemLabel} (${itemCode})` : itemLabel },
   ];
-
-  const [searchDoc, setSearchDoc] = useState('');
 
   // Determine which toolbar to use
   const activeToolbar = isCheckPage ? checkToolbarButtons : toolbarButtons;
@@ -148,228 +143,4 @@ export default function PlaceholderPage() {
   );
 }
 
-// ─── Sub-components ───
 
-function FormSection({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div
-      className="animate-fade-in-up overflow-hidden rounded-xl"
-      style={{ background: 'var(--color-surface-1)', border: '1px solid var(--color-border-light)' }}
-    >
-      <div
-        className="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]"
-        style={{ background: 'var(--color-surface-0)', borderBottom: '1px solid var(--color-border-light)', fontFamily: 'var(--font-display)' }}
-      >
-        {title}
-      </div>
-      {children}
-    </div>
-  );
-}
-
-function FormField({ field }: { field: FormFieldDef }) {
-  const inputStyles = {
-    background: field.readOnly ? 'var(--color-surface-0)' : 'var(--color-surface-2)',
-    border: '1px solid var(--color-border-light)',
-  };
-
-  // Skip rendering if label is empty (spacer field)
-  if (field.label === '') return <div />;
-
-  return (
-    <div className="flex flex-col gap-0.5">
-      <label className="text-[11px] font-medium text-[var(--color-text-secondary)]">{field.label}</label>
-      <div className="relative">
-        {field.type === 'select' && field.options ? (
-          <select
-            className="w-full rounded-lg px-2.5 py-1.5 text-sm outline-none transition-colors focus:border-[var(--color-brand-500)]"
-            style={inputStyles}
-          >
-            <option value="">—</option>
-            {field.options.map(opt => (
-              <option key={opt} value={opt}>{opt}</option>
-            ))}
-          </select>
-        ) : (
-          <input
-            type={field.type || 'text'}
-            readOnly={field.readOnly}
-            placeholder={field.readOnly ? '' : undefined}
-            className={`w-full rounded-lg py-1.5 text-sm outline-none transition-colors focus:border-[var(--color-brand-500)] ${
-              field.readOnly ? 'text-[var(--color-text-secondary)]' : ''
-            } ${field.hasSearch ? 'pl-2.5 pr-8' : 'px-2.5'}`}
-            style={inputStyles}
-          />
-        )}
-        {field.hasSearch && (
-          <button className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-1 text-[var(--color-text-tertiary)] hover:text-[var(--color-brand-500)]">
-            <SearchIcon size={13} />
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function DataTable({ config }: { config?: FormConfig }) {
-  const cols = config?.tableColumns || defaultTableColumns;
-
-  return (
-    <FormSection title="รายการ">
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse">
-          <thead>
-            <tr>
-              {cols.map(col => (
-                <th
-                  key={col.key}
-                  className={`whitespace-nowrap px-3 py-2 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-secondary)] ${
-                    col.align === 'right' ? 'text-right' : 'text-left'
-                  }`}
-                  style={{ background: 'var(--color-surface-0)', borderBottom: '1px solid var(--color-border-light)' }}
-                >
-                  {col.label}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td colSpan={cols.length} className="px-4 py-10 text-center text-sm text-[var(--color-text-tertiary)]">
-                <div className="flex flex-col items-center gap-2">
-                  <Construction size={22} className="text-[var(--color-text-tertiary)] opacity-30" />
-                  <span>ไม่มีข้อมูล — รอเชื่อมต่อฐานข้อมูล</span>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      {/* Footer Stats */}
-      <div
-        className="flex items-center justify-end gap-6 px-4 py-2.5"
-        style={{ background: 'var(--color-surface-0)', borderTop: '1px solid var(--color-border-light)' }}
-      >
-        {(config?.footerStats || ['รายการ', 'จำนวนรวม', 'มูลค่ารวม']).map((stat, i, arr) => (
-          <div key={stat} className="flex items-baseline gap-1.5">
-            <span className="text-[11px] uppercase tracking-wider text-[var(--color-text-tertiary)]">{stat}</span>
-            <span
-              className={`font-bold ${i === arr.length - 1 ? 'text-base text-[var(--color-brand-500)]' : 'text-sm'}`}
-              style={{ fontFamily: 'var(--font-display)' }}
-            >
-              —
-            </span>
-          </div>
-        ))}
-      </div>
-    </FormSection>
-  );
-}
-
-// ─── Confirm Stock special layout ───
-
-function ConfirmStockLayout({ config }: { config?: FormConfig }) {
-  const [stockFilter, setStockFilter] = useState('all');
-
-  const filterOptions = [
-    { value: 'all', label: 'สต๊อกทั้งหมด' },
-    { value: 'nonzero', label: 'สต๊อกไม่เป็น 0' },
-    { value: 'negative', label: 'สต๊อกติดลบ' },
-    { value: 'positive', label: 'สต๊อกไม่ติดลบ' },
-  ];
-
-  const summaryFields = [
-    { label: 'Stone', value: '' },
-    { label: 'Total List', value: '—' },
-    { label: 'In Qty', value: '—' },
-    { label: 'In Amnt', value: '—' },
-    { label: 'Out Qty', value: '—' },
-    { label: 'Out Amnt', value: '—' },
-    { label: 'Return Qty', value: '—' },
-    { label: 'Return Amnt', value: '—' },
-    { label: 'Stock Qty', value: '—' },
-    { label: 'Stock Amnt', value: '—' },
-  ];
-
-  return (
-    <>
-      {/* Summary & Filters */}
-      <FormSection title="Confirm Stock">
-        <div className="p-4">
-          {/* Radio Filters */}
-          <div className="mb-4 flex flex-wrap gap-4">
-            {filterOptions.map(opt => (
-              <label key={opt.value} className="flex cursor-pointer items-center gap-2 text-sm text-[var(--color-text-primary)]">
-                <input
-                  type="radio"
-                  name="stockFilter"
-                  value={opt.value}
-                  checked={stockFilter === opt.value}
-                  onChange={e => setStockFilter(e.target.value)}
-                  className="accent-[var(--color-brand-500)]"
-                />
-                {opt.label}
-              </label>
-            ))}
-          </div>
-
-          {/* Search + Summary Grid */}
-          <div className="grid grid-cols-[200px_1fr] gap-4">
-            {/* Stone Search */}
-            <div className="flex flex-col gap-1">
-              <label className="text-[11px] font-medium text-[var(--color-text-secondary)]">Stone</label>
-              <div className="relative">
-                <input
-                  type="text"
-                  className="w-full rounded-lg py-1.5 pl-2.5 pr-8 text-sm outline-none transition-colors focus:border-[var(--color-brand-500)]"
-                  style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border-light)' }}
-                />
-                <button className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-1 text-[var(--color-text-tertiary)] hover:text-[var(--color-brand-500)]">
-                  <SearchIcon size={13} />
-                </button>
-              </div>
-            </div>
-
-            {/* Summary Stats */}
-            <div className="grid grid-cols-[repeat(auto-fit,minmax(120px,1fr))] gap-2">
-              {summaryFields.map(sf => (
-                <div key={sf.label} className="flex items-baseline gap-1.5">
-                  <span className="text-[11px] font-semibold text-[var(--color-brand-500)]">{sf.label} :</span>
-                  <span className="text-sm font-medium text-[var(--color-text-primary)]">{sf.value}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </FormSection>
-
-      {/* Data Table */}
-      <DataTable config={config} />
-    </>
-  );
-}
-
-// ─── Defaults when no config ───
-
-function defaultHeaderFields(isCheck: boolean): FormFieldDef[] {
-  const base: FormFieldDef[] = [
-    { name: 'docNumber', label: 'เลขที่', readOnly: true },
-    { name: 'docDate', label: 'วันที่เอกสาร', type: 'date' },
-  ];
-  if (isCheck) {
-    return [...base, { name: 'item', label: 'รายการ' }, { name: 'jobNo', label: 'เบอร์งาน' }, { name: 'detail', label: 'รายละเอียด', colSpan: 2 }];
-  }
-  return [...base, { name: 'ref', label: 'เลขที่อ้างอิง' }, { name: 'customer', label: 'รหัสลูกค้า / ผู้ขาย' }, { name: 'detail', label: 'รายละเอียด', colSpan: 2 }];
-}
-
-const defaultTableColumns: TableColumnDef[] = [
-  { key: 'seq', label: 'ลำดับ' },
-  { key: 'stoneCode', label: 'รหัสพลอย' },
-  { key: 'unit', label: 'หน่วย' },
-  { key: 'grade', label: 'สุง' },
-  { key: 'weight', label: 'น้ำหนัก', align: 'right' },
-  { key: 'qty', label: 'จำนวน', align: 'right' },
-  { key: 'price', label: 'ราคา', align: 'right' },
-  { key: 'total', label: 'รวม', align: 'right' },
-  { key: 'warehouse', label: 'คลัง' },
-];

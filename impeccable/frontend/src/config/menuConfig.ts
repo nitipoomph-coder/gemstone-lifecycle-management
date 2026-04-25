@@ -64,6 +64,16 @@ export const menuConfig: NavMenuGroup[] = [
     ],
   },
 
+  // ─── Order Tracker (ระบบใหม่) ───
+  {
+    id: 'order-tracker',
+    label: 'Order Tracker',
+    icon: 'layout-list',
+    items: [
+      { id: 'ot-list',   label: 'รายการ Order (Pending)', path: '/order-tracker' },
+    ],
+  },
+
   // ─── Entity 5: สต็อกอะไหล่ ───
   {
     id: 'spare-parts',

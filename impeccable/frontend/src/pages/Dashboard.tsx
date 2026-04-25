@@ -17,15 +17,11 @@ export default function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [logoVisible, setLogoVisible] = useState(false);
   const [currentDate, setCurrentDate] = useState<string>('');
-
   const loadData = () => {
     setLoading(true);
     setError(null);
     setData(null);
-    setLogoVisible(false);
-    setTimeout(() => setLogoVisible(true), 80);
 
     fetchDashboardData()
       .then(res => {

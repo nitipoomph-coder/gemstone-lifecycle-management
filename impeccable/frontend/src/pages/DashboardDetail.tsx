@@ -13,7 +13,6 @@ const shimmerStyle: React.CSSProperties = {
 
 export default function DashboardDetail() {
   const navigate = useNavigate();
-  const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentDate, setCurrentDate] = useState<string>('');
@@ -21,11 +20,9 @@ export default function DashboardDetail() {
   const loadData = () => {
     setLoading(true);
     setError(null);
-    setData(null);
 
     fetchDashboardData()
-      .then(res => {
-        setData(res);
+      .then(() => {
         setLoading(false);
       })
       .catch(() => {

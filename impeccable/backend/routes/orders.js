@@ -2,214 +2,285 @@ const express = require('express');
 const router = express.Router();
 const { getPool, sql } = require('../db');
 
-// ─── helper: convert photo buffer → base64 ────────────────────────────────────
+// â”€â”€â”€ helper: convert photo buffer â†’ base64 â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function toBase64Photo(buf) {
   if (!buf) return null;
   try {
     let b;
     if (Buffer.isBuffer(buf)) b = buf;
-    else if (buf?.data) b = Buffer.from(buf.data); // mssql wrap เป็น {data:[...]}
+    else if (buf?.data) b = Buffer.from(buf.data);
     else b = Buffer.from(buf);
     if (b.length === 0) return null;
     return `data:image/jpeg;base64,${b.toString('base64')}`;
-  } catch {
+  } catch (err) {
+    console.error('Photo conversion error:', err.message);
     return null;
   }
+}
+
+// // ─── In-Memory Cache + Request Coalescing ────────────────────────────────────
+// cache: เก็บผลที่ได้แล้ว (5 นาที)
+// inFlight: ถ้ามีคนกำลังดึงอยู่แล้ว คนอื่นรอผลเดียวกัน (ไม่ยิง DB ซ้ำ)
+const cache   = new Map(); // key → { data, expiresAt }
+const inFlight = new Map(); // key → Promise  ← ป้องกัน Cache Stampede
+
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 นาที
+
+function getCached(key) {
+  const entry = cache.get(key);
+  if (!entry) return null;
+  if (Date.now() > entry.expiresAt) { cache.delete(key); return null; }
+  return entry.data;
+}
+function setCached(key, data) {
+  cache.set(key, { data, expiresAt: Date.now() + CACHE_TTL_MS });
 }
 
 // ─── GET /api/orders ──────────────────────────────────────────────────────────
 router.get('/', async (req, res) => {
   try {
     const pool = await getPool();
-    const { status = 'pending', custCode, dateFrom, dateTo } = req.query;
+    const { dateFrom, dateTo, dateType, noCache } = req.query;
 
-    let whereClause = `WHERE 1=1`;
-    if (status === 'pending') {
-      whereClause += ` AND (h.CloseStatus IS NULL OR h.CloseStatus != 'Y')`;
+    // Default: 3 เดือนย้อนหลัง → 2 เดือนข้างหน้า
+    const defaultFrom = new Date(); defaultFrom.setMonth(defaultFrom.getMonth() - 3);
+    const defaultTo   = new Date(); defaultTo.setMonth(defaultTo.getMonth() + 2);
+
+    const startDate = dateFrom ? new Date(dateFrom) : defaultFrom;
+    const endDate   = dateTo   ? new Date(dateTo)   : defaultTo;
+
+    let spName = 'dbo.PC_Show_OrdTrack_Sum_DueDate';
+    if (dateType === 'Order Date')         spName = 'dbo.PC_Show_OrdTrack_Sum_OrdDate';
+    else if (dateType === 'Cust Due Date') spName = 'dbo.PC_Show_OrdTrack_Sum_CustDueDate';
+    else if (dateType === 'Finish Date')   spName = 'dbo.PC_Show_OrdTrack_Sum_FinDate';
+    else if (dateType === 'All')           spName = 'dbo.PC_Show_OrdTrack_Sum_All';
+
+    const cacheKey = `${spName}|${startDate.toISOString().slice(0,10)}|${endDate.toISOString().slice(0,10)}`;
+
+    // 1️⃣ Cache hit — ส่งทันที
+    if (!noCache) {
+      const cached = getCached(cacheKey);
+      if (cached) {
+        console.log(`[CACHE HIT] ${cacheKey} (${cached.length} rows)`);
+        return res.json({ ok: true, data: cached, count: cached.length, cached: true });
+      }
     }
-    if (custCode) whereClause += ` AND h.CustCode = @custCode`;
-    if (dateFrom) whereClause += ` AND h.OrdDate >= @dateFrom`;
-    if (dateTo) whereClause += ` AND h.OrdDate <= @dateTo`;
 
-    const request = pool.request();
-    if (custCode) request.input('custCode', sql.NVarChar, custCode);
-    if (dateFrom) request.input('dateFrom', sql.DateTime, new Date(dateFrom));
-    if (dateTo) request.input('dateTo', sql.DateTime, new Date(dateTo));
+    // 2️⃣ In-flight check — ถ้ามี request กำลังดึงอยู่แล้ว รอผลเดียวกันเลย
+    if (inFlight.has(cacheKey)) {
+      console.log(`[IN-FLIGHT] waiting: ${cacheKey}`);
+      const data = await inFlight.get(cacheKey);
+      return res.json({ ok: true, data, count: data.length, cached: 'coalesced' });
+    }
 
-    const result = await request.query(`
-      WITH OrderAgg AS (
-        SELECT
-          h.OrdNo,
-          h.OrdDate,
-          h.DueDate,
-          h.CustCode,
-          c.CustName,
-          h.PONo,
-          h.OrdMat,
-          h.OrdKind,
-          h.CustMultiAddr,
-          h.OrdStatus,
-          h.CloseStatus,
-          h.SumOrdQty    AS TotalQty,
-          h.SumOrdAmnt   AS TotalAmount,
-          h.CurrCode,
-          h.OrdWeek      AS Week,
-          h.CastStatus,
-          h.PolishStatus,
-          h.PlateStatus,
-          h.AssemStatus,
-          h.QCStatus,
-          h.CustQCDate,
-          h.CustDueDate,
-          COUNT(d.OrdNo) AS LineCount,
-          SUM(d.ItemQty) AS SumItem
-        FROM OrdHD h
-        LEFT JOIN GMCust c ON c.CustCode = h.CustCode
-        LEFT JOIN OrdDT  d ON d.OrdNo    = h.OrdNo
-        ${whereClause}
-        GROUP BY
-          h.OrdNo, h.OrdDate, h.DueDate, h.CustCode, c.CustName,
-          h.PONo, h.OrdMat, h.OrdKind, h.CustMultiAddr,
-          h.OrdStatus, h.CloseStatus,
-          h.SumOrdQty, h.SumOrdAmnt, h.CurrCode, h.OrdWeek,
-          h.CastStatus, h.PolishStatus, h.PlateStatus, h.AssemStatus, h.QCStatus,
-          h.CustQCDate, h.CustDueDate
-      )
-      SELECT
-        a.*,
-        -- OrdTrackDT fields
-        t.OrdSGS,
-        t.TrackTest,
-        t.OORDate,
-        t.BookDate,
-        t.QC1_Qty,  t.QC1_Date,  t.QC1_Fail,
-        t.QC2_Qty,  t.QC2_Date,  t.QC2_Fail,
-        t.QC3_Qty,  t.QC3_Date,
-        -- Production pending qty
-        agg.PolishPenQty,
-        agg.PlatePenQty,
-        -- รูปภาพ (LEFT JOIN แทน subquery)
-        ph.ItemPhoto
-      FROM OrderAgg a
-      -- JOIN OrdTrackDT
-      LEFT JOIN OrdTrackDT t
-        ON  t.CustCode      = a.CustCode
-        AND t.PONo          = a.PONo
-        AND t.OrdMat        = a.OrdMat
-        AND t.OrdKind       = a.OrdKind
-        AND t.CustMultiAddr = a.CustMultiAddr
-        AND t.CustDueDate   = a.CustDueDate
-        AND (t.TrackStatus IS NULL OR t.TrackStatus != 'Y')
-      -- JOIN aggregate สำหรับ PolishPenQty, PlatePenQty
-      LEFT JOIN (
-        SELECT
-          d.OrdNo,
-          SUM(CASE WHEN d.GrindQty = d.ItemQty
-                   THEN ISNULL(d.PolishQty,0) - ISNULL(d.GrindQty,0)
-                   ELSE ISNULL(d.PolishQty,0) - ISNULL(d.ItemQty,0) END) AS PolishPenQty,
-          SUM(CASE WHEN d.PlateQty = d.ItemQty
-                   THEN ISNULL(d.QCQty,0) - ISNULL(d.PlateQty,0)
-                   ELSE ISNULL(d.QCQty,0) - ISNULL(d.ItemQty,0) END) AS PlatePenQty
-        FROM OrdDT d
-        GROUP BY d.OrdNo
-      ) agg ON agg.OrdNo = a.OrdNo
-      -- JOIN รูปภาพ (ใช้ MAX เพื่อเอารูปแรกที่มี)
-      LEFT JOIN (
-        SELECT
-          d2.OrdNo,
-          MAX(CAST(p.ItemPhoto AS VARBINARY(MAX))) AS ItemPhoto
-        FROM OrdDT d2
-        JOIN GMItemPhoto p ON p.ItemNo = d2.ItemNo
-        WHERE p.ItemPhoto IS NOT NULL
-          AND DATALENGTH(p.ItemPhoto) > 0
-        GROUP BY d2.OrdNo
-      ) ph ON ph.OrdNo = a.OrdNo
-      ORDER BY a.OrdDate DESC
-    `);
+    // 3️⃣ DB call — สร้าง Promise แชร์ให้คนอื่นรอ
+    const fetchPromise = (async () => {
+      console.log(`[DB] Executing: ${spName} (${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()})`);
+      const request = pool.request();
+      request.input('FromDate', sql.DateTime, startDate);
+      request.input('ToDate',   sql.DateTime, endDate);
+      const result = await request.execute(spName);
 
-    const data = result.recordset.map(r => {
-      const { ItemPhoto, ...rest } = r;
-      return {
-        ...rest,
-        ItemPhoto: toBase64Photo(ItemPhoto),
-      };
-    });
+      const data = result.recordset.map(r => {
+        const { ItemPhoto, ...rest } = r;
+        return {
+          ...rest,
+          ItemPhoto: toBase64Photo(ItemPhoto),
+          hasPhoto:  !!(ItemPhoto && (ItemPhoto.data?.length || ItemPhoto.length)),
+        };
+      });
+      setCached(cacheKey, data);
+      console.log(`[DB] Done: ${data.length} rows — cached`);
+      return data;
+    })();
 
-    res.json({ ok: true, data, count: data.length });
+    inFlight.set(cacheKey, fetchPromise);
+    try {
+      const data = await fetchPromise;
+      res.json({ ok: true, data, count: data.length });
+    } finally {
+      inFlight.delete(cacheKey); // เสร็จแล้วลบออกเสมอ
+    }
+
   } catch (err) {
-    console.error('GET /api/orders error:', err);
+    console.error('[API ERROR]:', err);
     res.status(500).json({ ok: false, error: err.message });
   }
 });
 
-// ─── GET /api/orders/:ordNo ───────────────────────────────────────────────────
+// ─── GET /api/orders/photo/:itemNo ────────────────────────────────────────────
+router.get('/photo/:itemNo', async (req, res) => {
+  try {
+    const pool = await getPool();
+    const itemNo = req.params.itemNo;
+    const cacheKey = `photo:${itemNo}`;
+    const cached = getCached(cacheKey);
+    if (cached !== undefined && cached !== null) return res.json({ ok: true, photo: cached });
+
+    const result = await pool.request()
+      .input('itemNo', sql.NVarChar, itemNo)
+      .query('SELECT CAST(ItemPhoto AS VARBINARY(MAX)) AS photo FROM GMItemPhoto WHERE ItemNo = @itemNo');
+    const photo = toBase64Photo(result.recordset[0]?.photo);
+    setCached(cacheKey, photo);
+    res.json({ ok: true, photo });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+
+// â”€â”€â”€ GET /api/orders/:ordNo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── GET /api/orders/by-po/:poNo (MUST be BEFORE /:ordNo) ────────────────────
+router.get('/by-po/:poNo', async (req, res) => {
+  try {
+    const pool = await getPool();
+    const poNo = decodeURIComponent(req.params.poNo);
+    console.log('[GET /api/orders/by-po/' + poNo + ']');
+
+    const result = await pool.request()
+      .input('poNo', sql.NVarChar, poNo)
+      .query(`
+        SELECT
+          h.OrdNo, h.OrdDate, h.DueDate, h.CustCode, c.CustName,
+          h.PONo, h.OrdMat, h.OrdKind, h.OrdStatus, h.CloseStatus,
+          h.SumOrdQty AS TotalQty, h.SumOrdAmnt AS TotalAmount, h.CurrCode,
+          h.OrdWeek AS Week,
+          d.OrdLineNo, d.ItemNo, d.ItemDesc, d.ItemMat, d.ItemSize,
+          d.ItemQty AS Qty, d.ItemPrice AS Price, d.ItemAmnt AS Amount,
+          d.FinishQty, d.FinishStatus, d.ItemStatus,
+          d.CastQty, d.FCastStatus, d.GrindQty, d.FGrindStatus,
+          d.PolishQty, d.FPolishStatus, d.SetQty, d.FSetStatus,
+          d.EpoxQty, d.FEpoxStatus, d.PlateQty, d.FPlateStatus,
+          d.AssemQty, d.FAssemStatus, d.QCQty, d.FQCStatus,
+          d.PackQty, d.FPackStatus,
+          CAST(p.ItemPhoto AS VARBINARY(MAX)) AS ItemPhoto
+        FROM OrdHD h
+        LEFT JOIN GMCust c ON c.CustCode = h.CustCode
+        LEFT JOIN OrdDT  d ON d.OrdNo    = h.OrdNo
+        LEFT JOIN GMItemPhoto p ON p.ItemNo = d.ItemNo
+        WHERE h.PONo = @poNo
+        ORDER BY h.OrdNo, d.OrdLineNo
+      `);
+
+    if (result.recordset.length === 0)
+      return res.status(404).json({ ok: false, error: 'PO not found' });
+
+    const first = result.recordset[0];
+    const uniqueOrds = new Map();
+    result.recordset.forEach(r => {
+      if (!uniqueOrds.has(r.OrdNo))
+        uniqueOrds.set(r.OrdNo, { qty: r.TotalQty || 0, amnt: r.TotalAmount || 0 });
+    });
+    let sumQty = 0, sumAmnt = 0;
+    for (const v of uniqueOrds.values()) { sumQty += v.qty; sumAmnt += v.amnt; }
+
+    const header = {
+      PONo: first.PONo, OrdNos: [...uniqueOrds.keys()], OrdNo: first.OrdNo,
+      OrdDate: first.OrdDate, DueDate: first.DueDate,
+      CustCode: first.CustCode, CustName: first.CustName,
+      OrdMat: first.OrdMat, OrdKind: first.OrdKind,
+      OrdStatus: first.OrdStatus, CloseStatus: first.CloseStatus,
+      TotalQty: sumQty, TotalAmount: sumAmnt,
+      CurrCode: first.CurrCode, Week: first.Week,
+    };
+
+    const lines = result.recordset.map(r => ({
+      OrdNo: r.OrdNo, LineNo: r.OrdLineNo, ItemNo: r.ItemNo,
+      ItemDesc: r.ItemDesc, ItemMat: r.ItemMat, ItemSize: r.ItemSize,
+      Qty: r.Qty, Price: r.Price, Amount: r.Amount,
+      ItemPhoto: toBase64Photo(r.ItemPhoto),
+      FinishQty: r.FinishQty, FinishStatus: r.FinishStatus, ItemStatus: r.ItemStatus,
+      processes: {
+        Cast:   { qty: r.CastQty,   status: r.FCastStatus },
+        Grind:  { qty: r.GrindQty,  status: r.FGrindStatus },
+        Polish: { qty: r.PolishQty, status: r.FPolishStatus },
+        Set:    { qty: r.SetQty,    status: r.FSetStatus },
+        Epox:   { qty: r.EpoxQty,   status: r.FEpoxStatus },
+        Plate:  { qty: r.PlateQty,  status: r.FPlateStatus },
+        Assem:  { qty: r.AssemQty,  status: r.FAssemStatus },
+        QC:     { qty: r.QCQty,     status: r.FQCStatus },
+        Pack:   { qty: r.PackQty,   status: r.FPackStatus },
+      },
+    }));
+
+    res.json({ ok: true, header, lines, lineCount: lines.length, ordCount: uniqueOrds.size });
+  } catch (err) {
+    console.error('[API ERROR] by-po:', err.message);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
 router.get('/:ordNo', async (req, res) => {
   try {
     const pool = await getPool();
     const { ordNo } = req.params;
+    console.log(`[GET /api/orders/${ordNo}] Fetching detail...`);
 
-    const result = await pool.request()
-      .input('ordNo', sql.NVarChar, ordNo)
-      .query(`
+    // Handle "Group PO" case where ordNo is "BBC123/ BBC456"
+    const ordList = ordNo.split('/').map(s => s.trim()).filter(Boolean);
+    const request = pool.request();
+    let whereClause = "";
+
+    if (ordList.length > 1) {
+       whereClause = `h.OrdNo IN (${ordList.map((_, i) => `@ord${i}`).join(',')})`;
+       ordList.forEach((ord, i) => request.input(`ord${i}`, sql.NVarChar, ord));
+    } else {
+       // Single string: check OrdNo or PONo
+       whereClause = `(h.OrdNo = @val OR h.PONo = @val)`;
+       request.input('val', sql.NVarChar, ordList[0]);
+    }
+
+    const result = await request.query(`
         SELECT
-          h.OrdNo,
-          h.OrdDate,
-          h.DueDate,
-          h.CustCode,
-          c.CustName,
-          h.PONo,
-          h.OrdMat,
-          h.OrdStatus,
-          h.CloseStatus,
-          h.SumOrdQty  AS TotalQty,
-          h.SumOrdAmnt AS TotalAmount,
-          h.CurrCode,
-          d.OrdLineNo,
-          d.ItemNo,
-          d.ItemDesc,
-          d.ItemMat,
-          d.ItemSize,
-          d.ItemQty     AS Qty,
-          d.ItemPrice   AS Price,
-          d.ItemAmnt    AS Amount,
-          d.FinishQty,
-          d.FinishStatus,
-          d.ItemStatus,
-          d.CastQty,   d.FCastStatus,
-          d.GrindQty,  d.FGrindStatus,
-          d.PolishQty, d.FPolishStatus,
-          d.SetQty,    d.FSetStatus,
-          d.EpoxQty,   d.FEpoxStatus,
-          d.PlateQty,  d.FPlateStatus,
-          d.AssemQty,  d.FAssemStatus,
-          d.QCQty,     d.FQCStatus,
-          d.PackQty,   d.FPackStatus,
+          h.OrdNo, h.OrdDate, h.DueDate, h.CustCode, c.CustName, h.PONo, h.OrdMat,
+          h.OrdStatus, h.CloseStatus, h.SumOrdQty AS TotalQty, h.SumOrdAmnt AS TotalAmount, h.CurrCode,
+          d.OrdLineNo, d.ItemNo, d.ItemDesc, d.ItemMat, d.ItemSize, d.ItemQty AS Qty,
+          d.ItemPrice AS Price, d.ItemAmnt AS Amount, d.FinishQty, d.FinishStatus, d.ItemStatus,
+          d.CastQty, d.FCastStatus, d.GrindQty, d.FGrindStatus, d.PolishQty, d.FPolishStatus,
+          d.SetQty, d.FSetStatus, d.EpoxQty, d.FEpoxStatus, d.PlateQty, d.FPlateStatus,
+          d.AssemQty, d.FAssemStatus, d.QCQty, d.FQCStatus, d.PackQty, d.FPackStatus,
           CAST(p.ItemPhoto AS VARBINARY(MAX)) AS ItemPhoto
         FROM OrdHD h
-        LEFT JOIN GMCust       c ON c.CustCode = h.CustCode
-        LEFT JOIN OrdDT        d ON d.OrdNo    = h.OrdNo
-        LEFT JOIN GMItemPhoto  p ON p.ItemNo   = d.ItemNo
-        WHERE h.OrdNo = @ordNo
-        ORDER BY d.OrdLineNo
+        LEFT JOIN GMCust c ON c.CustCode = h.CustCode
+        LEFT JOIN OrdDT d ON d.OrdNo = h.OrdNo
+        LEFT JOIN GMItemPhoto p ON p.ItemNo = d.ItemNo
+        WHERE ${whereClause}
+        ORDER BY h.OrdNo, d.OrdLineNo
       `);
 
     if (result.recordset.length === 0) {
       return res.status(404).json({ ok: false, error: 'Order not found' });
     }
 
+    // Aggregate Header if multiple orders
     const first = result.recordset[0];
+    
+    // Sum up totals across unique orders
+    const uniqueOrders = new Map();
+    result.recordset.forEach(r => {
+      if (!uniqueOrders.has(r.OrdNo)) {
+        uniqueOrders.set(r.OrdNo, { qty: r.TotalQty || 0, amnt: r.TotalAmount || 0 });
+      }
+    });
+    
+    let sumTotalQty = 0;
+    let sumTotalAmnt = 0;
+    for (const v of uniqueOrders.values()) {
+      sumTotalQty += v.qty;
+      sumTotalAmnt += v.amnt;
+    }
+
     const header = {
-      OrdNo: first.OrdNo,
+      OrdNo: ordList.length > 1 ? ordNo : first.OrdNo,
       OrdDate: first.OrdDate,
       DueDate: first.DueDate,
       CustCode: first.CustCode,
       CustName: first.CustName,
-      PONo: first.PONo,
+      PONo: ordList.length > 1 ? 'Group PO By ShipTo' : first.PONo,
       OrdMat: first.OrdMat,
       OrdStatus: first.OrdStatus,
       CloseStatus: first.CloseStatus,
-      TotalQty: first.TotalQty,
-      TotalAmount: first.TotalAmount,
+      TotalQty: sumTotalQty,
+      TotalAmount: sumTotalAmnt,
       CurrCode: first.CurrCode,
     };
 
@@ -241,34 +312,92 @@ router.get('/:ordNo', async (req, res) => {
 
     res.json({ ok: true, header, lines, lineCount: lines.length });
   } catch (err) {
-    console.error(`GET /api/orders/${req.params.ordNo} error:`, err);
+    console.error('[API ERROR] Detail:', err.message);
     res.status(500).json({ ok: false, error: err.message });
   }
 });
 
-// ─── GET /api/orders/summary/by-customer ─────────────────────────────────────
-router.get('/summary/by-customer', async (req, res) => {
+
+// ─── GET /api/orders/by-po/:poNo ─────────────────────────────────────────────
+// Key หลัก: ดึงทุก OrdNo ที่อยู่ใต้ PONo เดียวกัน
+router.get('/by-po/:poNo', async (req, res) => {
   try {
     const pool = await getPool();
-    const result = await pool.request().query(`
-      SELECT
-        h.CustCode,
-        c.CustName,
-        COUNT(DISTINCT h.OrdNo) AS OrderCount,
-        SUM(h.SumOrdQty)        AS TotalQty,
-        SUM(h.SumOrdAmnt)       AS TotalAmount,
-        h.CurrCode
-      FROM OrdHD h
-      LEFT JOIN GMCust c ON c.CustCode = h.CustCode
-      WHERE (h.CloseStatus IS NULL OR h.CloseStatus != 'Y')
-      GROUP BY h.CustCode, c.CustName, h.CurrCode
-      ORDER BY OrderCount DESC
-    `);
-    res.json({ ok: true, data: result.recordset });
+    const poNo = decodeURIComponent(req.params.poNo);
+    console.log(`[GET /api/orders/by-po/${poNo}]`);
+
+    const result = await pool.request()
+      .input('poNo', sql.NVarChar, poNo)
+      .query(`
+        SELECT
+          h.OrdNo, h.OrdDate, h.DueDate, h.CustCode, c.CustName,
+          h.PONo, h.OrdMat, h.OrdKind, h.OrdStatus, h.CloseStatus,
+          h.SumOrdQty AS TotalQty, h.SumOrdAmnt AS TotalAmount, h.CurrCode,
+          h.OrdWeek AS Week,
+          d.OrdLineNo, d.ItemNo, d.ItemDesc, d.ItemMat, d.ItemSize,
+          d.ItemQty AS Qty, d.ItemPrice AS Price, d.ItemAmnt AS Amount,
+          d.FinishQty, d.FinishStatus, d.ItemStatus,
+          d.CastQty, d.FCastStatus, d.GrindQty, d.FGrindStatus,
+          d.PolishQty, d.FPolishStatus, d.SetQty, d.FSetStatus,
+          d.EpoxQty, d.FEpoxStatus, d.PlateQty, d.FPlateStatus,
+          d.AssemQty, d.FAssemStatus, d.QCQty, d.FQCStatus,
+          d.PackQty, d.FPackStatus,
+          CAST(p.ItemPhoto AS VARBINARY(MAX)) AS ItemPhoto
+        FROM OrdHD h
+        LEFT JOIN GMCust c ON c.CustCode = h.CustCode
+        LEFT JOIN OrdDT  d ON d.OrdNo    = h.OrdNo
+        LEFT JOIN GMItemPhoto p ON p.ItemNo = d.ItemNo
+        WHERE h.PONo = @poNo
+        ORDER BY h.OrdNo, d.OrdLineNo
+      `);
+
+    if (result.recordset.length === 0)
+      return res.status(404).json({ ok: false, error: `PO "${poNo}" not found` });
+
+    const first = result.recordset[0];
+    const uniqueOrds = new Map();
+    result.recordset.forEach(r => {
+      if (!uniqueOrds.has(r.OrdNo))
+        uniqueOrds.set(r.OrdNo, { qty: r.TotalQty || 0, amnt: r.TotalAmount || 0 });
+    });
+    let sumQty = 0, sumAmnt = 0;
+    for (const v of uniqueOrds.values()) { sumQty += v.qty; sumAmnt += v.amnt; }
+
+    const header = {
+      PONo: first.PONo, OrdNos: [...uniqueOrds.keys()],
+      OrdDate: first.OrdDate, DueDate: first.DueDate,
+      CustCode: first.CustCode, CustName: first.CustName,
+      OrdMat: first.OrdMat, OrdKind: first.OrdKind,
+      OrdStatus: first.OrdStatus, CloseStatus: first.CloseStatus,
+      TotalQty: sumQty, TotalAmount: sumAmnt,
+      CurrCode: first.CurrCode, Week: first.Week,
+    };
+
+    const lines = result.recordset.map(r => ({
+      OrdNo: r.OrdNo, LineNo: r.OrdLineNo, ItemNo: r.ItemNo,
+      ItemDesc: r.ItemDesc, ItemMat: r.ItemMat, ItemSize: r.ItemSize,
+      Qty: r.Qty, Price: r.Price, Amount: r.Amount,
+      ItemPhoto: toBase64Photo(r.ItemPhoto),
+      FinishQty: r.FinishQty, FinishStatus: r.FinishStatus, ItemStatus: r.ItemStatus,
+      processes: {
+        Cast:   { qty: r.CastQty,   status: r.FCastStatus },
+        Grind:  { qty: r.GrindQty,  status: r.FGrindStatus },
+        Polish: { qty: r.PolishQty, status: r.FPolishStatus },
+        Set:    { qty: r.SetQty,    status: r.FSetStatus },
+        Epox:   { qty: r.EpoxQty,   status: r.FEpoxStatus },
+        Plate:  { qty: r.PlateQty,  status: r.FPlateStatus },
+        Assem:  { qty: r.AssemQty,  status: r.FAssemStatus },
+        QC:     { qty: r.QCQty,     status: r.FQCStatus },
+        Pack:   { qty: r.PackQty,   status: r.FPackStatus },
+      },
+    }));
+
+    res.json({ ok: true, header, lines, lineCount: lines.length, ordCount: uniqueOrds.size });
   } catch (err) {
-    console.error('GET /api/orders/summary/by-customer error:', err);
+    console.error('[API ERROR] by-po:', err.message);
     res.status(500).json({ ok: false, error: err.message });
   }
 });
 
 module.exports = router;
+

@@ -1,104 +1,74 @@
-import { useState, useEffect } from 'react';
+// src/pages/OrderDetailPage.tsx
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { ChevronLeft, Printer, RefreshCw, AlertTriangle, Image as ImageIcon, FileText, CheckCircle2, Box, Scissors, Gem, Droplet, Sun, Layers, ShieldCheck, Package } from 'lucide-react';
 import Topbar from '../components/layout/Topbar';
 import { fetchOrderDetail, type OrderDetail, type OrderLine } from '../services/orderTrackerAPI';
-import { ArrowLeft, AlertTriangle, RefreshCw, Image as ImageIcon } from 'lucide-react';
 
-// ─── Process columns to display ───────────────────────────────────────────────
-const PROCESSES = [
-  { key: 'Cast',   label: 'CAST' },
-  { key: 'Grind',  label: 'GRIND' },
-  { key: 'Polish', label: 'POLISH' },
-  { key: 'Set',    label: 'SET' },
-  { key: 'Epox',   label: 'EPOX' },
-  { key: 'Plate',  label: 'PLATE' },
-  { key: 'Assem',  label: 'ASSEM' },
-  { key: 'QC',     label: 'QC' },
-  { key: 'Pack',   label: 'PACK' },
-] as const;
+// ─── Helpers ───
+function fDate(d: string | null | undefined) {
+  if (!d) return '—';
+  return new Date(d).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: '2-digit' });
+}
+function fQty(n: number | null | undefined) {
+  if (n == null) return '—';
+  return n.toLocaleString();
+}
+function fAmt(n: number | null | undefined, curr?: string) {
+  if (n == null) return '—';
+  return `${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${curr || ''}`.trim();
+}
 
-type ProcessKey = typeof PROCESSES[number]['key'];
+// ─── Production Step Tracker ───
+const PROD_STEPS = [
+  { key: 'Cast', label: 'Cast', icon: <Box size={14} /> },
+  { key: 'Grind', label: 'Grind', icon: <Scissors size={14} /> },
+  { key: 'Polish', label: 'Polish', icon: <Sun size={14} /> },
+  { key: 'Set', label: 'Set', icon: <Gem size={14} /> },
+  { key: 'Epox', label: 'Epox', icon: <Droplet size={14} /> },
+  { key: 'Plate', label: 'Plate', icon: <Layers size={14} /> },
+  { key: 'Assem', label: 'Assem', icon: <Layers size={14} /> },
+  { key: 'QC', label: 'QC', icon: <ShieldCheck size={14} /> },
+  { key: 'Pack', label: 'Pack', icon: <Package size={14} /> },
+];
 
-function ProcessBadge({ label, proc, totalQty }: { label: string, proc: { qty: number | null; status: string | null }, totalQty: number }) {
-  if (!proc.qty) return null; // ไม่โชว์แผนกที่ไม่มีงานเลย เพื่อความสะอาดตา
-  
-  const done = proc.status === 'Y';
-  const isWorking = proc.status === 'W';
-  const isPending = proc.status === 'P';
-  
-  const showPartial = proc.qty < totalQty && !done;
-
+function StepTracker({ processes }: { processes: Record<string, { qty: number | null; status: string | null }> }) {
   return (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      minWidth: '60px',
-      background: isWorking ? 'var(--color-brand-500)' : isPending ? 'var(--color-surface-2)' : 'var(--color-surface-1)',
-      padding: '6px 8px',
-      borderRadius: '8px',
-      border: done ? '1px solid oklch(0.70 0.16 150)' : isWorking ? '1px solid var(--color-brand-600)' : '1px solid var(--color-border-default)',
-    }}>
-      <div style={{ 
-        fontSize: '0.6rem', 
-        fontWeight: 700, 
-        letterSpacing: '0.05em',
-        color: isWorking ? 'var(--color-text-inverse)' : 'var(--color-text-tertiary)',
-        opacity: isWorking ? 0.9 : 1,
-        marginBottom: '2px'
-      }}>
-        {label}
-      </div>
-      <div style={{ 
-        fontSize: '0.9rem', 
-        fontWeight: 800,
-        color: isWorking ? 'var(--color-text-inverse)' : done ? 'oklch(0.70 0.16 150)' : 'var(--color-text-primary)',
-      }}>
-        {proc.qty?.toLocaleString()}
-      </div>
-      
-      {showPartial && (
-        <div style={{ fontSize: '0.55rem', color: isWorking ? 'rgba(255,255,255,0.8)' : 'var(--color-brand-600)', marginTop: '2px', fontWeight: 700 }}>
-          PARTIAL
-        </div>
-      )}
-      
-      {done && (
-        <div style={{ fontSize: '0.6rem', color: 'oklch(0.70 0.16 150)', marginTop: '2px', fontWeight: 700 }}>
-          ✓ DONE
-        </div>
-      )}
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(70px, 1fr))', gap: '8px', background: '#f8f9fa', padding: '12px', borderRadius: '8px', border: '1px solid #e9ecef' }}>
+      {PROD_STEPS.map(step => {
+        const p = processes[step.key];
+        const isPending = p && p.qty != null && p.qty < 0;
+        const isDone = p && (p.status === 'Y' || p.status === 'C' || p.qty === 0);
+        
+        let color = '#adb5bd'; // default (not reached)
+        let bg = '#f1f3f5';
+        if (isDone) { color = '#2b8a3e'; bg = '#d3f9d8'; }
+        else if (isPending) { color = '#c92a2a'; bg = '#ffe3e3'; }
+
+        return (
+          <div key={step.key} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', padding: '6px', background: bg, borderRadius: '6px', border: `1px solid ${isDone ? '#b2f2bb' : isPending ? '#ffc9c9' : '#dee2e6'}` }}>
+            <div style={{ color }}>{step.icon}</div>
+            <div style={{ fontSize: '0.6rem', fontWeight: 700, color: color }}>{step.label}</div>
+            <div style={{ fontSize: '0.75rem', fontWeight: 800, color: isPending ? '#c92a2a' : '#495057' }}>
+              {p?.qty != null ? Math.abs(p.qty).toLocaleString() : '—'}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
 
-function formatDate(d: string | null) {
-  if (!d) return '—';
-  return new Date(d).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' });
-}
-
-// ─── Skeleton ─────────────────────────────────────────────────────────────────
-function Skeleton({ w = '100%', h = '14px' }: { w?: string; h?: string }) {
-  return (
-    <div style={{
-      width: w, height: h, borderRadius: '2px',
-      background: 'linear-gradient(90deg,oklch(0.22 0.03 250) 25%,oklch(0.28 0.04 250) 50%,oklch(0.22 0.03 250) 75%)',
-      backgroundSize: '400% 100%',
-      animation: 'skSh 1.4s ease-in-out infinite',
-    }} />
-  );
-}
-
+// ─────────────────────────────────────────────────────────────────────────────
 export default function OrderDetailPage() {
   const { ordNo } = useParams<{ ordNo: string }>();
   const navigate = useNavigate();
+
   const [detail, setDetail] = useState<OrderDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  // Filter: hide fully finished lines
-  const [hideFinished, setHideFinished] = useState(true);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     if (!ordNo) return;
     setLoading(true);
     setError(null);
@@ -110,214 +80,147 @@ export default function OrderDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [ordNo]);
 
-  useEffect(() => { load(); }, [ordNo]);
+  useEffect(() => { load(); }, [load]);
 
   const h = detail?.header;
 
-  // Lines to display — filter finished if toggled
-  const lines: OrderLine[] = (() => {
-    if (!detail?.lines) return [];
-    if (!hideFinished) return detail.lines;
-    return detail.lines.filter(l => l.FinishStatus !== 'Y' && l.ItemStatus !== 'C');
-  })();
-
-  const totalQty    = lines.reduce((s, l) => s + (l.Qty    || 0), 0);
-  const totalFinish = lines.reduce((s, l) => s + (l.FinishQty || 0), 0);
-
   return (
-    <>
-      <style>{`@keyframes skSh{0%{background-position:200% 0}100%{background-position:-200% 0}}`}</style>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#f4f6f8' }}>
       <Topbar breadcrumb={[
+        { label: 'JEWELRY SMART FACTORY', path: '/' },
         { label: 'ORDER TRACKER', path: '/order-tracker' },
-        { label: ordNo || '...' },
+        { label: decodeURIComponent(ordNo ?? '') },
       ]} />
 
-      <div className="content-scrollbar flex-1 overflow-y-auto bg-[var(--color-surface-0)]">
-
-        {/* ─── Header card ─── */}
-        <div style={{
-          padding: '16px 24px',
-          background: 'var(--color-surface-1)',
-          borderBottom: '1px solid var(--color-border-light)',
-        }}>
-          {/* Back + title row */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
-            <button onClick={() => navigate('/order-tracker')} style={{
-              display: 'flex', alignItems: 'center', gap: '4px',
-              background: 'none', border: 'none', cursor: 'pointer',
-              color: 'var(--color-text-tertiary)', fontSize: '0.75rem',
-              padding: '4px 8px', borderRadius: '4px',
-              transition: 'background 0.15s, color 0.15s',
-            }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--color-surface-2)'; (e.currentTarget as HTMLElement).style.color = 'var(--color-text-primary)'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'none'; (e.currentTarget as HTMLElement).style.color = 'var(--color-text-tertiary)'; }}
-            >
-              <ArrowLeft size={13} /> Back
+      <div className="flex-1 overflow-y-auto" style={{ padding: '24px' }}>
+        
+        {/* Action Bar */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <button onClick={() => navigate('/order-tracker')} style={btnStyle('#fff', '#495057')}>
+              <ChevronLeft size={16} /> กลับ
             </button>
-            <div style={{ fontFamily: 'var(--font-logo)', fontSize: '1rem', letterSpacing: '0.15em', color: 'var(--color-brand-500)' }}>
-              {loading ? <Skeleton w="160px" h="20px" /> : h?.OrdNo}
+            <div style={{ padding: '4px 16px', background: '#004b8d', color: '#fff', borderRadius: '8px', fontWeight: 800, fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(0,75,141,0.2)' }}>
+              <FileText size={18} /> ORDER: {decodeURIComponent(ordNo ?? '')}
             </div>
-            <button onClick={load} title="Refresh" style={{
-              marginLeft: 'auto', background: 'none', border: '1px solid var(--color-border-default)',
-              borderRadius: '6px', padding: '4px 8px', cursor: 'pointer', color: 'var(--color-text-secondary',
-              display: 'flex', alignItems: 'center',
-            }}>
-              <RefreshCw size={13} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
-            </button>
           </div>
-
-          {/* Meta grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: '12px' }}>
-            {[
-              { label: 'CUSTOMER',   value: loading ? null : (h?.CustName || h?.CustCode) },
-              { label: 'PO NO',      value: loading ? null : h?.PONo },
-              { label: 'ORDER DATE', value: loading ? null : formatDate(h?.OrdDate ?? null) },
-              { label: 'DUE DATE',   value: loading ? null : formatDate(h?.DueDate ?? null) },
-              { label: 'MATERIAL',   value: loading ? null : (h?.OrdMat || '—') },
-              { label: 'TOTAL QTY',  value: loading ? null : (h?.TotalQty?.toLocaleString() ?? '—') },
-            ].map(({ label, value }) => (
-              <div key={label}>
-                <div style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--color-text-tertiary)', marginBottom: '3px' }}>{label}</div>
-                {value == null ? <Skeleton w="80%" /> : (
-                  <div style={{ fontSize: '0.8rem', color: 'var(--color-text-primary)', fontWeight: 500 }}>{value}</div>
-                )}
-              </div>
-            ))}
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button style={btnStyle('#fff', '#495057')} onClick={load}>
+              <RefreshCw size={14} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} /> รีเฟรช
+            </button>
+            <button style={btnStyle('#1971c2', '#fff')} onClick={() => window.print()}>
+              <Printer size={14} /> พิมพ์รายงาน
+            </button>
           </div>
         </div>
 
-        {/* ─── Error ─── */}
-        {error && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 24px', background: 'oklch(0.28 0.06 25)' }}>
-            <AlertTriangle size={13} style={{ color: 'oklch(0.62 0.20 25)' }} />
-            <span style={{ fontSize: '0.75rem', color: 'oklch(0.80 0.10 25)' }}>{error}</span>
+        {/* ── Order Header Info ── */}
+        {h && (
+          <div style={{ background: '#fff', borderRadius: '12px', border: '1px solid #dee2e6', padding: '20px', marginBottom: '24px', display: 'flex', flexWrap: 'wrap', gap: '24px', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
+            <div style={{ display: 'flex', flex: 1, gap: '24px' }}>
+              <InfoCol label="Customer" value={`${h.CustCode} — ${h.CustName}`} />
+              <InfoCol label="PO No." value={h.PONo || '—'} />
+              <InfoCol label="Material" value={h.OrdMat || '—'} />
+              <InfoCol label="Order Date" value={fDate(h.OrdDate)} />
+              <InfoCol label="Due Date" value={fDate(h.DueDate)} warning />
+            </div>
+            <div style={{ display: 'flex', gap: '24px', borderLeft: '1px solid #e9ecef', paddingLeft: '24px' }}>
+              <InfoCol label="Total Qty" value={fQty(h.TotalQty)} highlight />
+              <InfoCol label={`Amount (${h.CurrCode || '$'})`} value={fAmt(h.TotalAmount)} success />
+            </div>
           </div>
         )}
 
-        {/* ─── Table controls ─── */}
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: '12px',
-          padding: '10px 24px',
-          borderBottom: '1px solid var(--color-border-light)',
-          background: 'var(--color-surface-0)',
-        }}>
-          <div style={{ fontSize: '0.72rem', color: 'var(--color-text-tertiary)' }}>
-            {loading ? '...' : `${lines.length} lines | Qty: ${totalQty.toLocaleString()} | Finished: ${totalFinish.toLocaleString()}`}
+        {/* ── Error ── */}
+        {error && (
+          <div style={{ padding: '16px', background: '#ffe3e3', border: '1px solid #ffc9c9', borderRadius: '8px', marginBottom: '24px', color: '#c92a2a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <AlertTriangle size={18} /> {error}
           </div>
-          <label style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.72rem', color: 'var(--color-text-secondary)' }}>
-            <input
-              type="checkbox"
-              checked={hideFinished}
-              onChange={e => setHideFinished(e.target.checked)}
-              style={{ accentColor: 'var(--color-brand-500)', cursor: 'pointer' }}
-            />
-            ซ่อนงานเสร็จแล้ว
-          </label>
-        </div>
+        )}
 
-        {/* ─── Cards Layout ─── */}
-        <div style={{ padding: '16px 24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {loading ? (
-            Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} style={{ padding: '16px', background: 'var(--color-surface-0)', borderRadius: '12px', border: '1px solid var(--color-border-default)' }}>
-                 <Skeleton h="60px" />
-              </div>
-            ))
-          ) : lines.length === 0 ? (
-            <div style={{ padding: '40px', textAlign: 'center', color: 'var(--color-text-tertiary)', fontSize: '0.8rem', background: 'var(--color-surface-0)', borderRadius: '12px', border: '1px dashed var(--color-border-default)' }}>
-              ไม่มีรายการ{hideFinished ? ' (งานทั้งหมดเสร็จแล้ว)' : ''}
-            </div>
-          ) : lines.map((line) => {
-            const isFinished = line.FinishStatus === 'Y';
-            return (
-              <div
-                key={line.LineNo}
-                style={{
-                  background: 'var(--color-surface-0)',
-                  borderRadius: '12px',
-                  border: isFinished ? '1px solid oklch(0.70 0.16 150 / 0.4)' : '1px solid var(--color-border-default)',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
-                  overflow: 'hidden',
-                  opacity: isFinished ? 0.7 : 1,
-                  display: 'flex',
-                  flexDirection: 'column',
-                }}
-              >
-                {/* แถบด้านบน: ข้อมูลสินค้า */}
-                <div style={{ 
-                  display: 'flex', 
-                  flexWrap: 'wrap',
-                  gap: '16px', 
-                  padding: '16px', 
-                  borderBottom: '1px solid var(--color-border-light)' 
-                }}>
-                  {/* รูปภาพสินค้า */}
-                  <div style={{ 
-                    width: '80px', height: '80px', flexShrink: 0,
-                    background: 'var(--color-surface-1)', borderRadius: '8px', overflow: 'hidden',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    border: '1px solid var(--color-border-light)'
-                  }}>
-                    {line.ItemPhoto ? (
-                      <img src={line.ItemPhoto} alt={line.ItemNo} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    ) : (
-                      <ImageIcon size={24} style={{ color: 'var(--color-text-tertiary)' }} />
-                    )}
-                  </div>
+        {/* ── Items List ── */}
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '40px', color: '#adb5bd' }}>กำลังโหลดข้อมูล...</div>
+        ) : detail?.lines.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '40px', color: '#adb5bd', background: '#fff', borderRadius: '12px', border: '1px solid #dee2e6' }}>ไม่พบข้อมูลรายการสินค้า</div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {detail?.lines.map(line => (
+              <div key={line.LineNo} style={{ background: '#fff', borderRadius: '12px', border: '1px solid #dee2e6', overflow: 'hidden', display: 'flex', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+                
+                {/* Photo */}
+                <div style={{ width: '160px', background: '#f8f9fa', borderRight: '1px solid #dee2e6', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+                  {line.ItemPhoto ? (
+                    <img src={line.ItemPhoto} alt={line.ItemNo} style={{ width: '100%', height: '100%', objectFit: 'contain', mixBlendMode: 'darken' }} />
+                  ) : (
+                    <div style={{ textAlign: 'center', color: '#adb5bd' }}>
+                      <ImageIcon size={32} style={{ margin: '0 auto', marginBottom: '8px' }} />
+                      <div style={{ fontSize: '0.7rem' }}>No Image</div>
+                    </div>
+                  )}
+                </div>
 
-                  {/* รายละเอียด */}
-                  <div style={{ flex: 1, minWidth: '200px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <div>
-                        <div style={{ display: 'inline-block', padding: '2px 6px', background: 'var(--color-surface-2)', color: 'var(--color-text-secondary)', fontSize: '0.65rem', fontWeight: 700, borderRadius: '4px', marginBottom: '4px' }}>
-                          LINE {line.LineNo}
-                        </div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--color-brand-600)', fontFamily: 'var(--font-logo)' }}>
-                          {line.ItemNo}
-                        </div>
-                        <div style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', marginTop: '2px' }}>
-                          {line.ItemDesc || 'No Description'}
-                        </div>
-                      </div>
-                      
-                      {/* ยอดรวม */}
-                      <div style={{ textAlign: 'right', background: 'var(--color-surface-1)', padding: '8px 12px', borderRadius: '8px' }}>
-                        <div style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--color-text-tertiary)', letterSpacing: '0.05em' }}>TOTAL QTY</div>
-                        <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--color-text-primary)' }}>
-                          {line.Qty?.toLocaleString() ?? '—'}
-                        </div>
-                        <div style={{ fontSize: '0.65rem', color: isFinished ? 'oklch(0.70 0.16 150)' : 'var(--color-text-secondary)', marginTop: '2px' }}>
-                          Finished: {line.FinishQty ? line.FinishQty.toLocaleString() : '0'}
-                        </div>
-                      </div>
+                {/* Details */}
+                <div style={{ flex: 1, padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                    <div>
+                      <div style={{ fontSize: '0.75rem', color: '#868e96', fontWeight: 700, marginBottom: '4px' }}>LINE {line.LineNo}</div>
+                      <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#004b8d', marginBottom: '4px' }}>{line.ItemNo}</div>
+                      <div style={{ fontSize: '0.85rem', color: '#495057' }}>{line.ItemDesc || '—'}</div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: '0.75rem', color: '#868e96', fontWeight: 700, marginBottom: '4px' }}>QTY / AMOUNT</div>
+                      <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1971c2' }}>{fQty(line.Qty)}</div>
+                      <div style={{ fontSize: '0.85rem', color: '#099268', fontWeight: 700 }}>{fAmt(line.Amount)}</div>
                     </div>
                   </div>
-                </div>
 
-                {/* แถบด้านล่าง: Production Kanban Flow */}
-                <div style={{ padding: '16px', background: 'var(--color-surface-0)' }}>
-                  <div style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--color-text-tertiary)', letterSpacing: '0.05em', marginBottom: '8px' }}>
-                    PRODUCTION STATUS (PENDING QTY)
+                  <div style={{ display: 'flex', gap: '24px', marginBottom: '16px', fontSize: '0.8rem' }}>
+                    <div><span style={{ color: '#868e96' }}>Material:</span> <b style={{ color: '#212529' }}>{line.ItemMat || '—'}</b></div>
+                    <div><span style={{ color: '#868e96' }}>Size:</span> <b style={{ color: '#212529' }}>{line.ItemSize || '—'}</b></div>
+                    <div><span style={{ color: '#868e96' }}>Status:</span> <b style={{ color: line.ItemStatus === 'Y' ? '#2b8a3e' : '#e67700' }}>{line.ItemStatus === 'Y' ? 'Done' : 'Pending'}</b></div>
+                    <div><span style={{ color: '#868e96' }}>Finish Qty:</span> <b style={{ color: line.FinishQty === line.Qty ? '#2b8a3e' : '#212529' }}>{fQty(line.FinishQty)}</b></div>
                   </div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                    {PROCESSES.map(p => (
-                      <ProcessBadge key={p.key} label={p.label} proc={line.processes[p.key as ProcessKey]} totalQty={line.Qty} />
-                    ))}
-                    {PROCESSES.every(p => !line.processes[p.key as ProcessKey]?.qty) && (
-                      <div style={{ fontSize: '0.8rem', color: 'var(--color-text-tertiary)', padding: '8px' }}>
-                        No active production processes.
-                      </div>
-                    )}
-                  </div>
+
+                  {/* Production Tracker */}
+                  <StepTracker processes={line.processes} />
                 </div>
               </div>
-            );
-          })}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
       <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
-    </>
+    </div>
   );
+}
+
+// ─── Component Helpers ───
+
+function InfoCol({ label, value, highlight, warning, success }: any) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+      <span style={{ fontSize: '0.65rem', color: '#868e96', fontWeight: 700, textTransform: 'uppercase' }}>{label}</span>
+      <span style={{ 
+        fontSize: '1rem', 
+        fontWeight: highlight || warning || success ? 800 : 600, 
+        color: warning ? '#e03131' : success ? '#099268' : highlight ? '#1971c2' : '#212529' 
+      }}>
+        {value}
+      </span>
+    </div>
+  );
+}
+
+function btnStyle(bg: string, color: string): React.CSSProperties {
+  return {
+    display: 'flex', alignItems: 'center', gap: '6px',
+    padding: '8px 16px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 700,
+    border: bg === '#fff' ? '1px solid #ced4da' : 'none',
+    background: bg, color: color,
+    cursor: 'pointer', transition: 'all 0.2s',
+    boxShadow: bg === '#fff' ? '0 2px 4px rgba(0,0,0,0.02)' : '0 2px 6px rgba(25,113,194,0.3)'
+  };
 }

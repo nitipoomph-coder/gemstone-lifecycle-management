@@ -118,7 +118,7 @@ export default function Topbar({ breadcrumb }: TopbarProps) {
           >
             <Palette size={18} />
           </button>
-          
+
           {showThemeMenu && (
             <div className="absolute right-0 mt-2 w-48 rounded-xl border border-[var(--color-border-light)] bg-[var(--color-surface-1)] p-2 shadow-lg z-[100] animate-fade-in-up">
               <div className="mb-2 px-2 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-tertiary)]">

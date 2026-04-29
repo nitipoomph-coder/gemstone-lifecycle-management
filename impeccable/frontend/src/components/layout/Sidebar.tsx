@@ -74,9 +74,9 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
           <div
             className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold text-[var(--color-sidebar-text-active)]"
             style={{ background: 'var(--color-sidebar-hover)' }}
-            title="สมชาย วงศ์อัญมณี — ฝ่ายจัดซื้อ"
+            title="มหาเศรษฐี ศรีมงคล — ฝ่ายขาย"
           >
-            สม
+            อิชิ
           </div>
         </div>
       </aside>
@@ -96,7 +96,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
           className="min-w-0 flex-1 text-left transition-opacity hover:opacity-80"
         >
           <div
-            className="truncate text-[18px] font-bold tracking-wider text-[var(--color-brand-400)]"
+            className="truncate text-[18px] font-bold tracking-wider text-[var(--color-brand-600)]"
             style={{ fontFamily: 'var(--font-logo)', lineHeight: '1.1' }}
           >
             JEWELRY
@@ -138,13 +138,13 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-[var(--color-sidebar-text-active)]"
           style={{ background: 'var(--color-sidebar-hover)' }}
         >
-          สม
+          อิชิ
         </div>
         <div className="min-w-0 flex-1">
           <div className="truncate text-[13px] font-medium text-[var(--color-sidebar-text-active)]">
-            สมชาย วงศ์อัญมณี
+            มหาเศรษฐี ศรีมงคล
           </div>
-          <div className="text-[11px] text-[var(--color-sidebar-text)] opacity-60">ฝ่ายจัดซื้อ</div>
+          <div className="text-[11px] text-[var(--color-sidebar-text)] opacity-60">ฝ่ายขาย</div>
         </div>
       </div>
     </aside>

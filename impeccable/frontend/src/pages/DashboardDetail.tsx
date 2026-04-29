@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import Topbar from '../components/layout/Topbar';
 import { fetchDashboardData, type DashboardData } from '../services/dashboardAPI';
 import { AlertTriangle, RefreshCw, ArrowLeft } from 'lucide-react';
@@ -13,6 +13,8 @@ const shimmerStyle: React.CSSProperties = {
 
 export default function DashboardDetail() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { category, value } = (location.state as { category?: string; value?: string | number }) || {};
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentDate, setCurrentDate] = useState<string>('');
@@ -35,10 +37,10 @@ export default function DashboardDetail() {
     loadData();
     const timer = setInterval(() => {
       const now = new Date();
-      const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+      const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
       setCurrentDate(
-        `${now.getDate().toString().padStart(2,'0')} ${months[now.getMonth()]} ${now.getFullYear()} | ` +
-        `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`
+        `${now.getDate().toString().padStart(2, '0')} ${months[now.getMonth()]} ${now.getFullYear()} | ` +
+        `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`
       );
     }, 1000);
     return () => clearInterval(timer);
@@ -108,13 +110,13 @@ export default function DashboardDetail() {
       <Topbar breadcrumb={[
         { label: 'JEWELRY SMART FACTORY', path: '/' },
         { label: 'DASHBOARD', path: '/' },
-        { label: 'DETAIL VIEW' }
+        { label: category || 'DETAIL VIEW' }
       ]} />
       <div className="content-scrollbar flex-1 overflow-y-auto bg-[var(--color-surface-0)] p-6">
         <div className="mx-auto flex flex-col gap-4 max-w-[1400px]">
-          
-          <button 
-            onClick={() => navigate(-1)} 
+
+          <button
+            onClick={() => navigate(-1)}
             className="self-start flex items-center gap-2 text-sm font-bold text-[var(--color-text-tertiary)] hover:text-[var(--color-brand-600)] transition-colors mb-2"
           >
             <ArrowLeft size={16} /> ย้อนกลับ (Back)
@@ -124,9 +126,11 @@ export default function DashboardDetail() {
           <div className="flex items-end justify-between border-b-[3px] border-[var(--color-brand-600)] pb-4">
             <div>
               <h1 className="text-3xl font-bold tracking-widest text-[var(--color-text-primary)]" style={{ fontFamily: 'var(--font-logo)' }}>
-                DETAIL DASHBOARD
+                {category || 'DETAIL DASHBOARD'}
               </h1>
-              <p className="mt-1 text-sm text-[var(--color-text-tertiary)]">หน้ารายละเอียดเชิงลึก (Mockup)</p>
+              <p className="mt-1 text-sm text-[var(--color-text-tertiary)]">
+                {category ? `แสดงรายละเอียดสำหรับ ${category} (ค่าปัจจุบัน: ${value})` : 'หน้ารายละเอียดเชิงลึก (Mockup)'}
+              </p>
             </div>
             <div className="text-right">
               <div className="text-xs font-mono text-[var(--color-text-tertiary)] mb-1">{currentDate}</div>

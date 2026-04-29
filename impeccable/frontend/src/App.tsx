@@ -4,8 +4,9 @@ import Dashboard from './pages/Dashboard';
 import DashboardDetail from './pages/DashboardDetail';
 import SIRPage from './pages/SIRPage';
 import SIMPage from './pages/SIMPage';
-import OrderTrackerPage from './pages/OrderTrackerPage';
+import OrderTrackerAdvanced from './pages/OrderTrackerAdvanced';
 import OrderDetailPage from './pages/OrderDetailPage';
+import ItemDetailPage from './pages/ItemDetailPage';
 import PlaceholderPage from './pages/PlaceholderPage';
 
 export default function App() {
@@ -55,8 +56,12 @@ export default function App() {
           <Route path="/spare-parts/check-status" element={<PlaceholderPage />} />
 
           {/* Order Tracker */}
-          <Route path="/order-tracker" element={<OrderTrackerPage />} />
+          <Route path="/order-tracker" element={<OrderTrackerAdvanced />} />
+          <Route path="/order-tracker/po/:poNo" element={<OrderDetailPage />} />
+          <Route path="/order-tracker/ord/:ordNo" element={<OrderDetailPage />} />
+          {/* legacy compat */}
           <Route path="/order-tracker/:ordNo" element={<OrderDetailPage />} />
+          <Route path="/item-detail/:id" element={<ItemDetailPage />} />
 
           {/* Fallback */}
           <Route path="*" element={<PlaceholderPage />} />

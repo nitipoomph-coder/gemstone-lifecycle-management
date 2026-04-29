@@ -126,9 +126,30 @@ export async function fetchOrders(params?: {
   return { data: json.data ?? [], count: json.count ?? 0 };
 }
 
-// ─── fetchOrderDetail ─────────────────────────────────────────────────────────
+// ─── fetchOrderDetail (by OrdNo) ──────────────────────────────────────────────
 export async function fetchOrderDetail(ordNo: string): Promise<OrderDetail> {
   const res = await fetch(`${BASE_URL}/orders/${encodeURIComponent(ordNo)}`);
   if (!res.ok) throw new Error(`API error: ${res.status}`);
+  return await res.json();
+}
+
+// ─── fetchOrderByPo (by PONo) ─────────────────────────────────────────────────
+// Key หลัก — ดึงทุก OrdNo ใต้ PONo เดียวกัน
+export interface OrderDetailByPo {
+  ok: boolean;
+  header: OrderHeader & {
+    PONo: string;
+    OrdNos: string[];    // รายการ OrdNo ทั้งหมดใต้ PO นี้
+    OrdKind: string | null;
+    Week: string | null;
+  };
+  lines: (OrderLine & { OrdNo: string })[];
+  lineCount: number;
+  ordCount: number;
+}
+
+export async function fetchOrderByPo(poNo: string): Promise<OrderDetailByPo> {
+  const res = await fetch(`${BASE_URL}/orders/by-po/${encodeURIComponent(poNo)}`);
+  if (!res.ok) throw new Error(`API error ${res.status} — PO "${poNo}" not found`);
   return await res.json();
 }

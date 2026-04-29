@@ -1,6 +1,6 @@
 // src/services/orderTrackerAPI.ts
 
-const BASE_URL = 'https://shaky-rivers-teach.loca.lt';
+const BASE_URL = 'https://shaky-rivers-teach.loca.lt/api';
 
 export interface OrderSummary {
   // ── existing ──────────────────────────────────────────────

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Topbar from '../components/layout/Topbar';
-import { fetchDashboardData, type DashboardData } from '../services/dashboardAPI';
+import { fetchDashboardData } from '../services/dashboardAPI';
 import { AlertTriangle, RefreshCw, ArrowLeft } from 'lucide-react';
 
 const shimmerStyle: React.CSSProperties = {

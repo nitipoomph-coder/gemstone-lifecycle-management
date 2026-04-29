@@ -9,7 +9,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { ChevronLeft, Printer, RefreshCw, AlertTriangle, Image as ImageIcon, Edit2, Trash2 } from 'lucide-react';
 import Topbar from '../components/layout/Topbar';
-import { fetchOrderDetail, type OrderDetail, type OrderLine } from '../services/orderTrackerAPI';
+import { fetchOrderDetail, type OrderDetail } from '../services/orderTrackerAPI';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function fDate(d: string | null | undefined) {
@@ -132,7 +132,7 @@ const COL_GROUPS = [
   },
 ];
 
-const ALL_COLS = COL_GROUPS.flatMap(g => g.cols);
+// const ALL_COLS = COL_GROUPS.flatMap(g => g.cols);
 
 // ─── Shared cell style ────────────────────────────────────────────────────────
 const TD: React.CSSProperties = {

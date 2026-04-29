@@ -1,9 +1,9 @@
 // src/pages/OrderDetailPage.tsx
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Printer, RefreshCw, AlertTriangle, Image as ImageIcon, FileText, CheckCircle2, Box, Scissors, Gem, Droplet, Sun, Layers, ShieldCheck, Package } from 'lucide-react';
+import { ChevronLeft, Printer, RefreshCw, AlertTriangle, Image as ImageIcon, FileText, Box, Scissors, Gem, Droplet, Sun, Layers, ShieldCheck, Package } from 'lucide-react';
 import Topbar from '../components/layout/Topbar';
-import { fetchOrderDetail, type OrderDetail, type OrderLine } from '../services/orderTrackerAPI';
+import { fetchOrderDetail, type OrderDetail } from '../services/orderTrackerAPI';
 
 // ─── Helpers ───
 function fDate(d: string | null | undefined) {

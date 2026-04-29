@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Topbar from '../components/layout/Topbar';
-import { ChevronLeft, Printer, Image as ImageIcon, CheckCircle, FileText, Settings, Layers, Hash, Calendar, DollarSign, Box } from 'lucide-react';
+import { ChevronLeft, Printer, Image as ImageIcon, CheckCircle, FileText, Settings, Layers, Hash, Box } from 'lucide-react';
 
 export default function ItemDetailPage() {
   const { id } = useParams<{ id: string }>();

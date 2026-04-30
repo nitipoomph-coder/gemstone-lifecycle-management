@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Anuphan:wght@300;400;500;600;700&family=Bai+Jamjuree:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&family=Prompt:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap');
 @import "tailwindcss";
 
@@ -65,8 +65,8 @@
 
   /* Fonts */
   --font-logo: 'Cinzel', serif;
-  --font-display: 'Anuphan', sans-serif;
-  --font-body: 'Bai Jamjuree', sans-serif;
+  --font-display: 'Kanit', sans-serif;
+  --font-body: 'Prompt', sans-serif;
 }
 
 @layer base {

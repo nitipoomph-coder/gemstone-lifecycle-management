@@ -38,17 +38,17 @@ export interface DashboardData {
   materialAlerts: MaterialAlert[];
 }
 
+import { BASE_URL } from './orderTrackerAPI';
+
 /**
- * ฟังก์ชันจำลองการดึงข้อมูลผ่าน API
- * เมื่อหลังบ้าน (VB.net 2008) พร้อม สามารถเปลี่ยนโค้ดตรงนี้ไปใช้ fetch() หรือ axios เพื่อยิงเข้า API จริงได้เลย
+ * ฟังก์ชันดึงข้อมูลผ่าน API จากฐานข้อมูลจริง
  */
 export const fetchDashboardData = async (): Promise<DashboardData> => {
-  // Use the same base url as orderTrackerAPI or window.location.origin
-  // To avoid hardcoding, we can construct it or just hardcode the localtunnel for now,
-  // but it's better to export BASE_URL from a central config. For now, we will use the localtunnel URL.
-  const BASE_URL = 'https://shaky-rivers-teach.loca.lt/api';
-  
-  const res = await fetch(`${BASE_URL}/dashboard`);
+  const res = await fetch(`${BASE_URL}/dashboard`, {
+    headers: {
+      'bypass-tunnel-reminder': 'true' // For localtunnel bypass
+    }
+  });
   if (!res.ok) throw new Error(`Dashboard API error: ${res.status}`);
   return await res.json();
 };

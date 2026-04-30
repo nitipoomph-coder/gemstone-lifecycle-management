@@ -1,6 +1,7 @@
 // src/services/orderTrackerAPI.ts
 
-const BASE_URL = 'https://shaky-rivers-teach.loca.lt/api';
+const isLocal = typeof window !== 'undefined' && window.location.hostname === 'localhost';
+export const BASE_URL = isLocal ? 'http://localhost:3001/api' : 'https://fresh-camels-change.loca.lt/api';
 
 export interface OrderSummary {
   // ── existing ──────────────────────────────────────────────
@@ -119,7 +120,9 @@ export async function fetchOrders(params?: {
   if (params?.dateFrom) qs.set('dateFrom', params.dateFrom);
   if (params?.dateTo) qs.set('dateTo', params.dateTo);
 
-  const res = await fetch(`${BASE_URL}/orders?${qs}`);
+  const res = await fetch(`${BASE_URL}/orders?${qs}`, {
+    headers: { 'bypass-tunnel-reminder': 'true' }
+  });
   if (!res.ok) throw new Error(`API error: ${res.status}`);
   const json = await res.json();
   // backend ส่ง { ok, data, count }
@@ -128,7 +131,9 @@ export async function fetchOrders(params?: {
 
 // ─── fetchOrderDetail (by OrdNo) ──────────────────────────────────────────────
 export async function fetchOrderDetail(ordNo: string): Promise<OrderDetail> {
-  const res = await fetch(`${BASE_URL}/orders/${encodeURIComponent(ordNo)}`);
+  const res = await fetch(`${BASE_URL}/orders/${encodeURIComponent(ordNo)}`, {
+    headers: { 'bypass-tunnel-reminder': 'true' }
+  });
   if (!res.ok) throw new Error(`API error: ${res.status}`);
   return await res.json();
 }
@@ -149,7 +154,9 @@ export interface OrderDetailByPo {
 }
 
 export async function fetchOrderByPo(poNo: string): Promise<OrderDetailByPo> {
-  const res = await fetch(`${BASE_URL}/orders/by-po/${encodeURIComponent(poNo)}`);
+  const res = await fetch(`${BASE_URL}/orders/by-po/${encodeURIComponent(poNo)}`, {
+    headers: { 'bypass-tunnel-reminder': 'true' }
+  });
   if (!res.ok) throw new Error(`API error ${res.status} — PO "${poNo}" not found`);
   return await res.json();
 }

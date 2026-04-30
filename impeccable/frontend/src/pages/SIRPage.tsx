@@ -2,7 +2,25 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Trash2, Printer, Save } from 'lucide-react';
 import Topbar from '../components/layout/Topbar';
-import { mockSIRDocList, mockSIRDocument } from '../services/mockData';
+const mockSIRDocList = [
+  { docNumber: 'SIR2406-0001', date: '01/06/2024' },
+  { docNumber: 'SIR2406-0002', date: '02/06/2024' },
+];
+
+const mockSIRDocument = {
+  docNumber: 'SIR2406-0001',
+  date: '2024-06-01',
+  refNumber: 'SRA2405-0120',
+  category: 'A',
+  supplierCode: 'V-001',
+  supplierName: 'ABC Gems Co., Ltd.',
+  currency: 'THB — บาท',
+  exchangeRate: 1.0,
+  items: [
+    { seq: 1, stoneCode: 'RUBY-01', unit: 'ct', grade: 'A', weight: 1.5, returnQty: 10, price: 500, total: 5000, warehouse: 'W01' },
+    { seq: 2, stoneCode: 'SAPPHIRE-02', unit: 'ct', grade: 'B', weight: 2.0, returnQty: 5, price: 800, total: 4000, warehouse: 'W01' },
+  ]
+};
 
 export default function SIRPage() {
   const navigate = useNavigate();

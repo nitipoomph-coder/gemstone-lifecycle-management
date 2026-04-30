@@ -50,10 +50,12 @@ export default function Dashboard() {
   // ─── Phase 1 + 2: Logo animation + Skeleton (data loading) ───────────────
   if (loading) {
     return (
-      <div
-        className="flex h-full w-full flex-col p-6"
-        style={{ background: 'var(--color-surface-0)' }}
-      >
+      <>
+        <Topbar breadcrumb={[{ label: 'JEWELRY SMART FACTORY', path: '/' }, { label: 'DASHBOARD' }]} />
+        <div
+          className="flex h-full w-full flex-col p-6"
+          style={{ background: 'var(--color-surface-0)' }}
+        >
         <div className="mx-auto w-full max-w-[1400px]">
           {/* Header Skeleton */}
           <div className="mb-6 flex items-end justify-between border-b-[3px] border-[var(--color-border-light)] pb-4">
@@ -89,27 +91,30 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+      </>
     );
   }
 
   // ─── Error state ──────────────────────────────────────────────────────────
   if (error) {
     return (
-      <div
-        className="flex h-full w-full flex-col items-center justify-center gap-6"
-        style={{ background: 'oklch(0.18 0.03 250)' }}
-      >
+      <>
+        <Topbar breadcrumb={[{ label: 'JEWELRY SMART FACTORY', path: '/' }, { label: 'DASHBOARD' }]} />
+        <div
+          className="flex h-full w-full flex-col items-center justify-center gap-6"
+          style={{ background: 'var(--color-surface-0)' }}
+        >
         <div className="flex flex-col items-center gap-4 text-center">
           <div
             className="flex h-14 w-14 items-center justify-center rounded-full"
-            style={{ background: 'oklch(0.30 0.08 25)' }}
+            style={{ background: 'var(--color-danger-50)' }}
           >
-            <AlertTriangle size={26} style={{ color: 'oklch(0.62 0.20 25)' }} />
+            <AlertTriangle size={26} style={{ color: 'var(--color-danger-500)' }} />
           </div>
-          <div style={{ fontFamily: 'var(--font-logo)', fontSize: '0.8rem', letterSpacing: '0.2em', color: 'oklch(0.62 0.20 25)' }}>
+          <div style={{ fontFamily: 'var(--font-logo)', fontSize: '0.8rem', letterSpacing: '0.2em', color: 'var(--color-danger-500)' }}>
             CONNECTION ERROR
           </div>
-          <p style={{ fontSize: '0.85rem', color: 'oklch(0.75 0.02 250)', maxWidth: '320px', lineHeight: '1.6' }}>
+          <p style={{ fontSize: '0.85rem', color: 'var(--color-text-tertiary)', maxWidth: '320px', lineHeight: '1.6' }}>
             {error}
           </p>
         </div>
@@ -117,8 +122,8 @@ export default function Dashboard() {
           onClick={loadData}
           className="flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold transition-all hover:opacity-80 active:scale-95"
           style={{
-            background: 'oklch(0.68 0.14 245)',
-            color: 'oklch(0.15 0.02 250)',
+            background: 'var(--color-brand-600)',
+            color: 'var(--color-text-inverse)',
             fontFamily: 'var(--font-display)',
           }}
         >
@@ -126,6 +131,7 @@ export default function Dashboard() {
           ลองใหม่อีกครั้ง
         </button>
       </div>
+      </>
     );
   }
 

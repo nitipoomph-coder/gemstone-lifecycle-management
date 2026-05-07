@@ -38,10 +38,10 @@ export default function Dashboard() {
     loadData();
     const timer = setInterval(() => {
       const now = new Date();
-      const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+      const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
       setCurrentDate(
-        `${now.getDate().toString().padStart(2,'0')} ${months[now.getMonth()]} ${now.getFullYear()} | ` +
-        `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`
+        `${now.getDate().toString().padStart(2, '0')} ${months[now.getMonth()]} ${now.getFullYear()} | ` +
+        `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`
       );
     }, 1000);
     return () => clearInterval(timer);
@@ -56,41 +56,41 @@ export default function Dashboard() {
           className="flex h-full w-full flex-col p-6"
           style={{ background: 'var(--color-surface-0)' }}
         >
-        <div className="mx-auto w-full max-w-[1400px]">
-          {/* Header Skeleton */}
-          <div className="mb-6 flex items-end justify-between border-b-[3px] border-[var(--color-border-light)] pb-4">
-            <div>
-              <div style={{ height: '36px', width: '300px', ...shimmerStyle }} className="mb-2" />
-              <div style={{ height: '20px', width: '150px', ...shimmerStyle }} />
+          <div className="mx-auto w-full max-w-[1400px]">
+            {/* Header Skeleton */}
+            <div className="mb-6 flex items-end justify-between border-b-[3px] border-[var(--color-border-light)] pb-4">
+              <div>
+                <div style={{ height: '36px', width: '300px', ...shimmerStyle }} className="mb-2" />
+                <div style={{ height: '20px', width: '150px', ...shimmerStyle }} />
+              </div>
+              <div className="flex flex-col items-end gap-2">
+                <div style={{ height: '16px', width: '120px', ...shimmerStyle }} />
+                <div style={{ height: '26px', width: '200px', ...shimmerStyle }} />
+              </div>
             </div>
-            <div className="flex flex-col items-end gap-2">
-              <div style={{ height: '16px', width: '120px', ...shimmerStyle }} />
-              <div style={{ height: '26px', width: '200px', ...shimmerStyle }} />
+
+            {/* Stats Row Skeleton */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: '1rem', marginBottom: '1rem' }}>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} style={{ height: '96px', ...shimmerStyle }} />
+              ))}
             </div>
-          </div>
 
-          {/* Stats Row Skeleton */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: '1rem', marginBottom: '1rem' }}>
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} style={{ height: '96px', ...shimmerStyle }} />
-            ))}
-          </div>
+            {/* Middle Row Skeleton */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.5fr', gap: '1rem', marginBottom: '1rem' }}>
+              {[140, 140, 180].map((h, i) => (
+                <div key={i} style={{ height: `${h}px`, ...shimmerStyle }} />
+              ))}
+            </div>
 
-          {/* Middle Row Skeleton */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.5fr', gap: '1rem', marginBottom: '1rem' }}>
-            {[140, 140, 180].map((h, i) => (
-              <div key={i} style={{ height: `${h}px`, ...shimmerStyle }} />
-            ))}
-          </div>
-
-          {/* Bottom Row Skeleton */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '1rem' }}>
-            {[160, 160].map((h, i) => (
-              <div key={i} style={{ height: `${h}px`, ...shimmerStyle }} />
-            ))}
+            {/* Bottom Row Skeleton */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '1rem' }}>
+              {[160, 160].map((h, i) => (
+                <div key={i} style={{ height: `${h}px`, ...shimmerStyle }} />
+              ))}
+            </div>
           </div>
         </div>
-      </div>
       </>
     );
   }
@@ -104,33 +104,33 @@ export default function Dashboard() {
           className="flex h-full w-full flex-col items-center justify-center gap-6"
           style={{ background: 'var(--color-surface-0)' }}
         >
-        <div className="flex flex-col items-center gap-4 text-center">
-          <div
-            className="flex h-14 w-14 items-center justify-center rounded-full"
-            style={{ background: 'var(--color-danger-50)' }}
+          <div className="flex flex-col items-center gap-4 text-center">
+            <div
+              className="flex h-14 w-14 items-center justify-center rounded-full"
+              style={{ background: 'var(--color-danger-50)' }}
+            >
+              <AlertTriangle size={26} style={{ color: 'var(--color-danger-500)' }} />
+            </div>
+            <div style={{ fontFamily: 'var(--font-logo)', fontSize: '0.8rem', letterSpacing: '0.2em', color: 'var(--color-danger-500)' }}>
+              CONNECTION ERROR
+            </div>
+            <p style={{ fontSize: '0.85rem', color: 'var(--color-text-tertiary)', maxWidth: '320px', lineHeight: '1.6' }}>
+              {error}
+            </p>
+          </div>
+          <button
+            onClick={loadData}
+            className="flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold transition-all hover:opacity-80 active:scale-95"
+            style={{
+              background: 'var(--color-brand-600)',
+              color: 'var(--color-text-inverse)',
+              fontFamily: 'var(--font-display)',
+            }}
           >
-            <AlertTriangle size={26} style={{ color: 'var(--color-danger-500)' }} />
-          </div>
-          <div style={{ fontFamily: 'var(--font-logo)', fontSize: '0.8rem', letterSpacing: '0.2em', color: 'var(--color-danger-500)' }}>
-            CONNECTION ERROR
-          </div>
-          <p style={{ fontSize: '0.85rem', color: 'var(--color-text-tertiary)', maxWidth: '320px', lineHeight: '1.6' }}>
-            {error}
-          </p>
+            <RefreshCw size={14} />
+            ลองใหม่อีกครั้ง
+          </button>
         </div>
-        <button
-          onClick={loadData}
-          className="flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold transition-all hover:opacity-80 active:scale-95"
-          style={{
-            background: 'var(--color-brand-600)',
-            color: 'var(--color-text-inverse)',
-            fontFamily: 'var(--font-display)',
-          }}
-        >
-          <RefreshCw size={14} />
-          ลองใหม่อีกครั้ง
-        </button>
-      </div>
       </>
     );
   }
@@ -146,37 +146,61 @@ export default function Dashboard() {
         <div className="mx-auto flex flex-col gap-4 max-w-[1400px]">
 
           {/* Header */}
-          <div className="flex items-end justify-between border-b-[3px] border-[var(--color-brand-600)] pb-4">
+          <div className="flex items-end justify-between border-b-2 border-[var(--color-border-light)] pb-6 mb-2">
             <div>
-              <h1 className="text-3xl font-bold tracking-widest text-[var(--color-text-primary)]" style={{ fontFamily: 'var(--font-logo)' }}>
-                PRODUCTION OVERVIEW
+              <h1 className="text-3xl font-extrabold tracking-tight text-[var(--color-text-primary)]" style={{ fontFamily: 'var(--font-display)' }}>
+                PRODUCTION <span className="text-[var(--color-brand-500)]">OVERVIEW</span>
               </h1>
-              <p className="mt-1 text-sm text-[var(--color-text-tertiary)]">ภาพรวมการผลิต</p>
+              <p className="mt-1 text-sm font-semibold text-[var(--color-text-tertiary)] uppercase tracking-[0.1em]">Jewelry Manufacturing Intelligence</p>
             </div>
             <div className="text-right">
-              <div className="text-xs font-mono text-[var(--color-text-tertiary)] mb-1">{currentDate}</div>
-              <div className="text-[26px] font-bold tracking-[0.15em] text-[var(--color-brand-500)] leading-none" style={{ fontFamily: 'var(--font-logo)' }}>
-                JEWELRY <span className="text-[12px] font-sans tracking-[0.25em] text-[var(--color-text-secondary)] align-middle">SMART FACTORY</span>
+              <div className="text-[0.65rem] font-bold text-[var(--color-text-tertiary)] uppercase tracking-[0.15em] mb-1">{currentDate}</div>
+              <div className="text-[20px] font-black tracking-tight text-[var(--color-text-primary)] leading-none" style={{ fontFamily: 'var(--font-display)' }}>
+                IMPECCABLE <span className="text-[10px] font-bold tracking-[0.3em] text-[var(--color-brand-500)] align-middle ml-1">SYSTEMS</span>
               </div>
             </div>
           </div>
 
           {/* Stats Row */}
-          <div className="grid grid-cols-5 gap-4">
+          <div className="grid grid-cols-5 gap-5">
             {data!.productionStats.map((stat, i) => (
               <div
                 key={i}
                 onClick={() => navigate('/dashboard/detail')}
-                className={`cursor-pointer hover:-translate-y-1 hover:shadow-lg transition-all duration-300 relative flex flex-col justify-between p-4 border bg-[var(--color-surface-1)] ${stat.isAlert ? 'border-[var(--color-danger-500)]' : 'border-[var(--color-border-strong)]'}`}
-                style={{ borderRadius: '2px', borderTopWidth: '4px', borderTopColor: stat.isAlert ? 'var(--color-danger-500)' : 'var(--color-border-strong)' }}
+                className="group animate-fade-in-up"
+                style={{ 
+                  background: 'var(--color-surface-0)', 
+                  padding: '24px', 
+                  borderRadius: '24px', 
+                  border: `1px solid ${stat.isAlert ? 'var(--color-danger-200)' : 'var(--color-border-light)'}`, 
+                  display: 'flex', 
+                  flexDirection: 'column',
+                  gap: '16px', 
+                  cursor: 'pointer', 
+                  boxShadow: '0 4px 20px -4px rgba(0,0,0,0.04)',
+                  transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+                  animationDelay: `${i * 100}ms`
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.transform = 'translateY(-6px)';
+                  e.currentTarget.style.boxShadow = '0 12px 30px -8px rgba(0,0,0,0.1)';
+                  if (stat.isAlert) e.currentTarget.style.borderColor = 'var(--color-danger-400)';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 20px -4px rgba(0,0,0,0.04)';
+                  if (stat.isAlert) e.currentTarget.style.borderColor = 'var(--color-danger-200)';
+                }}
               >
-                <div className="text-xs font-bold tracking-widest text-[var(--color-text-tertiary)] flex justify-between items-center">
-                  <span>{stat.label}</span>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--color-text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{stat.label}</span>
                   {stat.isAlert && <span className="flex h-2 w-2 rounded-full bg-[var(--color-danger-500)] animate-pulse" />}
                 </div>
-                <div className="mt-4 flex items-end justify-between">
-                  <div className={`text-[2.2rem] font-bold leading-none ${stat.isAlert ? 'text-[var(--color-danger-100)]' : 'text-[var(--color-text-primary)]'}`} style={{ fontFamily: 'var(--font-logo)' }}>{stat.value}</div>
-                  <div className={`text-xs font-mono font-bold ${stat.trend === 'up' || stat.trend === 'good' ? 'text-[var(--color-success-500)]' : 'text-[var(--color-danger-500)]'}`}>{stat.change}</div>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                  <span style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--color-text-primary)', fontFamily: 'var(--font-display)', letterSpacing: '-0.02em' }}>{stat.value}</span>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, fontFamily: 'monospace', color: stat.trend === 'up' || stat.trend === 'good' ? 'var(--color-success-600)' : 'var(--color-danger-600)' }}>
+                    {stat.change}
+                  </span>
                 </div>
               </div>
             ))}
@@ -185,49 +209,54 @@ export default function Dashboard() {
           {/* Middle Row */}
           <div className="grid grid-cols-[1fr_1fr_1.5fr] gap-4">
             {/* Trend Chart */}
-            <div className="flex flex-col border border-[var(--color-border-strong)] bg-[var(--color-surface-1)] p-4" style={{ borderRadius: '2px' }}>
-              <div className="mb-4 text-xs font-bold tracking-widest text-[var(--color-text-secondary)] uppercase">Production Trend (7 Days)</div>
+            {/* Trend Chart */}
+            <div className="flex flex-col border border-[var(--color-border-light)] bg-[var(--color-surface-0)] p-6" style={{ borderRadius: '24px', boxShadow: '0 4px 20px -4px rgba(0,0,0,0.02)' }}>
+              <div className="mb-6 flex items-center justify-between">
+                <span className="text-[0.7rem] font-extrabold tracking-[0.1em] text-[var(--color-text-tertiary)] uppercase">Production Trend (7 Days)</span>
+                <span className="text-[0.65rem] font-bold text-[var(--color-success-600)] bg-[var(--color-success-50)] px-2 py-1 rounded">+12% Growth</span>
+              </div>
               <div className="flex-1 flex items-end justify-between gap-2 pt-6 relative">
-                <div className="absolute left-0 top-0 bottom-0 w-6 flex flex-col justify-between text-[9px] text-[var(--color-text-tertiary)] pb-6 font-mono">
+                <div className="absolute left-0 top-0 bottom-0 w-8 flex flex-col justify-between text-[10px] text-[var(--color-text-tertiary)] pb-8 font-bold opacity-40">
                   <span>100</span><span>80</span><span>60</span><span>40</span><span>20</span><span>0</span>
                 </div>
-                <div className="pl-6 flex w-full h-full items-end justify-between gap-3 pb-6 border-b border-[var(--color-border-light)] relative">
+                <div className="pl-8 flex w-full h-full items-end justify-between gap-3 pb-8 border-b border-[var(--color-border-light)] relative">
                   {[40, 60, 50, 80, 70, 95, 100].map((h, i) => (
-                    <div key={i} className="w-full bg-[var(--color-accent-500)] hover:bg-[var(--color-accent-600)] transition-colors relative group" style={{ height: `${h}%` }}>
-                      <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] text-[var(--color-text-primary)] opacity-0 group-hover:opacity-100 transition-opacity">{h}</span>
+                    <div key={i} className="w-full rounded-t-lg bg-[var(--color-brand-500)] hover:bg-[var(--color-brand-600)] transition-all relative group" style={{ height: `${h}%`, opacity: 0.15 + (h/100) }}>
+                      <div className="absolute -top-7 left-1/2 -translate-x-1/2 px-2 py-1 rounded bg-[var(--color-text-primary)] text-[10px] font-bold text-white opacity-0 group-hover:opacity-100 transition-all pointer-events-none">{h}%</div>
                     </div>
                   ))}
                 </div>
-                <div className="absolute bottom-0 left-6 right-0 flex justify-between text-[9px] text-[var(--color-text-tertiary)] pt-2 font-mono">
-                  <span>14/05</span><span>15/05</span><span>16/05</span><span>17/05</span><span>18/05</span><span>19/05</span><span>20/05</span>
+                <div className="absolute bottom-0 left-8 right-0 flex justify-between text-[10px] text-[var(--color-text-tertiary)] pt-3 font-bold uppercase tracking-tighter opacity-60">
+                  <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
                 </div>
               </div>
             </div>
 
-            {/* Donut */}
-            <div className="flex flex-col border border-[var(--color-border-strong)] bg-[var(--color-surface-1)] p-4" style={{ borderRadius: '2px' }}>
-              <div className="mb-4 text-xs font-bold tracking-widest text-[var(--color-text-secondary)] uppercase">Status By Process</div>
-              <div className="flex-1 flex items-center justify-center gap-6">
-                <div className="relative w-32 h-32 rounded-full flex items-center justify-center" style={{ background: 'conic-gradient(var(--color-info-500) 0% 45%, var(--color-brand-600) 45% 70%, var(--color-danger-500) 70% 85%, var(--color-success-500) 85% 100%)' }}>
-                  <div className="w-24 h-24 bg-[var(--color-surface-1)] rounded-full flex flex-col items-center justify-center">
-                    <span className="text-2xl font-bold text-[var(--color-text-primary)]">128</span>
-                    <span className="text-[10px] text-[var(--color-text-tertiary)]">Total</span>
+            {/* Donut Chart */}
+            <div className="flex flex-col border border-[var(--color-border-light)] bg-[var(--color-surface-0)] p-6" style={{ borderRadius: '24px', boxShadow: '0 4px 20px -4px rgba(0,0,0,0.02)' }}>
+              <div className="mb-6 text-[0.7rem] font-extrabold tracking-[0.1em] text-[var(--color-text-tertiary)] uppercase">Process Distribution</div>
+              <div className="flex-1 flex items-center justify-center gap-8">
+                <div className="relative w-36 h-36 rounded-full flex items-center justify-center p-4" style={{ 
+                  background: 'conic-gradient(var(--color-brand-500) 0% 45%, var(--color-brand-300) 45% 70%, var(--color-accent-500) 70% 85%, var(--color-success-500) 85% 100%)' 
+                }}>
+                  <div className="w-full h-full bg-[var(--color-surface-0)] rounded-full flex flex-col items-center justify-center shadow-inner">
+                    <span className="text-3xl font-black text-[var(--color-text-primary)]" style={{ fontFamily: 'var(--font-display)' }}>128</span>
+                    <span className="text-[10px] font-bold text-[var(--color-text-tertiary)] uppercase tracking-widest">Total Orders</span>
                   </div>
                 </div>
-                <div className="flex flex-col gap-2 text-xs text-[var(--color-text-secondary)]">
+                <div className="flex flex-col gap-3">
                   {[
-                    { label: 'Casting',  color: 'var(--color-info-500)',    pct: '45%' },
-                    { label: 'Polishing',color: 'var(--color-brand-600)',   pct: '25%' },
-                    { label: 'Setting',  color: 'var(--color-danger-500)',  pct: '15%' },
-                    { label: 'QC',       color: 'var(--color-success-500)', pct: '15%' },
-                    { label: 'Packing',  color: 'var(--color-border-strong)',pct: '5%'  },
+                    { label: 'Casting', color: 'var(--color-brand-500)', pct: '45%' },
+                    { label: 'Polishing', color: 'var(--color-brand-300)', pct: '25%' },
+                    { label: 'Setting', color: 'var(--color-accent-500)', pct: '15%' },
+                    { label: 'QC/Final', color: 'var(--color-success-500)', pct: '15%' },
                   ].map(({ label, color, pct }) => (
-                    <div key={label} className="flex items-center justify-between gap-4">
-                      <span className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full" style={{ background: color }} />
+                    <div key={label} className="flex items-center justify-between gap-6">
+                      <span className="flex items-center gap-2 text-[0.75rem] font-bold text-[var(--color-text-secondary)]">
+                        <span className="w-2.5 h-2.5 rounded-sm" style={{ background: color }} />
                         {label}
                       </span>
-                      <span className="font-mono text-[var(--color-text-primary)]">{pct}</span>
+                      <span className="font-bold text-[var(--color-text-primary)] text-[0.75rem]">{pct}</span>
                     </div>
                   ))}
                 </div>
@@ -235,93 +264,105 @@ export default function Dashboard() {
             </div>
 
             {/* Delay Orders */}
-            <div className="flex flex-col border border-[var(--color-border-strong)] bg-[var(--color-surface-1)] p-0" style={{ borderRadius: '2px' }}>
-              <div className="flex items-center justify-between p-4 border-b border-[var(--color-border-light)]">
-                <div className="text-xs font-bold tracking-widest text-[var(--color-text-secondary)] uppercase">Top Delay Orders</div>
-                <button className="text-[10px] text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)] uppercase tracking-widest transition-colors">View All</button>
+            {/* Delay Orders Table */}
+            <div className="flex flex-col border border-[var(--color-border-light)] bg-[var(--color-surface-0)] overflow-hidden" style={{ borderRadius: '24px', boxShadow: '0 4px 20px -4px rgba(0,0,0,0.02)' }}>
+              <div className="flex items-center justify-between px-6 py-5 border-b border-[var(--color-border-light)]">
+                <div className="text-[0.7rem] font-extrabold tracking-[0.1em] text-[var(--color-text-tertiary)] uppercase flex items-center gap-2">
+                  <AlertTriangle size={14} className="text-[var(--color-danger-500)]" />
+                  Critical Delay Orders
+                </div>
+                <button 
+                  onClick={() => navigate('/dashboard/detail')}
+                  className="text-[0.65rem] font-bold text-[var(--color-brand-600)] hover:text-[var(--color-brand-700)] uppercase tracking-widest transition-all px-3 py-1.5 rounded-full bg-[var(--color-brand-50)]"
+                >View Tracker</button>
               </div>
-              <table className="w-full text-xs font-mono">
-                <thead>
-                  <tr className="text-[var(--color-text-tertiary)] border-b border-[var(--color-border-light)] bg-[var(--color-surface-0)]">
-                    <th className="font-medium text-left py-2 px-4 uppercase tracking-wider">OrderNo</th>
-                    <th className="font-medium text-left py-2 px-4 uppercase tracking-wider">Customer</th>
-                    <th className="font-medium text-left py-2 px-4 uppercase tracking-wider">DueDate</th>
-                    <th className="font-medium text-right py-2 px-4 text-[var(--color-danger-500)] uppercase tracking-wider">Delay</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[var(--color-border-light)]">
-                  {data!.delayOrders.map((order, i) => (
-                    <tr key={i} className="hover:bg-[var(--color-surface-2)] text-[var(--color-text-primary)] transition-colors">
-                      <td className="py-2.5 px-4">{order.no}</td>
-                      <td className="py-2.5 px-4 font-sans text-[var(--color-text-secondary)]">{order.customer}</td>
-                      <td className="py-2.5 px-4">{order.date}</td>
-                      <td className="py-2.5 px-4 text-right text-[var(--color-danger-500)] font-bold">{order.delay}</td>
+              <div className="flex-1 overflow-x-auto">
+                <table className="w-full text-[0.8rem]">
+                  <thead>
+                    <tr className="text-[var(--color-text-tertiary)] border-b border-[var(--color-border-light)] bg-[var(--color-surface-1)]">
+                      <th className="font-bold text-left py-3 px-6 uppercase tracking-wider text-[0.65rem]">PO / Order</th>
+                      <th className="font-bold text-left py-3 px-6 uppercase tracking-wider text-[0.65rem]">Customer</th>
+                      <th className="font-bold text-right py-3 px-6 uppercase tracking-wider text-[0.65rem]">Days Late</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-[var(--color-border-light)]">
+                    {data!.delayOrders.map((order, i) => (
+                      <tr key={i} className="hover:bg-[var(--color-surface-1)] text-[var(--color-text-primary)] transition-colors">
+                        <td className="py-3.5 px-6 font-bold">{order.no}</td>
+                        <td className="py-3.5 px-6 font-semibold text-[var(--color-text-secondary)]">{order.customer}</td>
+                        <td className="py-3.5 px-6 text-right text-[var(--color-danger-600)] font-black italic">{order.delay}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
 
           {/* Bottom Row */}
           <div className="grid grid-cols-[1.2fr_1fr] gap-4">
             {/* Live Tracking */}
-            <div className="flex flex-col border border-[var(--color-border-strong)] bg-[var(--color-surface-1)] p-0" style={{ borderRadius: '2px' }}>
-              <div className="flex items-center gap-2 p-4 border-b border-[var(--color-border-light)]">
-                <div className="text-xs font-bold tracking-widest text-[var(--color-text-secondary)] uppercase">Live Tracking</div>
-                <div className="relative flex h-1.5 w-1.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--color-text-primary)] opacity-75" />
-                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[var(--color-text-primary)]" />
+            {/* Live Tracking Feed */}
+            <div className="flex flex-col border border-[var(--color-border-light)] bg-[var(--color-surface-0)] overflow-hidden" style={{ borderRadius: '24px', boxShadow: '0 4px 20px -4px rgba(0,0,0,0.02)' }}>
+              <div className="flex items-center gap-3 px-6 py-5 border-b border-[var(--color-border-light)]">
+                <div className="text-[0.7rem] font-extrabold tracking-[0.1em] text-[var(--color-text-tertiary)] uppercase">Real-Time Factory Feed</div>
+                <div className="flex items-center gap-2 px-2 py-0.5 rounded bg-[var(--color-success-50)]">
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--color-success-500)] opacity-75" />
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[var(--color-success-500)]" />
+                  </span>
+                  <span className="text-[0.6rem] font-black text-[var(--color-success-700)] uppercase">Live</span>
                 </div>
               </div>
-              <table className="w-full text-xs font-mono">
-                <thead>
-                  <tr className="text-[var(--color-text-tertiary)] border-b border-[var(--color-border-light)] bg-[var(--color-surface-0)]">
-                    <th className="font-medium text-left py-3 px-4 uppercase tracking-wider">OrderNo</th>
-                    <th className="font-medium text-left py-3 px-4 uppercase tracking-wider">ItemNo</th>
-                    <th className="font-medium text-left py-3 px-4 uppercase tracking-wider">Process</th>
-                    <th className="font-medium text-left py-3 px-4 uppercase tracking-wider">Location</th>
-                    <th className="font-medium text-right py-3 px-4 uppercase tracking-wider">Scan Time</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[var(--color-border-light)]">
-                  {data!.liveTracking.map((track, i) => (
-                    <tr key={i} className="hover:bg-[var(--color-surface-2)] text-[var(--color-text-primary)] transition-colors">
-                      <td className="py-3 px-4">{track.no}</td>
-                      <td className="py-3 px-4 text-[var(--color-text-secondary)]">{track.item}</td>
-                      <td className="py-3 px-4 font-sans text-[var(--color-text-secondary)]">{track.process}</td>
-                      <td className="py-3 px-4 font-sans text-[var(--color-text-tertiary)]">{track.location}</td>
-                      <td className="py-3 px-4 text-right text-[var(--color-text-tertiary)]">{track.time}</td>
+              <div className="flex-1 overflow-x-auto">
+                <table className="w-full text-[0.75rem]">
+                  <thead>
+                    <tr className="text-[var(--color-text-tertiary)] border-b border-[var(--color-border-light)] bg-[var(--color-surface-1)]">
+                      <th className="font-bold text-left py-3 px-6 uppercase tracking-wider text-[0.65rem]">PO No</th>
+                      <th className="font-bold text-left py-3 px-6 uppercase tracking-wider text-[0.65rem]">Process Step</th>
+                      <th className="font-bold text-left py-3 px-6 uppercase tracking-wider text-[0.65rem]">Location</th>
+                      <th className="font-bold text-right py-3 px-6 uppercase tracking-wider text-[0.65rem]">Scan Time</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-[var(--color-border-light)]">
+                    {data!.liveTracking.map((track, i) => (
+                      <tr key={i} className="hover:bg-[var(--color-surface-1)] text-[var(--color-text-primary)] transition-colors">
+                        <td className="py-3 px-6 font-bold text-[var(--color-brand-600)]">{track.no}</td>
+                        <td className="py-3 px-6 font-semibold">{track.process}</td>
+                        <td className="py-3 px-6 text-[var(--color-text-tertiary)] font-medium italic">{track.location}</td>
+                        <td className="py-3 px-6 text-right text-[var(--color-text-tertiary)] font-bold">{track.time}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
 
             {/* Low Material Stock Alerts */}
-            <div className="flex flex-col border border-[var(--color-border-strong)] bg-[var(--color-surface-1)] p-0" style={{ borderRadius: '2px' }}>
-              <div className="flex items-center justify-between p-4 border-b border-[var(--color-border-light)]">
-                <div className="flex items-center gap-2">
-                  <div className="text-xs font-bold tracking-widest text-[var(--color-text-secondary)] uppercase">Material Alerts</div>
+            {/* Material Alerts */}
+            <div className="flex flex-col border border-[var(--color-border-light)] bg-[var(--color-surface-0)] overflow-hidden" style={{ borderRadius: '24px', boxShadow: '0 4px 20px -4px rgba(0,0,0,0.02)' }}>
+              <div className="flex items-center justify-between px-6 py-5 border-b border-[var(--color-border-light)]">
+                <div className="flex items-center gap-3">
+                  <div className="text-[0.7rem] font-extrabold tracking-[0.1em] text-[var(--color-text-tertiary)] uppercase">Material Stock Alerts</div>
                   <span className="flex h-2 w-2 rounded-full bg-[var(--color-danger-500)] animate-pulse" />
                 </div>
-                <button className="text-[10px] font-bold text-[var(--color-brand-600)] hover:text-[var(--color-brand-500)] uppercase tracking-widest transition-colors">Request PO</button>
+                <button className="text-[0.65rem] font-bold text-[var(--color-brand-600)] hover:text-[var(--color-brand-700)] uppercase tracking-widest transition-all">Stock Manager</button>
               </div>
-              <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
+              <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-4">
                 {data!.materialAlerts.map((alert, i) => (
-                  <div key={i} className="flex items-center justify-between p-3 rounded bg-[var(--color-surface-0)] border border-[var(--color-border-light)] transition-colors hover:border-[var(--color-brand-500)]">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-1.5 h-8 rounded-full ${alert.status === 'critical' ? 'bg-[var(--color-danger-500)]' : 'bg-[var(--color-accent-500)]'}`} />
+                  <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-[var(--color-surface-1)] border border-[var(--color-border-light)] transition-all hover:border-[var(--color-brand-300)] hover:shadow-md">
+                    <div className="flex items-center gap-4">
+                      <div className={`w-1.5 h-10 rounded-full ${alert.status === 'critical' ? 'bg-[var(--color-danger-500)]' : 'bg-[var(--color-accent-500)]'}`} />
                       <div className="flex flex-col">
-                        <span className="text-sm font-bold text-[var(--color-text-primary)]">{alert.item}</span>
-                        <span className="text-[10px] text-[var(--color-text-tertiary)] uppercase tracking-wider">{alert.type}</span>
+                        <span className="text-sm font-extrabold text-[var(--color-text-primary)]">{alert.item}</span>
+                        <span className="text-[0.65rem] font-bold text-[var(--color-text-tertiary)] uppercase tracking-wider">{alert.type}</span>
                       </div>
                     </div>
                     <div className="text-right flex flex-col">
-                      <span className={`text-sm font-bold font-mono ${alert.status === 'critical' ? 'text-[var(--color-danger-500)]' : 'text-[var(--color-accent-500)]'}`}>
+                      <span className={`text-base font-black ${alert.status === 'critical' ? 'text-[var(--color-danger-600)]' : 'text-[var(--color-accent-600)]'}`}>
                         {alert.currentStock}
                       </span>
-                      <span className="text-[10px] text-[var(--color-text-tertiary)] font-mono">Min: {alert.minStock}</span>
+                      <span className="text-[0.6rem] font-bold text-[var(--color-text-tertiary)] uppercase">Min Threshold: {alert.minStock}</span>
                     </div>
                   </div>
                 ))}

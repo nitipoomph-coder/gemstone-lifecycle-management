@@ -1,7 +1,7 @@
 // src/services/orderTrackerAPI.ts
 
-const isLocal = typeof window !== 'undefined' && window.location.hostname === 'localhost';
-export const BASE_URL = isLocal ? 'http://localhost:3001/api' : 'https://fresh-camels-change.loca.lt/api';
+const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname.startsWith('192.168.'));
+export const BASE_URL = isLocal ? `http://${window.location.hostname}:3001/api` : 'https://fresh-camels-change.loca.lt/api';
 
 export interface OrderSummary {
   // ── existing ──────────────────────────────────────────────
@@ -111,12 +111,14 @@ export interface OrderDetail {
 export async function fetchOrders(params?: {
   status?: 'pending' | 'all';
   custCode?: string;
+  dateType?: string;
   dateFrom?: string;
   dateTo?: string;
-}): Promise<{ data: OrderSummary[]; count: number }> {
+}): Promise<{ ok: boolean; data: OrderSummary[]; count: number }> {
   const qs = new URLSearchParams();
   if (params?.status) qs.set('status', params.status);
   if (params?.custCode) qs.set('custCode', params.custCode);
+  if (params?.dateType) qs.set('dateType', params.dateType);
   if (params?.dateFrom) qs.set('dateFrom', params.dateFrom);
   if (params?.dateTo) qs.set('dateTo', params.dateTo);
 
@@ -126,7 +128,7 @@ export async function fetchOrders(params?: {
   if (!res.ok) throw new Error(`API error: ${res.status}`);
   const json = await res.json();
   // backend ส่ง { ok, data, count }
-  return { data: json.data ?? [], count: json.count ?? 0 };
+  return { ok: json.ok ?? true, data: json.data ?? [], count: json.count ?? 0 };
 }
 
 // ─── fetchOrderDetail (by OrdNo) ──────────────────────────────────────────────
@@ -159,4 +161,23 @@ export async function fetchOrderByPo(poNo: string): Promise<OrderDetailByPo> {
   });
   if (!res.ok) throw new Error(`API error ${res.status} — PO "${poNo}" not found`);
   return await res.json();
+}
+
+// ─── fetchSearch (Global Search) ──────────────────────────────────────────────
+export interface SearchResultItem {
+  id: string;
+  type: 'order' | 'item' | 'customer';
+  title: string;
+  sub: string;
+  path: string;
+  photo?: string | null;
+}
+
+export async function fetchSearch(query: string): Promise<SearchResultItem[]> {
+  const res = await fetch(`${BASE_URL}/search?q=${encodeURIComponent(query)}`, {
+    headers: { 'bypass-tunnel-reminder': 'true' }
+  });
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  const json = await res.json();
+  return json.data ?? [];
 }

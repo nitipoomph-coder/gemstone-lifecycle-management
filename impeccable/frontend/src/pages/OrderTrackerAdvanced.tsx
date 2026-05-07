@@ -1,6 +1,6 @@
 // src/pages/OrderTrackerAdvanced.tsx
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import Topbar from '../components/layout/Topbar';
 import OrderTable from '../components/dashboard/OrderTable'; // 👈 Import ตารางที่แยกไว้
 import { fetchOrders, type OrderSummary } from '../services/orderAPI';
@@ -12,22 +12,57 @@ export default function OrderTrackerAdvanced() {
   const [filtered, setFiltered] = useState<OrderSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [search, setSearch] = useState('');
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const initialSearch = searchParams.get('search') || '';
+  const [search, setSearch] = useState(initialSearch);
+
+  // Sync search state if URL changes (e.g. from Topbar global search)
+  // Sync search state และเลือกกลุ่มอัตโนมัติตามคำค้นหา
+  useEffect(() => {
+    const s = new URLSearchParams(location.search).get('search');
+    if (s !== null) {
+      const q = s.toUpperCase(); // ทำให้เป็นตัวพิมพ์ใหญ่เพื่อเช็คเงื่อนไขง่ายๆ
+      setSearch(s);
+
+      // --- Logic เลือกกลุ่มอัตโนมัติ ---
+      if (q.includes('N083')) {
+        setGroupFilter('N083');
+      } else if (q.includes('N051')) {
+        setGroupFilter('N051');
+      } else if (q.includes('N044')) {
+        setGroupFilter('N044');
+      } else if (q.includes('MLT') || q.startsWith('U')) {
+        setGroupFilter('MLT'); // ถ้ามี MLT หรือขึ้นต้นด้วย U ให้ไปที่กลุ่ม MLT
+      } else {
+        // เช็คว่าอยู่ในกลุ่ม N008 หรือไม่ (N008, N048, N066, etc.)
+        const n008List = ['N008', 'N048', 'N066', 'N067', 'N068', 'N069', 'N070', 'N071', 'N072', 'N073', 'N074', 'N075'];
+        if (n008List.some(code => q.includes(code))) {
+          setGroupFilter('N008');
+        } else {
+          setGroupFilter('N008'); // ค่า Default ถ้าไม่ตรงเงื่อนไขอื่นเลย
+        }
+      }
+    }
+  }, [location.search]);
+
   const [statusFilter, setStatusFilter] = useState<'pending' | 'finish' | 'all'>('pending');
   const [groupFilter, setGroupFilter] = useState<string>('N008');
   const [dateType, setDateType] = useState('Order Date');
-  const [page, setPage]         = useState(1);
+  const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20); // default 20 rows/page
   const [dateFrom, setDateFrom] = useState(() => {
     const d = new Date();
-    d.setMonth(d.getMonth() - 3); // 3 เดือนย้อนหลัง (เดิม 7)
+    d.setMonth(d.getMonth() - 7); // 7 เดือนย้อนหลัง 
     return d.toISOString().split('T')[0];
   });
   const [dateTo, setDateTo] = useState(() => {
     const d = new Date();
-    d.setMonth(d.getMonth() + 2); // 2 เดือนข้างหน้า
+    d.setMonth(d.getMonth() + 0); // 0 เดือนข้างหน้า
     return d.toISOString().split('T')[0];
   });
+
+
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -54,7 +89,7 @@ export default function OrderTrackerAdvanced() {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter]);
+  }, [statusFilter, dateType, dateFrom, dateTo]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -77,7 +112,7 @@ export default function OrderTrackerAdvanced() {
       else if (groupFilter === 'N044') filteredList = filteredList.filter(o => o.CustCode?.includes('N044'));
       else if (groupFilter === 'N051') filteredList = filteredList.filter(o => o.CustCode?.includes('N051'));
     }
-
+    //Logic search
     if (search.trim()) {
       const q = search.toLowerCase();
       filteredList = filteredList.filter(o =>
@@ -97,9 +132,9 @@ export default function OrderTrackerAdvanced() {
   const delayedCount = filtered.filter(o => o.DueDate && new Date(o.DueDate) < new Date() && (o.OrdStatus === 'P' || o.OrdStatus === 'N')).length;
 
   // ── Pagination ──────────────────────────────────────────────────────────────
-  const totalPages  = Math.ceil(filtered.length / pageSize);
-  const pageStart   = (page - 1) * pageSize;          // 0-indexed
-  const paged       = filtered.slice(pageStart, pageStart + pageSize);
+  const totalPages = Math.ceil(filtered.length / pageSize);
+  const pageStart = (page - 1) * pageSize;          // 0-indexed
+  const paged = filtered.slice(pageStart, pageStart + pageSize);
 
   // หน้าเลขที่แสดงใน pagination bar (สูงสุด 7 ปุ่ม)
   const pageNumbers = (() => {
@@ -110,64 +145,97 @@ export default function OrderTrackerAdvanced() {
   })();
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#f8f9fa' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--color-surface-1)', fontFamily: 'var(--font-body)' }}>
       <Topbar breadcrumb={[{ label: 'JEWELRY SMART FACTORY', path: '/' }, { label: 'ORDER TRACKER' }]} />
 
       <div className="content-scrollbar flex-1 overflow-y-auto" style={{ padding: '24px' }}>
 
         {/* ─── KPI TILES (Smaller) ─── */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '16px', marginBottom: '20px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '24px' }}>
           {[
-            { id: 'total', label: 'ACTIVE ORDERS', value: filtered.length, color: '#1971c2', icon: <Package size={16} /> },
-            { id: 'qty', label: 'TOTAL QTY', value: totalQty.toLocaleString(), color: '#099268', icon: <LayoutGrid size={16} /> },
-            { id: 'amount', label: 'TOTAL AMOUNT', value: `$${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, color: '#862e9c', icon: <DollarSign size={16} /> },
-            { id: 'pending', label: 'PENDING', value: pendingCount, color: '#e67700', icon: <AlertTriangle size={16} /> },
-            { id: 'late', label: 'LATE', value: delayedCount, color: '#e03131', icon: <ChevronRight size={16} /> },
+            { id: 'total', label: 'ACTIVE ORDERS', value: filtered.length, color: 'var(--color-brand-500)', icon: <Package size={18} /> },
+            { id: 'qty', label: 'TOTAL QTY', value: totalQty.toLocaleString(), color: 'var(--color-success-500)', icon: <LayoutGrid size={18} /> },
+            { id: 'amount', label: 'TOTAL AMOUNT', value: `$${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, color: 'var(--color-accent-500)', icon: <DollarSign size={18} /> },
+            { id: 'pending', label: 'PENDING', value: pendingCount, color: 'var(--color-brand-400)', icon: <AlertTriangle size={18} /> },
+            { id: 'late', label: 'LATE', value: delayedCount, color: 'var(--color-danger-500)', icon: <RefreshCw size={18} /> },
           ].map((stat) => (
-            <div key={stat.id} onClick={() => navigate('/dashboard/detail')} style={{ background: '#fff', padding: '12px 16px', borderRadius: '12px', border: '1px solid #dee2e6', display: 'flex', alignItems: 'center', gap: '16px', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-              <div style={{ width: 36, height: 36, borderRadius: 10, background: `${stat.color}10`, color: stat.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div
+              key={stat.id}
+              onClick={() => navigate('/dashboard/detail')}
+              className="animate-fade-in-up"
+              style={{
+                background: 'var(--color-surface-0)',
+                padding: '20px 24px',
+                borderRadius: '20px',
+                border: '1px solid var(--color-border-light)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px',
+                cursor: 'pointer',
+                boxShadow: '0 4px 20px -4px rgba(0,0,0,0.05)',
+                transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.transform = 'translateY(-4px)';
+                e.currentTarget.style.boxShadow = '0 12px 30px -8px rgba(0,0,0,0.12)';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 20px -4px rgba(0,0,0,0.05)';
+              }}
+            >
+              <div style={{ width: 42, height: 42, borderRadius: 12, background: `color-mix(in oklch, ${stat.color}, transparent 90%)`, color: stat.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {stat.icon}
               </div>
               <div>
-                <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#868e96' }}>{stat.label}</div>
-                <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#212529', margin: '0' }}>{stat.value}</div>
+                <div style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--color-text-tertiary)', letterSpacing: '0.05em' }}>{stat.label}</div>
+                <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--color-text-primary)', margin: '4px 0 0', fontFamily: 'var(--font-display)' }}>{stat.value}</div>
               </div>
             </div>
           ))}
         </div>
 
         {/* ─── LEGACY FILTER PANEL ─── */}
-        <div style={{ background: '#f4f8fb', borderRadius: '12px', border: '1px solid #d0e1f0', marginBottom: '20px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-
-          <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
+        <div style={{
+          background: 'var(--color-surface-0)',
+          borderRadius: '20px',
+          border: '1px solid var(--color-border-light)',
+          marginBottom: '24px',
+          padding: '24px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '20px',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.02)'
+        }}>
+          <div style={{ display: 'flex', gap: '32px', flexWrap: 'wrap' }}>
             {/* Customer Group */}
-            <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap', borderRight: '1px solid #d0e1f0', paddingRight: '24px' }}>
-              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#004b8d', marginRight: '8px' }}>Customer Group:</div>
+            <div style={{ display: 'flex', gap: '20px', alignItems: 'center', flexWrap: 'wrap', borderRight: '1px solid var(--color-border-light)', paddingRight: '32px' }}>
+              <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--color-brand-600)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Group:</div>
               {['N008', 'MLT', 'N083', 'N044', 'N051', 'ALL'].map(grp => (
-                <label key={grp} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', fontWeight: 600, color: '#495057', cursor: 'pointer' }}>
+                <label key={grp} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', fontWeight: 600, color: groupFilter === grp ? 'var(--color-text-primary)' : 'var(--color-text-tertiary)', cursor: 'pointer', transition: 'all 0.2s' }}>
                   <input
                     type="radio"
                     name="groupFilter"
                     checked={groupFilter === grp}
                     onChange={() => setGroupFilter(grp)}
-                    style={{ accentColor: '#862e9c' }}
+                    style={{ accentColor: 'var(--color-accent-500)', width: '16px', height: '16px' }}
                   />
-                  {grp === 'ALL' ? 'General / ALL' : `${grp} Group`}
+                  {grp === 'ALL' ? 'General' : grp}
                 </label>
               ))}
             </div>
 
             {/* Status */}
-            <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#004b8d', marginRight: '8px' }}>Status:</div>
-              {['finish', 'pending', 'all'].map(st => (
-                <label key={st} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', fontWeight: 600, color: '#004b8d', cursor: 'pointer', textTransform: 'capitalize' }}>
+            <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+              <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--color-brand-600)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status:</div>
+              {['pending', 'finish', 'all'].map(st => (
+                <label key={st} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', fontWeight: 600, color: statusFilter === st ? 'var(--color-brand-600)' : 'var(--color-text-tertiary)', cursor: 'pointer', textTransform: 'capitalize', transition: 'all 0.2s' }}>
                   <input
                     type="radio"
                     name="statusFilter"
                     checked={statusFilter === st}
                     onChange={() => setStatusFilter(st as 'pending' | 'finish' | 'all')}
-                    style={{ accentColor: '#1971c2' }}
+                    style={{ accentColor: 'var(--color-brand-500)', width: '16px', height: '16px' }}
                   />
                   {st}
                 </label>
@@ -176,28 +244,24 @@ export default function OrderTrackerAdvanced() {
           </div>
 
           {/* Search, Date Filter & Actions */}
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap', borderTop: '1px dashed #d0e1f0', paddingTop: '16px' }}>
-
-            {/* DATE RANGE FILTER (PREMIUM EDITION) */}
+          <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap', borderTop: '1px solid var(--color-border-light)', paddingTop: '20px' }}>
+            {/* DATE RANGE FILTER */}
             <div
               style={{
                 display: 'flex',
-                background: '#fff',
-                borderRadius: '8px',
-                border: '1px solid #b8d4f0',
+                background: 'var(--color-surface-1)',
+                borderRadius: '12px',
+                border: '1px solid var(--color-border-light)',
                 overflow: 'hidden',
-                boxShadow: '0 4px 12px rgba(0, 75, 141, 0.06), 0 1px 3px rgba(0,0,0,0.04)',
                 transition: 'all 0.2s ease',
               }}
-              onMouseEnter={e => e.currentTarget.style.boxShadow = '0 6px 16px rgba(0, 75, 141, 0.12), 0 2px 4px rgba(0,0,0,0.06)'}
-              onMouseLeave={e => e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 75, 141, 0.06), 0 1px 3px rgba(0,0,0,0.04)'}
             >
-              <div style={{ position: 'relative', display: 'flex', alignItems: 'center', background: 'linear-gradient(135deg, #005eb8 0%, #004b8d 100%)', borderRight: '1px solid #003d73' }}>
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center', background: 'var(--color-brand-500)', borderRight: '1px solid var(--color-brand-600)' }}>
                 <select
                   value={dateType}
                   onChange={e => setDateType(e.target.value)}
                   style={{
-                    padding: '8px 12px 8px 16px',
+                    padding: '10px 16px 10px 20px',
                     border: 'none',
                     background: 'transparent',
                     color: '#fff',
@@ -206,7 +270,8 @@ export default function OrderTrackerAdvanced() {
                     outline: 'none',
                     cursor: 'pointer',
                     appearance: 'none',
-                    paddingRight: '32px'
+                    paddingRight: '36px',
+                    fontFamily: 'var(--font-display)'
                   }}
                 >
                   <option style={{ color: '#000' }} value="Order Date">Order Date</option>
@@ -215,43 +280,52 @@ export default function OrderTrackerAdvanced() {
                   <option style={{ color: '#000' }} value="Finish Date">Finish Date</option>
                   <option style={{ color: '#000' }} value="All">All Dates</option>
                 </select>
-                <div style={{ position: 'absolute', right: '10px', pointerEvents: 'none', color: '#82bced' }}>
+                <div style={{ position: 'absolute', right: '12px', pointerEvents: 'none', color: '#fff', opacity: 0.8 }}>
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
                 </div>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', padding: '0 12px', gap: '8px', background: '#f8fbff' }}>
-                <Calendar size={14} style={{ color: '#004b8d', opacity: 0.6 }} />
+              <div style={{ display: 'flex', alignItems: 'center', padding: '0 16px', gap: '12px' }}>
+                <Calendar size={14} style={{ color: 'var(--color-brand-500)', opacity: 0.6 }} />
                 <input
                   type="date"
                   value={dateFrom}
                   onChange={e => setDateFrom(e.target.value)}
-                  style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '0.75rem', color: '#1971c2', fontWeight: 600, cursor: 'pointer' }}
+                  style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '0.8rem', color: 'var(--color-text-primary)', fontWeight: 600, cursor: 'pointer', fontFamily: 'monospace' }}
                 />
-                <span style={{ color: '#a5c8e4', fontSize: '0.8rem', fontWeight: 800 }}>→</span>
+                <span style={{ color: 'var(--color-text-tertiary)', fontSize: '0.8rem', fontWeight: 800 }}>→</span>
                 <input
                   type="date"
                   value={dateTo}
                   onChange={e => setDateTo(e.target.value)}
-                  style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '0.75rem', color: '#1971c2', fontWeight: 600, cursor: 'pointer' }}
+                  style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '0.8rem', color: 'var(--color-text-primary)', fontWeight: 600, cursor: 'pointer', fontFamily: 'monospace' }}
                 />
               </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 12px', borderRadius: '6px', border: '1px solid #ced4da', background: '#fff', flex: 1, minWidth: '200px', maxWidth: '400px' }}>
-              <Search size={14} style={{ color: '#adb5bd' }} />
-              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="ค้นหา Customer, PO, Ship To..." style={{ border: 'none', background: 'transparent', outline: 'none', width: '100%', fontSize: '0.8rem' }} />
-            </div>
-
-            <button onClick={load} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px', borderRadius: '6px', border: '1px solid #004b8d', background: '#004b8d', color: '#fff', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600, boxShadow: '0 2px 4px rgba(0,75,141,0.2)' }}>
-              <RefreshCw size={14} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} /> Refresh Data
+            <button
+              onClick={load}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '8px',
+                padding: '10px 20px', borderRadius: '12px',
+                border: 'none', background: 'var(--color-brand-500)', color: '#fff',
+                cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700,
+                boxShadow: '0 4px 12px -2px rgba(var(--color-brand-500), 0.3)',
+                transition: 'all 0.2s',
+                fontFamily: 'var(--font-display)'
+              }}
+              onMouseEnter={e => e.currentTarget.style.opacity = '0.9'}
+              onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+            >
+              <RefreshCw size={16} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
+              Refresh Tracker
             </button>
           </div>
 
         </div>
 
         {/* ─── DATA TABLE ─── */}
-        <div style={{ background: '#fff', borderRadius: '16px', border: '1px solid #dee2e6', boxShadow: '0 8px 30px rgba(0,0,0,0.04)', overflow: 'hidden' }}>
+        <div style={{ background: 'var(--color-surface-0)', borderRadius: '24px', border: '1px solid var(--color-border-light)', boxShadow: '0 12px 40px -12px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
           {error && (
             <div style={{ padding: '16px', background: '#fff5f5', borderBottom: '1px solid #ffc9c9', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <AlertTriangle size={16} style={{ color: '#e03131' }} /> <span style={{ fontSize: '0.85rem', color: '#c92a2a' }}>{error}</span>
@@ -259,7 +333,7 @@ export default function OrderTrackerAdvanced() {
           )}
 
           {/* ⭐️ ส่งเฉพาะ rows ของหน้าปัจจุบัน */}
-          <OrderTable data={paged} loading={loading} pageOffset={pageStart} />
+          <OrderTable data={paged} loading={loading} pageOffset={pageStart} group={groupFilter} />
 
           {/* ─── Pagination Bar ─── */}
           {!loading && filtered.length > 0 && (
@@ -300,12 +374,14 @@ export default function OrderTrackerAdvanced() {
                       key={p}
                       onClick={() => setPage(p as number)}
                       style={{
-                        padding: '4px 10px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: 600,
-                        border: `1px solid ${page === p ? '#1971c2' : '#dee2e6'}`,
-                        background: page === p ? '#1971c2' : '#fff',
-                        color: page === p ? '#fff' : '#495057',
+                        padding: '6px 12px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 700,
+                        border: `1px solid ${page === p ? 'var(--color-brand-500)' : 'var(--color-border-light)'}`,
+                        background: page === p ? 'var(--color-brand-500)' : 'var(--color-surface-0)',
+                        color: page === p ? '#fff' : 'var(--color-text-secondary)',
                         cursor: 'pointer',
-                        minWidth: '32px',
+                        minWidth: '36px',
+                        transition: 'all 0.2s',
+                        fontFamily: 'var(--font-display)'
                       }}
                     >{p}</button>
                   )

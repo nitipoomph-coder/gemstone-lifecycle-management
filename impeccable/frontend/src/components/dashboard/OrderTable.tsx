@@ -1,5 +1,5 @@
 // src/components/dashboard/OrderTable.tsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronRight, Image as ImageIcon, BarChart2, DollarSign, Layers, X } from 'lucide-react';
 import { type OrderSummary } from '../../services/orderAPI';
@@ -18,184 +18,251 @@ interface ViewPickerProps {
   onSelect: (view: ViewMode) => void;
 }
 
-const VIEW_OPTIONS: { key: ViewMode; label: string; sub: string; icon: React.ReactNode; bg: string; border: string; iconBg: string }[] = [
+const VIEW_OPTIONS: { 
+  key: ViewMode; 
+  label: string; 
+  sub: string; 
+  icon: React.ReactNode; 
+  accentColor: string;
+}[] = [
   {
     key: 'sales',
-    label: 'Sales View',
-    sub: 'ข้อมูลราคา, จำนวน, ยอดเงิน',
-    icon: <DollarSign size={22} />,
-    bg: '#fff9db',
-    border: '#fcc419',
-    iconBg: '#ffd43b',
+    label: 'Sales Perspective',
+    sub: 'Pricing, quantity, and total amount insights',
+    icon: <DollarSign size={20} />,
+    accentColor: 'oklch(0.75 0.16 80)', // Gold
   },
   {
     key: 'prod',
-    label: 'Production View',
-    sub: 'สถานะแต่ละขั้นตอนการผลิต',
-    icon: <BarChart2 size={22} />,
-    bg: '#e7f5ff',
-    border: '#74c0fc',
-    iconBg: '#4dabf7',
+    label: 'Production Tracker',
+    sub: 'Real-time production status and workflow tracking',
+    icon: <BarChart2 size={20} />,
+    accentColor: 'oklch(0.60 0.14 245)', // Blue
   },
   {
     key: 'all',
-    label: 'All View',
-    sub: 'ข้อมูลทั้งหมดรวมทุก column',
-    icon: <Layers size={22} />,
-    bg: '#f3f0ff',
-    border: '#b197fc',
-    iconBg: '#9775fa',
+    label: 'Unified View',
+    sub: 'Full dataset with all columns for deep-dive analysis',
+    icon: <Layers size={20} />,
+    accentColor: 'oklch(0.70 0.16 150)', // Green
   },
 ];
 
 function ViewPickerModal({ order, onClose, onSelect }: ViewPickerProps) {
   const [hovered, setHovered] = useState<ViewMode | null>(null);
 
-  // Close on backdrop click
   const handleBackdrop = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) onClose();
   };
 
   return (
     <>
-      {/* Backdrop */}
       <div
         onClick={handleBackdrop}
         style={{
           position: 'fixed', inset: 0, zIndex: 9998,
-          background: 'rgba(0,0,0,0.45)',
-          backdropFilter: 'blur(3px)',
+          background: 'rgba(15, 23, 42, 0.4)',
+          backdropFilter: 'blur(12px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          animation: 'fadeIn 0.15s ease',
+          animation: 'modalFadeIn 0.3s ease-out forwards',
         }}
       >
-        {/* Modal card */}
         <div
           style={{
-            background: '#fff',
-            borderRadius: '16px',
-            boxShadow: '0 24px 60px rgba(0,0,0,0.25)',
-            width: '460px',
+            background: 'var(--color-surface-0)',
+            borderRadius: '24px',
+            boxShadow: '0 32px 80px -16px rgba(0, 0, 0, 0.2)',
+            width: '440px',
             maxWidth: '95vw',
             overflow: 'hidden',
-            animation: 'slideUp 0.2s cubic-bezier(0.34,1.56,0.64,1)',
+            border: '1px solid var(--color-border-light)',
+            animation: 'modalSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards',
           }}
         >
-          {/* Header */}
+          {/* Header Section */}
           <div style={{
-            background: 'linear-gradient(135deg, #004b8d 0%, #1971c2 100%)',
-            padding: '16px 20px',
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '32px 32px 28px',
+            textAlign: 'center',
+            position: 'relative',
+            borderBottom: '1px solid var(--color-border-light)',
+            background: 'linear-gradient(to bottom, var(--color-surface-1), var(--color-surface-0))'
           }}>
-            <div>
-              <div style={{ color: '#a5d8ff', fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.1em', marginBottom: '2px' }}>
-                เลือกมุมมองที่ต้องการ
-              </div>
-              {/* PONo = key หลัก */}
-              <div style={{ color: '#fff', fontSize: '1rem', fontWeight: 800, fontFamily: 'Tahoma, "Segoe UI", sans-serif', letterSpacing: '0.05em' }}>
-                {order.PONo && order.PONo !== '-' ? order.PONo : order.OrdNo}
-              </div>
-              {/* OrdNo + CustName แสดงรอง */}
-              <div style={{ color: '#a5d8ff', fontSize: '0.7rem', marginTop: '3px', display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                <span style={{ background: 'rgba(255,255,255,0.15)', padding: '1px 6px', borderRadius: '3px', fontFamily: 'monospace' }}>
-                  {order.OrdNo}
-                </span>
-                <span>·</span>
-                <span>{order.CustName || order.CustCode}</span>
-              </div>
-            </div>
             <button
               onClick={onClose}
               style={{
-                background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '8px',
+                position: 'absolute', top: '20px', right: '20px',
+                background: 'transparent', border: 'none', borderRadius: '50%',
                 width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', color: '#fff', transition: 'background 0.15s',
+                cursor: 'pointer', color: 'var(--color-text-tertiary)',
+                transition: 'all 0.2s',
+                zIndex: 10
               }}
-              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.25)')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.15)')}
+              onMouseEnter={e => {
+                e.currentTarget.style.background = 'oklch(0.95 0.01 250)';
+                e.currentTarget.style.color = 'var(--color-text-primary)';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = 'transparent';
+                e.currentTarget.style.color = 'var(--color-text-tertiary)';
+              }}
             >
-              <X size={16} />
+              <X size={18} />
             </button>
+
+            <div style={{ 
+              display: 'inline-flex', padding: '6px 16px', borderRadius: '100px', 
+              background: 'var(--color-accent-100)', color: 'var(--color-accent-600)',
+              fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.08em',
+              textTransform: 'uppercase', marginBottom: '20px',
+              fontFamily: 'var(--font-body)',
+              boxShadow: '0 2px 8px -2px var(--color-accent-500)22'
+            }}>
+              Select View Mode
+            </div>
+
+            <h3 style={{ 
+              fontSize: '1.75rem', fontWeight: 800, color: 'var(--color-text-primary)',
+              fontFamily: 'var(--font-display)', margin: '0 0 4px',
+              letterSpacing: '-0.02em'
+            }}>
+              {order.OrdNo.length > 20 ? order.OrdNo.split('/')[0] + '...' : order.OrdNo}
+            </h3>
+            
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(2, 1fr)',
+              gap: '12px 24px',
+              marginTop: '24px',
+              textAlign: 'left',
+              padding: '0 8px',
+              fontSize: '0.9rem'
+            }}>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <span style={{ fontWeight: 700, color: 'var(--color-brand-600)', minWidth: '85px' }}>Customer :</span>
+                <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>{order.CustCode || '-'}</span>
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <span style={{ fontWeight: 700, color: 'var(--color-brand-600)', minWidth: '85px' }}>Material :</span>
+                <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>{order.OrdMat || '-'}</span>
+              </div>
+              <div style={{ gridColumn: 'span 2', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <span style={{ fontWeight: 700, color: 'var(--color-brand-600)', minWidth: '85px' }}>PO No :</span>
+                <span style={{ fontWeight: 600, color: 'var(--color-text-secondary)', fontSize: '0.85rem' }}>
+                  {order.PONo && order.PONo !== '-' ? order.PONo : 'No PO Number'}
+                </span>
+                {order.OrdKind && (
+                  <span style={{ 
+                    marginLeft: 'auto',
+                    fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-accent-600)',
+                    fontStyle: 'italic',
+                    whiteSpace: 'nowrap'
+                  }}>
+                    ( {order.OrdKind} )
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
 
-          {/* View options */}
-          <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {VIEW_OPTIONS.map(opt => (
+          {/* Options Grid */}
+          <div style={{ 
+            padding: '0 24px 24px', 
+            display: 'flex', flexDirection: 'column', gap: '12px' 
+          }}>
+            {VIEW_OPTIONS.map((opt, idx) => (
               <button
                 key={opt.key}
                 onClick={() => onSelect(opt.key)}
                 onMouseEnter={() => setHovered(opt.key)}
                 onMouseLeave={() => setHovered(null)}
+                className={`animate-fade-in-up stagger-${idx + 1}`}
                 style={{
-                  display: 'flex', alignItems: 'center', gap: '14px',
-                  padding: '14px 16px',
-                  borderRadius: '10px',
-                  border: `2px solid ${hovered === opt.key ? opt.border : '#e9ecef'}`,
-                  background: hovered === opt.key ? opt.bg : '#fafbfc',
+                  display: 'flex', alignItems: 'center', gap: '18px',
+                  padding: '16px 20px',
+                  borderRadius: '16px',
+                  border: '1px solid',
+                  borderColor: hovered === opt.key ? opt.accentColor : 'var(--color-border-light)',
+                  background: hovered === opt.key ? `color-mix(in oklch, ${opt.accentColor}, transparent 92%)` : 'transparent',
                   cursor: 'pointer',
                   textAlign: 'left',
-                  transition: 'all 0.15s ease',
-                  transform: hovered === opt.key ? 'translateX(4px)' : 'none',
-                  boxShadow: hovered === opt.key ? `0 4px 16px ${opt.border}44` : 'none',
+                  transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                  boxShadow: hovered === opt.key ? `0 12px 24px -8px color-mix(in oklch, ${opt.accentColor}, transparent 70%)` : 'none',
+                  transform: hovered === opt.key ? 'translateY(-2px)' : 'none',
                 }}
               >
-                {/* Icon */}
+                {/* Icon Container */}
                 <div style={{
-                  width: 44, height: 44, borderRadius: '10px',
-                  background: hovered === opt.key ? opt.iconBg : '#e9ecef',
+                  width: 48, height: 48, borderRadius: '12px',
+                  background: hovered === opt.key ? opt.accentColor : 'oklch(0.97 0.01 250)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: hovered === opt.key ? '#fff' : '#adb5bd',
-                  transition: 'all 0.15s',
+                  color: hovered === opt.key ? '#fff' : 'var(--color-text-secondary)',
+                  transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
                   flexShrink: 0,
                 }}>
                   {opt.icon}
                 </div>
 
-                {/* Text */}
+                {/* Label & Description */}
                 <div style={{ flex: 1 }}>
                   <div style={{
-                    fontSize: '0.88rem', fontWeight: 800,
-                    color: hovered === opt.key ? '#212529' : '#495057',
-                    fontFamily: 'Tahoma, "Segoe UI", sans-serif',
+                    fontSize: '0.95rem', fontWeight: 600,
+                    color: hovered === opt.key ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
+                    fontFamily: 'var(--font-display)',
+                    transition: 'color 0.2s',
                   }}>
                     {opt.label}
                   </div>
-                  <div style={{ fontSize: '0.72rem', color: '#868e96', marginTop: '2px' }}>
+                  <div style={{ 
+                    fontSize: '0.75rem', 
+                    color: hovered === opt.key ? 'var(--color-text-secondary)' : 'var(--color-text-tertiary)',
+                    marginTop: '2px',
+                    fontFamily: 'var(--font-body)',
+                  }}>
                     {opt.sub}
                   </div>
                 </div>
 
-                {/* Arrow */}
                 <ChevronRight
                   size={18}
                   style={{
-                    color: hovered === opt.key ? opt.border : '#dee2e6',
-                    transition: 'color 0.15s',
-                    flexShrink: 0,
+                    color: hovered === opt.key ? opt.accentColor : 'var(--color-border-strong)',
+                    transition: 'all 0.3s',
+                    opacity: hovered === opt.key ? 1 : 0.4,
+                    transform: hovered === opt.key ? 'translateX(0)' : 'translateX(-4px)',
                   }}
                 />
               </button>
             ))}
           </div>
 
-          {/* Footer hint */}
+          {/* Footer */}
           <div style={{
-            padding: '10px 20px 14px',
-            fontSize: '0.68rem', color: '#adb5bd', textAlign: 'center',
-            borderTop: '1px solid #f1f3f5',
+            padding: '16px 24px 20px',
+            textAlign: 'center',
+            borderTop: '1px solid var(--color-border-light)',
+            background: 'oklch(0.99 0.005 250)',
           }}>
-            กด ESC หรือคลิกนอกกรอบเพื่อปิด
+            <span style={{ 
+              fontSize: '0.7rem', color: 'var(--color-text-tertiary)',
+              fontWeight: 500, letterSpacing: '0.02em'
+            }}>
+              ESC to dismiss • Global View System
+            </span>
           </div>
         </div>
       </div>
 
       <style>{`
-        @keyframes fadeIn  { from { opacity: 0 } to { opacity: 1 } }
-        @keyframes slideUp { from { opacity: 0; transform: scale(0.92) translateY(16px) } to { opacity: 1; transform: scale(1) translateY(0) } }
+        @keyframes modalFadeIn { from { opacity: 0 } to { opacity: 1 } }
+        @keyframes modalSlideUp { 
+          from { opacity: 0; transform: translateY(20px) scale(0.98) } 
+          to { opacity: 1; transform: translateY(0) scale(1) } 
+        }
       `}</style>
     </>
   );
 }
+
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 function SkeletonRows({ cols }: { cols: number }) {
@@ -221,46 +288,167 @@ function SkeletonRows({ cols }: { cols: number }) {
   );
 }
 
-// ─── Column definitions ────────────────────────────────────────────────────────
-const COLS = [
-  { key: 'no',      label: 'No.',        w: 40,  align: 'center' as const },
-  { key: 'week',    label: 'Week',       w: 50,  align: 'center' as const },
-  { key: 'cust',    label: 'Cust',       w: 60,  align: 'center' as const },
-  { key: 'po',      label: 'PO no.',     w: 180, align: 'left'   as const },
-  { key: 'kind',    label: 'New/Replen', w: 90,  align: 'center' as const },
-  { key: 'metal',   label: 'Metal',      w: 50,  align: 'center' as const },
-  { key: 'shipto',  label: 'Ship To',    w: 250, align: 'left'   as const },
-  { key: 'photo',   label: 'Picture',    w: 60,  align: 'center' as const },
-  { key: 'orddate', label: 'Order Date', w: 90,  align: 'center' as const },
-  { key: 'due',     label: 'Factory Due',w: 90,  align: 'center' as const },
-  { key: 'custdue', label: 'Cust Due',   w: 90,  align: 'center' as const },
-  { key: 'sku',     label: 'No. of SKU', w: 80,  align: 'center' as const },
-  { key: 'qty',     label: 'Qty',        w: 80,  align: 'right'  as const },
-  { key: 'amount',  label: 'Amount ($)', w: 100, align: 'right'  as const },
-  { key: 'arrow',   label: '',           w: 30,  align: 'center' as const },
-];
+// ─── Master Column Definitions ──────────────────────────────────────────────
+// รวมคอลัมน์ทุกอย่างไว้ที่เดียว พร้อมกำหนดวิธีแสดงผล (render) และสไตล์
+const MASTER_COLS: Record<string, {
+  label: string;
+  w: number;
+  align: 'left' | 'center' | 'right';
+  render: (o: OrderSummary, i: number, offset: number) => React.ReactNode;
+  cellStyle?: (o: OrderSummary) => React.CSSProperties;
+}> = {
+  no: {
+    label: 'No.', w: 40, align: 'center',
+    render: (_, i, offset) => offset + i + 1,
+    cellStyle: () => ({ color: '#868e96', background: '#f8f9fa' }),
+  },
+  week: {
+    label: 'Week', w: 50, align: 'center',
+    render: (o) => o.Week,
+  },
+  cust: {
+    label: 'Cust', w: 60, align: 'center',
+    render: (o) => o.CustCode,
+    cellStyle: () => ({ fontWeight: 700, color: '#1971c2' }),
+  },
+  po: {
+    label: 'PO no.', w: 180, align: 'left',
+    render: (o) => o.PONo,
+    cellStyle: () => ({ fontWeight: 600, color: '#495057', wordBreak: 'break-word' }),
+  },
+  kind: {
+    label: 'New/Replen', w: 90, align: 'center',
+    render: (o) => o.OrdKind,
+  },
+  shipto: {
+    label: 'Ship To', w: 200, align: 'left',
+    render: (o) => o.ShipTo,
+    cellStyle: () => ({ fontWeight: 600, color: '#212529' }),
+  },
+  photo: {
+    label: 'Photo', w: 80, align: 'center',
+    render: (o) => (
+      <div style={{ width: 64, height: 64, borderRadius: 8, background: '#f1f3f5', overflow: 'hidden', margin: '0 auto', border: '1px solid #dee2e6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {o.ItemPhoto
+          ? <img src={o.ItemPhoto.startsWith('data:') ? o.ItemPhoto : `data:image/jpeg;base64,${o.ItemPhoto}`} alt="item" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          : <ImageIcon size={20} style={{ color: '#ced4da' }} />
+        }
+      </div>
+    ),
+  },
+  metal: {
+    label: 'Metal', w: 50, align: 'center',
+    render: (o) => o.OrdMat,
+  },
+  orddate: {
+    label: 'Order Date', w: 90, align: 'center',
+    render: (o) => formatDate(o.OrdDate),
+  },
+  due: {
+    label: 'Factory Due', w: 90, align: 'center',
+    render: (o) => formatDate(o.DueDate),
+  },
+  qa: {
+    label: 'QA/BBQ/Testing', w: 110, align: 'center',
+    render: (o) => o.TrackTest,
+  },
+  sgs: {
+    label: 'SGS', w: 60, align: 'center',
+    render: (o) => o.OrdSGS,
+  },
+  qcdate: {
+    label: 'QC Date', w: 90, align: 'center',
+    render: (o) => formatDate(o.CustQCDate),
+  },
+  custdue: {
+    label: 'Cust Due Date', w: 90, align: 'center',
+    render: (o) => formatDate(o.CustDueDate),
+  },
+  oor: {
+    label: 'OOR Date', w: 90, align: 'center',
+    render: (o) => formatDate(o.OORDate),
+  },
+  sku: {
+    label: 'No. of SKU', w: 80, align: 'center',
+    render: (o) => o.NumSKU || '-',
+    cellStyle: () => ({ fontWeight: 600, color: '#e67700', background: '#fff9db' }),
+  },
+  qty: {
+    label: 'Qty', w: 70, align: 'right',
+    render: (o) => formatQty(o.TotalQty),
+    cellStyle: () => ({ fontWeight: 800, color: '#1971c2', background: '#e7f5ff' }),
+  },
+  amount: {
+    label: 'Amount', w: 100, align: 'right',
+    render: (o) => o.Amount != null ? `$${o.Amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '-',
+    cellStyle: () => ({ fontWeight: 800, color: '#099268', background: '#ebfbee' }),
+  },
+  remark: {
+    label: 'Remark', w: 150, align: 'left',
+    render: (o) => o.TrackRemark,
+    cellStyle: () => ({ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }),
+  },
+  arrow: {
+    label: '', w: 30, align: 'center',
+    render: () => <ChevronRight size={16} style={{ color: '#ced4da' }} />,
+  }
+};
+
+// ─── Group Presets ────────────────────────────────────────────────────────────
+// กำหนดว่าแต่ละกลุ่มเริ่มต้นให้แสดงคอลัมน์ไหนบ้าง
+const GROUP_PRESETS: Record<string, string[]> = {
+  ALL: ['no', 'kind', 'orddate', 'due', 'custdue', 'sku', 'qty', 'amount', 'remark', 'arrow'],
+  N008: ['no', 'week', 'cust', 'po', 'kind', 'shipto', 'photo', 'orddate', 'due', 'qa', 'sgs', 'qcdate', 'custdue', 'oor', 'sku', 'qty', 'amount', 'remark', 'arrow'],
+  MLT: ['no', 'week', 'cust', 'po', 'kind', 'orddate', 'due', 'custdue', 'sku', 'qty', 'amount', 'remark', 'arrow'],
+  N083: ['no', 'week', 'cust', 'po', 'kind', 'orddate', 'due', 'custdue', 'sku', 'qty', 'amount', 'remark', 'arrow'],
+  N044: ['no', 'week', 'cust', 'po', 'kind', 'shipto', 'photo', 'orddate', 'due', 'qa', 'qcdate', 'custdue', 'oor', 'sku', 'qty', 'amount', 'remark', 'arrow'],
+  N051: ['no', 'week', 'cust', 'po', 'kind', 'metal', 'photo', 'orddate', 'due', 'qa', 'qcdate', 'custdue', 'sku', 'qty', 'amount', 'arrow'],
+};
 
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function OrderTable({
   data,
   loading,
-  pageOffset = 0,   // เลข offset สำหรับแสดง No. ต่อเนื่องข้ามหน้า
+  pageOffset = 0,
+  group = 'ALL',
 }: {
   data: OrderSummary[];
   loading: boolean;
   pageOffset?: number;
+  group?: string;
 }) {
   const navigate = useNavigate();
   const [pickerOrder, setPickerOrder] = useState<OrderSummary | null>(null);
+  
+  // State สำหรับจัดการคอลัมน์ที่แสดงผล
+  const [visibleKeys, setVisibleKeys] = useState<string[]>(GROUP_PRESETS[group] || GROUP_PRESETS.ALL);
+  const [showPicker, setShowPicker] = useState(false);
+
+  // เมื่อกลุ่มเปลี่ยน ให้ Reset คอลัมน์ตาม Preset ของกลุ่มนั้น
+  useEffect(() => {
+    setVisibleKeys(GROUP_PRESETS[group] || GROUP_PRESETS.ALL);
+  }, [group]);
+
+  // คอลัมน์ที่กำลังแสดงผลอยู่ (เรียงตามลำดับใน Master เพื่อความระเบียบ หรือเรียงตาม Preset ก็ได้)
+  // ในที่นี้ผมให้เรียงตาม Master เพื่อให้ลำดับ No. อยู่หน้าสุดเสมอ
+  const allMasterKeys = Object.keys(MASTER_COLS);
+  const activeCols = allMasterKeys
+    .filter(key => visibleKeys.includes(key))
+    .map(key => ({ key, ...MASTER_COLS[key] }));
+
+  const toggleKey = (key: string) => {
+    setVisibleKeys(prev => 
+      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+    );
+  };
 
   const handleRowClick = (order: OrderSummary) => {
-    setPickerOrder(order); // เปิด popup
+    setPickerOrder(order);
   };
 
   const handleViewSelect = (view: ViewMode) => {
     if (!pickerOrder) return;
     setPickerOrder(null);
-    // ใช้ PONo เป็น key หลัก ถ้าไม่มี PONo fallback ไป OrdNo
     const key = pickerOrder.PONo && pickerOrder.PONo !== '-'
       ? encodeURIComponent(pickerOrder.PONo)
       : encodeURIComponent(pickerOrder.OrdNo);
@@ -279,20 +467,76 @@ export default function OrderTable({
         />
       )}
 
-      {/* ── Table ── */}
+      {/* ── Column Picker Popover ── */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px', position: 'relative' }}>
+        <button 
+          onClick={() => setShowPicker(!showPicker)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '6px',
+            padding: '8px 14px', borderRadius: '8px',
+            background: '#fff', border: '1px solid #dee2e6',
+            fontSize: '0.75rem', fontWeight: 600, color: '#495057',
+            cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+            transition: 'all 0.15s'
+          }}
+          onMouseEnter={e => (e.currentTarget.style.background = '#f8f9fa')}
+          onMouseLeave={e => (e.currentTarget.style.background = '#fff')}
+        >
+          <Layers size={14} />
+          View Columns
+        </button>
+
+        {showPicker && (
+          <>
+            <div onClick={() => setShowPicker(false)} style={{ position: 'fixed', inset: 0, zIndex: 100 }} />
+            <div style={{
+              position: 'absolute', top: '100%', right: 0, marginTop: '8px',
+              background: '#fff', borderRadius: '12px', boxShadow: '0 10px 30px rgba(0,0,0,0.15)',
+              border: '1px solid #e9ecef', padding: '12px', zIndex: 101,
+              width: '220px', display: 'grid', gridTemplateColumns: '1fr', gap: '4px',
+              maxHeight: '400px', overflowY: 'auto'
+            }}>
+              <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#adb5bd', padding: '4px 8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Select Columns
+              </div>
+              {allMasterKeys.map(key => (
+                <label key={key} style={{ 
+                  display: 'flex', alignItems: 'center', gap: '10px', 
+                  padding: '8px', borderRadius: '6px', cursor: 'pointer',
+                  background: visibleKeys.includes(key) ? '#f1f3f5' : 'transparent',
+                  transition: 'background 0.15s'
+                }}>
+                  <input 
+                    type="checkbox" 
+                    checked={visibleKeys.includes(key)}
+                    onChange={() => toggleKey(key)}
+                    style={{ cursor: 'pointer' }}
+                  />
+                  <span style={{ fontSize: '0.75rem', color: '#495057', fontWeight: visibleKeys.includes(key) ? 600 : 400 }}>
+                    {MASTER_COLS[key].label || key}
+                  </span>
+                </label>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+
       <div style={{ overflowX: 'auto' }}>
-        <table style={{ borderCollapse: 'collapse', width: '100%', tableLayout: 'fixed' }}>
+        <table style={{ borderCollapse: 'collapse', width: '100%', tableLayout: 'auto' }}>
           <colgroup>
-            {COLS.map(c => <col key={c.key} style={{ width: c.w }} />)}
+            {activeCols.map(c => <col key={c.key} style={{ width: c.w }} />)}
           </colgroup>
           <thead>
-            <tr style={{ background: '#004b8d', borderBottom: '1px solid #003d73' }}>
-              {COLS.map(c => (
+            <tr style={{ background: 'var(--color-brand-500)', borderBottom: '1px solid var(--color-brand-600)' }}>
+              {activeCols.map(c => (
                 <th key={c.key} style={{
                   position: 'sticky', top: 0,
+                  background: 'var(--color-brand-500)',
                   padding: '16px 12px', fontSize: '0.75rem', fontWeight: 800,
-                  color: '#fff', textAlign: c.align, textTransform: 'uppercase',
-                  border: '1px solid #003d73',
+                  color: '#fff', textAlign: c.align,
+                  border: '1px solid var(--color-brand-600)',
+                  zIndex: 10,
                 }}>
                   {c.label}
                 </th>
@@ -301,10 +545,10 @@ export default function OrderTable({
           </thead>
           <tbody>
             {loading ? (
-              <SkeletonRows cols={COLS.length} />
+              <SkeletonRows cols={activeCols.length} />
             ) : data.length === 0 ? (
               <tr>
-                <td colSpan={COLS.length} style={{ padding: '60px', textAlign: 'center', color: '#adb5bd', fontSize: '0.9rem' }}>
+                <td colSpan={activeCols.length} style={{ padding: '60px', textAlign: 'center', color: '#adb5bd', fontSize: '0.9rem' }}>
                   No orders found matching your criteria.
                 </td>
               </tr>
@@ -317,35 +561,24 @@ export default function OrderTable({
                   background: i % 2 === 0 ? '#fff' : '#fafbfc',
                   transition: 'all 0.1s',
                 }}
-                onMouseEnter={e => (e.currentTarget.style.background = '#e7f5ff')}
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--color-brand-50)')}
                 onMouseLeave={e => (e.currentTarget.style.background = i % 2 === 0 ? '#fff' : '#fafbfc')}
               >
-                <td style={{ padding: '16px 12px', textAlign: 'center', color: '#868e96', fontSize: '0.75rem', border: '1px solid #d0e1f0', background: '#f8f9fa' }}>{pageOffset + i + 1}</td>
-                <td style={{ padding: '16px 12px', textAlign: 'center', fontWeight: 600, color: '#495057', border: '1px solid #d0e1f0' }}>{o.Week}</td>
-                <td style={{ padding: '16px 12px', textAlign: 'center', fontWeight: 700, color: '#1971c2', border: '1px solid #d0e1f0' }}>{o.CustCode}</td>
-                <td style={{ padding: '16px 12px', fontWeight: 600, color: '#495057', fontSize: '0.75rem', wordBreak: 'break-word', border: '1px solid #d0e1f0' }}>{o.PONo}</td>
-                <td style={{ padding: '16px 12px', textAlign: 'center', color: '#495057', fontSize: '0.75rem', border: '1px solid #d0e1f0' }}>{o.OrdKind}</td>
-                <td style={{ padding: '16px 12px', textAlign: 'center', color: '#495057', fontSize: '0.75rem', border: '1px solid #d0e1f0' }}>{o.OrdMat}</td>
-                <td style={{ padding: '16px 12px', fontWeight: 600, color: '#212529', fontSize: '0.75rem', wordBreak: 'break-word', border: '1px solid #d0e1f0' }}>{o.ShipTo}</td>
-                <td style={{ padding: '10px 12px', textAlign: 'center', border: '1px solid #d0e1f0' }}>
-                  <div style={{ width: 40, height: 40, borderRadius: 8, background: '#f1f3f5', overflow: 'hidden', margin: '0 auto', border: '1px solid #dee2e6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {o.ItemPhoto
-                      ? <img src={o.ItemPhoto.startsWith('data:') ? o.ItemPhoto : `data:image/jpeg;base64,${o.ItemPhoto}`} alt="item" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      : <ImageIcon size={16} style={{ color: '#ced4da' }} />
-                    }
-                  </div>
-                </td>
-                <td style={{ padding: '16px 12px', textAlign: 'center', color: '#495057', fontSize: '0.75rem', border: '1px solid #d0e1f0' }}>{formatDate(o.OrdDate)}</td>
-                <td style={{ padding: '16px 12px', textAlign: 'center', color: '#495057', fontSize: '0.75rem', border: '1px solid #d0e1f0' }}>{formatDate(o.DueDate)}</td>
-                <td style={{ padding: '16px 12px', textAlign: 'center', color: '#495057', fontSize: '0.75rem', border: '1px solid #d0e1f0' }}>{formatDate(o.CustDueDate)}</td>
-                <td style={{ padding: '16px 12px', textAlign: 'center', fontWeight: 600, color: '#e67700', border: '1px solid #d0e1f0', background: '#fff9db' }}>{o.NumSKU || '-'}</td>
-                <td style={{ padding: '16px 12px', textAlign: 'right', fontWeight: 800, color: '#1971c2', border: '1px solid #d0e1f0', background: '#e7f5ff' }}>{formatQty(o.TotalQty)}</td>
-                <td style={{ padding: '16px 12px', textAlign: 'right', fontWeight: 800, color: '#099268', border: '1px solid #d0e1f0', background: '#ebfbee' }}>
-                  {o.Amount != null ? `$${o.Amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '-'}
-                </td>
-                <td style={{ padding: '16px 12px', textAlign: 'center', border: '1px solid #d0e1f0' }}>
-                  <ChevronRight size={16} style={{ color: '#ced4da' }} />
-                </td>
+                {activeCols.map(c => (
+                  <td
+                    key={c.key}
+                    style={{
+                      padding: '12px 10px',
+                      textAlign: c.align,
+                      fontSize: '0.75rem',
+                      color: 'var(--color-text-secondary)',
+                      border: '1px solid var(--color-border-light)',
+                      ...c.cellStyle?.(o)
+                    }}
+                  >
+                    {c.render(o, i, pageOffset)}
+                  </td>
+                ))}
               </tr>
             ))}
           </tbody>

@@ -44,6 +44,7 @@ app.get('/api/health', async (req, res) => {
 // ─── Routes ───────────────────────────────────────────────────────────────────
 app.use('/api/orders', require('./routes/orders'));
 app.use('/api/dashboard', require('./routes/dashboard'));
+app.use('/api/search', require('./routes/search'));
 
 // ─── Global Error Handler (ดักจับ Error ที่หลุดรอด) ───────────────────────────
 app.use((err, req, res, next) => {

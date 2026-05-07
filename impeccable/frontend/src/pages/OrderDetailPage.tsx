@@ -1,226 +1,370 @@
 // src/pages/OrderDetailPage.tsx
 import { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Printer, RefreshCw, AlertTriangle, Image as ImageIcon, FileText, Box, Scissors, Gem, Droplet, Sun, Layers, ShieldCheck, Package } from 'lucide-react';
+import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
+import { ChevronLeft, RefreshCw, AlertTriangle } from 'lucide-react';
 import Topbar from '../components/layout/Topbar';
-import { fetchOrderDetail, type OrderDetail } from '../services/orderTrackerAPI';
+import { fetchOrderDetail, fetchOrderByPo, type OrderDetail } from '../services/orderTrackerAPI';
 
-// ─── Helpers ───
-function fDate(d: string | null | undefined) {
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+const fDate = (d: string | null | undefined) => {
   if (!d) return '—';
   return new Date(d).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: '2-digit' });
-}
-function fQty(n: number | null | undefined) {
-  if (n == null) return '—';
-  return n.toLocaleString();
-}
-function fAmt(n: number | null | undefined, curr?: string) {
-  if (n == null) return '—';
-  return `${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${curr || ''}`.trim();
-}
+};
+const fQty = (n: number | null | undefined) => (n == null ? '—' : n.toLocaleString());
+const fAmt = (n: number | null | undefined) =>
+  n == null ? '—' : n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-// ─── Production Step Tracker ───
-const PROD_STEPS = [
-  { key: 'Cast', label: 'Cast', icon: <Box size={14} /> },
-  { key: 'Grind', label: 'Grind', icon: <Scissors size={14} /> },
-  { key: 'Polish', label: 'Polish', icon: <Sun size={14} /> },
-  { key: 'Set', label: 'Set', icon: <Gem size={14} /> },
-  { key: 'Epox', label: 'Epox', icon: <Droplet size={14} /> },
-  { key: 'Plate', label: 'Plate', icon: <Layers size={14} /> },
-  { key: 'Assem', label: 'Assem', icon: <Layers size={14} /> },
-  { key: 'QC', label: 'QC', icon: <ShieldCheck size={14} /> },
-  { key: 'Pack', label: 'Pack', icon: <Package size={14} /> },
+type ViewMode = 'sales' | 'prod' | 'all';
+
+// ─── Column Definitions ───────────────────────────────────────────────────────
+// คอลัมน์ที่ตรึงอยู่เสมอ (ซ้ายสุด)
+const FIXED_COLS = [
+  { key: 'no',       label: 'No.',        w: 40  },
+  { key: 'ItemNo',   label: 'Item No.',   w: 110 },
+  { key: 'ItemDesc', label: 'Description',w: 160 },
+  { key: 'ItemSize', label: 'Size',       w: 90  },
+  { key: 'ItemMat',  label: 'Metal',      w: 70  },
 ];
 
-function StepTracker({ processes }: { processes: Record<string, { qty: number | null; status: string | null }> }) {
-  return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(70px, 1fr))', gap: '8px', background: '#f8f9fa', padding: '12px', borderRadius: '8px', border: '1px solid #e9ecef' }}>
-      {PROD_STEPS.map(step => {
-        const p = processes[step.key];
-        const isPending = p && p.qty != null && p.qty < 0;
-        const isDone = p && (p.status === 'Y' || p.status === 'C' || p.qty === 0);
-        
-        let color = '#adb5bd'; // default (not reached)
-        let bg = '#f1f3f5';
-        if (isDone) { color = '#2b8a3e'; bg = '#d3f9d8'; }
-        else if (isPending) { color = '#c92a2a'; bg = '#ffe3e3'; }
+// Customer Data columns
+const COL_CUST = [
+  { key: 'OrdDate',    label: 'Order Date',    w: 85,  group: 'cust', sales: true,  prod: true  },
+  { key: 'DueDate',    label: 'Factory Due',   w: 85,  group: 'cust', sales: true,  prod: true  },
+  { key: 'QCDate',     label: 'QC Date',       w: 85,  group: 'cust', sales: true,  prod: false },
+  { key: 'CustDueDate',label: 'Cust Due Date', w: 85,  group: 'cust', sales: true,  prod: false },
+  { key: 'Sales',      label: 'Sales',         w: 70,  group: 'cust', sales: true,  prod: false },
+  { key: 'PONo',       label: 'PO1',           w: 100, group: 'cust', sales: true,  prod: false },
+  { key: 'Destination',label: 'Destination',   w: 90,  group: 'cust', sales: true,  prod: false },
+  { key: 'CustItem',   label: 'Cust Item',     w: 90,  group: 'cust', sales: true,  prod: false },
+  { key: 'Stone',      label: 'Stone',         w: 80,  group: 'cust', sales: true,  prod: true  },
+  { key: 'Plating',    label: 'Plating',       w: 70,  group: 'cust', sales: true,  prod: true  },
+  { key: 'OrdRemark',  label: 'Order Remark',  w: 120, group: 'cust', sales: true,  prod: false },
+  { key: 'Price',      label: 'Price',         w: 80,  group: 'cust', sales: true,  prod: false },
+  { key: 'Amount',     label: 'Amount',        w: 90,  group: 'cust', sales: true,  prod: false },
+];
 
-        return (
-          <div key={step.key} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', padding: '6px', background: bg, borderRadius: '6px', border: `1px solid ${isDone ? '#b2f2bb' : isPending ? '#ffc9c9' : '#dee2e6'}` }}>
-            <div style={{ color }}>{step.icon}</div>
-            <div style={{ fontSize: '0.6rem', fontWeight: 700, color: color }}>{step.label}</div>
-            <div style={{ fontSize: '0.75rem', fontWeight: 800, color: isPending ? '#c92a2a' : '#495057' }}>
-              {p?.qty != null ? Math.abs(p.qty).toLocaleString() : '—'}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
+// Shipping Data columns
+const COL_SHIP = [
+  { key: 'InvoiceNo',  label: 'Invoice No.',  w: 100, group: 'ship', sales: true,  prod: false },
+  { key: 'InvoiceDate',label: 'Invoice Date', w: 85,  group: 'ship', sales: true,  prod: false },
+  { key: 'AWB',        label: 'AWB',          w: 90,  group: 'ship', sales: true,  prod: false },
+];
+
+// Production Process columns (qty = pending qty)
+const COL_PROD = [
+  { key: 'StoneQty',   label: 'Stone',    w: 70, group: 'prod', sales: false, prod: true },
+  { key: 'FindingQty', label: 'Finding',  w: 70, group: 'prod', sales: false, prod: true },
+  { key: 'WaxQty',     label: 'Wax',      w: 60, group: 'prod', sales: false, prod: true },
+  { key: 'WaxSetQty',  label: 'Wax Set',  w: 70, group: 'prod', sales: false, prod: true },
+  { key: 'CastQty',    label: 'Cast',     w: 60, group: 'prod', sales: false, prod: true },
+  { key: 'GrindQty',   label: 'Grind',    w: 65, group: 'prod', sales: false, prod: true },
+  { key: 'EpoxQty',    label: 'Epoxy',    w: 60, group: 'prod', sales: false, prod: true },
+  { key: 'FilingQty',  label: 'Filing',   w: 60, group: 'prod', sales: false, prod: true },
+  { key: 'PolishQty',  label: 'Polish',   w: 65, group: 'prod', sales: false, prod: true },
+  { key: 'PQCQty',     label: 'PQC',      w: 55, group: 'prod', sales: false, prod: true },
+  { key: 'PlatingQty', label: 'Plating',  w: 65, group: 'prod', sales: false, prod: true },
+  { key: 'AssemQty',   label: 'Assemble', w: 70, group: 'prod', sales: false, prod: true },
+  { key: 'FQCQty',     label: 'FQC',      w: 55, group: 'prod', sales: false, prod: true },
+  { key: 'PackQty',    label: 'Pack',     w: 60, group: 'prod', sales: false, prod: true },
+  { key: 'GroupQty',   label: 'Group',    w: 60, group: 'prod', sales: false, prod: true },
+  { key: 'BalQty',     label: 'Balance',  w: 65, group: 'prod', sales: false, prod: true },
+];
+
+// Remark columns — แสดงทั้ง sales & prod
+const COL_REMARK = [
+  { key: 'RecRemark',  label: 'Receive Remark',   w: 120, group: 'remark', sales: true, prod: true },
+  { key: 'EnaRemark',  label: 'Enamel Remark',    w: 120, group: 'remark', sales: true, prod: true },
+  { key: 'CryRemark',  label: 'Crystal Remark',   w: 120, group: 'remark', sales: true, prod: true },
+  { key: 'AsmRemark',  label: 'Assembly Remark',  w: 130, group: 'remark', sales: true, prod: true },
+  { key: 'ShfRemark',  label: 'Shelf Remark',     w: 110, group: 'remark', sales: true, prod: true },
+  { key: 'PkRemark',   label: 'Pack Remark',      w: 110, group: 'remark', sales: true, prod: true },
+  { key: 'ProdRemark', label: 'Production Remark',w: 130, group: 'remark', sales: true, prod: true },
+];
+
+const ALL_EXTRA_COLS = [...COL_CUST, ...COL_SHIP, ...COL_PROD, ...COL_REMARK];
+
+function getVisibleCols(view: ViewMode) {
+  if (view === 'all') return ALL_EXTRA_COLS;
+  return ALL_EXTRA_COLS.filter(c => view === 'sales' ? c.sales : c.prod);
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// Group header spans
+function buildGroupHeaders(cols: typeof ALL_EXTRA_COLS) {
+  const groups: { label: string; span: number; color: string }[] = [];
+  let current = '';
+  const COLORS: Record<string, string> = {
+    cust: '#d0ebff', ship: '#d3f9d8', prod: '#fff3bf', remark: '#ffe8cc',
+  };
+  const LABELS: Record<string, string> = {
+    cust: 'Customer Data', ship: 'Shipping Data', prod: 'Production Process', remark: 'Remarks',
+  };
+  for (const c of cols) {
+    if (c.group !== current) {
+      groups.push({ label: LABELS[c.group] || c.group, span: 1, color: COLORS[c.group] || '#f8f9fa' });
+      current = c.group;
+    } else {
+      groups[groups.length - 1].span++;
+    }
+  }
+  return groups;
+}
+
+// ─── View Tabs ─────────────────────────────────────────────────────────────────
+const VIEW_TABS: { key: ViewMode; label: string; color: string }[] = [
+  { key: 'sales', label: '📋 Sales View',      color: '#1971c2' },
+  { key: 'prod',  label: '⚙️ Production View', color: '#c92a2a' },
+  { key: 'all',   label: '🔍 All View',         color: '#5c5f66' },
+];
+
+// ─── Cell renderer ─────────────────────────────────────────────────────────────
+const DATE_KEYS = new Set(['OrdDate','DueDate','QCDate','CustDueDate','InvoiceDate']);
+
+function cellVal(colKey: string, line: Record<string, unknown>): string {
+  const v = line[colKey];
+  if (v == null || v === '') return '—';
+  if (DATE_KEYS.has(colKey)) return fDate(v as string);
+  if (typeof v === 'number') {
+    if (colKey === 'Price' || colKey === 'Amount') return fAmt(v);
+    return fQty(v);
+  }
+  return String(v);
+}
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
 export default function OrderDetailPage() {
-  const { ordNo } = useParams<{ ordNo: string }>();
+  // รองรับ /po/:poNo, /ord/:ordNo และ legacy /:ordNo
+  const { poNo, ordNo } = useParams<{ poNo?: string; ordNo?: string }>();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+
+  const isPo = Boolean(poNo);
+  const rawKey = isPo ? poNo! : ordNo!;
+
+  const viewParam = (searchParams.get('view') as ViewMode) || 'prod';
+  const [view, setView] = useState<ViewMode>(viewParam);
 
   const [detail, setDetail] = useState<OrderDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    if (!ordNo) return;
-    setLoading(true);
-    setError(null);
+    if (!rawKey) return;
+    setLoading(true); setError(null);
     try {
-      const data = await fetchOrderDetail(decodeURIComponent(ordNo));
+      let data: OrderDetail;
+      if (isPo) {
+        data = await fetchOrderByPo(decodeURIComponent(rawKey)) as unknown as OrderDetail;
+      } else {
+        data = await fetchOrderDetail(decodeURIComponent(rawKey));
+      }
       setDetail(data);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'โหลดข้อมูลไม่สำเร็จ');
     } finally {
       setLoading(false);
     }
-  }, [ordNo]);
+  }, [rawKey, isPo]);
 
   useEffect(() => { load(); }, [load]);
 
   const h = detail?.header;
+  const lines = (detail?.lines ?? []) as Record<string, unknown>[];
+  const visibleCols = getVisibleCols(view);
+  const groupHeaders = buildGroupHeaders(visibleCols);
+
+  const pageTitle = isPo
+    ? (h as any)?.PONo || decodeURIComponent(rawKey)
+    : decodeURIComponent(rawKey);
+
+  // ─── Th/Td style helpers ─────────────────────────────────────────────────
+  const thBase: React.CSSProperties = {
+    padding: '6px 8px', fontSize: '0.68rem', fontWeight: 700,
+    border: '1px solid #b0c4de', whiteSpace: 'nowrap', textAlign: 'center',
+    position: 'sticky', top: 0, zIndex: 2,
+  };
+  const tdBase: React.CSSProperties = {
+    padding: '5px 7px', fontSize: '0.72rem', border: '1px solid #cdd5e0',
+    whiteSpace: 'nowrap', textAlign: 'center', verticalAlign: 'middle',
+  };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#f4f6f8' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#f0f4f8' }}>
       <Topbar breadcrumb={[
         { label: 'JEWELRY SMART FACTORY', path: '/' },
         { label: 'ORDER TRACKER', path: '/order-tracker' },
-        { label: decodeURIComponent(ordNo ?? '') },
+        { label: pageTitle },
       ]} />
 
-      <div className="flex-1 overflow-y-auto" style={{ padding: '24px' }}>
-        
-        {/* Action Bar */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <button onClick={() => navigate('/order-tracker')} style={btnStyle('#fff', '#495057')}>
-              <ChevronLeft size={16} /> กลับ
-            </button>
-            <div style={{ padding: '4px 16px', background: '#004b8d', color: '#fff', borderRadius: '8px', fontWeight: 800, fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(0,75,141,0.2)' }}>
-              <FileText size={18} /> ORDER: {decodeURIComponent(ordNo ?? '')}
+      {/* ── Top Bar ── */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '8px 16px', background: '#fff', borderBottom: '1px solid #dee2e6',
+        boxShadow: '0 2px 6px rgba(0,0,0,0.04)',
+      }}>
+        {/* Left: back + title */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <button
+            onClick={() => navigate('/order-tracker')}
+            style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '5px 12px', border: '1px solid #ced4da', borderRadius: '6px', background: '#fff', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600, color: '#495057' }}
+          >
+            <ChevronLeft size={14} /> กลับ
+          </button>
+          <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#004b8d' }}>
+            {isPo ? 'PO: ' : 'Order: '}{pageTitle}
+          </div>
+          {isPo && (h as any)?.OrdNos && (
+            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+              {((h as any).OrdNos as string[]).map((o: string) => (
+                <span key={o} style={{ background: '#e7f5ff', color: '#1971c2', fontSize: '0.65rem', padding: '1px 6px', borderRadius: '3px', fontFamily: 'monospace', fontWeight: 700 }}>{o}</span>
+              ))}
             </div>
-          </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button style={btnStyle('#fff', '#495057')} onClick={load}>
-              <RefreshCw size={14} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} /> รีเฟรช
-            </button>
-            <button style={btnStyle('#1971c2', '#fff')} onClick={() => window.print()}>
-              <Printer size={14} /> พิมพ์รายงาน
-            </button>
-          </div>
+          )}
         </div>
 
-        {/* ── Order Header Info ── */}
-        {h && (
-          <div style={{ background: '#fff', borderRadius: '12px', border: '1px solid #dee2e6', padding: '20px', marginBottom: '24px', display: 'flex', flexWrap: 'wrap', gap: '24px', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
-            <div style={{ display: 'flex', flex: 1, gap: '24px' }}>
-              <InfoCol label="Customer" value={`${h.CustCode} — ${h.CustName}`} />
-              <InfoCol label="PO No." value={h.PONo || '—'} />
-              <InfoCol label="Material" value={h.OrdMat || '—'} />
-              <InfoCol label="Order Date" value={fDate(h.OrdDate)} />
-              <InfoCol label="Due Date" value={fDate(h.DueDate)} warning />
-            </div>
-            <div style={{ display: 'flex', gap: '24px', borderLeft: '1px solid #e9ecef', paddingLeft: '24px' }}>
-              <InfoCol label="Total Qty" value={fQty(h.TotalQty)} highlight />
-              <InfoCol label={`Amount (${h.CurrCode || '$'})`} value={fAmt(h.TotalAmount)} success />
-            </div>
-          </div>
-        )}
+        {/* Center: View Tabs */}
+        <div style={{ display: 'flex', gap: '4px' }}>
+          {VIEW_TABS.map(t => (
+            <button
+              key={t.key}
+              onClick={() => setView(t.key)}
+              style={{
+                padding: '5px 14px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', transition: 'all 0.15s',
+                background: view === t.key ? t.color : '#f1f3f5',
+                color: view === t.key ? '#fff' : '#495057',
+                border: `1px solid ${view === t.key ? t.color : '#dee2e6'}`,
+              }}
+            >{t.label}</button>
+          ))}
+        </div>
 
-        {/* ── Error ── */}
-        {error && (
-          <div style={{ padding: '16px', background: '#ffe3e3', border: '1px solid #ffc9c9', borderRadius: '8px', marginBottom: '24px', color: '#c92a2a', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <AlertTriangle size={18} /> {error}
-          </div>
-        )}
+        {/* Right: refresh + meta */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {h && (
+            <div style={{ display: 'flex', gap: '16px', fontSize: '0.72rem', color: '#495057' }}>
+              <span><b style={{ color: '#868e96' }}>Customer:</b> {h.CustCode} {h.CustName}</span>
+              <span><b style={{ color: '#868e96' }}>Due:</b> <span style={{ color: '#c92a2a', fontWeight: 700 }}>{fDate(h.DueDate)}</span></span>
+              <span><b style={{ color: '#868e96' }}>Qty:</b> <span style={{ color: '#1971c2', fontWeight: 800 }}>{fQty(h.TotalQty)}</span></span>
+              <span><b style={{ color: '#868e96' }}>Lines:</b> {detail?.lineCount ?? '—'}</span>
+            </div>
+          )}
+          <button
+            onClick={load}
+            style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '5px 10px', border: '1px solid #ced4da', borderRadius: '6px', background: '#fff', cursor: 'pointer', fontSize: '0.72rem', color: '#495057' }}
+          >
+            <RefreshCw size={12} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} /> รีเฟรช
+          </button>
+        </div>
+      </div>
 
-        {/* ── Items List ── */}
+      {/* ── Error ── */}
+      {error && (
+        <div style={{ padding: '8px 16px', background: '#ffe3e3', borderBottom: '1px solid #ffc9c9', color: '#c92a2a', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem' }}>
+          <AlertTriangle size={14} /> {error}
+        </div>
+      )}
+
+      {/* ── Table (full-screen, scrollable) ── */}
+      <div style={{ flex: 1, overflow: 'auto' }}>
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '40px', color: '#adb5bd' }}>กำลังโหลดข้อมูล...</div>
-        ) : detail?.lines.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '40px', color: '#adb5bd', background: '#fff', borderRadius: '12px', border: '1px solid #dee2e6' }}>ไม่พบข้อมูลรายการสินค้า</div>
+          <div style={{ textAlign: 'center', padding: '60px', color: '#adb5bd', fontSize: '0.85rem' }}>กำลังโหลดข้อมูล...</div>
+        ) : lines.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '60px', color: '#adb5bd', fontSize: '0.85rem' }}>ไม่พบข้อมูล</div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {detail?.lines.map(line => (
-              <div key={line.LineNo} style={{ background: '#fff', borderRadius: '12px', border: '1px solid #dee2e6', overflow: 'hidden', display: 'flex', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
-                
-                {/* Photo */}
-                <div style={{ width: '160px', background: '#f8f9fa', borderRight: '1px solid #dee2e6', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
-                  {line.ItemPhoto ? (
-                    <img src={line.ItemPhoto} alt={line.ItemNo} style={{ width: '100%', height: '100%', objectFit: 'contain', mixBlendMode: 'darken' }} />
-                  ) : (
-                    <div style={{ textAlign: 'center', color: '#adb5bd' }}>
-                      <ImageIcon size={32} style={{ margin: '0 auto', marginBottom: '8px' }} />
-                      <div style={{ fontSize: '0.7rem' }}>No Image</div>
-                    </div>
-                  )}
-                </div>
+          <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 'max-content', tableLayout: 'fixed', fontSize: '0.72rem' }}>
+            <colgroup>
+              {/* Fixed cols */}
+              {FIXED_COLS.map(c => <col key={c.key} style={{ width: `${c.w}px`, minWidth: `${c.w}px` }} />)}
+              {/* Photo */}
+              <col style={{ width: '60px', minWidth: '60px' }} />
+              {/* Dynamic cols */}
+              {visibleCols.map(c => <col key={c.key} style={{ width: `${c.w}px`, minWidth: `${c.w}px` }} />)}
+            </colgroup>
 
-                {/* Details */}
-                <div style={{ flex: 1, padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-                    <div>
-                      <div style={{ fontSize: '0.75rem', color: '#868e96', fontWeight: 700, marginBottom: '4px' }}>LINE {line.LineNo}</div>
-                      <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#004b8d', marginBottom: '4px' }}>{line.ItemNo}</div>
-                      <div style={{ fontSize: '0.85rem', color: '#495057' }}>{line.ItemDesc || '—'}</div>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: '0.75rem', color: '#868e96', fontWeight: 700, marginBottom: '4px' }}>QTY / AMOUNT</div>
-                      <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1971c2' }}>{fQty(line.Qty)}</div>
-                      <div style={{ fontSize: '0.85rem', color: '#099268', fontWeight: 700 }}>{fAmt(line.Amount)}</div>
-                    </div>
-                  </div>
+            <thead>
+              {/* Row 1: Group headers */}
+              <tr>
+                {/* Fixed group */}
+                <th colSpan={FIXED_COLS.length + 1} style={{ ...thBase, background: '#e3e8ef', color: '#364155' }}>
+                  Item Information
+                </th>
+                {groupHeaders.map((g, i) => (
+                  <th key={i} colSpan={g.span} style={{ ...thBase, background: g.color, color: '#333' }}>
+                    {g.label}
+                  </th>
+                ))}
+              </tr>
+              {/* Row 2: Column labels */}
+              <tr>
+                {FIXED_COLS.map(c => (
+                  <th key={c.key} style={{ ...thBase, background: '#e9ecef', color: '#495057' }}>{c.label}</th>
+                ))}
+                <th style={{ ...thBase, background: '#e9ecef', color: '#495057' }}>Pic</th>
+                {visibleCols.map(c => (
+                  <th key={c.key} style={{ ...thBase, background: '#f1f3f5', color: '#495057' }}>{c.label}</th>
+                ))}
+              </tr>
+            </thead>
 
-                  <div style={{ display: 'flex', gap: '24px', marginBottom: '16px', fontSize: '0.8rem' }}>
-                    <div><span style={{ color: '#868e96' }}>Material:</span> <b style={{ color: '#212529' }}>{line.ItemMat || '—'}</b></div>
-                    <div><span style={{ color: '#868e96' }}>Size:</span> <b style={{ color: '#212529' }}>{line.ItemSize || '—'}</b></div>
-                    <div><span style={{ color: '#868e96' }}>Status:</span> <b style={{ color: line.ItemStatus === 'Y' ? '#2b8a3e' : '#e67700' }}>{line.ItemStatus === 'Y' ? 'Done' : 'Pending'}</b></div>
-                    <div><span style={{ color: '#868e96' }}>Finish Qty:</span> <b style={{ color: line.FinishQty === line.Qty ? '#2b8a3e' : '#212529' }}>{fQty(line.FinishQty)}</b></div>
-                  </div>
-
-                  {/* Production Tracker */}
-                  <StepTracker processes={line.processes} />
-                </div>
-              </div>
-            ))}
-          </div>
+            <tbody>
+              {lines.map((line, i) => {
+                const even = i % 2 === 0;
+                const rowBg = even ? '#fff' : '#f8fafc';
+                return (
+                  <tr
+                    key={i}
+                    style={{ background: rowBg }}
+                    onMouseEnter={e => (e.currentTarget.style.background = '#eff6ff')}
+                    onMouseLeave={e => (e.currentTarget.style.background = rowBg)}
+                  >
+                    {/* Fixed cells */}
+                    <td style={{ ...tdBase, color: '#868e96', background: '#f8f9fa' }}>{i + 1}</td>
+                    <td style={{ ...tdBase, fontWeight: 700, color: '#004b8d', fontFamily: 'monospace', fontSize: '0.68rem' }}>
+                      {String(line.OrdNo || '')}
+                      {line.LineNo != null && <span style={{ color: '#868e96', fontWeight: 400 }}>/{String(line.LineNo)}</span>}
+                      <div style={{ fontWeight: 800, color: '#212529', fontFamily: 'inherit', fontSize: '0.7rem' }}>{String(line.ItemNo || '—')}</div>
+                    </td>
+                    <td style={{ ...tdBase, textAlign: 'left' }}>{String(line.ItemDesc || '—')}</td>
+                    <td style={{ ...tdBase }}>{String(line.ItemSize || '—')}</td>
+                    <td style={{ ...tdBase, fontWeight: 700, color: '#862e9c' }}>{String(line.ItemMat || '—')}</td>
+                    {/* Photo */}
+                    <td style={{ ...tdBase, padding: '2px' }}>
+                      {line.ItemPhoto ? (
+                        <img src={String(line.ItemPhoto)} alt="" style={{ width: '50px', height: '50px', objectFit: 'contain', display: 'block', margin: '0 auto', mixBlendMode: 'darken' }} />
+                      ) : (
+                        <div style={{ width: '50px', height: '50px', background: '#f1f3f5', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', color: '#ced4da', fontSize: '0.55rem' }}>
+                          No Img
+                        </div>
+                      )}
+                    </td>
+                    {/* Dynamic cells */}
+                    {visibleCols.map(c => {
+                      const val = cellVal(c.key, line);
+                      const isProd = c.group === 'prod';
+                      const isRed = isProd && val !== '—' && !isNaN(Number(val.replace(/,/g, ''))) && Number(val.replace(/,/g, '')) < 0;
+                      const isGreen = isProd && val !== '—' && !isNaN(Number(val.replace(/,/g, ''))) && Number(val.replace(/,/g, '')) === 0;
+                      return (
+                        <td key={c.key} style={{
+                          ...tdBase,
+                          color: isRed ? '#c92a2a' : isGreen ? '#2b8a3e' : c.key.endsWith('Remark') ? '#495057' : undefined,
+                          fontWeight: isRed ? 700 : undefined,
+                          background: isRed ? 'rgba(201,42,42,0.05)' : undefined,
+                          textAlign: c.key.endsWith('Remark') ? 'left' : 'center',
+                          whiteSpace: c.key.endsWith('Remark') ? 'normal' : 'nowrap',
+                          maxWidth: c.key.endsWith('Remark') ? `${c.w}px` : undefined,
+                        }}>
+                          {val}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         )}
       </div>
+
       <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
     </div>
   );
-}
-
-// ─── Component Helpers ───
-
-function InfoCol({ label, value, highlight, warning, success }: any) {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-      <span style={{ fontSize: '0.65rem', color: '#868e96', fontWeight: 700, textTransform: 'uppercase' }}>{label}</span>
-      <span style={{ 
-        fontSize: '1rem', 
-        fontWeight: highlight || warning || success ? 800 : 600, 
-        color: warning ? '#e03131' : success ? '#099268' : highlight ? '#1971c2' : '#212529' 
-      }}>
-        {value}
-      </span>
-    </div>
-  );
-}
-
-function btnStyle(bg: string, color: string): React.CSSProperties {
-  return {
-    display: 'flex', alignItems: 'center', gap: '6px',
-    padding: '8px 16px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 700,
-    border: bg === '#fff' ? '1px solid #ced4da' : 'none',
-    background: bg, color: color,
-    cursor: 'pointer', transition: 'all 0.2s',
-    boxShadow: bg === '#fff' ? '0 2px 4px rgba(0,0,0,0.02)' : '0 2px 6px rgba(25,113,194,0.3)'
-  };
 }

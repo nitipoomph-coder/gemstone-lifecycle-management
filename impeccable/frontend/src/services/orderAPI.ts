@@ -17,11 +17,17 @@ export interface OrderSummary {
   NumSKU: number;
   Amount: number | null;
   ItemPhoto: string | null; // รูป Base64
+  TrackTest: string | null;
+  OrdSGS: string | null;
+  CustQCDate: string | null;
+  OORDate: string | null;
+  TrackRemark: string | null;
 }
 
 export const fetchOrders = async (params: { status?: 'pending' | 'all', dateType?: string, dateFrom?: string, dateTo?: string }): Promise<{ ok: boolean; data: OrderSummary[]; error?: string }> => {
   try {
-    const baseUrl = 'http://localhost:3001/api/orders';
+    const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname.startsWith('192.168.'));
+    const baseUrl = isLocal ? `http://${window.location.hostname}:3001/api/orders` : 'https://fresh-camels-change.loca.lt/api/orders';
     const queryParams = new URLSearchParams();
     if (params.status === 'pending') queryParams.append('status', 'pending');
     if (params.dateFrom) queryParams.append('dateFrom', params.dateFrom);
@@ -56,6 +62,11 @@ export const fetchOrders = async (params: { status?: 'pending' | 'all', dateType
       NumSKU: Number(item.SumItem || item.sumItem || item.NumSKU || 0),
       Amount: Number(item.SumAmnt || item.sumAmnt || item.Amount || item.amount || 0),
       ItemPhoto: item.ItemPhoto || item.itemPhoto || null,
+      TrackTest: item.TrackTest || '-',
+      OrdSGS: item.OrdSGS || '-',
+      CustQCDate: item.CustQCDate || null,
+      OORDate: item.OORDate || null,
+      TrackRemark: item.TrackRemark || item.remark || '-',
     }));
 
     return { ok: true, data: mappedData };

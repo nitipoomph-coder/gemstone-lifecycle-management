@@ -6,12 +6,12 @@ const { getPool, sql } = require('../db');
 function toBase64Photo(buf) {
   if (!buf) return null;
   try {
-    let b;
-    if (Buffer.isBuffer(buf)) b = buf;
-    else if (buf?.data) b = Buffer.from(buf.data);
-    else b = Buffer.from(buf);
-    if (b.length === 0) return null;
-    return `data:image/jpeg;base64,${b.toString('base64')}`;
+    // ดึงก้อนข้อมูล Binary ออกมา
+    const actualBuffer = Buffer.isBuffer(buf) ? buf : (buf.data ? Buffer.from(buf.data) : Buffer.from(buf));
+
+    if (!actualBuffer || actualBuffer.length === 0) return null;
+
+    return `data:image/jpeg;base64,${actualBuffer.toString('base64')}`;
   } catch (err) {
     console.error('Photo conversion error:', err.message);
     return null;
@@ -38,7 +38,8 @@ function setCached(key, data) {
 router.get('/', async (req, res) => {
   try {
     const pool = await getPool();
-    const { dateFrom, dateTo, dateType, noCache } = req.query;
+    const { dateFrom, dateTo, dateType, status, noCache } = req.query;
+    const statusFilter = status || 'pending'; // default to pending if not specified
 
     // Default range: 7 months back -> today
     const defaultFrom = new Date(); defaultFrom.setMonth(defaultFrom.getMonth() - 7);
@@ -47,13 +48,7 @@ router.get('/', async (req, res) => {
     const startDate = dateFrom ? new Date(dateFrom) : defaultFrom;
     const endDate = dateTo ? new Date(dateTo) : defaultTo;
 
-    let spName = 'dbo.PC_Show_OrdTrack_Sum_DueDate';
-    if (dateType === 'Order Date') spName = 'dbo.PC_Show_OrdTrack_Sum_OrdDate';
-    else if (dateType === 'Cust Due Date') spName = 'dbo.PC_Show_OrdTrack_Sum_CustDueDate';
-    else if (dateType === 'Finish Date') spName = 'dbo.PC_Show_OrdTrack_Sum_FinDate';
-    else if (dateType === 'All') spName = 'dbo.PC_Show_OrdTrack_Sum_All';
-
-    const cacheKey = `${spName}|${startDate.toISOString().slice(0, 10)}|${endDate.toISOString().slice(0, 10)}`;
+    const cacheKey = `NEW_QUERY|${dateType}|${statusFilter}|${startDate.toISOString().slice(0, 10)}|${endDate.toISOString().slice(0, 10)}`;
 
     // 1) Cache hit - return immediately
     if (!noCache) {
@@ -64,19 +59,30 @@ router.get('/', async (req, res) => {
       }
     }
 
-    // 2) In-flight check - if same request is already running, wait for it
+    // 2) In-flight check
     if (inFlight.has(cacheKey)) {
       console.log(`[IN-FLIGHT] waiting: ${cacheKey}`);
       const data = await inFlight.get(cacheKey);
       return res.json({ ok: true, data, count: data.length, cached: 'coalesced' });
     }
 
-    // 3) DB call - create shared Promise so other callers can wait
+    // 3) Execute Stored Procedure
     const fetchPromise = (async () => {
-      console.log(`[DB] Executing: ${spName} (${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()})`);
+      // Map DateType to SP Name (ตามชื่อจริงใน SQL ของคุณ)
+      let spName = 'dbo.PC_Show_OrdTrack_Sum_All'; // ตัวหลัก (Order Date)
+      if (dateType === 'Due Date' || dateType === 'DueDate') {
+        spName = 'dbo.PC_Show_OrdTrack_Sum_DueDate';
+      } else if (dateType === 'Cust Due Date' || dateType === 'CustDueDate') {
+        spName = 'dbo.PC_Show_OrdTrack_Sum_CustDueDate';
+      } else if (dateType === 'Finish Date' || dateType === 'FinDate') {
+        spName = 'dbo.PC_Show_OrdTrack_Sum_FinDate';
+      }
+
+      console.log(`[EXEC SP] ${spName} | status: ${statusFilter} (${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()})`);
       const request = pool.request();
       request.input('FromDate', sql.DateTime, startDate);
       request.input('ToDate', sql.DateTime, endDate);
+
       const result = await request.execute(spName);
 
       const data = result.recordset.map(r => {
@@ -84,11 +90,10 @@ router.get('/', async (req, res) => {
         return {
           ...rest,
           ItemPhoto: toBase64Photo(ItemPhoto),
-          hasPhoto: !!(ItemPhoto && (ItemPhoto.data?.length || ItemPhoto.length)),
         };
       });
       setCached(cacheKey, data);
-      console.log(`[DB] Done: ${data.length} rows - cached`);
+      console.log(`[EXEC SP] Done: ${data.length} rows - cached`);
       return data;
     })();
 
@@ -200,13 +205,13 @@ router.get('/by-po/:poNo', async (req, res) => {
       Qty: r.Qty, Price: r.Price, Amount: r.Amount,
       ItemPhoto: toBase64Photo(r.ItemPhoto),
       FinishQty: r.FinishQty, FinishStatus: r.FinishStatus, ItemStatus: r.ItemStatus,
-      OrdDate:     r.OrdDate,
-      DueDate:     r.DueDate,
-      QCDate:      r.CustQCDate,
+      OrdDate: r.OrdDate,
+      DueDate: r.DueDate,
+      QCDate: r.CustQCDate,
       CustDueDate: r.CustDueDate,
       Destination: r.Destination,
-      Sales:       r.Sales,
-      PONo:        r.PONo,
+      Sales: r.Sales,
+      PONo: r.PONo,
       StoneQty: r.StoneQty, FindingQty: r.FindingQty,
       WaxQty: r.WaxQty, WaxSetQty: r.WaxSetQty,
       CastQty: r.CastQty, GrindQty: r.GrindQty,

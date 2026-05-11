@@ -142,21 +142,21 @@ export default function Dashboard() {
         { label: 'JEWELRY SMART FACTORY', path: '/' },
         { label: 'DASHBOARD' },
       ]} />
-      <div className="content-scrollbar flex-1 overflow-y-auto bg-[var(--color-surface-0)] p-6">
-        <div className="mx-auto flex flex-col gap-4 max-w-[1400px]">
+      <div className="content-scrollbar flex-1 overflow-y-auto bg-[var(--color-surface-0)] p-4">
+        <div className="mx-auto flex flex-col gap-3 max-w-[1400px]">
 
           {/* Header */}
-          <div className="flex items-end justify-between border-b-2 border-[var(--color-border-light)] pb-6 mb-2">
+          <div className="flex items-end justify-between border-b-2 border-[var(--color-border-light)] pb-4 mb-1">
             <div>
-              <h1 className="text-3xl font-extrabold tracking-tight text-[var(--color-text-primary)]" style={{ fontFamily: 'var(--font-display)' }}>
+              <h1 className="text-2xl font-extrabold tracking-tight text-[var(--color-text-primary)]" style={{ fontFamily: 'var(--font-display)' }}>
                 PRODUCTION <span className="text-[var(--color-brand-500)]">OVERVIEW</span>
               </h1>
-              <p className="mt-1 text-sm font-semibold text-[var(--color-text-tertiary)] uppercase tracking-[0.1em]">Jewelry Manufacturing Intelligence</p>
+              <p className="mt-0.5 text-[0.65rem] font-semibold text-[var(--color-text-tertiary)] uppercase tracking-[0.1em]">Jewelry Manufacturing Intelligence</p>
             </div>
             <div className="text-right">
-              <div className="text-[0.65rem] font-bold text-[var(--color-text-tertiary)] uppercase tracking-[0.15em] mb-1">{currentDate}</div>
-              <div className="text-[20px] font-black tracking-tight text-[var(--color-text-primary)] leading-none" style={{ fontFamily: 'var(--font-display)' }}>
-                IMPECCABLE <span className="text-[10px] font-bold tracking-[0.3em] text-[var(--color-brand-500)] align-middle ml-1">SYSTEMS</span>
+              <div className="text-[0.6rem] font-bold text-[var(--color-text-tertiary)] uppercase tracking-[0.15em] mb-0.5">{currentDate}</div>
+              <div className="text-[18px] font-black tracking-tight text-[var(--color-text-primary)] leading-none" style={{ fontFamily: 'var(--font-display)' }}>
+                IMPECCABLE <span className="text-[9px] font-bold tracking-[0.3em] text-[var(--color-brand-500)] align-middle ml-1">SYSTEMS</span>
               </div>
             </div>
           </div>
@@ -170,12 +170,12 @@ export default function Dashboard() {
                 className="group animate-fade-in-up"
                 style={{ 
                   background: 'var(--color-surface-0)', 
-                  padding: '24px', 
-                  borderRadius: '24px', 
+                  padding: '16px 20px', 
+                  borderRadius: '16px', 
                   border: `1px solid ${stat.isAlert ? 'var(--color-danger-200)' : 'var(--color-border-light)'}`, 
                   display: 'flex', 
                   flexDirection: 'column',
-                  gap: '16px', 
+                  gap: '12px', 
                   cursor: 'pointer', 
                   boxShadow: '0 4px 20px -4px rgba(0,0,0,0.04)',
                   transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
@@ -197,8 +197,10 @@ export default function Dashboard() {
                   {stat.isAlert && <span className="flex h-2 w-2 rounded-full bg-[var(--color-danger-500)] animate-pulse" />}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-                  <span style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--color-text-primary)', fontFamily: 'var(--font-display)', letterSpacing: '-0.02em' }}>{stat.value}</span>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, fontFamily: 'monospace', color: stat.trend === 'up' || stat.trend === 'good' ? 'var(--color-success-600)' : 'var(--color-danger-600)' }}>
+                  <span style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--color-text-primary)', fontFamily: 'var(--font-display)', letterSpacing: '-0.02em' }}>
+                    {stat.value.toLocaleString()}
+                  </span>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 700, fontFamily: 'monospace', color: stat.trend === 'up' || stat.trend === 'good' ? 'var(--color-success-600)' : 'var(--color-danger-600)' }}>
                     {stat.change}
                   </span>
                 </div>
@@ -240,8 +242,8 @@ export default function Dashboard() {
                   background: 'conic-gradient(var(--color-brand-500) 0% 45%, var(--color-brand-300) 45% 70%, var(--color-accent-500) 70% 85%, var(--color-success-500) 85% 100%)' 
                 }}>
                   <div className="w-full h-full bg-[var(--color-surface-0)] rounded-full flex flex-col items-center justify-center shadow-inner">
-                    <span className="text-3xl font-black text-[var(--color-text-primary)]" style={{ fontFamily: 'var(--font-display)' }}>128</span>
-                    <span className="text-[10px] font-bold text-[var(--color-text-tertiary)] uppercase tracking-widest">Total Orders</span>
+                    <span className="text-2xl font-black text-[var(--color-text-primary)]" style={{ fontFamily: 'var(--font-display)' }}>{128..toLocaleString()}</span>
+                    <span className="text-[9px] font-bold text-[var(--color-text-tertiary)] uppercase tracking-widest">Total Orders</span>
                   </div>
                 </div>
                 <div className="flex flex-col gap-3">

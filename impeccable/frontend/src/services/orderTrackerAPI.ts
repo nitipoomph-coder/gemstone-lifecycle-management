@@ -173,8 +173,12 @@ export interface SearchResultItem {
   photo?: string | null;
 }
 
-export async function fetchSearch(query: string): Promise<SearchResultItem[]> {
-  const res = await fetch(`${BASE_URL}/search?q=${encodeURIComponent(query)}`, {
+export async function fetchSearch(query: string, type?: string): Promise<SearchResultItem[]> {
+  const qs = new URLSearchParams();
+  qs.set('q', query);
+  if (type && type !== 'all') qs.set('type', type);
+
+  const res = await fetch(`${BASE_URL}/search?${qs.toString()}`, {
     headers: { 'bypass-tunnel-reminder': 'true' }
   });
   if (!res.ok) throw new Error(`API error: ${res.status}`);

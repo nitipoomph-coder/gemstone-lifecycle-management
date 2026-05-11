@@ -7,7 +7,7 @@ const config = {
   server: process.env.DB_HOST,
   port: parseInt(process.env.DB_PORT) || 1433,
   database: process.env.DB_NAME,
-  requestTimeout:    90000,  // 90s — SP ช้า SP หนักได้
+  requestTimeout:    300000, // 300s (5 minutes) — allow long processing for large datasets
   connectionTimeout: 15000,  // 15s connect timeout
   options: {
     encrypt: false,

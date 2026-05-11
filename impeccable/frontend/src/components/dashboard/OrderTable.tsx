@@ -1,7 +1,7 @@
 // src/components/dashboard/OrderTable.tsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronRight, Image as ImageIcon, BarChart2, DollarSign, Layers, X } from 'lucide-react';
+import { ChevronRight, Image as ImageIcon, BarChart2, DollarSign, Layers, X, Search } from 'lucide-react';
 import { type OrderSummary } from '../../services/orderAPI';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -18,35 +18,35 @@ interface ViewPickerProps {
   onSelect: (view: ViewMode) => void;
 }
 
-const VIEW_OPTIONS: { 
-  key: ViewMode; 
-  label: string; 
-  sub: string; 
-  icon: React.ReactNode; 
+const VIEW_OPTIONS: {
+  key: ViewMode;
+  label: string;
+  sub: string;
+  icon: React.ReactNode;
   accentColor: string;
 }[] = [
-  {
-    key: 'sales',
-    label: 'Sales Perspective',
-    sub: 'Pricing, quantity, and total amount insights',
-    icon: <DollarSign size={20} />,
-    accentColor: 'oklch(0.75 0.16 80)', // Gold
-  },
-  {
-    key: 'prod',
-    label: 'Production Tracker',
-    sub: 'Real-time production status and workflow tracking',
-    icon: <BarChart2 size={20} />,
-    accentColor: 'oklch(0.60 0.14 245)', // Blue
-  },
-  {
-    key: 'all',
-    label: 'Unified View',
-    sub: 'Full dataset with all columns for deep-dive analysis',
-    icon: <Layers size={20} />,
-    accentColor: 'oklch(0.70 0.16 150)', // Green
-  },
-];
+    {
+      key: 'sales',
+      label: 'Sales Perspective',
+      sub: 'Pricing, quantity, and total amount insights',
+      icon: <DollarSign size={20} />,
+      accentColor: 'oklch(0.75 0.16 80)', // Gold
+    },
+    {
+      key: 'prod',
+      label: 'Production Tracker',
+      sub: 'Real-time production status and workflow tracking',
+      icon: <BarChart2 size={20} />,
+      accentColor: 'oklch(0.60 0.14 245)', // Blue
+    },
+    {
+      key: 'all',
+      label: 'Unified View',
+      sub: 'Full dataset with all columns for deep-dive analysis',
+      icon: <Layers size={20} />,
+      accentColor: 'oklch(0.70 0.16 150)', // Green
+    },
+  ];
 
 function ViewPickerModal({ order, onClose, onSelect }: ViewPickerProps) {
   const [hovered, setHovered] = useState<ViewMode | null>(null);
@@ -61,8 +61,8 @@ function ViewPickerModal({ order, onClose, onSelect }: ViewPickerProps) {
         onClick={handleBackdrop}
         style={{
           position: 'fixed', inset: 0, zIndex: 9998,
-          background: 'rgba(15, 23, 42, 0.4)',
-          backdropFilter: 'blur(12px)',
+          background: 'color-mix(in srgb, var(--color-surface-1), transparent 30%)',
+          backdropFilter: 'blur(12px) saturate(160%)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           animation: 'modalFadeIn 0.3s ease-out forwards',
         }}
@@ -70,193 +70,189 @@ function ViewPickerModal({ order, onClose, onSelect }: ViewPickerProps) {
         <div
           style={{
             background: 'var(--color-surface-0)',
-            borderRadius: '24px',
-            boxShadow: '0 32px 80px -16px rgba(0, 0, 0, 0.2)',
-            width: '440px',
+            borderRadius: '28px',
+            boxShadow: '0 40px 100px -20px rgba(0, 0, 0, 0.3), 0 0 0 1px color-mix(in srgb, var(--color-border-light), transparent 50%)',
+            width: '480px',
             maxWidth: '95vw',
             overflow: 'hidden',
-            border: '1px solid var(--color-border-light)',
-            animation: 'modalSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+            animation: 'modalSlideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards',
           }}
         >
-          {/* Header Section */}
+          {/* ─── Premium Header ─── */}
           <div style={{
-            padding: '32px 32px 28px',
+            padding: '40px 40px 32px',
             textAlign: 'center',
             position: 'relative',
-            borderBottom: '1px solid var(--color-border-light)',
-            background: 'linear-gradient(to bottom, var(--color-surface-1), var(--color-surface-0))'
+            background: 'linear-gradient(180deg, color-mix(in srgb, var(--color-brand-500), transparent 96%), transparent)',
           }}>
             <button
               onClick={onClose}
               style={{
-                position: 'absolute', top: '20px', right: '20px',
-                background: 'transparent', border: 'none', borderRadius: '50%',
-                width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                position: 'absolute', top: '24px', right: '24px',
+                background: 'var(--color-surface-2)', border: 'none', borderRadius: '12px',
+                width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center',
                 cursor: 'pointer', color: 'var(--color-text-tertiary)',
-                transition: 'all 0.2s',
-                zIndex: 10
+                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
               }}
               onMouseEnter={e => {
-                e.currentTarget.style.background = 'oklch(0.95 0.01 250)';
-                e.currentTarget.style.color = 'var(--color-text-primary)';
+                e.currentTarget.style.transform = 'rotate(90deg)';
+                e.currentTarget.style.background = 'var(--color-danger-500)';
+                e.currentTarget.style.color = '#fff';
               }}
               onMouseLeave={e => {
-                e.currentTarget.style.background = 'transparent';
+                e.currentTarget.style.transform = 'rotate(0deg)';
+                e.currentTarget.style.background = 'var(--color-surface-2)';
                 e.currentTarget.style.color = 'var(--color-text-tertiary)';
               }}
             >
-              <X size={18} />
+              <X size={20} />
             </button>
 
-            <div style={{ 
-              display: 'inline-flex', padding: '6px 16px', borderRadius: '100px', 
-              background: 'var(--color-accent-100)', color: 'var(--color-accent-600)',
-              fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.08em',
-              textTransform: 'uppercase', marginBottom: '20px',
-              fontFamily: 'var(--font-body)',
-              boxShadow: '0 2px 8px -2px var(--color-accent-500)22'
+            <div style={{
+              display: 'inline-flex', padding: '6px 14px', borderRadius: '100px',
+              background: 'color-mix(in srgb, var(--color-brand-500), transparent 90%)',
+              color: 'var(--color-brand-600)',
+              fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.1em',
+              textTransform: 'uppercase', marginBottom: '24px',
+              border: '1px solid color-mix(in srgb, var(--color-brand-500), transparent 80%)'
             }}>
-              Select View Mode
+              Select Intelligence View
             </div>
 
-            <h3 style={{ 
-              fontSize: '1.75rem', fontWeight: 800, color: 'var(--color-text-primary)',
-              fontFamily: 'var(--font-display)', margin: '0 0 4px',
-              letterSpacing: '-0.02em'
+            <h3 style={{
+              fontSize: '2rem', fontWeight: 900, color: 'var(--color-text-primary)',
+              fontFamily: 'var(--font-display)', margin: '0 0 8px',
+              letterSpacing: '-0.03em', lineHeight: 1.1
             }}>
-              {order.OrdNo.length > 20 ? order.OrdNo.split('/')[0] + '...' : order.OrdNo}
+              {order.PONo || 'NO PO'}
             </h3>
-            
+
             <div style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(2, 1fr)',
               gap: '12px 24px',
-              marginTop: '24px',
+              marginTop: '32px',
               textAlign: 'left',
-              padding: '0 8px',
-              fontSize: '0.9rem'
+              background: 'var(--color-surface-1)',
+              padding: '20px 24px',
+              borderRadius: '20px',
+              border: '1px solid var(--color-border-light)',
             }}>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <span style={{ fontWeight: 700, color: 'var(--color-brand-600)', minWidth: '85px' }}>Customer :</span>
-                <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>{order.CustCode || '-'}</span>
+              {/* Row 1: Customer & Material */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <span style={{ fontSize: '0.62rem', fontWeight: 800, color: 'var(--color-text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Customer</span>
+                <span style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>{order.CustCode || '-'}</span>
               </div>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <span style={{ fontWeight: 700, color: 'var(--color-brand-600)', minWidth: '85px' }}>Material :</span>
-                <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>{order.OrdMat || '-'}</span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <span style={{ fontSize: '0.62rem', fontWeight: 800, color: 'var(--color-text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Material</span>
+                <span style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>{order.OrdMat || '-'}</span>
               </div>
-              <div style={{ gridColumn: 'span 2', display: 'flex', gap: '8px', alignItems: 'center' }}>
-                <span style={{ fontWeight: 700, color: 'var(--color-brand-600)', minWidth: '85px' }}>PO No :</span>
-                <span style={{ fontWeight: 600, color: 'var(--color-text-secondary)', fontSize: '0.85rem' }}>
-                  {order.PONo && order.PONo !== '-' ? order.PONo : 'No PO Number'}
-                </span>
+              {/* Row 2: PO No & Order Kind */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', borderTop: '1px solid var(--color-border-light)', paddingTop: '12px' }}>
+                <span style={{ fontSize: '0.62rem', fontWeight: 800, color: 'var(--color-text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>PO Number</span>
+                <span style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--color-brand-600)' }}>{order.PONo || '-'}</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', borderTop: '1px solid var(--color-border-light)', paddingTop: '12px' }}>
+                <span style={{ fontSize: '0.62rem', fontWeight: 800, color: 'var(--color-text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status</span>
                 {order.OrdKind && (
-                  <span style={{ 
-                    marginLeft: 'auto',
-                    fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-accent-600)',
-                    fontStyle: 'italic',
-                    whiteSpace: 'nowrap'
+                  <span style={{
+                    fontSize: '0.75rem', fontWeight: 800,
+                    color: 'var(--color-accent-600)',
+                    background: 'color-mix(in srgb, var(--color-accent-500), transparent 90%)',
+                    padding: '2px 8px', borderRadius: '6px', alignSelf: 'flex-start'
                   }}>
-                    ( {order.OrdKind} )
+                    {order.OrdKind}
                   </span>
                 )}
               </div>
             </div>
           </div>
 
-          {/* Options Grid */}
-          <div style={{ 
-            padding: '0 24px 24px', 
-            display: 'flex', flexDirection: 'column', gap: '12px' 
-          }}>
-            {VIEW_OPTIONS.map((opt, idx) => (
-              <button
-                key={opt.key}
-                onClick={() => onSelect(opt.key)}
-                onMouseEnter={() => setHovered(opt.key)}
-                onMouseLeave={() => setHovered(null)}
-                className={`animate-fade-in-up stagger-${idx + 1}`}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: '18px',
-                  padding: '16px 20px',
-                  borderRadius: '16px',
-                  border: '1px solid',
-                  borderColor: hovered === opt.key ? opt.accentColor : 'var(--color-border-light)',
-                  background: hovered === opt.key ? `color-mix(in oklch, ${opt.accentColor}, transparent 92%)` : 'transparent',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-                  boxShadow: hovered === opt.key ? `0 12px 24px -8px color-mix(in oklch, ${opt.accentColor}, transparent 70%)` : 'none',
-                  transform: hovered === opt.key ? 'translateY(-2px)' : 'none',
-                }}
-              >
-                {/* Icon Container */}
-                <div style={{
-                  width: 48, height: 48, borderRadius: '12px',
-                  background: hovered === opt.key ? opt.accentColor : 'oklch(0.97 0.01 250)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: hovered === opt.key ? '#fff' : 'var(--color-text-secondary)',
-                  transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-                  flexShrink: 0,
-                }}>
-                  {opt.icon}
-                </div>
-
-                {/* Label & Description */}
-                <div style={{ flex: 1 }}>
-                  <div style={{
-                    fontSize: '0.95rem', fontWeight: 600,
-                    color: hovered === opt.key ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
-                    fontFamily: 'var(--font-display)',
-                    transition: 'color 0.2s',
-                  }}>
-                    {opt.label}
-                  </div>
-                  <div style={{ 
-                    fontSize: '0.75rem', 
-                    color: hovered === opt.key ? 'var(--color-text-secondary)' : 'var(--color-text-tertiary)',
-                    marginTop: '2px',
-                    fontFamily: 'var(--font-body)',
-                  }}>
-                    {opt.sub}
-                  </div>
-                </div>
-
-                <ChevronRight
-                  size={18}
+          {/* ─── Options List ─── */}
+          <div style={{ padding: '0 32px 32px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {VIEW_OPTIONS.map((opt) => (
+                <button
+                  key={opt.key}
+                  onMouseEnter={() => setHovered(opt.key)}
+                  onMouseLeave={() => setHovered(null)}
+                  onClick={() => onSelect(opt.key)}
                   style={{
-                    color: hovered === opt.key ? opt.accentColor : 'var(--color-border-strong)',
-                    transition: 'all 0.3s',
-                    opacity: hovered === opt.key ? 1 : 0.4,
-                    transform: hovered === opt.key ? 'translateX(0)' : 'translateX(-4px)',
+                    display: 'flex', alignItems: 'center', gap: '20px',
+                    padding: '20px 24px', borderRadius: '20px',
+                    background: hovered === opt.key ? 'var(--color-surface-1)' : 'transparent',
+                    border: '1px solid',
+                    borderColor: hovered === opt.key ? 'var(--color-border-light)' : 'transparent',
+                    cursor: 'pointer', transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                    textAlign: 'left', position: 'relative', overflow: 'hidden'
                   }}
-                />
-              </button>
-            ))}
+                >
+                  {hovered === opt.key && (
+                    <div style={{
+                      position: 'absolute', left: 0, top: 0, bottom: 0, width: '4px',
+                      background: opt.accentColor, borderRadius: '0 4px 4px 0'
+                    }} />
+                  )}
+
+                  <div style={{
+                    width: '52px', height: '52px', borderRadius: '16px',
+                    background: hovered === opt.key ? opt.accentColor : 'var(--color-surface-2)',
+                    color: hovered === opt.key ? '#fff' : 'var(--color-text-secondary)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                    boxShadow: hovered === opt.key ? `0 8px 20px -6px ${opt.accentColor}` : 'none'
+                  }}>
+                    {opt.icon}
+                  </div>
+
+                  <div style={{ flex: 1 }}>
+                    <div style={{
+                      fontSize: '1rem', fontWeight: 800,
+                      color: hovered === opt.key ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
+                      marginBottom: '2px', transition: 'color 0.2s'
+                    }}>
+                      {opt.label}
+                    </div>
+                    <div style={{
+                      fontSize: '0.78rem', color: 'var(--color-text-tertiary)',
+                      fontWeight: 500, lineHeight: 1.4
+                    }}>
+                      {opt.sub}
+                    </div>
+                  </div>
+
+                  <ChevronRight
+                    size={18}
+                    style={{
+                      color: 'var(--color-text-quaternary)',
+                      transform: hovered === opt.key ? 'translateX(0)' : 'translateX(-8px)',
+                      opacity: hovered === opt.key ? 1 : 0,
+                      transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
+                    }}
+                  />
+                </button>
+              ))}
+            </div>
           </div>
 
-          {/* Footer */}
+          {/* ─── Premium Footer ─── */}
           <div style={{
-            padding: '16px 24px 20px',
-            textAlign: 'center',
+            padding: '16px', textAlign: 'center',
+            background: 'var(--color-surface-1)',
             borderTop: '1px solid var(--color-border-light)',
-            background: 'oklch(0.99 0.005 250)',
           }}>
-            <span style={{ 
-              fontSize: '0.7rem', color: 'var(--color-text-tertiary)',
-              fontWeight: 500, letterSpacing: '0.02em'
-            }}>
-              ESC to dismiss • Global View System
-            </span>
+            <div style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--color-text-tertiary)', letterSpacing: '0.05em' }}>
+              ESC TO DISMISS • INTEL-VIEW SYSTEM v2.0
+            </div>
           </div>
         </div>
       </div>
 
       <style>{`
-        @keyframes modalFadeIn { from { opacity: 0 } to { opacity: 1 } }
+        @keyframes modalFadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes modalSlideUp { 
-          from { opacity: 0; transform: translateY(20px) scale(0.98) } 
-          to { opacity: 1; transform: translateY(0) scale(1) } 
+          from { opacity: 0; transform: translateY(40px) scale(0.95); } 
+          to { opacity: 1; transform: translateY(0) scale(1); } 
         }
       `}</style>
     </>
@@ -268,18 +264,19 @@ function ViewPickerModal({ order, onClose, onSelect }: ViewPickerProps) {
 function SkeletonRows({ cols }: { cols: number }) {
   return (
     <>
-      <style>{`@keyframes skSh{0%{background-position:200% 0}100%{background-position:-200% 0}}`}</style>
+      <style>{`
+        @keyframes skSh { 0% { background-position: 200% 0 } 100% { background-position: -200% 0 } }
+        .skeleton-cell {
+          background: linear-gradient(90deg, var(--color-surface-1) 25%, var(--color-surface-2) 50%, var(--color-surface-1) 75%);
+          backgroundSize: 400% 100%;
+          animation: skSh 1.4s ease-in-out infinite;
+        }
+      `}</style>
       {Array.from({ length: 12 }).map((_, i) => (
-        <tr key={i} style={{ borderBottom: '1px solid #dee2e6' }}>
+        <tr key={i} style={{ borderBottom: '1px solid var(--color-border-light)' }}>
           {Array.from({ length: cols }).map((_, j) => (
-            <td key={j} style={{ padding: '16px 10px' }}>
-              <div style={{
-                height: '14px', borderRadius: '4px',
-                background: 'linear-gradient(90deg,#f8f9fa 25%,#f1f3f5 50%,#f8f9fa 75%)',
-                backgroundSize: '400% 100%',
-                animation: `skSh 1.4s ease-in-out infinite`,
-                animationDelay: `${(i * cols + j) * 0.02}s`,
-              }} />
+            <td key={j} style={{ padding: '16px 12px' }}>
+              <div className="skeleton-cell" style={{ height: '14px', borderRadius: '4px' }} />
             </td>
           ))}
         </tr>
@@ -288,8 +285,6 @@ function SkeletonRows({ cols }: { cols: number }) {
   );
 }
 
-// ─── Master Column Definitions ──────────────────────────────────────────────
-// รวมคอลัมน์ทุกอย่างไว้ที่เดียว พร้อมกำหนดวิธีแสดงผล (render) และสไตล์
 const MASTER_COLS: Record<string, {
   label: string;
   w: number;
@@ -298,104 +293,124 @@ const MASTER_COLS: Record<string, {
   cellStyle?: (o: OrderSummary) => React.CSSProperties;
 }> = {
   no: {
-    label: 'No.', w: 40, align: 'center',
+    label: 'No.', w: 50, align: 'center',
     render: (_, i, offset) => offset + i + 1,
-    cellStyle: () => ({ color: '#868e96', background: '#f8f9fa' }),
+    cellStyle: () => ({ color: 'var(--color-text-tertiary)', background: 'color-mix(in srgb, var(--color-surface-1), transparent 50%)', fontWeight: 700 }),
   },
   week: {
-    label: 'Week', w: 50, align: 'center',
+    label: 'Week', w: 60, align: 'center',
     render: (o) => o.Week,
+    cellStyle: () => ({ fontWeight: 600, color: 'var(--color-brand-600)' }),
   },
   cust: {
-    label: 'Cust', w: 60, align: 'center',
+    label: 'Cust', w: 70, align: 'center',
     render: (o) => o.CustCode,
-    cellStyle: () => ({ fontWeight: 700, color: '#1971c2' }),
+    cellStyle: () => ({ fontWeight: 800, color: 'var(--color-text-primary)' }),
   },
   po: {
-    label: 'PO no.', w: 180, align: 'left',
+    label: 'PO Number', w: 180, align: 'left',
     render: (o) => o.PONo,
-    cellStyle: () => ({ fontWeight: 600, color: '#495057', wordBreak: 'break-word' }),
+    cellStyle: () => ({ fontWeight: 700, color: 'var(--color-text-primary)', fontSize: '0.8rem' }),
   },
   kind: {
-    label: 'New/Replen', w: 90, align: 'center',
-    render: (o) => o.OrdKind,
+    label: 'Type', w: 100, align: 'center',
+    render: (o) => (
+      <span style={{
+        padding: '2px 8px', borderRadius: '6px',
+        fontSize: '0.65rem', fontWeight: 800,
+        background: 'var(--color-surface-2)',
+        color: 'var(--color-text-secondary)',
+        border: '1px solid var(--color-border-light)'
+      }}>
+        {o.OrdKind}
+      </span>
+    ),
   },
   shipto: {
     label: 'Ship To', w: 200, align: 'left',
     render: (o) => o.ShipTo,
-    cellStyle: () => ({ fontWeight: 600, color: '#212529' }),
+    cellStyle: () => ({ fontWeight: 500, color: 'var(--color-text-secondary)' }),
   },
   photo: {
-    label: 'Photo', w: 80, align: 'center',
+    label: 'Photo', w: 85, align: 'center',
     render: (o) => (
-      <div style={{ width: 64, height: 64, borderRadius: 8, background: '#f1f3f5', overflow: 'hidden', margin: '0 auto', border: '1px solid #dee2e6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{
+        width: 60, height: 60, borderRadius: 12,
+        background: 'var(--color-surface-1)', overflow: 'hidden',
+        margin: '0 auto', border: '1px solid var(--color-border-light)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
+      }}>
         {o.ItemPhoto
           ? <img src={o.ItemPhoto.startsWith('data:') ? o.ItemPhoto : `data:image/jpeg;base64,${o.ItemPhoto}`} alt="item" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          : <ImageIcon size={20} style={{ color: '#ced4da' }} />
+          : <ImageIcon size={20} style={{ color: 'var(--color-text-quaternary)' }} />
         }
       </div>
     ),
   },
   metal: {
-    label: 'Metal', w: 50, align: 'center',
+    label: 'Metal', w: 60, align: 'center',
     render: (o) => o.OrdMat,
+    cellStyle: () => ({ fontWeight: 600, color: 'var(--color-accent-600)' }),
   },
   orddate: {
-    label: 'Order Date', w: 90, align: 'center',
+    label: 'Order Date', w: 100, align: 'center',
     render: (o) => formatDate(o.OrdDate),
   },
   due: {
-    label: 'Factory Due', w: 90, align: 'center',
+    label: 'Factory Due', w: 100, align: 'center',
     render: (o) => formatDate(o.DueDate),
+    cellStyle: (o) => {
+      const isLate = o.DueDate && new Date(o.DueDate) < new Date() && (o.OrdStatus === 'P' || o.OrdStatus === 'N');
+      return isLate ? { color: 'var(--color-danger-500)', fontWeight: 800, background: 'color-mix(in srgb, var(--color-danger-500), transparent 94%)' } : {};
+    }
   },
   qa: {
-    label: 'QA/BBQ/Testing', w: 110, align: 'center',
-    render: (o) => o.TrackTest,
+    label: 'QA/Testing', w: 120, align: 'center',
+    render: (o) => o.TrackTest || '-',
   },
   sgs: {
-    label: 'SGS', w: 60, align: 'center',
-    render: (o) => o.OrdSGS,
+    label: 'SGS', w: 70, align: 'center',
+    render: (o) => o.OrdSGS || '-',
   },
   qcdate: {
-    label: 'QC Date', w: 90, align: 'center',
+    label: 'QC Date', w: 100, align: 'center',
     render: (o) => formatDate(o.CustQCDate),
   },
   custdue: {
-    label: 'Cust Due Date', w: 90, align: 'center',
+    label: 'Cust Due', w: 100, align: 'center',
     render: (o) => formatDate(o.CustDueDate),
   },
   oor: {
-    label: 'OOR Date', w: 90, align: 'center',
+    label: 'OOR Date', w: 100, align: 'center',
     render: (o) => formatDate(o.OORDate),
   },
   sku: {
-    label: 'No. of SKU', w: 80, align: 'center',
+    label: 'SKU', w: 80, align: 'center',
     render: (o) => o.NumSKU || '-',
-    cellStyle: () => ({ fontWeight: 600, color: '#e67700', background: '#fff9db' }),
+    cellStyle: () => ({ fontWeight: 700, color: 'var(--color-accent-600)' }),
   },
   qty: {
-    label: 'Qty', w: 70, align: 'right',
+    label: 'Qty', w: 80, align: 'right',
     render: (o) => formatQty(o.TotalQty),
-    cellStyle: () => ({ fontWeight: 800, color: '#1971c2', background: '#e7f5ff' }),
+    cellStyle: () => ({ fontWeight: 800, color: 'var(--color-brand-600)', fontFamily: 'var(--font-display)', fontSize: '0.85rem' }),
   },
   amount: {
-    label: 'Amount', w: 100, align: 'right',
+    label: 'Amount', w: 110, align: 'right',
     render: (o) => o.Amount != null ? `$${o.Amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '-',
-    cellStyle: () => ({ fontWeight: 800, color: '#099268', background: '#ebfbee' }),
+    cellStyle: () => ({ fontWeight: 800, color: 'var(--color-success-600)', fontFamily: 'var(--font-display)', fontSize: '0.85rem' }),
   },
   remark: {
-    label: 'Remark', w: 150, align: 'left',
-    render: (o) => o.TrackRemark,
-    cellStyle: () => ({ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }),
+    label: 'Remark', w: 180, align: 'left',
+    render: (o) => o.TrackRemark || '-',
+    cellStyle: () => ({ fontSize: '0.7rem', color: 'var(--color-text-tertiary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }),
   },
   arrow: {
-    label: '', w: 30, align: 'center',
-    render: () => <ChevronRight size={16} style={{ color: '#ced4da' }} />,
+    label: '', w: 40, align: 'center',
+    render: () => <ChevronRight size={18} style={{ color: 'var(--color-text-quaternary)' }} />,
   }
 };
 
-// ─── Group Presets ────────────────────────────────────────────────────────────
-// กำหนดว่าแต่ละกลุ่มเริ่มต้นให้แสดงคอลัมน์ไหนบ้าง
 const GROUP_PRESETS: Record<string, string[]> = {
   ALL: ['no', 'kind', 'orddate', 'due', 'custdue', 'sku', 'qty', 'amount', 'remark', 'arrow'],
   N008: ['no', 'week', 'cust', 'po', 'kind', 'shipto', 'photo', 'orddate', 'due', 'qa', 'sgs', 'qcdate', 'custdue', 'oor', 'sku', 'qty', 'amount', 'remark', 'arrow'],
@@ -419,28 +434,40 @@ export default function OrderTable({
 }) {
   const navigate = useNavigate();
   const [pickerOrder, setPickerOrder] = useState<OrderSummary | null>(null);
-  
-  // State สำหรับจัดการคอลัมน์ที่แสดงผล
+
   const [visibleKeys, setVisibleKeys] = useState<string[]>(GROUP_PRESETS[group] || GROUP_PRESETS.ALL);
   const [showPicker, setShowPicker] = useState(false);
+  const [colSearch, setColSearch] = useState('');
 
-  // เมื่อกลุ่มเปลี่ยน ให้ Reset คอลัมน์ตาม Preset ของกลุ่มนั้น
+  // ⭐️ Smart Selection Locking: ใช้ Ref จำกลุ่มล่าสุดไว้ เพื่อไม่ให้ Reset คอลัมน์เวลา Re-render ปกติ
+  const lastGroupRef = useRef(group);
+
+  // เมื่อกลุ่มเปลี่ยน "จริงๆ" เท่านั้น ถึงจะ Reset คอลัมน์ตาม Preset
   useEffect(() => {
-    setVisibleKeys(GROUP_PRESETS[group] || GROUP_PRESETS.ALL);
+    if (lastGroupRef.current !== group) {
+      setVisibleKeys(GROUP_PRESETS[group] || GROUP_PRESETS.ALL);
+      lastGroupRef.current = group;
+    }
   }, [group]);
 
-  // คอลัมน์ที่กำลังแสดงผลอยู่ (เรียงตามลำดับใน Master เพื่อความระเบียบ หรือเรียงตาม Preset ก็ได้)
-  // ในที่นี้ผมให้เรียงตาม Master เพื่อให้ลำดับ No. อยู่หน้าสุดเสมอ
   const allMasterKeys = Object.keys(MASTER_COLS);
   const activeCols = allMasterKeys
-    .filter(key => visibleKeys.includes(key))
+    .filter(key => visibleKeys.includes(key) || ['no', 'week', 'cust', 'po', 'arrow'].includes(key))
     .map(key => ({ key, ...MASTER_COLS[key] }));
 
   const toggleKey = (key: string) => {
-    setVisibleKeys(prev => 
+    setVisibleKeys(prev =>
       prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
     );
   };
+
+  const filteredMasterKeys = allMasterKeys
+    .filter(key => !['no', 'week', 'cust', 'po', 'arrow'].includes(key))
+    .filter(key => {
+      if (!colSearch) return true;
+      const label = MASTER_COLS[key].label || key;
+      return label.toLowerCase().includes(colSearch.toLowerCase());
+    });
 
   const handleRowClick = (order: OrderSummary) => {
     setPickerOrder(order);
@@ -469,78 +496,155 @@ export default function OrderTable({
 
       {/* ── Column Picker Popover ── */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px', position: 'relative' }}>
-        <button 
-          onClick={() => setShowPicker(!showPicker)}
-          style={{
-            display: 'flex', alignItems: 'center', gap: '6px',
-            padding: '8px 14px', borderRadius: '8px',
-            background: '#fff', border: '1px solid #dee2e6',
-            fontSize: '0.75rem', fontWeight: 600, color: '#495057',
-            cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-            transition: 'all 0.15s'
-          }}
-          onMouseEnter={e => (e.currentTarget.style.background = '#f8f9fa')}
-          onMouseLeave={e => (e.currentTarget.style.background = '#fff')}
-        >
-          <Layers size={14} />
-          View Columns
-        </button>
+        <div style={{ position: 'relative' }}>
+          <button
+            onClick={(e) => { e.stopPropagation(); setShowPicker(!showPicker); }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '8px',
+              padding: '10px 18px', borderRadius: '14px',
+              background: showPicker ? 'var(--color-brand-500)' : 'var(--color-surface-0)',
+              border: '1px solid',
+              borderColor: showPicker ? 'var(--color-brand-600)' : 'var(--color-border-light)',
+              fontSize: '0.75rem', fontWeight: 800,
+              color: showPicker ? '#fff' : 'var(--color-text-secondary)',
+              cursor: 'pointer', boxShadow: '0 4px 12px -4px rgba(0,0,0,0.1)',
+              transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
+            }}
+          >
+            <Layers size={16} />
+            View Columns
+          </button>
 
-        {showPicker && (
-          <>
-            <div onClick={() => setShowPicker(false)} style={{ position: 'fixed', inset: 0, zIndex: 100 }} />
-            <div style={{
-              position: 'absolute', top: '100%', right: 0, marginTop: '8px',
-              background: '#fff', borderRadius: '12px', boxShadow: '0 10px 30px rgba(0,0,0,0.15)',
-              border: '1px solid #e9ecef', padding: '12px', zIndex: 101,
-              width: '220px', display: 'grid', gridTemplateColumns: '1fr', gap: '4px',
-              maxHeight: '400px', overflowY: 'auto'
-            }}>
-              <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#adb5bd', padding: '4px 8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Select Columns
-              </div>
-              {allMasterKeys.map(key => (
-                <label key={key} style={{ 
-                  display: 'flex', alignItems: 'center', gap: '10px', 
-                  padding: '8px', borderRadius: '6px', cursor: 'pointer',
-                  background: visibleKeys.includes(key) ? '#f1f3f5' : 'transparent',
-                  transition: 'background 0.15s'
+          {showPicker && (
+            <>
+              {/* Backdrop: ปิดเมื่อคลิกข้างนอก */}
+              <div
+                onClick={() => { setShowPicker(false); setColSearch(''); }}
+                style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'transparent' }}
+              />
+              {/* Popover Card */}
+              <div
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  position: 'absolute', top: 'calc(100% + 12px)', right: 0,
+                  background: 'var(--color-surface-0)', borderRadius: '20px',
+                  boxShadow: '0 20px 50px -12px rgba(0,0,0,0.25), 0 0 0 1px var(--color-border-light)',
+                  padding: '16px', zIndex: 101,
+                  width: '280px', display: 'flex', flexDirection: 'column', gap: '12px',
+                  animation: 'popoverIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                  transformOrigin: 'top right'
                 }}>
-                  <input 
-                    type="checkbox" 
-                    checked={visibleKeys.includes(key)}
-                    onChange={() => toggleKey(key)}
-                    style={{ cursor: 'pointer' }}
-                  />
-                  <span style={{ fontSize: '0.75rem', color: '#495057', fontWeight: visibleKeys.includes(key) ? 600 : 400 }}>
-                    {MASTER_COLS[key].label || key}
-                  </span>
-                </label>
-              ))}
-            </div>
-          </>
-        )}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ fontSize: '0.65rem', fontWeight: 900, color: 'var(--color-text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.1em', padding: '0 4px' }}>
+                    Column Intelligence
+                  </div>
+                  <div style={{ position: 'relative' }}>
+                    <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-quaternary)' }} />
+                    <input
+                      autoFocus
+                      placeholder="Find column..."
+                      value={colSearch}
+                      onChange={(e) => setColSearch(e.target.value)}
+                      style={{
+                        width: '100%', padding: '10px 12px 10px 36px', borderRadius: '12px',
+                        background: 'var(--color-surface-1)', border: '1px solid var(--color-border-light)',
+                        fontSize: '0.78rem', color: 'var(--color-text-primary)', fontWeight: 600,
+                        outline: 'none', transition: 'all 0.2s'
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div className="custom-scrollbar" style={{ maxHeight: '320px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px', paddingRight: '4px' }}>
+                  {filteredMasterKeys.length === 0 ? (
+                    <div style={{ padding: '20px', textAlign: 'center', color: 'var(--color-text-quaternary)', fontSize: '0.75rem' }}>
+                      No columns match
+                    </div>
+                  ) : filteredMasterKeys.map(key => (
+                    <label
+                      key={key}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '12px',
+                        padding: '10px 12px', borderRadius: '12px', cursor: 'pointer',
+                        background: visibleKeys.includes(key) ? 'color-mix(in srgb, var(--color-brand-500), transparent 94%)' : 'transparent',
+                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface-1)'}
+                      onMouseLeave={e => e.currentTarget.style.background = visibleKeys.includes(key) ? 'color-mix(in srgb, var(--color-brand-500), transparent 94%)' : 'transparent'}
+                    >
+                      <div style={{
+                        width: '18px', height: '18px', borderRadius: '5px',
+                        border: '2px solid',
+                        borderColor: visibleKeys.includes(key) ? 'var(--color-brand-500)' : 'var(--color-border-strong)',
+                        background: visibleKeys.includes(key) ? 'var(--color-brand-500)' : 'transparent',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        transition: 'all 0.2s'
+                      }}>
+                        {visibleKeys.includes(key) && <div style={{ width: '8px', height: '8px', borderRadius: '2px', background: '#fff' }} />}
+                      </div>
+                      <input
+                        type="checkbox"
+                        hidden
+                        checked={visibleKeys.includes(key)}
+                        onChange={() => toggleKey(key)}
+                      />
+                      <span style={{ fontSize: '0.8rem', color: visibleKeys.includes(key) ? 'var(--color-text-primary)' : 'var(--color-text-secondary)', fontWeight: visibleKeys.includes(key) ? 700 : 500 }}>
+                        {MASTER_COLS[key].label || key}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+
+                <div style={{ borderTop: '1px solid var(--color-border-light)', paddingTop: '10px', marginTop: '4px' }}>
+                  <div style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--color-text-quaternary)', textAlign: 'center', letterSpacing: '0.02em' }}>
+                    {allMasterKeys.filter(k => visibleKeys.includes(k)).length} ACTIVE COLUMNS
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ borderCollapse: 'collapse', width: '100%', tableLayout: 'auto' }}>
+      <style>{`
+        @keyframes popoverIn {
+          from { opacity: 0; transform: scale(0.95) translateY(-10px); }
+          to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+      `}</style>
+
+      <div className="custom-scrollbar" style={{
+        overflowX: 'auto',
+        borderRadius: '24px',
+        border: '1px solid var(--color-border-light)',
+        background: 'var(--color-surface-0)',
+        boxShadow: '0 12px 40px -12px rgba(0,0,0,0.15), 0 0 0 1px var(--color-border-light)',
+        position: 'relative',
+      }}>
+        <table style={{ borderCollapse: 'separate', borderSpacing: 0, width: '100%', tableLayout: 'auto' }}>
           <colgroup>
             {activeCols.map(c => <col key={c.key} style={{ width: c.w }} />)}
           </colgroup>
-          <thead>
-            <tr style={{ background: 'var(--color-brand-500)', borderBottom: '1px solid var(--color-brand-600)' }}>
-              {activeCols.map(c => (
-                <th key={c.key} style={{
-                  position: 'sticky', top: 0,
-                  background: 'var(--color-brand-500)',
-                  padding: '16px 12px', fontSize: '0.75rem', fontWeight: 800,
-                  color: '#fff', textAlign: c.align,
-                  border: '1px solid var(--color-brand-600)',
-                  zIndex: 10,
-                }}>
-                  {c.label}
-                </th>
-              ))}
+          <thead style={{ position: 'sticky', top: 0, zIndex: 30 }}>
+            <tr>
+              {activeCols.map((c, idx) => {
+                return (
+                  <th key={c.key} style={{
+                    background: 'color-mix(in srgb, var(--color-surface-1), transparent 5%)',
+                    backdropFilter: 'blur(12px)',
+                    WebkitBackdropFilter: 'blur(12px)',
+                    padding: '18px 14px', fontSize: '0.65rem', fontWeight: 900,
+                    color: 'var(--color-text-tertiary)', textAlign: c.align,
+                    borderBottom: '2px solid var(--color-border-light)',
+                    textTransform: 'uppercase', letterSpacing: '0.12em',
+                    position: 'sticky', top: 0,
+                    zIndex: 10,
+                    transition: 'all 0.2s'
+                  }}>
+                    {c.label}
+                  </th>
+                );
+              })}
             </tr>
           </thead>
           <tbody>
@@ -548,42 +652,80 @@ export default function OrderTable({
               <SkeletonRows cols={activeCols.length} />
             ) : data.length === 0 ? (
               <tr>
-                <td colSpan={activeCols.length} style={{ padding: '60px', textAlign: 'center', color: '#adb5bd', fontSize: '0.9rem' }}>
-                  No orders found matching your criteria.
+                <td colSpan={activeCols.length} style={{ padding: '120px 24px', textAlign: 'center', color: 'var(--color-text-quaternary)', fontSize: '0.9rem' }}>
+                  <div style={{ fontSize: '3rem', marginBottom: '20px', opacity: 0.2 }}>📦</div>
+                  <div style={{ fontWeight: 800, letterSpacing: '0.02em' }}>No matching orders found</div>
+                  <div style={{ fontSize: '0.75rem', marginTop: '4px', opacity: 0.6 }}>Try adjusting your filters or search keywords</div>
                 </td>
               </tr>
             ) : data.map((o, i) => (
               <tr
                 key={o.OrdNo + i}
                 onClick={() => handleRowClick(o)}
+                className="table-row-hover"
                 style={{
                   cursor: 'pointer',
-                  background: i % 2 === 0 ? '#fff' : '#fafbfc',
-                  transition: 'all 0.1s',
+                  transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                  background: 'transparent',
                 }}
-                onMouseEnter={e => (e.currentTarget.style.background = 'var(--color-brand-50)')}
-                onMouseLeave={e => (e.currentTarget.style.background = i % 2 === 0 ? '#fff' : '#fafbfc')}
               >
-                {activeCols.map(c => (
-                  <td
-                    key={c.key}
-                    style={{
-                      padding: '12px 10px',
-                      textAlign: c.align,
-                      fontSize: '0.75rem',
-                      color: 'var(--color-text-secondary)',
-                      border: '1px solid var(--color-border-light)',
-                      ...c.cellStyle?.(o)
-                    }}
-                  >
-                    {c.render(o, i, pageOffset)}
-                  </td>
-                ))}
+                {activeCols.map((c, idx) => {
+                  return (
+                    <td
+                      key={c.key}
+                      style={{
+                        padding: '16px 14px',
+                        textAlign: c.align,
+                        fontSize: '0.78rem',
+                        fontWeight: 600,
+                        color: 'var(--color-text-secondary)',
+                        borderBottom: '1px solid var(--color-border-light)',
+                        borderRight: idx === activeCols.length - 1 ? 'none' : '1px solid color-mix(in srgb, var(--color-border-light), transparent 85%)',
+                        background: 'transparent',
+                        transition: 'all 0.2s',
+                        ...c.cellStyle?.(o)
+                      }}
+                    >
+                      {c.render(o, i, pageOffset)}
+                    </td>
+                  );
+                })}
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      <style>{`
+        @keyframes popoverIn {
+          from { opacity: 0; transform: scale(0.95) translateY(-10px); }
+          to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .table-row-hover:hover {
+          background: color-mix(in srgb, var(--color-brand-500), transparent 96%) !important;
+          box-shadow: inset 4px 0 0 var(--color-brand-500);
+        }
+        .table-row-hover:hover td {
+          color: var(--color-text-primary) !important;
+          background: color-mix(in srgb, var(--color-brand-500), transparent 97%) !important;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+          height: 10px;
+          width: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: var(--color-surface-1);
+          border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: var(--color-border-strong);
+          border-radius: 10px;
+          border: 2px solid var(--color-surface-1);
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: var(--color-brand-400);
+        }
+      `}</style>
     </>
   );
 }

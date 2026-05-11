@@ -1,7 +1,7 @@
 // src/pages/OrderDetailPage.tsx
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, RefreshCw, AlertTriangle } from 'lucide-react';
+import { ChevronLeft, RefreshCw, AlertTriangle, Search } from 'lucide-react';
 import Topbar from '../components/layout/Topbar';
 import { fetchOrderDetail, fetchOrderByPo, type OrderDetail } from '../services/orderTrackerAPI';
 
@@ -33,14 +33,14 @@ const COL_CUST = [
   { key: 'QCDate',     label: 'QC Date',       w: 85,  group: 'cust', sales: true,  prod: false },
   { key: 'CustDueDate',label: 'Cust Due Date', w: 85,  group: 'cust', sales: true,  prod: false },
   { key: 'Sales',      label: 'Sales',         w: 70,  group: 'cust', sales: true,  prod: false },
-  { key: 'PONo',       label: 'PO1',           w: 100, group: 'cust', sales: true,  prod: false },
+  { key: 'PONo',       label: 'PO Number',     w: 120, group: 'cust', sales: true,  prod: true  },
   { key: 'Destination',label: 'Destination',   w: 90,  group: 'cust', sales: true,  prod: false },
   { key: 'CustItem',   label: 'Cust Item',     w: 90,  group: 'cust', sales: true,  prod: false },
-  { key: 'Stone',      label: 'Stone',         w: 80,  group: 'cust', sales: true,  prod: true  },
-  { key: 'Plating',    label: 'Plating',       w: 70,  group: 'cust', sales: true,  prod: true  },
-  { key: 'OrdRemark',  label: 'Order Remark',  w: 120, group: 'cust', sales: true,  prod: false },
-  { key: 'Price',      label: 'Price',         w: 80,  group: 'cust', sales: true,  prod: false },
-  { key: 'Amount',     label: 'Amount',        w: 90,  group: 'cust', sales: true,  prod: false },
+  {key: 'Stone',      label: 'Stone',         w: 100, group: 'cust', sales: true,  prod: true  },
+  {key: 'Plating',    label: 'Plating',       w: 180, group: 'cust', sales: true,  prod: true  },
+  {key: 'OrdRemark',  label: 'Order Remark',  w: 240, group: 'cust', sales: true,  prod: false },
+  {key: 'Price',      label: 'Price',         w: 80,  group: 'cust', sales: true,  prod: false },
+  {key: 'Amount',     label: 'Amount',        w: 90,  group: 'cust', sales: true,  prod: false },
 ];
 
 // Shipping Data columns
@@ -146,6 +146,7 @@ export default function OrderDetailPage() {
   const [detail, setDetail] = useState<OrderDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const load = useCallback(async () => {
     if (!rawKey) return;
@@ -168,7 +169,15 @@ export default function OrderDetailPage() {
   useEffect(() => { load(); }, [load]);
 
   const h = detail?.header;
-  const lines = (detail?.lines ?? []) as Record<string, unknown>[];
+  const rawLines = (detail?.lines ?? []) as Record<string, unknown>[];
+  
+  // Filter lines locally
+  const lines = rawLines.filter(line => {
+    if (!searchTerm.trim()) return true;
+    const s = searchTerm.toLowerCase();
+    return Object.values(line).some(v => String(v).toLowerCase().includes(s));
+  });
+
   const visibleCols = getVisibleCols(view);
   const groupHeaders = buildGroupHeaders(visibleCols);
 
@@ -188,70 +197,119 @@ export default function OrderDetailPage() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#f0f4f8' }}>
-      <Topbar breadcrumb={[
-        { label: 'JEWELRY SMART FACTORY', path: '/' },
-        { label: 'ORDER TRACKER', path: '/order-tracker' },
-        { label: pageTitle },
-      ]} />
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--color-surface-1)' }}>
+      <Topbar 
+        hideSearch
+        breadcrumb={[
+          { label: 'JEWELRY SMART FACTORY', path: '/' },
+          { label: 'ORDER TRACKER', path: '/order-tracker' },
+          { label: pageTitle },
+        ]} 
+      />
 
-      {/* ── Top Bar ── */}
+      {/* ── Top Bar (Relocated Info & Search) ── */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '8px 16px', background: '#fff', borderBottom: '1px solid #dee2e6',
-        boxShadow: '0 2px 6px rgba(0,0,0,0.04)',
+        padding: '16px 24px', background: 'var(--color-surface-0)', borderBottom: '1px solid var(--color-border-light)',
+        boxShadow: '0 4px 20px -12px rgba(0,0,0,0.1)', zIndex: 50,
       }}>
-        {/* Left: back + title */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
           <button
             onClick={() => navigate('/order-tracker')}
-            style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '5px 12px', border: '1px solid #ced4da', borderRadius: '6px', background: '#fff', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600, color: '#495057' }}
+            style={{ 
+              display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 18px', 
+              border: '1px solid var(--color-border-light)', borderRadius: '14px', 
+              background: 'var(--color-surface-1)', cursor: 'pointer', fontSize: '0.75rem', 
+              fontWeight: 800, color: 'var(--color-text-secondary)', transition: 'all 0.2s'
+            }}
           >
-            <ChevronLeft size={14} /> กลับ
+            <ChevronLeft size={18} /> BACK
           </button>
-          <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#004b8d' }}>
-            {isPo ? 'PO: ' : 'Order: '}{pageTitle}
+          
+          <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <div style={{ fontSize: '0.65rem', fontWeight: 900, color: 'var(--color-text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>
+                {isPo ? 'Purchase Order' : 'Order Document'}
+              </div>
+              <div style={{ fontWeight: 900, fontSize: '1.4rem', color: 'var(--color-text-primary)', fontFamily: 'var(--font-display)', lineHeight: 1 }}>
+                {pageTitle}
+              </div>
+            </div>
+
+            {h && (
+              <>
+                <div style={{ width: '1px', height: '32px', background: 'var(--color-border-light)' }} />
+                <div style={{ display: 'flex', gap: '40px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span style={{ fontSize: '0.62rem', fontWeight: 900, color: 'var(--color-text-tertiary)', letterSpacing: '0.1em' }}>CUSTOMER</span>
+                    <span style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--color-text-primary)' }}>{h.CustCode}</span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span style={{ fontSize: '0.62rem', fontWeight: 900, color: 'var(--color-text-tertiary)', letterSpacing: '0.1em' }}>TOTAL QUANTITY</span>
+                    <span style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--color-brand-600)' }}>{fQty(h.TotalQty)} <span style={{ fontSize: '0.8rem', opacity: 0.6 }}>PCS</span></span>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
-          {isPo && (h as any)?.OrdNos && (
-            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-              {((h as any).OrdNos as string[]).map((o: string) => (
-                <span key={o} style={{ background: '#e7f5ff', color: '#1971c2', fontSize: '0.65rem', padding: '1px 6px', borderRadius: '3px', fontFamily: 'monospace', fontWeight: 700 }}>{o}</span>
-              ))}
-            </div>
-          )}
         </div>
 
-        {/* Center: View Tabs */}
-        <div style={{ display: 'flex', gap: '4px' }}>
-          {VIEW_TABS.map(t => (
-            <button
-              key={t.key}
-              onClick={() => setView(t.key)}
-              style={{
-                padding: '5px 14px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', transition: 'all 0.15s',
-                background: view === t.key ? t.color : '#f1f3f5',
-                color: view === t.key ? '#fff' : '#495057',
-                border: `1px solid ${view === t.key ? t.color : '#dee2e6'}`,
-              }}
-            >{t.label}</button>
-          ))}
-        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          {/* Internal Table Search */}
+          <div style={{ position: 'relative', width: '320px' }}>
+             <input 
+               type="text"
+               placeholder="Search items, metals, plating..."
+               value={searchTerm}
+               onChange={(e) => setSearchTerm(e.target.value)}
+               style={{
+                 width: '100%', padding: '12px 16px 12px 42px', borderRadius: '14px',
+                 background: 'var(--color-surface-1)', border: '1px solid var(--color-border-light)',
+                 fontSize: '0.82rem', fontWeight: 600, color: 'var(--color-text-primary)',
+                 outline: 'none', transition: 'all 0.2s',
+                 boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)'
+               }}
+               onFocus={e => {
+                 e.currentTarget.style.borderColor = 'var(--color-brand-500)';
+                 e.currentTarget.style.boxShadow = '0 0 0 4px color-mix(in srgb, var(--color-brand-500), transparent 90%)';
+               }}
+               onBlur={e => {
+                 e.currentTarget.style.borderColor = 'var(--color-border-light)';
+                 e.currentTarget.style.boxShadow = 'inset 0 2px 4px rgba(0,0,0,0.02)';
+               }}
+             />
+             <div style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-tertiary)' }}>
+               <Search size={18} />
+             </div>
+          </div>
 
-        {/* Right: refresh + meta */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {h && (
-            <div style={{ display: 'flex', gap: '16px', fontSize: '0.72rem', color: '#495057' }}>
-              <span><b style={{ color: '#868e96' }}>Customer:</b> {h.CustCode} {h.CustName}</span>
-              <span><b style={{ color: '#868e96' }}>Due:</b> <span style={{ color: '#c92a2a', fontWeight: 700 }}>{fDate(h.DueDate)}</span></span>
-              <span><b style={{ color: '#868e96' }}>Qty:</b> <span style={{ color: '#1971c2', fontWeight: 800 }}>{fQty(h.TotalQty)}</span></span>
-              <span><b style={{ color: '#868e96' }}>Lines:</b> {detail?.lineCount ?? '—'}</span>
-            </div>
-          )}
+          <div style={{ display: 'flex', padding: '4px', borderRadius: '14px', background: 'var(--color-surface-1)', border: '1px solid var(--color-border-light)', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.05)' }}>
+            {VIEW_TABS.map(t => (
+              <button
+                key={t.key}
+                onClick={() => setView(t.key)}
+                style={{
+                  padding: '8px 18px', borderRadius: '10px', fontSize: '0.72rem', fontWeight: 800, 
+                  background: view === t.key ? 'var(--color-surface-0)' : 'transparent',
+                  color: view === t.key ? 'var(--color-brand-600)' : 'var(--color-text-tertiary)',
+                  boxShadow: view === t.key ? '0 4px 12px -2px rgba(0,0,0,0.08)' : 'none',
+                  border: 'none', cursor: 'pointer', transition: 'all 0.2s', textTransform: 'uppercase'
+                }}
+              >
+                {t.label.split(' ')[1]}
+              </button>
+            ))}
+          </div>
+
           <button
             onClick={load}
-            style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '5px 10px', border: '1px solid #ced4da', borderRadius: '6px', background: '#fff', cursor: 'pointer', fontSize: '0.72rem', color: '#495057' }}
+            style={{ 
+              width: 42, height: 42, borderRadius: '12px', border: '1px solid var(--color-border-light)', 
+              background: 'var(--color-surface-1)', color: 'var(--color-text-secondary)', 
+              display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer'
+            }}
           >
-            <RefreshCw size={12} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} /> รีเฟรช
+            <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
           </button>
         </div>
       </div>
@@ -264,93 +322,150 @@ export default function OrderDetailPage() {
       )}
 
       {/* ── Table (full-screen, scrollable) ── */}
-      <div style={{ flex: 1, overflow: 'auto' }}>
+      <div className="custom-scrollbar" style={{ 
+        flex: 1, 
+        overflow: 'auto', 
+        background: 'var(--color-surface-0)',
+        position: 'relative'
+      }}>
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '60px', color: '#adb5bd', fontSize: '0.85rem' }}>กำลังโหลดข้อมูล...</div>
+          <div style={{ textAlign: 'center', padding: '100px', color: 'var(--color-text-tertiary)' }}>
+             <RefreshCw size={32} className="animate-spin" style={{ opacity: 0.2, marginBottom: '16px' }} />
+             <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>Loading world-class data...</div>
+          </div>
         ) : lines.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '60px', color: '#adb5bd', fontSize: '0.85rem' }}>ไม่พบข้อมูล</div>
+          <div style={{ textAlign: 'center', padding: '100px', color: 'var(--color-text-tertiary)' }}>
+            <div style={{ fontSize: '3rem', marginBottom: '16px', opacity: 0.2 }}>📦</div>
+            <div style={{ fontSize: '1rem', fontWeight: 700 }}>No item data available</div>
+          </div>
         ) : (
-          <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 'max-content', tableLayout: 'fixed', fontSize: '0.72rem' }}>
+          <table style={{ borderCollapse: 'separate', borderSpacing: 0, width: '100%', minWidth: 'max-content', tableLayout: 'fixed' }}>
             <colgroup>
               {/* Fixed cols */}
-              {FIXED_COLS.map(c => <col key={c.key} style={{ width: `${c.w}px`, minWidth: `${c.w}px` }} />)}
+              {FIXED_COLS.map(c => <col key={c.key} style={{ width: `${c.w}px` }} />)}
               {/* Photo */}
-              <col style={{ width: '60px', minWidth: '60px' }} />
-              {/* Dynamic cols */}
-              {visibleCols.map(c => <col key={c.key} style={{ width: `${c.w}px`, minWidth: `${c.w}px` }} />)}
+              <col style={{ width: '65px' }} />
+              {/* Extra cols */}
+              {visibleCols.map(c => <col key={c.key} style={{ width: `${c.w}px` }} />)}
             </colgroup>
 
-            <thead>
+            <thead style={{ position: 'sticky', top: 0, zIndex: 100 }}>
               {/* Row 1: Group headers */}
               <tr>
-                {/* Fixed group */}
-                <th colSpan={FIXED_COLS.length + 1} style={{ ...thBase, background: '#e3e8ef', color: '#364155' }}>
-                  Item Information
-                </th>
+                <th colSpan={FIXED_COLS.length + 1} style={{
+                  background: 'color-mix(in srgb, var(--color-surface-1), transparent 5%)',
+                  backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+                  borderBottom: '1px solid var(--color-border-light)',
+                }} />
                 {groupHeaders.map((g, i) => (
-                  <th key={i} colSpan={g.span} style={{ ...thBase, background: g.color, color: '#333' }}>
+                  <th key={i} colSpan={g.span} style={{
+                    background: `color-mix(in srgb, ${g.color}, transparent 60%)`,
+                    backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+                    padding: '12px 14px', fontSize: '0.65rem', fontWeight: 900,
+                    color: 'var(--color-text-primary)', textAlign: 'center',
+                    borderBottom: '1px solid var(--color-border-light)',
+                    borderRight: '1px solid var(--color-border-light)',
+                    textTransform: 'uppercase', letterSpacing: '0.15em',
+                  }}>
                     {g.label}
                   </th>
                 ))}
               </tr>
               {/* Row 2: Column labels */}
               <tr>
-                {FIXED_COLS.map(c => (
-                  <th key={c.key} style={{ ...thBase, background: '#e9ecef', color: '#495057' }}>{c.label}</th>
-                ))}
-                <th style={{ ...thBase, background: '#e9ecef', color: '#495057' }}>Pic</th>
+                {FIXED_COLS.map((c, idx) => {
+                  return (
+                    <th key={c.key} style={{
+                      background: 'color-mix(in srgb, var(--color-surface-1), transparent 5%)',
+                      backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+                      padding: '14px', fontSize: '0.62rem', fontWeight: 800,
+                      color: 'var(--color-text-tertiary)', textAlign: 'center',
+                      borderBottom: '2px solid var(--color-border-light)',
+                      position: 'sticky', top: '38px', zIndex: 110,
+                      textTransform: 'uppercase', letterSpacing: '0.05em'
+                    }}>{c.label}</th>
+                  );
+                })}
+                <th style={{
+                  background: 'color-mix(in srgb, var(--color-surface-1), transparent 5%)',
+                  backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+                  padding: '14px', fontSize: '0.62rem', fontWeight: 800,
+                  color: 'var(--color-text-tertiary)', textAlign: 'center',
+                  borderBottom: '2px solid var(--color-border-light)',
+                  position: 'sticky', top: '38px', zIndex: 110,
+                  textTransform: 'uppercase', letterSpacing: '0.05em'
+                }}>Pic</th>
                 {visibleCols.map(c => (
-                  <th key={c.key} style={{ ...thBase, background: '#f1f3f5', color: '#495057' }}>{c.label}</th>
+                  <th key={c.key} style={{
+                    background: 'color-mix(in srgb, var(--color-surface-1), transparent 5%)',
+                    backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+                    padding: '14px', fontSize: '0.62rem', fontWeight: 800,
+                    color: 'var(--color-text-tertiary)', textAlign: 'center',
+                    borderBottom: '2px solid var(--color-border-light)',
+                    borderRight: '1px solid color-mix(in srgb, var(--color-border-light), transparent 80%)',
+                    textTransform: 'uppercase', letterSpacing: '0.05em',
+                    position: 'sticky', top: '38px',
+                  }}>{c.label}</th>
                 ))}
               </tr>
             </thead>
 
             <tbody>
               {lines.map((line, i) => {
-                const even = i % 2 === 0;
-                const rowBg = even ? '#fff' : '#f8fafc';
+                const rowBg = i % 2 === 0 ? 'var(--color-surface-0)' : 'color-mix(in srgb, var(--color-surface-1), transparent 60%)';
                 return (
-                  <tr
-                    key={i}
-                    style={{ background: rowBg }}
-                    onMouseEnter={e => (e.currentTarget.style.background = '#eff6ff')}
-                    onMouseLeave={e => (e.currentTarget.style.background = rowBg)}
-                  >
-                    {/* Fixed cells */}
-                    <td style={{ ...tdBase, color: '#868e96', background: '#f8f9fa' }}>{i + 1}</td>
-                    <td style={{ ...tdBase, fontWeight: 700, color: '#004b8d', fontFamily: 'monospace', fontSize: '0.68rem' }}>
-                      {String(line.OrdNo || '')}
-                      {line.LineNo != null && <span style={{ color: '#868e96', fontWeight: 400 }}>/{String(line.LineNo)}</span>}
-                      <div style={{ fontWeight: 800, color: '#212529', fontFamily: 'inherit', fontSize: '0.7rem' }}>{String(line.ItemNo || '—')}</div>
-                    </td>
-                    <td style={{ ...tdBase, textAlign: 'left' }}>{String(line.ItemDesc || '—')}</td>
-                    <td style={{ ...tdBase }}>{String(line.ItemSize || '—')}</td>
-                    <td style={{ ...tdBase, fontWeight: 700, color: '#862e9c' }}>{String(line.ItemMat || '—')}</td>
+                  <tr key={i} className="detail-row-hover" style={{ background: rowBg, transition: 'all 0.2s' }}>
+                    {/* Fixed Cells */}
+                    {FIXED_COLS.map((c, idx) => {
+                      return (
+                        <td key={c.key} style={{
+                          padding: '12px 14px', fontSize: '0.75rem', fontWeight: idx === 1 ? 800 : 600,
+                          color: idx === 1 ? 'var(--color-brand-600)' : 'var(--color-text-secondary)',
+                          borderBottom: '1px solid var(--color-border-light)',
+                          background: rowBg,
+                          textAlign: idx === 0 ? 'center' : 'left'
+                        }}>
+                          {idx === 0 ? i + 1 : idx === 1 ? (
+                            <>
+                              <div style={{ fontSize: '0.6rem', color: 'var(--color-text-tertiary)', fontWeight: 400 }}>{String(line.OrdNo || '')}/{String(line.LineNo || '1')}</div>
+                              {String(line.ItemNo || '—')}
+                            </>
+                          ) : String(line[c.key] || '—')}
+                        </td>
+                      );
+                    })}
                     {/* Photo */}
-                    <td style={{ ...tdBase, padding: '2px' }}>
-                      {line.ItemPhoto ? (
-                        <img src={String(line.ItemPhoto)} alt="" style={{ width: '50px', height: '50px', objectFit: 'contain', display: 'block', margin: '0 auto', mixBlendMode: 'darken' }} />
-                      ) : (
-                        <div style={{ width: '50px', height: '50px', background: '#f1f3f5', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', color: '#ced4da', fontSize: '0.55rem' }}>
-                          No Img
-                        </div>
-                      )}
+                    <td style={{
+                      padding: '6px', borderBottom: '1px solid var(--color-border-light)',
+                      background: rowBg, textAlign: 'center'
+                    }}>
+                      <div style={{
+                        width: '44px', height: '44px', borderRadius: '8px', 
+                        background: 'var(--color-surface-2)', overflow: 'hidden',
+                        border: '1px solid var(--color-border-light)', margin: '0 auto'
+                      }}>
+                        {line.ItemPhoto ? (
+                          <img src={String(line.ItemPhoto)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.5rem', color: 'var(--color-text-quaternary)' }}>NO IMG</div>
+                        )}
+                      </div>
                     </td>
                     {/* Dynamic cells */}
                     {visibleCols.map(c => {
                       const val = cellVal(c.key, line);
                       const isProd = c.group === 'prod';
-                      const isRed = isProd && val !== '—' && !isNaN(Number(val.replace(/,/g, ''))) && Number(val.replace(/,/g, '')) < 0;
-                      const isGreen = isProd && val !== '—' && !isNaN(Number(val.replace(/,/g, ''))) && Number(val.replace(/,/g, '')) === 0;
+                      const numVal = Number(val.replace(/,/g, ''));
+                      const isRed = isProd && val !== '—' && !isNaN(numVal) && numVal < 0;
+                      const isGreen = isProd && val !== '—' && !isNaN(numVal) && numVal === 0;
                       return (
                         <td key={c.key} style={{
-                          ...tdBase,
-                          color: isRed ? '#c92a2a' : isGreen ? '#2b8a3e' : c.key.endsWith('Remark') ? '#495057' : undefined,
-                          fontWeight: isRed ? 700 : undefined,
-                          background: isRed ? 'rgba(201,42,42,0.05)' : undefined,
+                          padding: '12px 14px', fontSize: '0.72rem', fontWeight: isRed ? 800 : 500,
                           textAlign: c.key.endsWith('Remark') ? 'left' : 'center',
-                          whiteSpace: c.key.endsWith('Remark') ? 'normal' : 'nowrap',
-                          maxWidth: c.key.endsWith('Remark') ? `${c.w}px` : undefined,
+                          color: isRed ? 'var(--color-accent-600)' : isGreen ? '#2b8a3e' : 'var(--color-text-secondary)',
+                          borderBottom: '1px solid var(--color-border-light)',
+                          borderRight: '1px solid color-mix(in srgb, var(--color-border-light), transparent 85%)',
+                          background: isRed ? 'color-mix(in srgb, var(--color-accent-500), transparent 96%)' : 'transparent',
                         }}>
                           {val}
                         </td>

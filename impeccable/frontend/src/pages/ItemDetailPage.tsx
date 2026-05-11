@@ -2,14 +2,14 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Topbar from '../components/layout/Topbar';
-import { ChevronLeft, Printer, Image as ImageIcon, CheckCircle, FileText, Settings, Layers, Hash, Box } from 'lucide-react';
+import { ChevronLeft, Printer, Image as ImageIcon, CheckCircle, FileText, Settings, Layers, Hash, Box, RefreshCw } from 'lucide-react';
 
 export default function ItemDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'stone' | 'finding' | 'cast'>('stone');
 
-  // Mock Data based on the user's screenshot
+  // Mock Data
   const itemData = {
     pdsNo: 'PDS26040921', from: 'PDN26040201', psNo: 'PS248652A', itemNo: id || 'BES32753A',
     round: 'R2', sales: 'Buum-Buum', customer: 'N031', metal: 'B-Brass', productType: 'E-Earring',
@@ -30,194 +30,193 @@ export default function ItemDetailPage() {
   ];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#f4f6f8' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--color-surface-1)' }}>
       <Topbar breadcrumb={[
         { label: 'JEWELRY SMART FACTORY', path: '/' },
         { label: 'ORDER TRACKER', path: '/order-tracker' },
         { label: itemData.itemNo }
       ]} />
 
-      <div className="flex-1 overflow-y-auto" style={{ padding: '24px' }}>
+      <div className="custom-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
         
         {/* Action Bar */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <button onClick={() => navigate(-1)} style={btnStyle('#fff', '#495057')}>
-              <ChevronLeft size={16} /> กลับ
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+          <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+            <button 
+              onClick={() => navigate(-1)} 
+              style={{
+                display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px',
+                background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)',
+                borderRadius: '14px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 800,
+                color: 'var(--color-text-secondary)', transition: 'all 0.2s',
+                boxShadow: '0 4px 12px -4px rgba(0,0,0,0.1)'
+              }}
+            >
+              <ChevronLeft size={16} /> BACK
             </button>
-            <div style={{ padding: '4px 16px', background: '#004b8d', color: '#fff', borderRadius: '8px', fontWeight: 800, fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(0,75,141,0.2)' }}>
-              <Box size={18} /> ITEM DETAIL: {itemData.itemNo}
+            <div style={{ 
+              padding: '10px 24px', background: 'var(--color-brand-500)', 
+              color: '#fff', borderRadius: '16px', fontWeight: 900, 
+              fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '12px', 
+              boxShadow: '0 8px 24px -8px var(--color-brand-500)',
+              fontFamily: 'var(--font-display)', letterSpacing: '0.02em'
+            }}>
+              <Box size={20} /> ITEM: {itemData.itemNo}
             </div>
           </div>
-          <button style={btnStyle('#1971c2', '#fff')} onClick={() => window.print()}>
-            <Printer size={16} /> พิมพ์ใบงาน
+          <button style={{
+            display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 24px',
+            background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)',
+            borderRadius: '14px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 800,
+            color: 'var(--color-brand-600)', transition: 'all 0.2s',
+            boxShadow: '0 4px 12px -4px rgba(0,0,0,0.1)'
+          }} onClick={() => window.print()}>
+            <Printer size={16} /> PRINT SPEC SHEET
           </button>
         </div>
 
-        {/* ─── MASTER CARD ─── */}
-        <div style={{ background: '#fff', borderRadius: '16px', border: '1px solid #dee2e6', boxShadow: '0 8px 24px rgba(0,0,0,0.04)', overflow: 'hidden', marginBottom: '24px', display: 'flex', flexDirection: 'column' }}>
+        {/* ─── MASTER DASHBOARD CARD ─── */}
+        <div style={{ 
+          background: 'var(--color-surface-0)', borderRadius: '24px', 
+          border: '1px solid var(--color-border-light)', 
+          boxShadow: '0 20px 50px -12px rgba(0,0,0,0.08), 0 0 0 1px var(--color-border-light)', 
+          overflow: 'hidden', marginBottom: '24px' 
+        }}>
           
           <div style={{ display: 'flex', flexWrap: 'wrap' }}>
             
-            {/* Left Column (Main Info) */}
-            <div style={{ flex: '1 1 300px', padding: '20px', borderRight: '1px solid #e9ecef', background: '#fafbfc' }}>
-              <h3 style={{ fontSize: '0.85rem', fontWeight: 800, color: '#004b8d', marginBottom: '16px', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Hash size={16} /> Primary Data
+            {/* Left Column */}
+            <div style={{ flex: '1 1 320px', padding: '32px', borderRight: '1px solid var(--color-border-light)', background: 'color-mix(in srgb, var(--color-surface-1), transparent 50%)' }}>
+              <h3 style={{ fontSize: '0.7rem', fontWeight: 900, color: 'var(--color-brand-600)', marginBottom: '24px', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '10px', letterSpacing: '0.1em' }}>
+                <Hash size={16} /> Identity Matrix
               </h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <FieldRow label="PDS no." value={itemData.pdsNo} highlight />
-                <FieldRow label="From" value={itemData.from} />
-                <FieldRow label="PS no." value={itemData.psNo} />
-                <FieldRow label="Customer" value={itemData.customer} bold />
-                <FieldRow label="Sales" value={itemData.sales} />
-                <FieldRow label="Product Type" value={itemData.productType} />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <FieldRow label="PDS Number" value={itemData.pdsNo} highlight />
+                <FieldRow label="Reference" value={itemData.from} />
+                <FieldRow label="PS Series" value={itemData.psNo} />
+                <FieldRow label="Client" value={itemData.customer} bold />
+                <FieldRow label="Lead Sales" value={itemData.sales} />
+                <FieldRow label="Category" value={itemData.productType} />
                 <FieldRow label="Collection" value={itemData.collection} />
-                <FieldRow label="Dev no." value={itemData.devNo} />
+                <FieldRow label="Dev ID" value={itemData.devNo} />
               </div>
             </div>
 
-            {/* Middle Column (Photos & Tech Spec) */}
-            <div style={{ flex: '2 1 500px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              {/* Photo Area */}
-              <div style={{ display: 'flex', gap: '16px', height: '180px' }}>
-                <div style={{ flex: 1, background: '#f8f9fa', borderRadius: '12px', border: '1px dashed #ced4da', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-                  <ImageIcon size={32} style={{ color: '#dee2e6' }} />
-                  <div style={{ position: 'absolute', bottom: '8px', left: '8px', fontSize: '0.65rem', color: '#adb5bd', fontWeight: 700 }}>FRONT VIEW</div>
+            {/* Middle Column */}
+            <div style={{ flex: '2 1 500px', padding: '32px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              <div style={{ display: 'flex', gap: '20px', height: '220px' }}>
+                <div style={{ flex: 1, background: 'var(--color-surface-1)', borderRadius: '20px', border: '2px dashed var(--color-border-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+                  <ImageIcon size={40} style={{ color: 'var(--color-text-quaternary)', opacity: 0.3 }} />
+                  <div style={{ position: 'absolute', bottom: '12px', left: '16px', fontSize: '0.65rem', color: 'var(--color-text-tertiary)', fontWeight: 800, textTransform: 'uppercase' }}>Front View</div>
                 </div>
-                <div style={{ flex: 1, background: '#f8f9fa', borderRadius: '12px', border: '1px dashed #ced4da', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-                  <ImageIcon size={32} style={{ color: '#dee2e6' }} />
-                  <div style={{ position: 'absolute', bottom: '8px', left: '8px', fontSize: '0.65rem', color: '#adb5bd', fontWeight: 700 }}>SIDE/TECH VIEW</div>
+                <div style={{ flex: 1, background: 'var(--color-surface-1)', borderRadius: '20px', border: '2px dashed var(--color-border-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+                  <ImageIcon size={40} style={{ color: 'var(--color-text-quaternary)', opacity: 0.3 }} />
+                  <div style={{ position: 'absolute', bottom: '12px', left: '16px', fontSize: '0.65rem', color: 'var(--color-text-tertiary)', fontWeight: 800, textTransform: 'uppercase' }}>Side View</div>
                 </div>
               </div>
 
-              {/* Tech Specs */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <FieldRow label="Metal" value={itemData.metal} highlight />
-                  <FieldRow label="Stamp on" value={itemData.stampOn} />
-                  <FieldRow label="Plating" value={itemData.plating} />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <FieldRow label="Metal Base" value={itemData.metal} highlight />
+                  <FieldRow label="Stamp Logic" value={itemData.stampOn} />
+                  <FieldRow label="Surface" value={itemData.plating} />
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <FieldRow label="Due Date" value={itemData.dueDate} warning />
-                  <FieldRow label="Target Price" value={`$${itemData.targetPrice}`} />
-                  <div style={{ background: '#f8f9fa', padding: '12px', borderRadius: '8px', border: '1px solid #e9ecef', marginTop: '8px' }}>
-                    <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#868e96', marginBottom: '8px' }}>WEIGHT (g)</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <FieldRow label="Target Due" value={itemData.dueDate} warning />
+                  <FieldRow label="Valuation" value={`$${itemData.targetPrice}`} />
+                  <div style={{ background: 'var(--color-surface-1)', padding: '16px', borderRadius: '16px', border: '1px solid var(--color-border-light)' }}>
+                    <div style={{ fontSize: '0.62rem', fontWeight: 900, color: 'var(--color-text-tertiary)', marginBottom: '8px' }}>WEIGHTS (G)</div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
-                      <span style={{ color: '#495057' }}>Cast: <b>{itemData.castWt}</b></span>
-                      <span style={{ color: '#495057' }}>Filing: <b>{itemData.filingWt}</b></span>
-                      <span style={{ color: '#495057' }}>Finish: <b>{itemData.finishWt}</b></span>
+                      <span>Cast: <b>{itemData.castWt}</b></span>
+                      <span>Filing: <b>{itemData.filingWt}</b></span>
+                      <span>Finish: <b>{itemData.finishWt}</b></span>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Right Column (Remarks & Extra) */}
-            <div style={{ flex: '1 1 300px', padding: '20px', borderLeft: '1px solid #e9ecef', background: '#fff' }}>
-               <h3 style={{ fontSize: '0.85rem', fontWeight: 800, color: '#e67700', marginBottom: '16px', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <FileText size={16} /> Remarks & Instructions
+            {/* Right Column */}
+            <div style={{ flex: '1 1 320px', padding: '32px', borderLeft: '1px solid var(--color-border-light)', background: 'var(--color-surface-0)' }}>
+               <h3 style={{ fontSize: '0.7rem', fontWeight: 900, color: 'var(--color-accent-600)', marginBottom: '24px', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <FileText size={16} /> Production Notes
               </h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {itemData.remarks.map((rmk, idx) => (
-                  <div key={idx} style={{ background: '#fff9db', padding: '10px 12px', borderRadius: '6px', borderLeft: '3px solid #fcc419', fontSize: '0.75rem', color: '#495057', lineHeight: 1.4 }}>
-                    <b style={{ color: '#d9480f' }}>Remark {idx + 1}:</b> {rmk}
+                  <div key={idx} style={{ background: 'color-mix(in srgb, var(--color-accent-500), transparent 94%)', padding: '14px', borderRadius: '12px', borderLeft: '4px solid var(--color-accent-500)', fontSize: '0.75rem' }}>
+                    <b>Note {idx + 1}:</b> {rmk}
                   </div>
                 ))}
-              </div>
-
-              <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', fontWeight: 600, color: '#212529' }}>
-                  <input type="checkbox" style={{ accentColor: '#1971c2', width: 16, height: 16 }} /> No Cast
-                </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', fontWeight: 600, color: '#212529' }}>
-                  <input type="checkbox" style={{ accentColor: '#1971c2', width: 16, height: 16 }} /> Resin make sample
-                </label>
               </div>
             </div>
           </div>
         </div>
 
-        {/* ─── BOTTOM TABS (BOM) ─── */}
-        <div style={{ background: '#fff', borderRadius: '16px', border: '1px solid #dee2e6', boxShadow: '0 4px 12px rgba(0,0,0,0.02)', overflow: 'hidden' }}>
-          
-          {/* Tab Header */}
-          <div style={{ display: 'flex', background: '#f8f9fa', borderBottom: '1px solid #dee2e6' }}>
-            <TabBtn label={`Stone (${stoneList.length})`} active={activeTab === 'stone'} onClick={() => setActiveTab('stone')} icon={<Layers size={14} />} />
-            <TabBtn label="Finding (2)" active={activeTab === 'finding'} onClick={() => setActiveTab('finding')} icon={<Settings size={14} />} />
-            <TabBtn label="Cast (4)" active={activeTab === 'cast'} onClick={() => setActiveTab('cast')} icon={<CheckCircle size={14} />} />
+        {/* BOTTOM TABS */}
+        <div style={{ background: 'var(--color-surface-0)', borderRadius: '24px', border: '1px solid var(--color-border-light)', overflow: 'hidden' }}>
+          <div style={{ display: 'flex', background: 'var(--color-surface-1)', borderBottom: '1px solid var(--color-border-light)' }}>
+            <TabBtn label={`Stones (${stoneList.length})`} active={activeTab === 'stone'} onClick={() => setActiveTab('stone')} icon={<Layers size={16} />} />
+            <TabBtn label="Findings" active={activeTab === 'finding'} onClick={() => setActiveTab('finding')} icon={<Settings size={16} />} />
+            <TabBtn label="Casting" active={activeTab === 'cast'} onClick={() => setActiveTab('cast')} icon={<CheckCircle size={16} />} />
           </div>
 
-          {/* Tab Content (Table) */}
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.75rem', textAlign: 'left' }}>
+          <div className="custom-scrollbar" style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, fontSize: '0.78rem' }}>
               <thead>
-                <tr style={{ background: '#e7f5ff', borderBottom: '2px solid #74c0fc' }}>
-                  <th style={TH}>No.</th>
-                  <th style={TH}>Stone Code</th>
-                  <th style={{...TH, textAlign: 'center'}}>Photo</th>
-                  <th style={TH}>Stone Name</th>
-                  <th style={TH}>Shape</th>
-                  <th style={TH}>Size</th>
-                  <th style={TH}>Cut</th>
-                  <th style={TH}>Grade</th>
-                  <th style={TH}>Set</th>
-                  <th style={{...TH, textAlign: 'right'}}>Wt (ct)</th>
-                  <th style={{...TH, textAlign: 'right'}}>Qty</th>
-                  <th style={TH}>Remark</th>
-                  <th style={TH}>Modify Date</th>
+                <tr>
+                  {[ 'No.', 'Stone Code', 'Visual', 'Stone Name', 'Shape', 'Size', 'Cut', 'Grade', 'Set', 'Wt (ct)', 'Qty', 'Modified' ].map((h, i) => (
+                    <th key={h} style={{
+                      background: 'color-mix(in srgb, var(--color-surface-1), transparent 5%)',
+                      backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+                      padding: '16px 20px', fontSize: '0.65rem', fontWeight: 900,
+                      color: 'var(--color-text-tertiary)', textAlign: i > 8 && i < 11 ? 'right' : i === 2 ? 'center' : 'left',
+                      borderBottom: '2px solid var(--color-border-light)',
+                      position: 'sticky', top: 0, zIndex: 10
+                    }}>{h}</th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
                 {activeTab === 'stone' && stoneList.map((st, i) => (
-                  <tr key={i} style={{ borderBottom: '1px solid #e9ecef', background: i % 2 === 0 ? '#fff' : '#fcfcfc' }}>
-                    <td style={{...TD, fontWeight: 700, color: '#1971c2'}}>{st.no}</td>
-                    <td style={TD}>{st.code}</td>
-                    <td style={{...TD, textAlign: 'center'}}><ImageIcon size={14} style={{ color: '#adb5bd', margin: '0 auto' }} /></td>
-                    <td style={TD}>{st.name}</td>
-                    <td style={TD}>{st.shape}</td>
-                    <td style={TD}>{st.size}</td>
-                    <td style={TD}>{st.cut}</td>
-                    <td style={TD}>{st.grade}</td>
-                    <td style={TD}>{st.set}</td>
-                    <td style={{...TD, textAlign: 'right'}}>{st.wt}</td>
-                    <td style={{...TD, textAlign: 'right', fontWeight: 700}}>{st.qty}</td>
-                    <td style={TD}></td>
-                    <td style={{...TD, color: '#868e96'}}>{st.modifyDate}</td>
+                  <tr key={i} className="detail-row-hover" style={{ background: i % 2 === 0 ? 'transparent' : 'color-mix(in srgb, var(--color-surface-1), transparent 80%)' }}>
+                    <td style={{ padding: '16px 20px', fontWeight: 800, color: 'var(--color-brand-600)', borderBottom: '1px solid var(--color-border-light)' }}>{st.no}</td>
+                    <td style={{ padding: '16px 20px', borderBottom: '1px solid var(--color-border-light)' }}>{st.code}</td>
+                    <td style={{ padding: '16px 20px', textAlign: 'center', borderBottom: '1px solid var(--color-border-light)' }}><ImageIcon size={16} style={{ color: 'var(--color-text-quaternary)', opacity: 0.5 }} /></td>
+                    <td style={{ padding: '16px 20px', fontWeight: 600, borderBottom: '1px solid var(--color-border-light)' }}>{st.name}</td>
+                    <td style={{ padding: '16px 20px', borderBottom: '1px solid var(--color-border-light)' }}>{st.shape}</td>
+                    <td style={{ padding: '16px 20px', borderBottom: '1px solid var(--color-border-light)' }}>{st.size}</td>
+                    <td style={{ padding: '16px 20px', borderBottom: '1px solid var(--color-border-light)' }}>{st.cut}</td>
+                    <td style={{ padding: '16px 20px', borderBottom: '1px solid var(--color-border-light)' }}>{st.grade}</td>
+                    <td style={{ padding: '16px 20px', borderBottom: '1px solid var(--color-border-light)' }}>{st.set}</td>
+                    <td style={{ padding: '16px 20px', textAlign: 'right', borderBottom: '1px solid var(--color-border-light)' }}>{st.wt}</td>
+                    <td style={{ padding: '16px 20px', textAlign: 'right', fontWeight: 800, color: 'var(--color-brand-600)', borderBottom: '1px solid var(--color-border-light)' }}>{st.qty}</td>
+                    <td style={{ padding: '16px 20px', color: 'var(--color-text-tertiary)', fontSize: '0.7rem', borderBottom: '1px solid var(--color-border-light)' }}>{st.modifyDate}</td>
                   </tr>
                 ))}
-                {activeTab !== 'stone' && (
-                  <tr>
-                    <td colSpan={13} style={{ padding: '40px', textAlign: 'center', color: '#adb5bd', fontSize: '0.85rem' }}>
-                      Mockup data for {activeTab} will appear here.
-                    </td>
-                  </tr>
-                )}
               </tbody>
             </table>
           </div>
         </div>
-
       </div>
+      <style>{`
+        .detail-row-hover:hover { background: color-mix(in srgb, var(--color-brand-500), transparent 96%) !important; }
+      `}</style>
     </div>
   );
 }
 
-// ─── Component Helpers ───
-
 function FieldRow({ label, value, highlight, bold, warning }: any) {
   return (
-    <div style={{ display: 'flex', borderBottom: '1px dotted #dee2e6', paddingBottom: '4px' }}>
-      <div style={{ width: '100px', fontSize: '0.7rem', color: '#868e96', fontWeight: 600, display: 'flex', alignItems: 'center' }}>{label}</div>
+    <div style={{ display: 'flex', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--color-border-light)' }}>
+      <div style={{ width: '110px', fontSize: '0.65rem', color: 'var(--color-text-tertiary)', fontWeight: 800, textTransform: 'uppercase' }}>{label}</div>
       <div style={{ 
-        flex: 1, 
-        fontSize: '0.8rem', 
-        fontWeight: highlight || bold || warning ? 800 : 500, 
-        color: warning ? '#e03131' : highlight ? '#004b8d' : '#212529',
-        background: highlight ? '#e7f5ff' : warning ? '#ffe3e3' : 'transparent',
-        padding: highlight || warning ? '2px 8px' : '2px 0',
-        borderRadius: '4px'
+        flex: 1, fontSize: '0.8rem', 
+        fontWeight: highlight || bold || warning ? 800 : 600, 
+        color: warning ? 'var(--color-accent-600)' : highlight ? 'var(--color-brand-600)' : 'var(--color-text-secondary)',
+        background: highlight ? 'color-mix(in srgb, var(--color-brand-500), transparent 94%)' : warning ? 'color-mix(in srgb, var(--color-accent-500), transparent 94%)' : 'transparent',
+        padding: highlight || warning ? '4px 12px' : '4px 0', borderRadius: '8px'
       }}>
-        {value || <span style={{ color: '#ced4da' }}>—</span>}
+        {value || <span style={{ color: 'var(--color-text-quaternary)' }}>—</span>}
       </div>
     </div>
   );
@@ -228,28 +227,13 @@ function TabBtn({ label, active, onClick, icon }: any) {
     <button 
       onClick={onClick}
       style={{
-        padding: '12px 24px', fontSize: '0.8rem', fontWeight: 800, border: 'none', cursor: 'pointer',
-        display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s',
-        background: active ? '#fff' : 'transparent',
-        color: active ? '#1971c2' : '#868e96',
-        borderTop: active ? '3px solid #1971c2' : '3px solid transparent',
-        boxShadow: active ? '0 -2px 10px rgba(0,0,0,0.02)' : 'none'
+        padding: '16px 32px', fontSize: '0.75rem', fontWeight: 800, border: 'none', cursor: 'pointer',
+        display: 'flex', alignItems: 'center', gap: '10px', background: active ? 'var(--color-surface-0)' : 'transparent',
+        color: active ? 'var(--color-brand-600)' : 'var(--color-text-tertiary)',
+        borderBottom: active ? '4px solid var(--color-brand-500)' : '4px solid transparent',
       }}
     >
       {icon} {label}
     </button>
   );
 }
-
-function btnStyle(bg: string, color: string): React.CSSProperties {
-  return {
-    display: 'flex', alignItems: 'center', gap: '6px',
-    padding: '8px 16px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 700,
-    border: '1px solid #ced4da', background: bg, color: color,
-    cursor: 'pointer', transition: 'all 0.2s',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
-  };
-}
-
-const TH: React.CSSProperties = { padding: '12px 16px', color: '#004b8d', fontWeight: 800 };
-const TD: React.CSSProperties = { padding: '12px 16px', color: '#495057' };

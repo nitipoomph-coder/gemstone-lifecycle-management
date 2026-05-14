@@ -1,0 +1,30 @@
+# ─── Dependencies ────────────────────────────────────────────────────────────
+node_modules/
+.pnp
+.pnp.js
+
+# ─── Environment / Secrets (ห้ามขึ้น GitHub เด็ดขาด) ──────────────────────────
+.env
+.env.local
+.env.*.local
+backend/.env
+
+# ─── Build output ─────────────────────────────────────────────────────────────
+frontend/dist/
+backend/dist/
+
+# ─── Logs ─────────────────────────────────────────────────────────────────────
+*.log
+npm-debug.log*
+
+# ─── Editor / OS ──────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/settings.json
+
+# ─── Test / Debug scripts (ไม่ต้องขึ้น) ──────────────────────────────────────
+backend/check-item.js
+backend/explore-db.js
+backend/test-cust.js
+backend/test-query.js
+backend/test_sp.js

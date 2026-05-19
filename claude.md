@@ -69,7 +69,7 @@
 | Theme Engine | 3 themes via `ThemeContext` + CSS custom properties |
 | Themes       | `modern-dark` (default), `dark-gold`, `royal-white` |
 | Color System | OKLCH color space                                |
-| Fonts        | **Cinzel** (logo), **Anuphan** (headings), **Bai Jamjuree** (body) |
+| Fonts        | **Cinzel** (logo), **Outfit** (headings/display), **Prompt** (body) |
 | Animations   | `fadeInUp`, skeleton shimmer, stagger classes    |
 
 ---
@@ -178,8 +178,8 @@ gemstone-lifecycle-management/
 7. **Icons**: ใช้ `lucide-react` เท่านั้น — import เฉพาะ icon ที่ใช้ (tree-shakable)
 8. **Menu Config**: Menu structure ทั้งหมดอยู่ใน `config/menuConfig.ts` — ห้าม hardcode menu ใน Sidebar
 9. **Font Stack**: 
-   - Headings: `font-display` → Anuphan
-   - Body text: `font-body` → Bai Jamjuree
+   - Headings: `font-display` → Outfit
+   - Body text: `font-body` → Prompt
    - Logo/Brand: `font-logo` → Cinzel
 
 ### Backend Rules
@@ -369,6 +369,6 @@ API_PORT=3001
 
 1. **ระบบนี้เป็น Internal Tool** — ใช้งานภายใน LAN ของโรงงาน ไม่มี authentication (ยัง)
 2. **Data จาก Production DB** — ระวังเรื่อง query performance, ใช้ cache เสมอสำหรับ heavy queries
-3. **Thai Language UI** — ข้อความในระบบเป็นภาษาไทย, ใช้ Thai web fonts (Anuphan, Bai Jamjuree)
+3. **Thai Language UI** — ข้อความในระบบเป็นภาษาไทย, ใช้ web fonts (Outfit, Prompt)
 4. **Legacy Migration** — กำลัง migrate จาก VB.net ทีละ module, หลายหน้ายังเป็น Placeholder
 5. **Photo Data** — รูปสินค้าเก็บเป็น VARBINARY ใน DB, แปลงเป็น base64 ตอน serve — ระวัง payload size

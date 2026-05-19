@@ -483,11 +483,11 @@ export default function OrderTable({
     if (isGrouped) {
       // ส่งเป็นเงื่อนไขกลุ่ม
       const path = [
-        pickerOrder.CustCode,
+        pickerOrder.CustCode || '-',
         encodeURIComponent(pickerOrder.ShipTo || '-'),
-        pickerOrder.OrdKind,
-        pickerOrder.OrdMat,
-        pickerOrder.CustDueDate // วันที่
+        encodeURIComponent(pickerOrder.OrdKind || '-'),
+        encodeURIComponent(pickerOrder.OrdMat || '-'),
+        encodeURIComponent(pickerOrder.CustDueDate || '-')
       ].join('/');
 
       navigate(`/order-tracker/group/${path}?view=${view}`);
@@ -629,11 +629,9 @@ export default function OrderTable({
       `}</style>
 
       <div className="custom-scrollbar" style={{
-        overflowX: 'auto',
-        borderRadius: '24px',
-        border: '1px solid var(--color-border-light)',
+        overflow: 'auto',
+        maxHeight: 'calc(100vh - 280px)', /* Allows sticky header to work */
         background: 'var(--color-surface-0)',
-        boxShadow: '0 12px 40px -12px rgba(0,0,0,0.15), 0 0 0 1px var(--color-border-light)',
         position: 'relative',
       }}>
         <table style={{ borderCollapse: 'separate', borderSpacing: 0, width: '100%', tableLayout: 'auto' }}>
@@ -653,7 +651,7 @@ export default function OrderTable({
                     borderBottom: '2px solid var(--color-border-light)',
                     textTransform: 'uppercase', letterSpacing: '0.12em',
                     position: 'sticky', top: 0,
-                    zIndex: 10,
+                    zIndex: 20,
                     transition: 'all 0.2s'
                   }}>
                     {c.label}
@@ -730,7 +728,6 @@ export default function OrderTable({
         }
         .custom-scrollbar::-webkit-scrollbar-track {
           background: var(--color-surface-1);
-          border-radius: 10px;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb {
           background: var(--color-border-strong);

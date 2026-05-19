@@ -23,6 +23,14 @@ export interface OrderSummary {
   OORDate: string | null;
   CloseStatus: string | null;
   TrackRemark: string | null;
+  // Sales Remarks (Production Data)
+  ReceiveRemark: string | null;
+  EnamelRemark: string | null;
+  CrystalRemark: string | null;
+  AssemblyRemark: string | null;
+  ShelfRemark: string | null;
+  PackRemark: string | null;
+  ProductionRemark: string | null;
 }
 
 export const fetchOrders = async (params: { status?: 'pending' | 'finfsh' | 'all', dateType?: string, dateFrom?: string, dateTo?: string }): Promise<{ ok: boolean; data: OrderSummary[]; error?: string }> => {
@@ -69,6 +77,15 @@ export const fetchOrders = async (params: { status?: 'pending' | 'finfsh' | 'all
       CustQCDate: item.CustQCDate || null,
       OORDate: item.OORDate || null,
       TrackRemark: item.TrackRemark || item.remark || '-',
+      
+      // Sales Remarks (Production Data)
+      ReceiveRemark: item.ReceiveRemark || item.receiveRemark || null,
+      EnamelRemark: item.EnamelRemark || item.enamelRemark || null,
+      CrystalRemark: item.CrystalRemark || item.crystalRemark || null,
+      AssemblyRemark: item.AssemblyRemark || item.assemblyRemark || null,
+      ShelfRemark: item.ShelfRemark || item.shelfRemark || null,
+      PackRemark: item.PackRemark || item.packRemark || null,
+      ProductionRemark: item.ProductionRemark || item.productionRemark || null,
     }));
 
     return { ok: true, data: mappedData };

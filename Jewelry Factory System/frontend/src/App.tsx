@@ -4,6 +4,7 @@ import Dashboard from './pages/Dashboard';
 import DashboardDetail from './pages/DashboardDetail';
 import SIRPage from './pages/SIRPage';
 import SIMPage from './pages/SIMPage';
+import ProcurementPage from './pages/ProcurementPage';
 import OrderTrackerAdvanced from './pages/OrderTrackerAdvanced';
 import OrderDetailPage from './pages/OrderDetailPage';
 import ItemDetailPage from './pages/ItemDetailPage';
@@ -18,11 +19,11 @@ export default function App() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/dashboard/detail" element={<DashboardDetail />} />
 
-          {/* 1. จัดซื้อและรับเข้า — SPA, SRA, SRB, SIR (CHK-SPA รวมเป็น view ใน SPA) */}
-          <Route path="/procurement/purchase" element={<PlaceholderPage />} />
-          <Route path="/procurement/receive" element={<PlaceholderPage />} />
-          <Route path="/procurement/receive-b" element={<PlaceholderPage />} />
-          <Route path="/procurement/return" element={<SIRPage />} />
+          {/* 1. จัดซื้อและรับเข้า — SPA, SRA, SRB, SIR */}
+          <Route path="/procurement/purchase" element={<ProcurementPage />} />
+          <Route path="/procurement/receive" element={<ProcurementPage />} />
+          <Route path="/procurement/receive-b" element={<ProcurementPage />} />
+          <Route path="/procurement/return" element={<ProcurementPage />} />
 
           {/* 2. ออเดอร์และการเบิก — SOA, SIA, SIB, SIP, SIS */}
           <Route path="/orders/create" element={<PlaceholderPage />} />
@@ -57,6 +58,7 @@ export default function App() {
 
           {/* Order Tracker */}
           <Route path="/order-tracker" element={<OrderTrackerAdvanced />} />
+          <Route path="/order-tracker/group/:cust/:addr/:kind/:mat/:duedate" element={<OrderDetailPage />} />
           <Route path="/order-tracker/po/:poNo" element={<OrderDetailPage />} />
           <Route path="/order-tracker/ord/:ordNo" element={<OrderDetailPage />} />
           {/* legacy compat */}

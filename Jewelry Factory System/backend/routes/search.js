@@ -27,57 +27,69 @@ router.get('/', async (req, res) => {
 
     const pool = await getPool();
     const likeQuery = `%${queryText}%`;
+    const prefixQuery = `${queryText}%`;
     const results = [];
 
     // Search Orders (OrdHD)
     if (!searchType || searchType === 'order' || searchType === 'po') {
-      let whereClause = 'h.OrdNo LIKE @q OR h.PONo LIKE @q OR h.CustCode LIKE @q OR c.SalesName LIKE @q';
+      let whereClause = 'h.OrdNo LIKE @qPrefix OR h.PONo LIKE @qPrefix OR h.CustCode LIKE @qPrefix OR c.SalesName LIKE @qPrefix';
       if (searchType === 'po') {
-        whereClause = 'h.PONo LIKE @q';
+        whereClause = 'h.PONo LIKE @qPrefix';
       }
 
       const orderResult = await pool.request()
         .input('q', sql.NVarChar, likeQuery)
+        .input('qPrefix', sql.NVarChar, prefixQuery)
         .query(`
-          SELECT TOP 10 
-            h.OrdNo AS id, 
+          WITH FilteredOrders AS (
+            SELECT TOP 10 h.OrdNo, h.PONo, h.CustCode, c.SalesName
+            FROM OrdHD h
+            LEFT JOIN GMCust c ON c.CustCode = h.CustCode
+            WHERE ${whereClause}
+          )
+          SELECT 
+            f.OrdNo AS id, 
             'order' AS type, 
-            h.OrdNo AS title, 
-            'Order No: ' + h.OrdNo + ' / PO: ' + ISNULL(h.PONo, '-') + ' / Cust: ' + ISNULL(h.CustCode, '') AS sub, 
-            '/order-tracker?search=' + h.OrdNo AS path,
+            f.OrdNo AS title, 
+            'Order No: ' + f.OrdNo + ' / PO: ' + ISNULL(f.PONo, '-') + ' / Cust: ' + ISNULL(f.CustCode, '') AS sub, 
+            '/order-tracker?search=' + f.OrdNo AS path,
             CAST(p.ItemPhoto AS VARBINARY(MAX)) AS ItemPhoto
-          FROM OrdHD h
-          LEFT JOIN OrdDT d ON d.OrdNo = h.OrdNo AND d.OrdLineNo = 1
+          FROM FilteredOrders f
+          LEFT JOIN OrdDT d ON d.OrdNo = f.OrdNo AND d.OrdLineNo = '1'
           LEFT JOIN GMItemPhoto p ON p.ItemNo = d.ItemNo
-          LEFT JOIN GMCust c ON c.CustCode = h.CustCode
-          WHERE ${whereClause}
         `);
       results.push(...orderResult.recordset.map(r => ({ ...r, photo: toBase64Photo(r.ItemPhoto), ItemPhoto: undefined })));
     }
 
     // Search Items (OrdDT)
-    if (!type || type === 'item') {
+    if (!searchType || searchType === 'item') {
       const itemResult = await pool.request()
         .input('q', sql.NVarChar, likeQuery)
+        .input('qPrefix', sql.NVarChar, prefixQuery)
         .query(`
-          SELECT DISTINCT TOP 10 
-            d.ItemNo AS id, 
+          WITH FilteredItems AS (
+            SELECT DISTINCT TOP 10 d.ItemNo, d.ItemDesc, d.ItemMat
+            FROM OrdDT d
+            WHERE d.ItemNo LIKE @qPrefix OR d.ItemDesc LIKE @qPrefix
+          )
+          SELECT 
+            f.ItemNo AS id, 
             'item' AS type, 
-            d.ItemNo AS title, 
-            'Item Desc: ' + ISNULL(d.ItemDesc, '') + ' / Mat: ' + ISNULL(d.ItemMat, '') AS sub, 
-            '/order-tracker?search=' + d.ItemNo AS path,
+            f.ItemNo AS title, 
+            'Item Desc: ' + ISNULL(f.ItemDesc, '') + ' / Mat: ' + ISNULL(f.ItemMat, '') AS sub, 
+            '/order-tracker?search=' + f.ItemNo AS path,
             CAST(p.ItemPhoto AS VARBINARY(MAX)) AS ItemPhoto
-          FROM OrdDT d
-          LEFT JOIN GMItemPhoto p ON p.ItemNo = d.ItemNo
-          WHERE d.ItemNo LIKE @q OR d.ItemDesc LIKE @q OR d.ItemMat LIKE @q OR d.ItemSize LIKE @q
+          FROM FilteredItems f
+          LEFT JOIN GMItemPhoto p ON p.ItemNo = f.ItemNo
         `);
       results.push(...itemResult.recordset.map(r => ({ ...r, photo: toBase64Photo(r.ItemPhoto), ItemPhoto: undefined })));
     }
 
     // Search Customers (GMCust)
-    if (!type || type === 'customer') {
+    if (!searchType || searchType === 'customer') {
       const custResult = await pool.request()
         .input('q', sql.NVarChar, likeQuery)
+        .input('qPrefix', sql.NVarChar, prefixQuery)
         .query(`
           SELECT TOP 10 
             CustCode AS id, 
@@ -86,7 +98,7 @@ router.get('/', async (req, res) => {
             'Customer Code: ' + CustCode AS sub, 
             '/order-tracker?search=' + CustCode AS path
           FROM GMCust
-          WHERE CustCode LIKE @q OR CustName LIKE @q
+          WHERE CustCode LIKE @qPrefix OR CustName LIKE @q
         `);
       results.push(...custResult.recordset.map(r => ({ ...r, photo: null, ItemPhoto: undefined })));
     }

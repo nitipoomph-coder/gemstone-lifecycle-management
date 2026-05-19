@@ -1,5 +1,5 @@
-import { useNavigate } from 'react-router-dom';
-import { Search, Bell, Settings, ChevronRight, Palette, Package, Gem, User, X } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Search, Bell, Settings, ChevronRight, ChevronLeft, Palette, Package, Gem, User, X } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useState, useRef, useEffect } from 'react';
 import { fetchSearch, type SearchResultItem } from '../../services/orderTrackerAPI';
@@ -21,6 +21,7 @@ export default function Topbar({ breadcrumb, hideSearch }: TopbarProps) {
   const { theme, setTheme } = useTheme();
   const [showThemeMenu, setShowThemeMenu] = useState(false);
   const themeMenuRef = useRef<HTMLDivElement>(null);
+  const location = useLocation();
 
   // ─── Universal Search State ───
   const [query, setQuery] = useState('');
@@ -82,6 +83,18 @@ export default function Topbar({ breadcrumb, hideSearch }: TopbarProps) {
         zIndex: 100,
       }}
     >
+      <div className="flex items-center gap-3 mr-2">
+        {location.pathname !== '/' && (
+          <button
+            onClick={() => navigate(-1)}
+            className="flex h-8 items-center justify-center gap-1.5 rounded-lg px-2.5 text-[11px] font-bold text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-0)] hover:text-[var(--color-text-primary)] transition-colors border border-transparent hover:border-[var(--color-border-light)] hover:shadow-sm"
+          >
+            <ChevronLeft size={16} />
+            BACK
+          </button>
+        )}
+      </div>
+
       {/* Breadcrumb */}
       <nav className="flex items-center gap-1.5 text-sm">
         {breadcrumb.map((item, i) => {
@@ -194,7 +207,7 @@ export default function Topbar({ breadcrumb, hideSearch }: TopbarProps) {
                             {res.photo ? (
                               <img src={res.photo} alt={res.title} className="h-12 w-12 rounded-lg object-cover flex-shrink-0 shadow-sm border border-[var(--color-border-light)]" />
                             ) : (
-                              <div className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-opacity-10 group-hover:bg-opacity-20 transition-colors ${type === 'order' ? 'bg-blue-500 text-blue-600' : type === 'item' ? 'bg-amber-500 text-amber-600' : 'bg-purple-500 text-purple-600'}`}>
+                              <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-[var(--color-surface-2)] text-[var(--color-text-secondary)] transition-colors">
                                 {type === 'order' ? <Package size={20} /> : type === 'item' ? <Gem size={20} /> : <User size={20} />}
                               </div>
                             )}

@@ -163,6 +163,16 @@ export async function fetchOrderByPo(poNo: string): Promise<OrderDetailByPo> {
   return await res.json();
 }
 
+// ─── fetchOrderByGroup ────────────────────────────────────────────────────────
+export async function fetchOrderByGroup(cust: string, addr: string, kind: string, mat: string, duedate: string): Promise<OrderDetailByPo> {
+  const path = [cust, encodeURIComponent(addr), encodeURIComponent(kind), encodeURIComponent(mat), encodeURIComponent(duedate)].join('/');
+  const res = await fetch(`${BASE_URL}/orders/group/${path}`, {
+    headers: { 'bypass-tunnel-reminder': 'true' }
+  });
+  if (!res.ok) throw new Error(`API error ${res.status} — Group data not found`);
+  return await res.json();
+}
+
 // ─── fetchSearch (Global Search) ──────────────────────────────────────────────
 export interface SearchResultItem {
   id: string;
@@ -184,4 +194,28 @@ export async function fetchSearch(query: string, type?: string): Promise<SearchR
   if (!res.ok) throw new Error(`API error: ${res.status}`);
   const json = await res.json();
   return json.data ?? [];
+}
+
+// ─── updateOrderRemarks (Save Sales & Production Remarks) ─────────────────────
+export async function updateOrderRemarks(payload: {
+  OrdNo: string;
+  LineNo: number;
+  RecRemark: string;
+  EnaRemark: string;
+  CryRemark: string;
+  AsmRemark: string;
+  ShfRemark: string;
+  PkRemark: string;
+  ProdRemark: string;
+}): Promise<{ ok: boolean }> {
+  const res = await fetch(`${BASE_URL}/orders/remarks`, {
+    method: 'POST',
+    headers: { 
+      'bypass-tunnel-reminder': 'true',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  return await res.json();
 }

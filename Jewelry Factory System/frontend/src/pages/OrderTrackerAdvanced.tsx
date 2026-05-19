@@ -1,10 +1,10 @@
 // src/pages/OrderTrackerAdvanced.tsx
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Topbar from '../components/layout/Topbar';
 import OrderTable from '../components/dashboard/OrderTable'; // 👈 Import ตารางที่แยกไว้
 import { fetchOrders, type OrderSummary } from '../services/orderAPI';
-import { Search, RefreshCw, AlertTriangle, Package, LayoutGrid, DollarSign } from 'lucide-react';
+import { Search, RefreshCw, AlertTriangle, Package, LayoutGrid, DollarSign, X } from 'lucide-react';
 
 export default function OrderTrackerAdvanced() {
   const navigate = useNavigate();
@@ -17,21 +17,52 @@ export default function OrderTrackerAdvanced() {
   const initialSearch = searchParams.get('search') || '';
   const [search, setSearch] = useState(initialSearch);
 
-  const [statusFilter, setStatusFilter] = useState<'pending' | 'finish' | 'all'>('pending');
-  const [groupFilter, setGroupFilter] = useState<string>('N008');
-  const [dateType, setDateType] = useState('Order Date');
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20); // default 20 rows/page
+  const [statusFilter, setStatusFilter] = useState<'pending' | 'finish' | 'all'>(() => (searchParams.get('status') as any) || 'pending');
+  const [groupFilter, setGroupFilter] = useState<string>(() => searchParams.get('group') || 'N008');
+  const [dateType, setDateType] = useState(() => searchParams.get('dateType') || 'Order Date');
+  const [page, setPage] = useState(() => parseInt(searchParams.get('page') || '1'));
+  const [pageSize, setPageSize] = useState(() => parseInt(searchParams.get('pageSize') || '20'));
+
+  const [filterWeek, setFilterWeek] = useState(() => searchParams.get('fWeek') || '');
+  const [filterPO, setFilterPO] = useState(() => searchParams.get('fPO') || '');
+  const [filterType, setFilterType] = useState(() => searchParams.get('fType') || '');
+  const [filterShipTo, setFilterShipTo] = useState(() => searchParams.get('fShipTo') || '');
+
   const [dateFrom, setDateFrom] = useState(() => {
+    const f = searchParams.get('dateFrom');
+    if (f) return f;
     const d = new Date();
-    d.setMonth(d.getMonth() - 7); // 7 เดือนย้อนหลัง 
+    d.setMonth(d.getMonth() - 7);
     return d.toISOString().split('T')[0];
   });
   const [dateTo, setDateTo] = useState(() => {
+    const t = searchParams.get('dateTo');
+    if (t) return t;
     const d = new Date();
-    d.setMonth(d.getMonth() + 0); // 0 เดือนข้างหน้า
     return d.toISOString().split('T')[0];
   });
+
+  // Sync state back to URL automatically
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (search) params.set('search', search);
+    if (statusFilter !== 'pending') params.set('status', statusFilter);
+    if (groupFilter !== 'N008') params.set('group', groupFilter);
+    if (dateType !== 'Order Date') params.set('dateType', dateType);
+    if (page !== 1) params.set('page', page.toString());
+    if (pageSize !== 20) params.set('pageSize', pageSize.toString());
+    if (filterWeek) params.set('fWeek', filterWeek);
+    if (filterPO) params.set('fPO', filterPO);
+    if (filterType) params.set('fType', filterType);
+    if (filterShipTo) params.set('fShipTo', filterShipTo);
+    
+    const d1 = new Date(); d1.setMonth(d1.getMonth() - 7); const defFrom = d1.toISOString().split('T')[0];
+    const d2 = new Date(); const defTo = d2.toISOString().split('T')[0];
+    if (dateFrom !== defFrom) params.set('dateFrom', dateFrom);
+    if (dateTo !== defTo) params.set('dateTo', dateTo);
+
+    navigate({ search: params.toString() }, { replace: true });
+  }, [search, statusFilter, groupFilter, dateType, page, pageSize, dateFrom, dateTo, filterWeek, filterPO, filterType, filterShipTo, navigate]);
 
   // Sync search state if URL changes (e.g. from Topbar global search)
   useEffect(() => {
@@ -114,7 +145,7 @@ export default function OrderTrackerAdvanced() {
     // Group Filter
     if (groupFilter !== 'ALL') {
       if (groupFilter === 'N008') {
-        const n008List = ['N008', 'N044', 'N048', 'N066', 'N067', 'N068', 'N069', 'N070', 'N071', 'N072', 'N073', 'N074', 'N075'];
+        const n008List = ['N008', 'N048', 'N066', 'N067', 'N068', 'N069', 'N070', 'N071', 'N072', 'N073', 'N074', 'N075'];
         filteredList = filteredList.filter(o => o.CustCode && n008List.some(code => o.CustCode!.includes(code)));
       }
       else if (groupFilter === 'MLT') filteredList = filteredList.filter(o => o.CustCode?.includes('MLT') || o.CustCode?.startsWith('U'));
@@ -152,19 +183,45 @@ export default function OrderTrackerAdvanced() {
       }
     }
 
+    // --- QUICK COLUMN FILTERS ---
+    if (filterWeek) {
+      filteredList = filteredList.filter(o => o.Week?.toString().toLowerCase().includes(filterWeek.toLowerCase()));
+    }
+    if (filterPO) {
+      filteredList = filteredList.filter(o => o.PONo?.toString().toLowerCase().includes(filterPO.toLowerCase()) || o.OrdNo?.toString().toLowerCase().includes(filterPO.toLowerCase()));
+    }
+    if (filterType) {
+      filteredList = filteredList.filter(o => o.OrdKind?.toString().toLowerCase().includes(filterType.toLowerCase()));
+    }
+    if (filterShipTo) {
+      filteredList = filteredList.filter(o => o.ShipTo?.toString().toLowerCase().includes(filterShipTo.toLowerCase()) || o.CustMultiAddr?.toString().toLowerCase().includes(filterShipTo.toLowerCase()));
+    }
+
     setFiltered(filteredList);
     setPage(1);
-  }, [search, orders, statusFilter, groupFilter]);
+  }, [search, orders, statusFilter, groupFilter, filterWeek, filterPO, filterType, filterShipTo]);
 
   const totalQty = filtered.reduce((s, o) => s + (o.TotalQty || 0), 0);
   const totalAmount = filtered.reduce((s, o) => s + (o.Amount || 0), 0);
   const pendingCount = filtered.filter(o => o.CloseStatus !== 'Y').length;
   const delayedCount = filtered.filter(o => o.DueDate && new Date(o.DueDate) < new Date() && (o.CloseStatus !== 'Y')).length;
 
+  // ⭐ Dynamic Type options — ดึง unique OrdKind จากข้อมูลจริง
+  const uniqueTypes = useMemo(() => {
+    const types = new Set<string>();
+    orders.forEach(o => {
+      if (o.OrdKind && o.OrdKind !== '-') types.add(o.OrdKind.trim());
+    });
+    return Array.from(types).sort();
+  }, [orders]);
+
+  const hasActiveFilters = !!(filterWeek || filterPO || filterType || filterShipTo);
+
   const resetSearch = () => {
     setSearch('');
     setGroupFilter('N008');
     setStatusFilter('pending');
+    setFilterWeek(''); setFilterPO(''); setFilterType(''); setFilterShipTo('');
     navigate('/dashboard/tracker', { replace: true });
   };
 
@@ -184,7 +241,6 @@ export default function OrderTrackerAdvanced() {
       <Topbar breadcrumb={[{ label: 'JEWELRY SMART FACTORY', path: '/' }, { label: 'ORDER TRACKER' }]} />
 
       <div className="content-scrollbar flex-1 overflow-y-auto" style={{ padding: '24px' }}>
-
         {/* ─── KPI TILES ─── */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '24px' }}>
           {[
@@ -316,6 +372,48 @@ export default function OrderTrackerAdvanced() {
                     {[20, 50, 100].map(n => <option key={n} value={n}>{n} / page</option>)}
                   </select>
                 </div>
+              </div>
+
+              {/* QUICK COLUMN FILTERS */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, justifyContent: 'center' }}>
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <Search size={13} style={{ position: 'absolute', left: '10px', color: filterWeek ? 'var(--color-brand-500)' : 'var(--color-text-quaternary)', transition: 'color 0.2s' }} />
+                  <input 
+                    type="text" placeholder="Week..." value={filterWeek} onChange={e => setFilterWeek(e.target.value)}
+                    style={{ width: '90px', padding: '7px 12px 7px 30px', borderRadius: '10px', border: `1.5px solid ${filterWeek ? 'var(--color-brand-400)' : 'var(--color-border-light)'}`, background: filterWeek ? 'color-mix(in srgb, var(--color-brand-500), transparent 96%)' : 'var(--color-surface-0)', fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-primary)', outline: 'none', transition: 'all 0.2s' }}
+                  />
+                </div>
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <Search size={13} style={{ position: 'absolute', left: '10px', color: filterPO ? 'var(--color-brand-500)' : 'var(--color-text-quaternary)', transition: 'color 0.2s' }} />
+                  <input 
+                    type="text" placeholder="PO / Order No..." value={filterPO} onChange={e => setFilterPO(e.target.value)}
+                    style={{ width: '160px', padding: '7px 12px 7px 30px', borderRadius: '10px', border: `1.5px solid ${filterPO ? 'var(--color-brand-400)' : 'var(--color-border-light)'}`, background: filterPO ? 'color-mix(in srgb, var(--color-brand-500), transparent 96%)' : 'var(--color-surface-0)', fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-primary)', outline: 'none', transition: 'all 0.2s' }}
+                  />
+                </div>
+                <select 
+                  value={filterType} onChange={e => setFilterType(e.target.value)}
+                  style={{ width: '120px', padding: '7px 12px', borderRadius: '10px', border: `1.5px solid ${filterType ? 'var(--color-brand-400)' : 'var(--color-border-light)'}`, background: filterType ? 'color-mix(in srgb, var(--color-brand-500), transparent 96%)' : 'var(--color-surface-0)', fontSize: '0.75rem', fontWeight: 600, color: filterType ? 'var(--color-brand-600)' : 'var(--color-text-tertiary)', cursor: 'pointer', outline: 'none', transition: 'all 0.2s' }}
+                >
+                  <option value="">Type: All</option>
+                  {uniqueTypes.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <Search size={13} style={{ position: 'absolute', left: '10px', color: filterShipTo ? 'var(--color-brand-500)' : 'var(--color-text-quaternary)', transition: 'color 0.2s' }} />
+                  <input 
+                    type="text" placeholder="Ship To..." value={filterShipTo} onChange={e => setFilterShipTo(e.target.value)}
+                    style={{ width: '150px', padding: '7px 12px 7px 30px', borderRadius: '10px', border: `1.5px solid ${filterShipTo ? 'var(--color-brand-400)' : 'var(--color-border-light)'}`, background: filterShipTo ? 'color-mix(in srgb, var(--color-brand-500), transparent 96%)' : 'var(--color-surface-0)', fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-primary)', outline: 'none', transition: 'all 0.2s' }}
+                  />
+                </div>
+                {hasActiveFilters && (
+                  <button 
+                    onClick={() => { setFilterWeek(''); setFilterPO(''); setFilterType(''); setFilterShipTo(''); }}
+                    style={{ padding: '7px 12px', borderRadius: '10px', background: 'var(--color-danger-500)', color: '#fff', border: 'none', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', transition: 'all 0.2s', boxShadow: '0 2px 8px -2px rgba(220, 53, 69, 0.4)' }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'var(--color-danger-600)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'var(--color-danger-500)'}
+                  >
+                    <X size={14} /> Clear
+                  </button>
+                )}
               </div>
 
               {/* Top Pagination controls */}

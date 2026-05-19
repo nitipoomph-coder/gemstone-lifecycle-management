@@ -18,6 +18,79 @@ function toBase64Photo(buf) {
   }
 }
 
+// --- helper: calculate pending quantities following legacy Stored Procedure ---
+function computePendingProcessQuantities(r, isAliased = false) {
+  const itemQty = Number(isAliased ? r.Qty : r.ItemQty) || 0;
+  
+  const stoneQty = Number(r.StoneQty) || 0;
+  const fitQty = Number(isAliased ? r.FindingQty : r.FitQty) || 0;
+  const wijQty = Number(isAliased ? r.WaxQty : r.WijQty) || 0;
+  const wstQty = Number(isAliased ? r.WaxSetQty : r.WstQty) || 0;
+  const castQty = Number(r.CastQty) || 0;
+  const controlQty = Number(r.ControlQty) || 0;
+  const grindQty = Number(r.GrindQty) || 0;
+  const polishQty = Number(r.PolishQty) || 0;
+  const plateQty = Number(isAliased ? r.PlatingQty : r.PlateQty) || 0;
+  const qcQty = Number(isAliased ? r.FQCQty : r.QCQty) || 0;
+  const exportQty = Number(isAliased ? r.GroupQty : r.ExportQty) || 0;
+  const finishQty = Number(r.FinishQty) || 0;
+
+  const epoxQty = Number(r.EpoxQty) || 0;
+  const filQty = Number(isAliased ? r.FilingQty : r.FilQty) || 0;
+  const solQty = Number(r.SolderQty || r.SolQty) || 0;
+  const setQty = Number(r.SetQty) || 0;
+  const pqcQty = Number(isAliased ? r.PQCQty : r.QPQty) || 0;
+  const assemQty = Number(r.AssemQty) || 0;
+  const packQty = Number(r.PackQty) || 0;
+
+  // Stored Procedure formulas
+  const stonePen = stoneQty - itemQty;
+  const fitPen = fitQty - itemQty;
+  const wijPen = wijQty - itemQty;
+  const wstPen = (wijQty === itemQty ? wstQty - wijQty : wstQty - itemQty);
+  const castPen = (wijQty === itemQty ? castQty - wijQty : castQty - itemQty);
+  const controlPen = controlQty - itemQty;
+  const grindPen = (castQty === itemQty ? grindQty - castQty : grindQty - itemQty);
+  const polishPen = (grindQty === itemQty ? polishQty - grindQty : polishQty - itemQty);
+  const platePen = (polishQty === itemQty ? plateQty - polishQty : plateQty - itemQty);
+  const qcPen = (plateQty === itemQty ? qcQty - plateQty : qcQty - itemQty);
+
+  const epoxPen = epoxQty - itemQty;
+  const filPen = filQty - itemQty;
+  const solPen = solQty - itemQty;
+  const setPen = setQty - itemQty;
+  const pqcPen = pqcQty - itemQty;
+  const assemPen = assemQty - itemQty;
+  const packPen = packQty - itemQty;
+
+  const balPen = exportQty - itemQty;
+  const finishPen = finishQty - itemQty;
+
+  return {
+    StoneQty: stonePen,
+    FindingQty: fitPen,
+    WaxQty: wijPen,
+    WaxSetQty: wstPen,
+    CastQty: castPen,
+    ControlQty: controlPen,
+    GrindQty: grindPen,
+    PolishQty: polishPen,
+    PlatingQty: platePen,
+    FQCQty: qcPen,
+    EpoxQty: epoxPen,
+    FilingQty: filPen,
+    SolderQty: solPen,
+    SetQty: setPen,
+    PQCQty: pqcPen,
+    AssemQty: assemPen,
+    PackQty: packPen,
+    GroupQty: exportQty,
+    BalQty: balPen,
+    ExportQty: exportQty,
+    FinishQty: finishQty,
+  };
+}
+
 // --- In-Memory Cache + Request Coalescing ---
 const cache = new Map();
 const inFlight = new Map();
@@ -86,20 +159,81 @@ router.get('/', async (req, res) => {
       request.input('FromDate', sql.DateTime, startDate);
       request.input('ToDate', sql.DateTime, endDate);
 
-      // ส่ง Status เฉพาะ SP ตัวที่มีพารามิเตอร์นี้รองรับแล้ว (เพื่อความปลอดภัย)
-      if (spName === 'dbo.PC_Show_OrdTrack_Sum_OrdDate') {
-        request.input('Status', sql.VarChar, statusFilter);
-      }
-
+      // ลบการส่งพารามิเตอร์ Status ไปให้ Database เก่า (ป้องกัน Error 500: too many arguments)
       const result = await request.execute(spName);
 
-      const data = result.recordset.map(r => {
-        const { ItemPhoto, ...rest } = r;
+      let rawData = result.recordset;
+
+      // === [ADDED: กรองสถานะและมัดรวม 5 แกนหลักด้วย Node.js] ===
+      // 1. กรองสถานะ Pending/Finish ที่หน้าบ้าน (แทนการส่งไปให้ DB ทำ)
+      if (statusFilter === 'pending') {
+        rawData = rawData.filter(r => r.CloseStatus !== 'Y');
+      } else if (statusFilter === 'finish') {
+        rawData = rawData.filter(r => r.CloseStatus === 'Y');
+      }
+
+      // 2. มัดรวมออเดอร์ที่กระจัดกระจาย โดยยึด 5 แกนหลัก (Cust, PO, Type, ShipTo, Material)
+      const groupedMap = new Map();
+      
+      rawData.forEach(r => {
+        // สร้างกุญแจ 5 เงื่อนไข
+        const key = `${r.CustCode}|${r.PONo}|${r.OrdKind}|${r.CustMultiAddr}|${r.OrdMat}`;
+        
+        if (!groupedMap.has(key)) {
+          // ถ้ายังไม่เคยมัดรวม ให้บันทึกเป็นก้อนใหม่
+          groupedMap.set(key, { 
+            ...r, 
+            OrdNos: new Set(r.OrdNo ? r.OrdNo.split('/').map(x => x.trim()) : []) 
+          });
+        } else {
+          // ถ้าเจอกุญแจซ้ำ ให้อัปเดตก้อนเดิม (ยุบรวม)
+          const existing = groupedMap.get(key);
+          
+          if (r.OrdNo) {
+            r.OrdNo.split('/').forEach(x => existing.OrdNos.add(x.trim()));
+          }
+
+          // รวมจำนวน Qty ต่างๆ
+          const qtyFields = [
+            'SumItem', 'SumQty', 'StonePenQty', 'FitPenQty', 'WijPenQty', 
+            'WstPenQty', 'CastPenQty', 'ControlPenQty', 'GrindPenQty', 
+            'PolishPenQty', 'PlatePenQty', 'QCPenQty', 'UnFinishQty', 
+            'FinishQty', 'ExportQty', 'BalQty', 'SumAmnt'
+          ];
+          qtyFields.forEach(f => {
+            existing[f] = (existing[f] || 0) + (r[f] || 0);
+          });
+
+          // คำนวณเปอร์เซ็นต์ส่งออกใหม่
+          if (existing.SumQty > 0) {
+            existing.ExpPct = Math.round((existing.ExportQty / existing.SumQty) * 100);
+          }
+
+          // วันที่ DueDate ให้ยึดวันที่เร็วที่สุด
+          if (r.DueDate && (!existing.DueDate || new Date(r.DueDate) < new Date(existing.DueDate))) {
+            existing.DueDate = r.DueDate;
+          }
+          if (r.CustDueDate && (!existing.CustDueDate || new Date(r.CustDueDate) < new Date(existing.CustDueDate))) {
+            existing.CustDueDate = r.CustDueDate;
+          }
+          
+          // ถ้ารูปเก่าไม่มี ให้เอารูปใหม่มาใส่
+          if (!existing.ItemPhoto && r.ItemPhoto) {
+            existing.ItemPhoto = r.ItemPhoto;
+          }
+        }
+      });
+
+      // 3. แปลงร่างกลับเป็น Array ปกติส่งให้ React
+      const data = Array.from(groupedMap.values()).map(r => {
+        const { OrdNos, ItemPhoto, ...rest } = r;
         return {
           ...rest,
+          OrdNo: Array.from(OrdNos).filter(Boolean).join('/ '),
           ItemPhoto: toBase64Photo(ItemPhoto),
         };
       });
+      // === [END ADDED] ===
       setCached(cacheKey, data);
       console.log(`[EXEC SP] Done: ${data.length} rows - cached`);
       return data;
@@ -125,16 +259,17 @@ router.get('/group/:cust/:addr/:kind/:mat/:duedate', async (req, res) => {
   try {
     const pool = await getPool();
     const { cust, addr, kind, mat, duedate } = req.params;
-    const decodedAddr = decodeURIComponent(addr);
+    const decodedAddr = addr === '-' ? null : decodeURIComponent(addr);
+    const decodedKind = kind === '-' ? null : decodeURIComponent(kind);
 
     console.log(`[GET /api/orders/group] Fetching for ${cust} at ${decodedAddr}`);
 
     const result = await pool.request()
       .input('cust', sql.NVarChar, cust)
       .input('addr', sql.NVarChar, decodedAddr)
-      .input('kind', sql.NVarChar, kind)
-      .input('mat', sql.NVarChar, mat)
-      .input('duedate', sql.DateTime, duedate)
+      .input('kind', sql.NVarChar, decodedKind)
+      .input('mat', sql.NVarChar, mat === '-' ? null : mat)
+      .input('duedate', sql.DateTime, duedate === '-' ? null : duedate)
       .query(`
         SELECT h.*, d.*, CAST(p.ItemPhoto AS VARBINARY(MAX)) AS ItemPhoto, c.CustName, c.SalesName AS Sales
         FROM OrdHD h
@@ -142,10 +277,17 @@ router.get('/group/:cust/:addr/:kind/:mat/:duedate', async (req, res) => {
         LEFT JOIN OrdDT d ON d.OrdNo = h.OrdNo
         LEFT JOIN GMItemPhoto p ON p.ItemNo = d.ItemNo
         WHERE h.CustCode = @cust 
-          AND h.CustMultiAddr = @addr 
-          AND h.OrdKind = @kind 
-          AND h.OrdMat = @mat 
-          AND CAST(h.CustDueDate AS DATE) = CAST(@duedate AS DATE)
+          AND ISNULL(h.CustMultiAddr, '') = ISNULL(@addr, '') 
+          AND (
+            (@kind = 'Replen' AND h.OrdKind <> 'NEW') OR
+            (@kind = 'New' AND h.OrdKind = 'NEW') OR
+            (ISNULL(h.OrdKind, '') = ISNULL(@kind, ''))
+          )
+          AND ISNULL(h.OrdMat, '') = ISNULL(@mat, '') 
+          AND (
+            (@duedate IS NULL AND h.CustDueDate IS NULL) OR 
+            (CAST(h.CustDueDate AS DATE) = CAST(@duedate AS DATE))
+          )
         ORDER BY h.OrdNo, d.OrdLineNo
       `);
 
@@ -178,14 +320,41 @@ router.get('/group/:cust/:addr/:kind/:mat/:duedate', async (req, res) => {
       Sales: first.Sales
     };
 
-    const lines = result.recordset.map(r => ({
-      OrdNo: r.OrdNo, LineNo: r.OrdLineNo, ItemNo: r.ItemNo,
-      ItemDesc: r.ItemDesc, ItemMat: r.ItemMat, ItemSize: r.ItemSize,
-      Qty: r.ItemQty, Price: r.ItemPrice, Amount: r.ItemAmnt,
-      ItemPhoto: toBase64Photo(r.ItemPhoto),
-      FinishQty: r.FinishQty, ItemStatus: r.ItemStatus,
-      // Add other detail fields if needed
-    }));
+    const lines = result.recordset.map(r => {
+      const p = computePendingProcessQuantities(r, false);
+      return {
+        OrdNo: r.OrdNo, LineNo: r.OrdLineNo, ItemNo: r.ItemNo,
+        ItemDesc: r.ItemDesc, ItemMat: r.ItemMat, ItemSize: r.ItemSize,
+        Stone: r.ItemStone, Plating: r.ItemPlate, CustItem: r.ItemCust,
+        OrdRemark: r.ItemRemark,
+        Qty: r.ItemQty, Price: r.ItemPrice, Amount: r.ItemAmnt,
+        ItemPhoto: toBase64Photo(r.ItemPhoto),
+        SilverWt: r.ItemSilverWt, FinishWt: r.ItemFinishWt,
+        FinishQty: p.FinishQty, FinishStatus: r.FinishStatus, ItemStatus: r.ItemStatus,
+        OrdDate: r.OrdDate,
+        DueDate: r.DueDate,
+        QCDate: r.CustQCDate,
+        CustDueDate: r.CustDueDate,
+        Destination: r.CustMultiAddr,
+        Sales: r.Sales,
+        PONo: r.PONo,
+        InvoiceNo: r.ExpInvNo || r.CenInvNo || '',
+        InvoiceDate: r.ExpInvDate || r.CenInvDate || '',
+        AWB: r.ExpAWBNo || r.CenAWBNo || '',
+        StoneQty: p.StoneQty, FindingQty: p.FindingQty,
+        WaxQty: p.WaxQty, WaxSetQty: p.WaxSetQty,
+        CastQty: p.CastQty, GrindQty: p.GrindQty,
+        EpoxQty: p.EpoxQty, FilingQty: p.FilingQty, SolderQty: p.SolderQty,
+        ControlQty: p.ControlQty, SetQty: p.SetQty,
+        PolishQty: p.PolishQty, PQCQty: p.PQCQty,
+        PlatingQty: p.PlatingQty, AssemQty: p.AssemQty,
+        FQCQty: p.FQCQty, PackQty: p.PackQty,
+        GroupQty: p.GroupQty, BalQty: p.BalQty, ExportQty: p.ExportQty,
+        RecRemark: r.Recvmark, EnaRemark: r.Enamark,
+        CryRemark: r.Crysmark, AsmRemark: r.Assemmark,
+        ShfRemark: r.Shelfmark, PkRemark: r.Packmark, ProdRemark: r.Prodmark,
+      };
+    });
 
     res.json({ ok: true, header, lines, lineCount: lines.length, ordCount: uniqueOrds.size });
   } catch (err) {
@@ -235,6 +404,7 @@ router.get('/by-po/:poNo', async (req, res) => {
           d.ItemStone AS Stone, d.ItemPlate AS Plating, d.ItemCust AS CustItem,
           d.ItemQty AS Qty, d.ItemPrice AS Price, d.ItemAmnt AS Amount,
           d.ItemRemark AS OrdRemark,
+          d.SilverWeight AS SilverWt, d.ItemWeight AS FinishWt,
           d.FinishQty, d.FinishStatus, d.ItemStatus,
           d.StoneQty, d.FitQty AS FindingQty, d.WijQty AS WaxQty,
           d.WstQty AS WaxSetQty, d.CastQty, d.FCastStatus,
@@ -280,33 +450,38 @@ router.get('/by-po/:poNo', async (req, res) => {
       CurrCode: first.CurrCode, Week: first.Week,
     };
 
-    const lines = result.recordset.map(r => ({
-      OrdNo: r.OrdNo, LineNo: r.OrdLineNo, ItemNo: r.ItemNo,
-      ItemDesc: r.ItemDesc, ItemMat: r.ItemMat, ItemSize: r.ItemSize,
-      Stone: r.Stone, Plating: r.Plating, CustItem: r.CustItem,
-      OrdRemark: r.OrdRemark,
-      Qty: r.Qty, Price: r.Price, Amount: r.Amount,
-      ItemPhoto: toBase64Photo(r.ItemPhoto),
-      FinishQty: r.FinishQty, FinishStatus: r.FinishStatus, ItemStatus: r.ItemStatus,
-      OrdDate: r.OrdDate,
-      DueDate: r.DueDate,
-      QCDate: r.CustQCDate,
-      CustDueDate: r.CustDueDate,
-      Destination: r.Destination,
-      Sales: r.Sales,
-      PONo: r.PONo,
-      StoneQty: r.StoneQty, FindingQty: r.FindingQty,
-      WaxQty: r.WaxQty, WaxSetQty: r.WaxSetQty,
-      CastQty: r.CastQty, GrindQty: r.GrindQty,
-      EpoxQty: r.EpoxQty, FilingQty: r.FilingQty,
-      PolishQty: r.PolishQty, PQCQty: r.PQCQty,
-      PlatingQty: r.PlatingQty, AssemQty: r.AssemQty,
-      FQCQty: r.FQCQty, PackQty: r.PackQty,
-      GroupQty: r.GroupQty, BalQty: r.BalQty,
-      RecRemark: r.RecRemark, EnaRemark: r.EnaRemark,
-      CryRemark: r.CryRemark, AsmRemark: r.AsmRemark,
-      ShfRemark: r.ShfRemark, PkRemark: r.PkRemark, ProdRemark: r.ProdRemark,
-    }));
+    const lines = result.recordset.map(r => {
+      const p = computePendingProcessQuantities(r, true);
+      return {
+        OrdNo: r.OrdNo, LineNo: r.OrdLineNo, ItemNo: r.ItemNo,
+        ItemDesc: r.ItemDesc, ItemMat: r.ItemMat, ItemSize: r.ItemSize,
+        Stone: r.Stone, Plating: r.Plating, CustItem: r.CustItem,
+        OrdRemark: r.OrdRemark,
+        Qty: r.Qty, Price: r.Price, Amount: r.Amount,
+        ItemPhoto: toBase64Photo(r.ItemPhoto),
+        SilverWt: r.SilverWt, FinishWt: r.FinishWt,
+        FinishQty: p.FinishQty, FinishStatus: r.FinishStatus, ItemStatus: r.ItemStatus,
+        OrdDate: r.OrdDate,
+        DueDate: r.DueDate,
+        QCDate: r.CustQCDate,
+        CustDueDate: r.CustDueDate,
+        Destination: r.Destination,
+        Sales: r.Sales,
+        PONo: r.PONo,
+        StoneQty: p.StoneQty, FindingQty: p.FindingQty,
+        WaxQty: p.WaxQty, WaxSetQty: p.WaxSetQty,
+        CastQty: p.CastQty, GrindQty: p.GrindQty,
+        EpoxQty: p.EpoxQty, FilingQty: p.FilingQty, SolderQty: p.SolderQty,
+        ControlQty: p.ControlQty, SetQty: p.SetQty,
+        PolishQty: p.PolishQty, PQCQty: p.PQCQty,
+        PlatingQty: p.PlatingQty, AssemQty: p.AssemQty,
+        FQCQty: p.FQCQty, PackQty: p.PackQty,
+        GroupQty: p.GroupQty, BalQty: p.BalQty, ExportQty: p.ExportQty,
+        RecRemark: r.RecRemark, EnaRemark: r.EnaRemark,
+        CryRemark: r.CryRemark, AsmRemark: r.AsmRemark,
+        ShfRemark: r.ShfRemark, PkRemark: r.PkRemark, ProdRemark: r.ProdRemark,
+      };
+    });
 
     res.json({ ok: true, header, lines, lineCount: lines.length, ordCount: uniqueOrds.size });
   } catch (err) {
@@ -338,13 +513,27 @@ router.get('/:ordNo', async (req, res) => {
 
     const result = await request.query(`
         SELECT
-          h.OrdNo, h.OrdDate, h.DueDate, h.CustCode, c.CustName, h.PONo, h.OrdMat,
-          h.OrdStatus, h.CloseStatus, h.SumOrdQty AS TotalQty, h.SumOrdAmnt AS TotalAmount, h.CurrCode,
-          d.OrdLineNo, d.ItemNo, d.ItemDesc, d.ItemMat, d.ItemSize, d.ItemQty AS Qty,
-          d.ItemPrice AS Price, d.ItemAmnt AS Amount, d.FinishQty, d.FinishStatus, d.ItemStatus,
-          d.CastQty, d.FCastStatus, d.GrindQty, d.FGrindStatus, d.PolishQty, d.FPolishStatus,
-          d.SetQty, d.FSetStatus, d.EpoxQty, d.FEpoxStatus, d.PlateQty, d.FPlateStatus,
-          d.AssemQty, d.FAssemStatus, d.QCQty, d.FQCStatus, d.PackQty, d.FPackStatus,
+          h.OrdNo, h.OrdDate, h.DueDate, h.CustQCDate, h.CustDueDate,
+          h.CustCode, c.CustName, c.SalesName AS Sales,
+          h.PONo, h.OrdMat, h.OrdKind, h.OrdStatus, h.CloseStatus,
+          h.SumOrdQty AS TotalQty, h.SumOrdAmnt AS TotalAmount, h.CurrCode,
+          h.CustMultiAddr,
+          d.OrdLineNo, d.ItemNo, d.ItemDesc, d.ItemMat, d.ItemSize,
+          d.ItemStone, d.ItemPlate, d.ItemCust, d.ItemRemark,
+          d.ItemQty, d.ItemPrice, d.ItemAmnt,
+          d.SilverWeight AS ItemSilverWt, d.ItemWeight AS ItemFinishWt,
+          d.FinishQty, d.FinishStatus, d.ItemStatus,
+          d.StoneQty, d.FitQty, d.WijQty, d.WstQty,
+          d.CastQty, d.FCastStatus, d.GrindQty, d.FGrindStatus,
+          d.EpoxQty, d.FEpoxStatus, d.FilQty, d.SolQty,
+          d.ControlQty, d.SetQty, d.FSetStatus,
+          d.PolishQty, d.FPolishStatus, d.QPQty, d.FQPStatus,
+          d.PlateQty, d.FPlateStatus, d.AssemQty, d.FAssemStatus,
+          d.QCQty, d.FQCStatus, d.PackQty, d.FPackStatus,
+          d.ExportQty,
+          d.Recvmark, d.Enamark, d.Crysmark, d.Assemmark,
+          d.Shelfmark, d.Packmark, d.Prodmark,
+          h.ExpInvNo, h.CenInvNo, h.ExpInvDate, h.CenInvDate, h.ExpAWBNo, h.CenAWBNo,
           CAST(p.ItemPhoto AS VARBINARY(MAX)) AS ItemPhoto
         FROM OrdHD h
         LEFT JOIN GMCust c ON c.CustCode = h.CustCode
@@ -391,35 +580,84 @@ router.get('/:ordNo', async (req, res) => {
       CurrCode: first.CurrCode,
     };
 
-    const lines = result.recordset.map(r => ({
-      LineNo: r.OrdLineNo,
-      ItemNo: r.ItemNo,
-      ItemDesc: r.ItemDesc,
-      ItemMat: r.ItemMat,
-      ItemSize: r.ItemSize,
-      Qty: r.Qty,
-      Price: r.Price,
-      Amount: r.Amount,
-      ItemPhoto: toBase64Photo(r.ItemPhoto),
-      FinishQty: r.FinishQty,
-      FinishStatus: r.FinishStatus,
-      ItemStatus: r.ItemStatus,
-      processes: {
-        Cast: { qty: r.CastQty, status: r.FCastStatus },
-        Grind: { qty: r.GrindQty, status: r.FGrindStatus },
-        Polish: { qty: r.PolishQty, status: r.FPolishStatus },
-        Set: { qty: r.SetQty, status: r.FSetStatus },
-        Epox: { qty: r.EpoxQty, status: r.FEpoxStatus },
-        Plate: { qty: r.PlateQty, status: r.FPlateStatus },
-        Assem: { qty: r.AssemQty, status: r.FAssemStatus },
-        QC: { qty: r.QCQty, status: r.FQCStatus },
-        Pack: { qty: r.PackQty, status: r.FPackStatus },
-      },
-    }));
+    const lines = result.recordset.map(r => {
+      const p = computePendingProcessQuantities(r, false);
+      return {
+        OrdNo: r.OrdNo, LineNo: r.OrdLineNo, ItemNo: r.ItemNo,
+        ItemDesc: r.ItemDesc, ItemMat: r.ItemMat, ItemSize: r.ItemSize,
+        Stone: r.ItemStone, Plating: r.ItemPlate, CustItem: r.ItemCust,
+        OrdRemark: r.ItemRemark,
+        Qty: r.ItemQty, Price: r.ItemPrice, Amount: r.ItemAmnt,
+        ItemPhoto: toBase64Photo(r.ItemPhoto),
+        SilverWt: r.ItemSilverWt, FinishWt: r.ItemFinishWt,
+        FinishQty: p.FinishQty, FinishStatus: r.FinishStatus, ItemStatus: r.ItemStatus,
+        OrdDate: r.OrdDate,
+        DueDate: r.DueDate,
+        QCDate: r.CustQCDate,
+        CustDueDate: r.CustDueDate,
+        Destination: r.CustMultiAddr,
+        Sales: r.Sales,
+        PONo: r.PONo,
+        InvoiceNo: r.ExpInvNo || r.CenInvNo || '',
+        InvoiceDate: r.ExpInvDate || r.CenInvDate || '',
+        AWB: r.ExpAWBNo || r.CenAWBNo || '',
+        StoneQty: p.StoneQty, FindingQty: p.FindingQty,
+        WaxQty: p.WaxQty, WaxSetQty: p.WaxSetQty,
+        CastQty: p.CastQty, GrindQty: p.GrindQty,
+        EpoxQty: p.EpoxQty, FilingQty: p.FilingQty, SolderQty: p.SolderQty,
+        ControlQty: p.ControlQty, SetQty: p.SetQty,
+        PolishQty: p.PolishQty, PQCQty: p.PQCQty,
+        PlatingQty: p.PlatingQty, AssemQty: p.AssemQty,
+        FQCQty: p.FQCQty, PackQty: p.PackQty,
+        GroupQty: p.GroupQty, BalQty: p.BalQty, ExportQty: p.ExportQty,
+        RecRemark: r.Recvmark, EnaRemark: r.Enamark,
+        CryRemark: r.Crysmark, AsmRemark: r.Assemmark,
+        ShfRemark: r.Shelfmark, PkRemark: r.Packmark, ProdRemark: r.Prodmark,
+      };
+    });
 
     res.json({ ok: true, header, lines, lineCount: lines.length });
   } catch (err) {
     console.error('[API ERROR] Detail:', err.message);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// === POST /api/orders/remarks ====================================================
+router.post('/remarks', async (req, res) => {
+  try {
+    const pool = await getPool();
+    const { OrdNo, LineNo, RecRemark, EnaRemark, CryRemark, AsmRemark, ShfRemark, PkRemark, ProdRemark } = req.body;
+
+    if (!OrdNo || LineNo == null) {
+      return res.status(400).json({ ok: false, error: 'OrdNo and LineNo are required' });
+    }
+
+    await pool.request()
+      .input('ordNo', sql.NVarChar, String(OrdNo))
+      .input('lineNo', sql.NVarChar, String(LineNo))
+      .input('rec', sql.NVarChar, RecRemark || '')
+      .input('ena', sql.NVarChar, EnaRemark || '')
+      .input('cry', sql.NVarChar, CryRemark || '')
+      .input('asm', sql.NVarChar, AsmRemark || '')
+      .input('shf', sql.NVarChar, ShfRemark || '')
+      .input('pck', sql.NVarChar, PkRemark || '')
+      .input('prod', sql.NVarChar, ProdRemark || '')
+      .query(`
+        UPDATE OrdDT 
+        SET Recvmark = @rec,
+            Enamark = @ena,
+            Crysmark = @cry,
+            Assemmark = @asm,
+            Shelfmark = @shf,
+            Packmark = @pck,
+            Prodmark = @prod
+        WHERE OrdNo = @ordNo AND OrdLineNo = @lineNo
+      `);
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[API ERROR] Update Remarks:', err.message);
     res.status(500).json({ ok: false, error: err.message });
   }
 });

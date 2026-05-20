@@ -1,7 +1,7 @@
 // src/pages/OrderDetailPage.tsx
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, RefreshCw, AlertTriangle, Search, Package, DollarSign, ClipboardList, Check, FileSpreadsheet, Image, X } from 'lucide-react';
+import { RefreshCw, AlertTriangle, Search, Package, DollarSign, ClipboardList, Check, FileSpreadsheet, Image, X } from 'lucide-react';
 import Topbar from '../components/layout/Topbar';
 import { fetchOrderDetail, fetchOrderByPo, fetchOrderByGroup, updateOrderRemarks, type OrderDetail } from '../services/orderTrackerAPI';
 
@@ -1369,13 +1369,34 @@ export default function OrderDetailPage() {
               <>
                 <div style={{ width: '1px', height: '32px', background: 'var(--color-border-light)' }} />
                 <div style={{ display: 'flex', gap: '40px' }}>
+                  {/* Customer */}
                   <div style={{ display: 'flex', flexDirection: 'column' }}>
                     <span style={{ fontSize: '0.62rem', fontWeight: 900, color: 'var(--color-text-tertiary)', letterSpacing: '0.1em' }}>CUSTOMER</span>
                     <span style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--color-text-primary)' }}>{h.CustCode}</span>
                   </div>
+
+                  {/* Total Quantity */}
                   <div style={{ display: 'flex', flexDirection: 'column' }}>
                     <span style={{ fontSize: '0.62rem', fontWeight: 900, color: 'var(--color-text-tertiary)', letterSpacing: '0.1em' }}>TOTAL QUANTITY</span>
-                    <span style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--color-brand-600)' }}>{fQty(h.TotalQty)} <span style={{ fontSize: '0.8rem', opacity: 0.6 }}>PCS</span></span>
+                    <span style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--color-brand-600)' }}>
+                      {fQty(h.TotalQty || totalQtySum)} <span style={{ fontSize: '0.8rem', opacity: 0.6 }}>PCS</span>
+                    </span>
+                  </div>
+
+                  {/* Total Orders */}
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span style={{ fontSize: '0.62rem', fontWeight: 900, color: 'var(--color-text-tertiary)', letterSpacing: '0.1em' }}>TOTAL ORDERS</span>
+                    <span style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--color-text-primary)' }}>
+                      {ordersCount.toLocaleString()} <span style={{ fontSize: '0.8rem', opacity: 0.6 }}>DOCS</span>
+                    </span>
+                  </div>
+
+                  {/* Total Amount */}
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span style={{ fontSize: '0.62rem', fontWeight: 900, color: 'var(--color-text-tertiary)', letterSpacing: '0.1em' }}>TOTAL AMOUNT (USD)</span>
+                    <span style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--color-success-500)' }}>
+                      ${fAmt(displayAmount)}
+                    </span>
                   </div>
                 </div>
               </>

@@ -468,7 +468,7 @@ router.get('/detail/:cardType', async (req, res) => {
           SUM(CASE WHEN YEAR(h.${dateCol})=@y1 THEN 1 ELSE 0 END) as y1Cnt,
           SUM(CASE WHEN YEAR(h.${dateCol})=@y2 THEN 1 ELSE 0 END) as y2Cnt,
           SUM(CASE WHEN YEAR(h.${dateCol})=@y1 THEN ISNULL(h.SumOrdQty,0) ELSE 0 END) as y1Qty,
-          SUM(CASE WHEN YEAR(h.${dateCol})=@y2 THEN ISNULL(h.SumOrdQty,0) ELSE 0 END) as y2Qty
+          SUM(CASE WHEN YEAR(h.${dateCol})=@y2 THEN ISNULL(h.SumOrdQty,0) ELSE 0 END) as y2Qty*-+
         FROM OrdHD h LEFT JOIN GMCust c ON c.CustCode=h.CustCode
         WHERE ${where} AND YEAR(h.${dateCol}) IN (@y1,@y2)
         GROUP BY h.CustCode, c.CustName

@@ -2,7 +2,6 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import AppLayout from './components/layout/AppLayout';
 import Dashboard from './pages/Dashboard';
 import DashboardDetail from './pages/DashboardDetail';
-import SIRPage from './pages/SIRPage';
 import SIMPage from './pages/SIMPage';
 import ProcurementPage from './pages/ProcurementPage';
 import OrderTrackerAdvanced from './pages/OrderTrackerAdvanced';

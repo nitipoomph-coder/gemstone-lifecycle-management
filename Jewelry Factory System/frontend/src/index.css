@@ -78,11 +78,20 @@
 }
 
 @layer base {
-  /* theme-modern-dark = base (no overrides needed, kept for ThemeContext class toggling) */
-  .theme-modern-dark {}
+  .theme-modern-dark {
+    color-scheme: dark;
+    --theme-calendar-invert: invert(1);
+    --theme-dark-invert: invert(1);
+  }
+  :root:has(body.theme-modern-dark) {
+    color-scheme: dark;
+  }
 
   /* UI THEME: DARK GOLD (override — เปิดใช้ทีหลัง) */
   .theme-dark-gold {
+    color-scheme: dark;
+    --theme-calendar-invert: invert(0.85) sepia(1) saturate(5) hue-rotate(15deg);
+    --theme-dark-invert: invert(1);
     --color-brand-50: oklch(0.35 0.08 80);
     --color-brand-100: oklch(0.45 0.12 80);
     --color-brand-200: oklch(0.55 0.15 80);
@@ -117,9 +126,15 @@
     --color-sidebar-accent: oklch(0.85 0.15 80);
     --color-sidebar-divider: oklch(0.22 0.01 80);
   }
+  :root:has(body.theme-dark-gold) {
+    color-scheme: dark;
+  }
 
   /* UI THEME: ROYAL WHITE (override — default) */
   .theme-royal-white {
+    color-scheme: light;
+    --theme-calendar-invert: invert(0.2);
+    --theme-dark-invert: invert(0);
     /* Brand Hues (Royal Blue - Better contrast for primary UI) */
     --color-brand-50: oklch(0.96 0.02 260);
     --color-brand-100: oklch(0.92 0.04 260);
@@ -161,6 +176,35 @@
     --color-sidebar-text-active: oklch(0.25 0.10 260); /* Darker blue active text */
     --color-sidebar-accent: oklch(0.65 0.16 80); /* Gold icons */
     --color-sidebar-divider: oklch(0.94 0.01 260);
+  }
+  :root:has(body.theme-royal-white) {
+    color-scheme: light;
+  }
+
+  /* Universal custom style overrides for native date pickers and inputs */
+  input[type="date"] {
+    color-scheme: inherit;
+    font-family: inherit;
+  }
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    filter: var(--theme-calendar-invert, none);
+    opacity: 0.6;
+    transition: opacity 0.2s;
+  }
+  input[type="date"]::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+  }
+
+  /* Universal select and option theme compliance */
+  select {
+    color-scheme: inherit;
+    background-color: var(--color-surface-1);
+    color: var(--color-text-primary);
+  }
+  select option {
+    background-color: var(--color-surface-1);
+    color: var(--color-text-primary);
   }
 }
 

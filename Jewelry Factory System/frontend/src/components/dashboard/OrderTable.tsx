@@ -640,13 +640,13 @@ export default function OrderTable({
           </colgroup>
           <thead style={{ position: 'sticky', top: 0, zIndex: 30 }}>
             <tr>
-              {activeCols.map((c, idx) => {
+              {activeCols.map((c) => {
                 return (
                   <th key={c.key} style={{
                     background: 'color-mix(in srgb, var(--color-surface-1), transparent 5%)',
                     backdropFilter: 'blur(12px)',
                     WebkitBackdropFilter: 'blur(12px)',
-                    padding: '18px 14px', fontSize: '0.65rem', fontWeight: 900,
+                    padding: '16px 14px 14px', fontSize: '0.65rem', fontWeight: 900,
                     color: 'var(--color-text-tertiary)', textAlign: c.align,
                     borderBottom: '2px solid var(--color-border-light)',
                     textTransform: 'uppercase', letterSpacing: '0.12em',

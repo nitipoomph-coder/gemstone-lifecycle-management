@@ -1,11 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Topbar from '../components/layout/Topbar';
-import { menuConfig } from '../config/menuConfig';
-import { formConfigMap, type FormConfig, type TableColumnDef } from '../config/formConfigs';
+import { formConfigMap, type TableColumnDef } from '../config/formConfigs';
 import {
   FilePlus, Save, Edit3, Search, Trash2, CornerUpLeft, Printer, List, X,
-  PlusCircle, MinusCircle, ChevronDown, Loader2, AlertCircle, FileText,
+  PlusCircle, MinusCircle, Loader2, AlertCircle, FileText,
   Package, TrendingUp, Calendar, DollarSign, Hash
 } from 'lucide-react';
 import {

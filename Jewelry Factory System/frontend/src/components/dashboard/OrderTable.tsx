@@ -1,6 +1,6 @@
 // src/components/dashboard/OrderTable.tsx
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ChevronRight, Image as ImageIcon, BarChart2, DollarSign, Layers, X, Search } from 'lucide-react';
 import { type OrderSummary } from '../../services/orderAPI';
 
@@ -433,6 +433,7 @@ export default function OrderTable({
   group?: string;
 }) {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [pickerOrder, setPickerOrder] = useState<OrderSummary | null>(null);
 
   const [visibleKeys, setVisibleKeys] = useState<string[]>(GROUP_PRESETS[group] || GROUP_PRESETS.ALL);
@@ -482,6 +483,18 @@ export default function OrderTable({
 
     if (isGrouped) {
       // ส่งเป็นเงื่อนไขกลุ่ม
+      const dateFrom = searchParams.get('dateFrom') || '';
+      const dateTo = searchParams.get('dateTo') || '';
+      const dateType = searchParams.get('dateType') || '';
+      const status = searchParams.get('status') || '';
+
+      const query = new URLSearchParams();
+      if (dateFrom) query.append('dateFrom', dateFrom);
+      if (dateTo) query.append('dateTo', dateTo);
+      if (dateType) query.append('dateType', dateType);
+      if (status) query.append('status', status);
+      query.append('view', view);
+
       const path = [
         pickerOrder.CustCode || '-',
         encodeURIComponent(pickerOrder.ShipTo || '-'),
@@ -490,7 +503,7 @@ export default function OrderTable({
         encodeURIComponent(pickerOrder.CustDueDate || '-')
       ].join('/');
 
-      navigate(`/order-tracker/group/${path}?view=${view}`);
+      navigate(`/order-tracker/group/${path}?${query.toString()}`);
     } else {
       // ส่งแบบปกติ (PO หรือ Ord)
       const key = encodeURIComponent(pickerOrder.PONo || pickerOrder.OrdNo);

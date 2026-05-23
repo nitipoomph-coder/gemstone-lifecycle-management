@@ -99,7 +99,7 @@ router.get('/', async (req, res) => {
         yoyPct: null, yoyLabel: ''
       },
       {
-        label: 'This Month', value: m.ordCount, change: `${m.totalQty.toLocaleString()} pcs`, trend: 'up',
+        label: 'This Month', value: m.ordCount, change: `${(m.totalQty || 0).toLocaleString()} pcs`, trend: 'up',
         yoyPct: pct(y.monthNow, y.monthLY), yoyLabel: 'vs last year'
       },
     ];
@@ -287,8 +287,8 @@ router.get('/', async (req, res) => {
     });
 
   } catch (err) {
-    console.error('[API ERROR] /api/dashboard:', err.message);
-    res.status(500).json({ error: err.message });
+    console.error('[API ERROR] /api/dashboard:', err.stack);
+    res.status(500).json({ error: err.message, stack: err.stack });
   }
 });
 
@@ -468,7 +468,7 @@ router.get('/detail/:cardType', async (req, res) => {
           SUM(CASE WHEN YEAR(h.${dateCol})=@y1 THEN 1 ELSE 0 END) as y1Cnt,
           SUM(CASE WHEN YEAR(h.${dateCol})=@y2 THEN 1 ELSE 0 END) as y2Cnt,
           SUM(CASE WHEN YEAR(h.${dateCol})=@y1 THEN ISNULL(h.SumOrdQty,0) ELSE 0 END) as y1Qty,
-          SUM(CASE WHEN YEAR(h.${dateCol})=@y2 THEN ISNULL(h.SumOrdQty,0) ELSE 0 END) as y2Qty*-+
+          SUM(CASE WHEN YEAR(h.${dateCol})=@y2 THEN ISNULL(h.SumOrdQty,0) ELSE 0 END) as y2Qty
         FROM OrdHD h LEFT JOIN GMCust c ON c.CustCode=h.CustCode
         WHERE ${where} AND YEAR(h.${dateCol}) IN (@y1,@y2)
         GROUP BY h.CustCode, c.CustName

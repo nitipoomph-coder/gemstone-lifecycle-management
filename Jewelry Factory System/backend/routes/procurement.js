@@ -228,39 +228,46 @@ router.get('/document/:docNo', async (req, res) => {
     if (hdr.recordset.length === 0) {
       return res.json({ ok: false, error: 'Document not found' });
     }
-    // 2. Fetch Detail Lines
-    const orderNumField = config.hasPO ? 'ISNULL(GoodPO, \'\')' : 'ISNULL(OCode, \'\')';
-    const remarkField = config.hasRemark ? 'ISNULL(GoodRemark, \'\')' : '\'\'';
-    const ctPriceField = config.hasCTPrice ? 'ISNULL(GoodCTPrice, 0)' : '0';
-    const customerField = config.type === 'SPA' ? 'ISNULL(GoodCustPO, \'\')' : '\'\'';
-    const descField = config.hasGoodDesc ? 'ISNULL(GoodDesc, \'\')' : '\'\'';
+    const orderNumField = config.hasPO ? 'ISNULL(d.GoodPO, \'\')' : 'ISNULL(d.OCode, \'\')';
+    const remarkField = config.hasRemark ? 'ISNULL(d.GoodRemark, \'\')' : '\'\'';
+    const ctPriceField = config.hasCTPrice ? 'ISNULL(d.GoodCTPrice, 0)' : '0';
+    const customerField = config.type === 'SPA' ? 'ISNULL(d.GoodCustPO, \'\')' : '\'\'';
+    const descField = config.hasGoodDesc ? 'ISNULL(d.GoodDesc, \'\')' : '\'\'';
+    const remark1Field = config.hasGoodDesc ? 'ISNULL(d.GoodDesc, \'\')' : '\'\'';
+    const remark2Field = config.hasGoodDesc ? 'ISNULL(d.GoodDescCH, \'\')' : '\'\'';
 
     const detailQuery = `
       SELECT
-        ListNo AS seq,
-        ISNULL(GoodCode, '') AS stoneCode,
+        d.ListNo AS seq,
+        ISNULL(d.GoodCode, '') AS stoneCode,
         ${descField} AS stoneName,
-        ISNULL(GoodColorCode, '') AS color,
-        ISNULL(GoodShapeCode, '') AS shape,
-        ISNULL(GoodSizeCode, '') AS size,
-        ISNULL(GoodSpecCode, '') AS characteristic,
-        ISNULL(GoodGradeCode, '') AS grade,
-        ISNULL(GoodThick, '') AS height,
-        ISNULL(${config.detailUnitCol}, '') AS unit,
+        ISNULL(d.GoodColorCode, '') AS color,
+        ISNULL(d.GoodShapeCode, '') AS shape,
+        ISNULL(s.GoodShapeNameEng, '') AS shapeName,
+        ISNULL(d.GoodSizeCode, '') AS size,
+        ISNULL(d.GoodSpecCode, '') AS characteristic,
+        ISNULL(sp.GoodSpecNameEng, '') AS specName,
+        ISNULL(d.GoodGradeCode, '') AS grade,
+        ISNULL(d.GoodThick, '') AS height,
+        ISNULL(d.${config.detailUnitCol}, '') AS unit,
         '' AS warehouse,
-        ISNULL(${config.detailWeightCol}, 0) AS weight,
-        ISNULL(${config.detailQtyCol}, 0) AS qty,
-        ISNULL(${config.detailPriceCol}, 0) AS price,
-        ISNULL(${config.detailAmntCol}, 0) AS amount,
+        ISNULL(d.${config.detailWeightCol}, 0) AS weight,
+        ISNULL(d.${config.detailQtyCol}, 0) AS qty,
+        ISNULL(d.${config.detailPriceCol}, 0) AS price,
+        ISNULL(d.${config.detailAmntCol}, 0) AS amount,
         ${ctPriceField} AS ctPerPc,
         ${orderNumField} AS orderNumber,
         ${customerField} AS customer,
         '' AS jobNumber,
         '' AS useStone,
-        ${remarkField} AS remark
-      FROM ${config.detailTable}
-      WHERE ${config.idCol} = (SELECT ${config.idCol} FROM ${config.headerTable} WHERE DocuNo = @docNo)
-      ORDER BY ListNo
+        ${remarkField} AS remark,
+        ${remark1Field} AS remark1,
+        ${remark2Field} AS remark2
+      FROM ${config.detailTable} d
+      LEFT JOIN dbInventory.dbo.GMGoodShape s ON d.GoodShapeCode = s.GoodShapeCode
+      LEFT JOIN dbInventory.dbo.GMGoodSpec sp ON d.GoodSpecCode = sp.GoodSpecCode
+      WHERE d.${config.idCol} = (SELECT ${config.idCol} FROM ${config.headerTable} WHERE DocuNo = @docNo)
+      ORDER BY d.ListNo
     `;
 
     const dtl = await pool.request()

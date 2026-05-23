@@ -123,15 +123,18 @@ router.get('/', async (req, res) => {
 
 
     // --- 1. หาชื่อ SP ให้เรียบร้อยก่อนใช้ทำ Cache Key ---
+    // SP name mapping — รองรับค่าจาก Frontend dropdown ทั้งหมด
     let spName = 'dbo.PC_Show_OrdTrack_Sum_OrdDate';
-    if (dateType === 'Due Date' || dateType === 'DueDate') {
+    if (dateType === 'Due Date' || dateType === 'DueDate' || dateType === 'Factory Due Date') {
       spName = 'dbo.PC_Show_OrdTrack_Sum_DueDate';
     } else if (dateType === 'Cust Due Date' || dateType === 'CustDueDate') {
       spName = 'dbo.PC_Show_OrdTrack_Sum_CustDueDate';
     } else if (dateType === 'Finish Date' || dateType === 'FinDate') {
       spName = 'dbo.PC_Show_OrdTrack_Sum_FinDate';
-    } else if (dateType === 'All' || !dateType) {
+    } else if (dateType === 'All' || dateType === 'All Dates') {
       spName = 'dbo.PC_Show_OrdTrack_Sum_All';
+    } else if (dateType === 'Order Date' || !dateType) {
+      spName = 'dbo.PC_Show_OrdTrack_Sum_OrdDate';
     }
 
     const cacheKey = `${spName}|${statusFilter}|${startDate.toISOString().slice(0, 10)}|${endDate.toISOString().slice(0, 10)}`;
@@ -158,26 +161,23 @@ router.get('/', async (req, res) => {
       const request = pool.request();
       request.input('FromDate', sql.DateTime, startDate);
       request.input('ToDate', sql.DateTime, endDate);
+      
+      // ส่งพารามิเตอร์ Status ไปให้ SP กรองให้จาก Database เลย
+      request.input('Status', sql.VarChar, statusFilter);
 
-      // ลบการส่งพารามิเตอร์ Status ไปให้ Database เก่า (ป้องกัน Error 500: too many arguments)
       const result = await request.execute(spName);
 
       let rawData = result.recordset;
 
-      // === [ADDED: กรองสถานะและมัดรวม 5 แกนหลักด้วย Node.js] ===
-      // 1. กรองสถานะ Pending/Finish ที่หน้าบ้าน (แทนการส่งไปให้ DB ทำ)
-      if (statusFilter === 'pending') {
-        rawData = rawData.filter(r => r.CloseStatus !== 'Y');
-      } else if (statusFilter === 'finish') {
-        rawData = rawData.filter(r => r.CloseStatus === 'Y');
-      }
+      // === [ADDED: มัดรวม 5 แกนหลักด้วย Node.js] ===
+      // (กรอง Pending/Finish ย้ายไปทำที่ Database SP แล้ว)
 
       // 2. มัดรวมออเดอร์ที่กระจัดกระจาย โดยยึด 5 แกนหลัก (Cust, PO, Type, ShipTo, Material)
       const groupedMap = new Map();
       
       rawData.forEach(r => {
-        // สร้างกุญแจ 5 เงื่อนไข
-        const key = `${r.CustCode}|${r.PONo}|${r.OrdKind}|${r.CustMultiAddr}|${r.OrdMat}`;
+        // สร้างกุญแจ 6 เงื่อนไข (เพิ่ม CustDueDate เพื่อไม่ให้ Group PO By ShipTo ที่ต่าง CustDueDate ถูกรวมซ้ำ)
+        const key = `${r.CustCode}|${r.PONo}|${r.OrdKind}|${r.CustMultiAddr}|${r.OrdMat}|${r.CustDueDate || ''}`;
         
         if (!groupedMap.has(key)) {
           // ถ้ายังไม่เคยมัดรวม ให้บันทึกเป็นก้อนใหม่
@@ -294,19 +294,19 @@ router.get('/group/:cust/:addr/:kind/:mat/:duedate', async (req, res) => {
     if (result.recordset.length === 0)
       return res.status(404).json({ ok: false, error: 'Group data not found' });
 
-    // Aggregate Header
+    // Aggregate Header — คำนวณจาก OrdDT lines จริง (ตรงกับ SP ที่ใช้ SUM(OrdDT.ItemQty))
     const first = result.recordset[0];
-    const uniqueOrds = new Map();
-    result.recordset.forEach(r => {
-      if (!uniqueOrds.has(r.OrdNo))
-        uniqueOrds.set(r.OrdNo, { qty: r.SumOrdQty || 0, amnt: r.SumOrdAmnt || 0 });
-    });
+    const uniqueOrds = new Set();
     let sumQty = 0, sumAmnt = 0;
-    uniqueOrds.forEach(v => { sumQty += v.qty; sumAmnt += v.amnt; });
+    result.recordset.forEach(r => {
+      uniqueOrds.add(r.OrdNo);
+      sumQty += (r.ItemQty || 0);     // ใช้ OrdDT.ItemQty (ยอด line จริง) ไม่ใช่ OrdHD.SumOrdQty
+      sumAmnt += (r.ItemAmnt || 0);   // ใช้ OrdDT.ItemAmnt (ยอด line จริง) ไม่ใช่ OrdHD.SumOrdAmnt
+    });
 
     const header = {
       PONo: 'Group PO By ShipTo',
-      OrdNos: Array.from(uniqueOrds.keys()),
+      OrdNos: Array.from(uniqueOrds),
       OrdNo: first.OrdNo,
       OrdDate: first.OrdDate,
       DueDate: first.DueDate,
@@ -430,17 +430,18 @@ router.get('/by-po/:poNo', async (req, res) => {
     if (result.recordset.length === 0)
       return res.status(404).json({ ok: false, error: 'PO not found' });
 
+    // Aggregate Header — คำนวณจาก OrdDT lines จริง (ตรงกับ SP)
     const first = result.recordset[0];
-    const uniqueOrds = new Map();
-    result.recordset.forEach(r => {
-      if (!uniqueOrds.has(r.OrdNo))
-        uniqueOrds.set(r.OrdNo, { qty: r.TotalQty || 0, amnt: r.TotalAmount || 0 });
-    });
+    const uniqueOrds = new Set();
     let sumQty = 0, sumAmnt = 0;
-    for (const v of uniqueOrds.values()) { sumQty += v.qty; sumAmnt += v.amnt; }
+    result.recordset.forEach(r => {
+      uniqueOrds.add(r.OrdNo);
+      sumQty += (r.Qty || 0);       // ใช้ OrdDT.ItemQty (alias Qty) ไม่ใช่ OrdHD.SumOrdQty
+      sumAmnt += (r.Amount || 0);    // ใช้ OrdDT.ItemAmnt (alias Amount) ไม่ใช่ OrdHD.SumOrdAmnt
+    });
 
     const header = {
-      PONo: first.PONo, OrdNos: [...uniqueOrds.keys()], OrdNo: first.OrdNo,
+      PONo: first.PONo, OrdNos: [...uniqueOrds], OrdNo: first.OrdNo,
       OrdDate: first.OrdDate, DueDate: first.DueDate,
       CustQCDate: first.CustQCDate, CustDueDate: first.CustDueDate,
       CustCode: first.CustCode, CustName: first.CustName,

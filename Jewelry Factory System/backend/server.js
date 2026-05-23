@@ -45,39 +45,14 @@ app.get('/api/health', async (req, res) => {
 const fs = require('fs');
 const path = require('path');
 
-// Safe, automated local mock folder initializer
-const mockDir = path.join(__dirname, 'mock_chong_photo');
-try {
-  if (!fs.existsSync(mockDir)) {
-    fs.mkdirSync(mockDir, { recursive: true });
-  }
-  const srcEarring = 'C:\\Users\\ITSP\\.gemini\\antigravity\\brain\\69fc8a62-b577-472b-baaf-550808027499\\bes33075a_1779158418297.png';
-  const srcRing = 'C:\\Users\\ITSP\\.gemini\\antigravity\\brain\\69fc8a62-b577-472b-baaf-550808027499\\bes32379a_1779158435877.png';
-  
-  const destEarring = path.join(mockDir, 'BES33075A.jpg');
-  const destRing = path.join(mockDir, 'BES32379A.jpg');
-
-  if (fs.existsSync(srcEarring) && !fs.existsSync(destEarring)) {
-    fs.copyFileSync(srcEarring, destEarring);
-    console.log('✔ [PhotoBridge Init] Copied mock Earring to:', destEarring);
-  }
-  if (fs.existsSync(srcRing) && !fs.existsSync(destRing)) {
-    fs.copyFileSync(srcRing, destRing);
-    console.log('✔ [PhotoBridge Init] Copied mock Ring to:', destRing);
-  }
-} catch (e) {
-  console.log('⚠️ [PhotoBridge Init Error]:', e.message);
-}
-
 // Register the Photo Bridge API Route
 app.get('/api/photos/:itemNo', (req, res) => {
   const itemNo = req.params.itemNo.trim();
   console.log(`[PhotoBridge] Serving Item: ${itemNo}`);
 
-  // Try the real network path first! Fallback to mock path if inaccessible.
+  // Try the real network path
   const searchDirs = [
-    '\\\\chongdts\\Chong Photo\\Cost',
-    mockDir
+    '\\\\chongdts\\Chong Photo\\Cost'
   ];
 
   const formats = ['.jpg', '.jpeg', '.png', '.JPG', '.JPEG', '.PNG'];
@@ -99,7 +74,7 @@ app.get('/api/photos/:itemNo', (req, res) => {
   }
 
   if (foundFile) {
-    res.setHeader('X-Source-Origin', foundFile.includes('mock_chong_photo') ? 'MockServer' : 'RealServer');
+    res.setHeader('X-Source-Origin', 'RealServer');
     return res.sendFile(foundFile);
   }
 

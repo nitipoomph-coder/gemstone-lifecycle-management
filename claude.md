@@ -224,7 +224,7 @@ npm run preview
 
 ### Backend (Working Directory: `Jewelry Factory System/backend`)
 
-```bash
+```bash (ถ้าใช้งานแล้วกรุณาปิดกลับคืนด้วย)
 # Production start
 npm start              # → node server.js
 
@@ -286,7 +286,7 @@ npm run dev
 | `dateFrom` | string | 7 months ago | Start date (ISO format)       |
 | `dateTo`   | string | today     | End date (ISO format)            |
 | `dateType` | string | `All`     | SP selector: `OrdDate`, `DueDate`, `CustDueDate`, `FinDate`, `All` |
-| `status`   | string | `pending` | `pending` or `finish`            |
+| `status`   | string | `pending` | `pending` or `finish` or `All`   |
 | `noCache`  | string | —         | Set to skip cache                |
 
 ### Dashboard
@@ -371,4 +371,4 @@ API_PORT=3001
 2. **Data จาก Production DB** — ระวังเรื่อง query performance, ใช้ cache เสมอสำหรับ heavy queries
 3. **Thai Language UI** — ข้อความในระบบเป็นภาษาไทย, ใช้ web fonts (Outfit, Prompt)
 4. **Legacy Migration** — กำลัง migrate จาก VB.net ทีละ module, หลายหน้ายังเป็น Placeholder
-5. **Photo Data** — รูปสินค้าเก็บเป็น VARBINARY ใน DB, แปลงเป็น base64 ตอน serve — ระวัง payload size
+5. **Photo Data** — รูปสินค้าเก็บเป็น VARBINARY ใน DB, แปลงเป็น base64 ตอน serve — ระวัง payload size 

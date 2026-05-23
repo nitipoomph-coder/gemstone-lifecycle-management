@@ -2,35 +2,25 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Trash2, Printer, Save } from 'lucide-react';
 import Topbar from '../components/layout/Topbar';
-const mockSIRDocList = [
-  { docNumber: 'SIR2406-0001', date: '01/06/2024' },
-  { docNumber: 'SIR2406-0002', date: '02/06/2024' },
-];
-
-const mockSIRDocument = {
-  docNumber: 'SIR2406-0001',
-  date: '2024-06-01',
-  refNumber: 'SRA2405-0120',
-  category: 'A',
-  supplierCode: 'V-001',
-  supplierName: 'ABC Gems Co., Ltd.',
+const emptySIRDocument = {
+  docNumber: '',
+  date: '',
+  refNumber: '',
+  category: '',
+  supplierCode: '',
+  supplierName: '',
   currency: 'THB — บาท',
   exchangeRate: 1.0,
-  items: [
-    { seq: 1, stoneCode: 'RUBY-01', unit: 'ct', grade: 'A', weight: 1.5, returnQty: 10, price: 500, total: 5000, warehouse: 'W01' },
-    { seq: 2, stoneCode: 'SAPPHIRE-02', unit: 'ct', grade: 'B', weight: 2.0, returnQty: 5, price: 800, total: 4000, warehouse: 'W01' },
-  ]
+  items: []
 };
 
 export default function SIRPage() {
   const navigate = useNavigate();
-  const [activeDoc, setActiveDoc] = useState(mockSIRDocList[0].docNumber);
+  const [activeDoc, setActiveDoc] = useState('');
   const [searchDoc, setSearchDoc] = useState('');
-  const doc = mockSIRDocument;
+  const doc = emptySIRDocument;
 
-  const filteredDocs = mockSIRDocList.filter(d =>
-    d.docNumber.toLowerCase().includes(searchDoc.toLowerCase())
-  );
+  const filteredDocs: any[] = [];
 
   const totalWeight = doc.items.reduce((sum, item) => sum + item.weight, 0);
   const totalQty = doc.items.reduce((sum, item) => sum + item.returnQty, 0);

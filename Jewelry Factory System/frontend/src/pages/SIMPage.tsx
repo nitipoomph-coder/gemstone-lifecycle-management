@@ -16,20 +16,13 @@ import {
 } from 'lucide-react';
 
 // --- Default Data ---
-const dummyDocIds = [
-  'SIM26040255', 'SIM26040256', 'SIM26040257', 'SIM26040258', 
-  'SIM26040259', 'SIM26040260', 'SIM26040261', 'SIM26040262', 
-  'SIM26040263', 'SIM26040264', 'SIM26040265', 'SIM26040266'
-];
+const dummyDocIds: string[] = [];
 
-const dummyTableData = [
-  { seq: 1, gem: '', color: '', shape: '', size: '', char: '', grade: '', height: '', set: '', whs: '', wgt: '', qty: '', price: '', total: '', highlighted: '' },
-  { seq: 2, gem: '', color: '', shape: '', size: '', char: '', grade: '', height: '', set: '', whs: '', wgt: '', qty: '', price: '', total: '', highlighted: '' }
-];
+const dummyTableData: any[] = [];
 
 export default function SIMPage() {
   const navigate = useNavigate();
-  const [selectedDoc, setSelectedDoc] = useState('SIM26040261');
+  const [selectedDoc, setSelectedDoc] = useState('');
 
   return (
     <div className="flex h-full flex-col bg-[var(--color-surface-0)]">
@@ -43,19 +36,19 @@ export default function SIMPage() {
       {/* Action Toolbar */}
       <div className="flex h-12 w-full items-center gap-1 border-b border-[var(--color-border-light)] bg-[var(--color-surface-1)] px-4">
         <button className="flex items-center gap-2 rounded px-3 py-1.5 text-[13px] font-medium text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-surface-2)]">
-          <FilePlus size={15} className="text-amber-400" /> สร้างใหม่
+          <FilePlus size={15} className="text-[var(--color-accent-500)]" /> สร้างใหม่
         </button>
         <button className="flex items-center gap-2 rounded px-3 py-1.5 text-[13px] font-medium text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-surface-2)]">
           <Save size={15} /> บันทึก
         </button>
         <button className="flex items-center gap-2 rounded px-3 py-1.5 text-[13px] font-medium text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-surface-2)]">
-          <Edit3 size={15} className="text-emerald-400" /> แก้ไข
+          <Edit3 size={15} className="text-[var(--color-success-500)]" /> แก้ไข
         </button>
         <button className="flex items-center gap-2 rounded px-3 py-1.5 text-[13px] font-medium text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-surface-2)]">
-          <Search size={15} className="text-yellow-400" /> ค้นหา
+          <Search size={15} className="text-[var(--color-accent-500)]" /> ค้นหา
         </button>
         <div className="mx-1 h-5 w-px bg-[var(--color-border-default)]"></div>
-        <button className="flex items-center gap-2 rounded bg-red-950/30 px-3 py-1.5 text-[13px] font-medium text-red-400 transition-colors hover:bg-red-900/50">
+        <button className="flex items-center gap-2 rounded bg-[var(--color-danger-500)]/10 px-3 py-1.5 text-[13px] font-medium text-[var(--color-danger-500)] transition-colors hover:bg-[var(--color-danger-500)]/20">
           <Trash2 size={15} /> ลบ
         </button>
         <button className="flex items-center gap-2 rounded px-3 py-1.5 text-[13px] font-medium text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-surface-2)]">
@@ -68,7 +61,7 @@ export default function SIMPage() {
         <button className="flex items-center gap-2 rounded px-3 py-1.5 text-[13px] font-medium text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-surface-2)]">
           <List size={15} /> รายการ
         </button>
-        <button onClick={() => navigate('/')} className="flex items-center gap-2 rounded px-3 py-1.5 text-[13px] font-medium text-[var(--color-text-primary)] transition-colors hover:bg-red-900/50 hover:text-red-400">
+        <button onClick={() => navigate('/')} className="flex items-center gap-2 rounded px-3 py-1.5 text-[13px] font-medium text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-danger-500)]/10 hover:text-[var(--color-danger-500)]">
           <X size={15} /> ปิด
         </button>
       </div>

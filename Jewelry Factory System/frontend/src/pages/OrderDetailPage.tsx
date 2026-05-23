@@ -787,7 +787,9 @@ function OrderLineCard({ line, index, viewMode }: { line: any, index: number, vi
 
   return (
     <div className="order-line-card" style={{
-      background: 'var(--color-surface-0)',
+      background: line.CloseStatus === 'Y' ? 'var(--color-surface-2)' : 'var(--color-surface-0)',
+      opacity: line.CloseStatus === 'Y' ? 0.65 : 1,
+      filter: line.CloseStatus === 'Y' ? 'grayscale(80%)' : 'none',
       borderRadius: '16px',
       border: '1px solid var(--color-border-light)',
       boxShadow: '0 4px 12px rgba(0,0,0,0.02)',

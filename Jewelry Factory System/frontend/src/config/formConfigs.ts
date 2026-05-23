@@ -63,7 +63,8 @@ const spaConfig: FormConfig = {
     { name: 'useStone', label: 'ใช้พลอย', type: 'number' },
     { name: 'price', label: 'ราคา', type: 'number' },
     { name: 'totalAmnt', label: 'รวม', type: 'number' },
-    { name: 'remark', label: 'หมายเหตุ', colSpan: 2 },
+    { name: 'remark1', label: 'หมายเหตุ 1', colSpan: 6 },
+    { name: 'remark2', label: 'หมายเหตุ 2', colSpan: 6 },
   ],
   tableColumns: [
     { key: 'seq', label: 'ลำดับ' },

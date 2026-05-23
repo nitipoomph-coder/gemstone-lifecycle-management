@@ -7,13 +7,8 @@ export default function AppLayout() {
   const location = useLocation();
 
   useEffect(() => {
-    // ย่อแถบเมนูโดยอัตโนมัติเมื่อเข้าสู่หน้า Order Tracker
-    if (location.pathname === '/order-tracker') {
-      setSidebarOpen(false);
-    } else {
-      // ถ้าเปลี่ยนไปหน้าอื่น อาจจะอยากให้เปิดกลับมา (Optional)
-      // setSidebarOpen(true);
-    }
+    // ย่อแถบเมนูโดยอัตโนมัติเมื่อมีการเปลี่ยนเส้นทางไปยังหน้าใดๆ
+    setSidebarOpen(false);
   }, [location.pathname]);
 
   return (

@@ -42,8 +42,10 @@ export interface ProcDocLine {
   stoneName: string;
   color: string;
   shape: string;
+  shapeName?: string;
   size: string;
   characteristic: string;
+  specName?: string;
   grade: string;
   height: number;
   unit: string;
@@ -58,6 +60,8 @@ export interface ProcDocLine {
   jobNumber: string;
   useStone: string;
   remark: string;
+  remark1?: string;
+  remark2?: string;
 }
 
 export interface ProcDocDetail {

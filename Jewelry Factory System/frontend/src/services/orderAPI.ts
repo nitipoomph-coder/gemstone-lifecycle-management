@@ -33,7 +33,7 @@ export interface OrderSummary {
   ProductionRemark: string | null;
 }
 
-export const fetchOrders = async (params: { status?: 'pending' | 'finfsh' | 'all', dateType?: string, dateFrom?: string, dateTo?: string }): Promise<{ ok: boolean; data: OrderSummary[]; error?: string }> => {
+export const fetchOrders = async (params: { status?: 'pending' | 'finish' | 'all', dateType?: string, dateFrom?: string, dateTo?: string }): Promise<{ ok: boolean; data: OrderSummary[]; error?: string }> => {
   try {
     const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname.startsWith('192.168.'));
     const baseUrl = isLocal ? `http://${window.location.hostname}:3001/api/orders` : 'https://fresh-camels-change.loca.lt/api/orders';

@@ -89,9 +89,8 @@ export default function OrderTrackerAdvanced() {
     setLoading(true);
     setError(null);
     try {
-      const apiStatus = statusFilter === 'finish' ? 'all' : statusFilter;
       const result = await fetchOrders({
-        status: apiStatus as 'pending' | 'all',
+        status: statusFilter as 'pending' | 'all' | 'finish',
         dateType: dateType,
         dateFrom: dateFrom,
         dateTo: dateTo
@@ -99,7 +98,6 @@ export default function OrderTrackerAdvanced() {
 
       if (result.ok) {
         setOrders(result.data);
-        setFiltered(result.data);
       } else {
         setError(result.error || 'Failed to load data from API');
       }
@@ -136,13 +134,6 @@ export default function OrderTrackerAdvanced() {
 
   useEffect(() => {
     let filteredList = orders;
-
-    if (statusFilter === 'finish') {
-      filteredList = filteredList.filter(o => o.CloseStatus?.toString().trim().toUpperCase() === 'Y');
-    } else if (statusFilter === 'pending') {
-      filteredList = filteredList.filter(o => o.CloseStatus?.toString().trim().toUpperCase() !== 'Y');
-    }
-
 
     // Group Filter
     if (groupFilter !== 'ALL') {
@@ -235,8 +226,8 @@ export default function OrderTrackerAdvanced() {
 
   const totalQty = filtered.reduce((s, o) => s + (o.TotalQty || 0), 0);
   const totalAmount = filtered.reduce((s, o) => s + (o.Amount || 0), 0);
-  const pendingCount = filtered.filter(o => o.CloseStatus !== 'Y').length;
-  const delayedCount = filtered.filter(o => o.DueDate && new Date(o.DueDate) < new Date() && (o.CloseStatus !== 'Y')).length;
+  const pendingCount = statusFilter === 'finish' ? 0 : filtered.length;
+  const delayedCount = statusFilter === 'finish' ? 0 : filtered.filter(o => o.DueDate && new Date(o.DueDate) < new Date()).length;
 
   // ⭐ Dynamic Type options — ดึง unique OrdKind จากข้อมูลจริง
   const uniqueTypes = useMemo(() => {

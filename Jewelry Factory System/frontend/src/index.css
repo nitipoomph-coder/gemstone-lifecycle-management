@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Prompt:wght@300;400;500;600;700;800&family=Cinzel:wght@400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Noto+Sans+Thai:wght@300;400;500;600;700;800&family=Cinzel:wght@400;600;700&display=swap');
 
 @import "tailwindcss";
 
@@ -74,7 +74,7 @@
   /* Fonts */
   --font-logo: 'Cinzel', serif;
   --font-display: 'Outfit', sans-serif;
-  --font-body: 'Prompt', sans-serif;
+  --font-body: 'Noto Sans Thai', sans-serif;
 }
 
 @layer base {
@@ -180,7 +180,6 @@
   :root:has(body.theme-royal-white) {
     color-scheme: light;
   }
-
   /* Universal custom style overrides for native date pickers and inputs */
   input[type="date"] {
     color-scheme: inherit;
@@ -268,5 +267,83 @@ h1, h2, h3, h4, h5, h6 {
 .stagger-1 { animation-delay: 0ms; }
 .stagger-2 { animation-delay: 60ms; }
 .stagger-3 { animation-delay: 120ms; }
+
+/* Hide print-only elements by default (screen mode) */
+.print-only {
+  display: none !important;
+}
+
+/* ============================================
+   A4 PRINT STYLESHEET (High Fidelity ERP)
+   ============================================ */
+@media print {
+  /* Reset document and background colors for black-and-white print output */
+  html, body, #root {
+    background-color: #ffffff !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-family: 'Prompt', 'Inter', -apple-system, sans-serif !important;
+    font-size: 11px !important;
+    height: auto !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Force top-level wrappers to clear flex layout limits */
+  #root > div,
+  main,
+  .flex.h-screen {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+    position: static !important;
+    width: 100% !important;
+  }
+
+  /* Hide screen-only interactive wrappers */
+  aside,
+  header,
+  .screen-only,
+  .no-print,
+  button,
+  .toast-notification {
+    display: none !important;
+  }
+
+  /* Render print-only voucher container */
+  .print-only {
+    display: block !important;
+    visibility: visible !important;
+    position: relative !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  /* Prevent page breaks inside signature blocks and table headers */
+  .page-break-avoid {
+    page-break-inside: avoid !important;
+  }
+
+  tr {
+    page-break-inside: avoid !important;
+    page-break-after: auto !important;
+  }
+
+  thead {
+    display: table-header-group !important;
+  }
+
+  tfoot {
+    display: table-footer-group !important;
+  }
+}
+
 .stagger-4 { animation-delay: 180ms; }
 .stagger-5 { animation-delay: 240ms; }

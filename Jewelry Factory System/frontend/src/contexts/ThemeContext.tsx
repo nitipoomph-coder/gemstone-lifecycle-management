@@ -13,7 +13,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<Theme>(() => {
     // Check localStorage first
     const savedTheme = localStorage.getItem('app-theme') as Theme;
-    if (savedTheme) return savedTheme;
+    if (savedTheme && ['dark-gold', 'royal-white', 'modern-dark'].includes(savedTheme)) return savedTheme;
     return 'royal-white'; // Default
   });
 

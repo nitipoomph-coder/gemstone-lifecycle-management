@@ -22,6 +22,9 @@ export interface TableColumnDef {
 export interface FormConfig {
   code: string;
   titleTh: string;
+  groupLabel: string;                                    // ชื่อกลุ่มเมนู เช่น 'จัดซื้อและรับเข้า'
+  apiType: 'procurement' | 'requisition' | 'none';       // ระบุ API backend ที่ใช้
+  hasPhoto?: boolean;                                    // แสดง photo panel (เฉพาะ SOA)
   headerFields: FormFieldDef[];
   stoneFields?: FormFieldDef[];
   tableColumns: TableColumnDef[];
@@ -34,6 +37,8 @@ export interface FormConfig {
 const spaConfig: FormConfig = {
   code: 'SPA',
   titleTh: 'บันทึกสั่งซื้อพลอย',
+  groupLabel: 'จัดซื้อและรับเข้า',
+  apiType: 'procurement',
   headerFields: [
     { name: 'docNumber', label: 'เลขที่', readOnly: true },
     { name: 'docDate', label: 'วันที่เอกสาร', type: 'date' },
@@ -92,6 +97,8 @@ const spaConfig: FormConfig = {
 const sraConfig: FormConfig = {
   code: 'SRA',
   titleTh: 'บันทึกรับพลอย',
+  groupLabel: 'จัดซื้อและรับเข้า',
+  apiType: 'procurement',
   headerFields: [
     { name: 'docNumber', label: 'เลขที่', readOnly: true },
     { name: 'docDate', label: 'วันที่เอกสาร', type: 'date' },
@@ -141,6 +148,8 @@ const srbConfig: FormConfig = {
   ...sraConfig,
   code: 'SRB',
   titleTh: 'บันทึกรับพลอย B',
+  groupLabel: 'จัดซื้อและรับเข้า',
+  apiType: 'procurement',
 };
 
 // ============================================
@@ -149,6 +158,8 @@ const srbConfig: FormConfig = {
 const sirConfig: FormConfig = {
   code: 'SIR',
   titleTh: 'บันทึกคืนพลอย',
+  groupLabel: 'จัดซื้อและรับเข้า',
+  apiType: 'procurement',
   headerFields: [
     { name: 'docNumber', label: 'เลขที่', readOnly: true },
     { name: 'docDate', label: 'วันที่เอกสาร', type: 'date' },
@@ -178,6 +189,8 @@ const sirConfig: FormConfig = {
 const chkSpaConfig: FormConfig = {
   code: 'CHK-SPA',
   titleTh: 'ตรวจสอบรับพลอยจากสั่งซื้อ',
+  groupLabel: 'ตรวจสอบและนับสต็อก',
+  apiType: 'none',
   headerFields: [
     { name: 'docNumber', label: 'เลขที่', readOnly: true },
     { name: 'docDate', label: 'วันที่เอกสาร', type: 'date' },
@@ -214,6 +227,9 @@ const chkSpaConfig: FormConfig = {
 const soaConfig: FormConfig = {
   code: 'SOA',
   titleTh: 'บันทึกออเดอร์พลอย',
+  groupLabel: 'ออเดอร์และการเบิก',
+  apiType: 'requisition',
+  hasPhoto: true,
   headerFields: [
     { name: 'docNumber', label: 'เลขที่', readOnly: true },
     { name: 'docDate', label: 'วันที่เอกสาร', type: 'date' },
@@ -269,6 +285,8 @@ const siaConfig: FormConfig = {
   ...sraConfig,
   code: 'SIA',
   titleTh: 'บันทึกเบิกพลอย',
+  groupLabel: 'ออเดอร์และการเบิก',
+  apiType: 'requisition',
 };
 
 // ============================================
@@ -277,6 +295,8 @@ const siaConfig: FormConfig = {
 const sibConfig: FormConfig = {
   code: 'SIB',
   titleTh: 'บันทึกเบิกพลอย B',
+  groupLabel: 'ออเดอร์และการเบิก',
+  apiType: 'none',
   headerFields: [
     { name: 'docNumber', label: 'เลขที่', readOnly: true },
     { name: 'docDate', label: 'วันที่เอกสาร', type: 'date' },
@@ -322,6 +342,8 @@ const sibConfig: FormConfig = {
 const sisConfig: FormConfig = {
   code: 'SIS',
   titleTh: 'บันทึกส่งพลอย งานออเดอร์',
+  groupLabel: 'ออเดอร์และการเบิก',
+  apiType: 'none',
   headerFields: [
     { name: 'docNumber', label: 'เลขที่', readOnly: true },
     { name: 'docDate', label: 'วันที่เอกสาร', type: 'date' },
@@ -352,6 +374,8 @@ const sisConfig: FormConfig = {
 const sipConfig: FormConfig = {
   code: 'SIP',
   titleTh: 'บันทึกเบิกพลอย งานซ่อม',
+  groupLabel: 'ออเดอร์และการเบิก',
+  apiType: 'none',
   headerFields: [
     { name: 'docNumber', label: 'เลขที่', readOnly: true },
     { name: 'docDate', label: 'วันที่เอกสาร', type: 'date' },
@@ -395,6 +419,8 @@ const sipConfig: FormConfig = {
 const ssaConfig: FormConfig = {
   code: 'SSA',
   titleTh: 'บันทึกออเดอร์พลอย ห้องตัวอย่าง',
+  groupLabel: 'ห้องตัวอย่าง',
+  apiType: 'none',
   headerFields: [
     { name: 'docNumber', label: 'เลขที่', readOnly: true },
     { name: 'docDate', label: 'วันที่เอกสาร', type: 'date' },
@@ -450,6 +476,8 @@ const ssaConfig: FormConfig = {
 const simConfig: FormConfig = {
   code: 'SIM',
   titleTh: 'บันทึกส่งพลอย ห้องตัวอย่าง',
+  groupLabel: 'ห้องตัวอย่าง',
+  apiType: 'none',
   headerFields: [
     { name: 'docNumber', label: 'เลขที่', readOnly: true },
     { name: 'docDate', label: 'วันที่เอกสาร', type: 'date' },
@@ -486,6 +514,8 @@ const simConfig: FormConfig = {
 const cfmStkConfig: FormConfig = {
   code: 'CFM-STK',
   titleTh: 'Confirm Stock',
+  groupLabel: 'ตรวจสอบและนับสต็อก',
+  apiType: 'none',
   headerFields: [
     { name: 'stone', label: 'Stone', hasSearch: true },
   ],

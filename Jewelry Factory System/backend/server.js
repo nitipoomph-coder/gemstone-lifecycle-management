@@ -86,6 +86,7 @@ app.use('/api/orders', require('./routes/orders'));
 app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/search', require('./routes/search'));
 app.use('/api/procurement', require('./routes/procurement'));
+app.use('/api/requisition', require('./routes/requisition')); // Added Requisition routes (SOA, SIA, etc.)
 
 // ─── Global Error Handler (ดักจับ Error ที่หลุดรอด) ───────────────────────────
 app.use((err, req, res, next) => {

@@ -148,14 +148,15 @@ export default function Dashboard() {
             {d.statCards.map((c, i) => {
               const ct = CARD_TYPE_MAP[c.label];
               const isActive = expandedCard === ct;
+              const isClickable = c.label !== 'Orders Today';
               return (
-                <div key={i} onClick={() => setExpandedCard(isActive ? null : ct)} style={{
-                  ...cardStyle(), padding:'22px 24px', cursor:'pointer',
+                <div key={i} onClick={() => isClickable && setExpandedCard(isActive ? null : ct)} style={{
+                  ...cardStyle(), padding:'22px 24px', cursor: isClickable ? 'pointer' : 'default',
                   border: isActive ? '2px solid var(--color-brand-500)' : c.isAlert ? '1px solid var(--color-danger-200)' : '1px solid transparent',
                   boxShadow: isActive ? '0 4px 20px -4px color-mix(in srgb, var(--color-brand-500), transparent 60%)' : '0 2px 12px -4px rgba(0,0,0,0.06)',
                 }}
-                onMouseEnter={e => { if(!isActive) { e.currentTarget.style.transform='translateY(-4px)'; e.currentTarget.style.boxShadow='0 8px 24px -8px rgba(0,0,0,0.1)'; }}}
-                onMouseLeave={e => { if(!isActive) { e.currentTarget.style.transform=''; e.currentTarget.style.boxShadow='0 2px 12px -4px rgba(0,0,0,0.04)'; }}}
+                onMouseEnter={e => { if(!isActive && isClickable) { e.currentTarget.style.transform='translateY(-4px)'; e.currentTarget.style.boxShadow='0 8px 24px -8px rgba(0,0,0,0.1)'; }}}
+                onMouseLeave={e => { if(!isActive && isClickable) { e.currentTarget.style.transform=''; e.currentTarget.style.boxShadow='0 2px 12px -4px rgba(0,0,0,0.04)'; }}}
                 >
                   <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12 }}>
                     <span style={{ fontSize:'0.8rem', fontWeight:800, color: isActive ? 'var(--color-brand-600)' : 'var(--color-text-tertiary)', textTransform:'uppercase', letterSpacing:'0.06em', transition:'color 0.2s' }}>{c.label}</span>

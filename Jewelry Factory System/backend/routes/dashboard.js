@@ -23,6 +23,7 @@ router.get('/', async (req, res) => {
         COUNT(CASE WHEN OrdStatus IN ('P','N') AND CloseStatus <> 'Y' THEN 1 END) AS wip,
         COUNT(CASE WHEN DueDate < CAST(GETDATE() AS DATE) AND OrdStatus IN ('P','N') AND CloseStatus <> 'Y' THEN 1 END) AS delay
       FROM OrdHD
+      WHERE ((PONo IS NULL OR UPPER(PONo) NOT LIKE '%SAMPLE%') AND LEFT(OrdNo, 3) IN ('BBC','BBQ','BBD','BBI','BBF','BBP','BBT','BBX','BBK','BBR','BBL','BBS','BBE'))
     `);
     const s = statsResult.recordset[0];
 
@@ -33,6 +34,7 @@ router.get('/', async (req, res) => {
         COUNT(CASE WHEN CAST(OrdDate AS DATE) >= DATEADD(day, -14, CAST(GETDATE() AS DATE))
                     AND CAST(OrdDate AS DATE) < DATEADD(day, -7, CAST(GETDATE() AS DATE)) THEN 1 END) AS lastWeek
       FROM OrdHD
+      WHERE ((PONo IS NULL OR UPPER(PONo) NOT LIKE '%SAMPLE%') AND LEFT(OrdNo, 3) IN ('BBC','BBQ','BBD','BBI','BBF','BBP','BBT','BBX','BBK','BBR','BBL','BBS','BBE'))
     `);
     const w = weekResult.recordset[0];
     const weekChange = w.lastWeek > 0 ? Math.round(((w.thisWeek - w.lastWeek) / w.lastWeek) * 100) : 0;
@@ -46,6 +48,7 @@ router.get('/', async (req, res) => {
           CAST(OrdDate AS DATE) < CAST(GETDATE() AS DATE)
           AND DATENAME(dw, OrdDate) <> 'Sunday'
           AND OrdDate IS NOT NULL
+          AND ((PONo IS NULL OR UPPER(PONo) NOT LIKE '%SAMPLE%') AND LEFT(OrdNo, 3) IN ('BBC','BBQ','BBD','BBI','BBF','BBP','BBT','BBX','BBK','BBR','BBL','BBS','BBE'))
         ORDER BY WorkDate DESC
       )
       SELECT 
@@ -53,7 +56,7 @@ router.get('/', async (req, res) => {
       FROM (
         SELECT COUNT(OrdNo) AS OrderCount
         FROM Last7Days w
-        JOIN OrdHD o ON CAST(o.OrdDate AS DATE) = w.WorkDate
+        JOIN OrdHD o ON CAST(o.OrdDate AS DATE) = w.WorkDate AND ((o.PONo IS NULL OR UPPER(o.PONo) NOT LIKE '%SAMPLE%') AND LEFT(o.OrdNo, 3) IN ('BBC','BBQ','BBD','BBI','BBF','BBP','BBT','BBX','BBK','BBR','BBL','BBS','BBE'))
         GROUP BY w.WorkDate
       ) d
     `);
@@ -64,6 +67,7 @@ router.get('/', async (req, res) => {
       SELECT COUNT(*) AS ordCount, SUM(ISNULL(SumOrdQty,0)) AS totalQty
       FROM OrdHD
       WHERE MONTH(OrdDate) = MONTH(GETDATE()) AND YEAR(OrdDate) = YEAR(GETDATE())
+        AND ((PONo IS NULL OR UPPER(PONo) NOT LIKE '%SAMPLE%') AND LEFT(OrdNo, 3) IN ('BBC','BBQ','BBD','BBI','BBF','BBP','BBT','BBX','BBK','BBR','BBL','BBS','BBE'))
     `);
     const m = monthResult.recordset[0];
 
@@ -77,6 +81,7 @@ router.get('/', async (req, res) => {
         COUNT(CASE WHEN MONTH(OrdDate)=MONTH(GETDATE()) AND YEAR(OrdDate)=YEAR(GETDATE()) THEN 1 END) AS monthNow,
         COUNT(CASE WHEN MONTH(OrdDate)=MONTH(GETDATE()) AND YEAR(OrdDate)=YEAR(GETDATE())-1 THEN 1 END) AS monthLY
       FROM OrdHD
+      WHERE ((PONo IS NULL OR UPPER(PONo) NOT LIKE '%SAMPLE%') AND LEFT(OrdNo, 3) IN ('BBC','BBQ','BBD','BBI','BBF','BBP','BBT','BBX','BBK','BBR','BBL','BBS','BBE'))
     `);
     const y = yoyResult.recordset[0];
     const pct = (now, ly) => ly > 0 ? Math.round(((now - ly) / ly) * 100) : (now > 0 ? 100 : 0);
@@ -120,6 +125,7 @@ router.get('/', async (req, res) => {
         SELECT CAST(OrdDate AS DATE) AS dt, COUNT(*) AS cnt
         FROM OrdHD
         WHERE OrdDate >= DATEADD(day, -7, CAST(GETDATE() AS DATE))
+          AND ((PONo IS NULL OR UPPER(PONo) NOT LIKE '%SAMPLE%') AND LEFT(OrdNo, 3) IN ('BBC','BBQ','BBD','BBI','BBF','BBP','BBT','BBX','BBK','BBR','BBL','BBS','BBE'))
         GROUP BY CAST(OrdDate AS DATE)
       ) o ON l.dt = o.dt
       ORDER BY l.dt
@@ -146,6 +152,7 @@ router.get('/', async (req, res) => {
       FROM OrdDT d
       JOIN OrdHD h ON d.OrdNo = h.OrdNo
       WHERE h.OrdStatus IN ('P','N') AND h.CloseStatus <> 'Y'
+        AND ((h.PONo IS NULL OR UPPER(h.PONo) NOT LIKE '%SAMPLE%') AND LEFT(h.OrdNo, 3) IN ('BBC','BBQ','BBD','BBI','BBF','BBP','BBT','BBX','BBK','BBR','BBL','BBS','BBE'))
     `);
     const p = procResult.recordset[0];
     const processDistribution = {
@@ -168,6 +175,7 @@ router.get('/', async (req, res) => {
              SUM(ISNULL(SumOrdQty,0)) AS totalQty
       FROM OrdHD
       WHERE OrdStatus IN ('P','N') AND CloseStatus <> 'Y'
+        AND ((PONo IS NULL OR UPPER(PONo) NOT LIKE '%SAMPLE%') AND LEFT(OrdNo, 3) IN ('BBC','BBQ','BBD','BBI','BBF','BBP','BBT','BBX','BBK','BBR','BBL','BBS','BBE'))
       GROUP BY OrdMat ORDER BY cnt DESC
     `);
     const materialBreakdown = matResult.recordset.map(r => ({
@@ -184,6 +192,7 @@ router.get('/', async (req, res) => {
       SELECT ISNULL(OrdKind,'Other') AS kind, COUNT(*) AS cnt
       FROM OrdHD
       WHERE OrdStatus IN ('P','N') AND CloseStatus <> 'Y'
+        AND ((PONo IS NULL OR UPPER(PONo) NOT LIKE '%SAMPLE%') AND LEFT(OrdNo, 3) IN ('BBC','BBQ','BBD','BBI','BBF','BBP','BBT','BBX','BBK','BBR','BBL','BBS','BBE'))
       GROUP BY OrdKind ORDER BY cnt DESC
     `);
     const orderTypes = kindResult.recordset.map(r => ({
@@ -203,6 +212,7 @@ router.get('/', async (req, res) => {
       FROM OrdHD h
       LEFT JOIN GMCust c ON c.CustCode = h.CustCode
       WHERE h.OrdStatus IN ('P','N') AND h.CloseStatus <> 'Y'
+        AND ((h.PONo IS NULL OR UPPER(h.PONo) NOT LIKE '%SAMPLE%') AND LEFT(h.OrdNo, 3) IN ('BBC','BBQ','BBD','BBI','BBF','BBP','BBT','BBX','BBK','BBR','BBL','BBS','BBE'))
       GROUP BY h.CustCode, c.CustName
       ORDER BY orderCount DESC
     `);
@@ -229,6 +239,7 @@ router.get('/', async (req, res) => {
       LEFT JOIN GMCust c ON c.CustCode = h.CustCode
       WHERE h.DueDate < CAST(GETDATE() AS DATE)
         AND h.OrdStatus IN ('P','N') AND h.CloseStatus <> 'Y'
+        AND ((h.PONo IS NULL OR UPPER(h.PONo) NOT LIKE '%SAMPLE%') AND LEFT(h.OrdNo, 3) IN ('BBC','BBQ','BBD','BBI','BBF','BBP','BBT','BBX','BBK','BBR','BBL','BBS','BBE'))
       ORDER BY h.DueDate ASC
     `);
     const delayOrders = delayResult.recordset.map(r => ({
@@ -259,6 +270,7 @@ router.get('/', async (req, res) => {
           ELSE 'In Progress'
         END AS status
       FROM OrdHD h
+      WHERE ((h.PONo IS NULL OR UPPER(h.PONo) NOT LIKE '%SAMPLE%') AND LEFT(h.OrdNo, 3) IN ('BBC','BBQ','BBD','BBI','BBF','BBP','BBT','BBX','BBK','BBR','BBL','BBS','BBE'))
       ORDER BY h.OrdDate DESC
     `);
     const recentOrders = recentResult.recordset.map(r => ({
@@ -300,7 +312,7 @@ router.get('/years', async (req, res) => {
     const cached = getDC('years');
     if (cached) return res.json(cached);
     const pool = await getPool();
-    const r = await pool.request().query(`SELECT DISTINCT YEAR(OrdDate) as yr FROM OrdHD WHERE OrdDate IS NOT NULL ORDER BY yr DESC`);
+    const r = await pool.request().query(`SELECT DISTINCT YEAR(OrdDate) as yr FROM OrdHD WHERE OrdDate IS NOT NULL AND ((PONo IS NULL OR UPPER(PONo) NOT LIKE '%SAMPLE%') AND LEFT(OrdNo, 3) IN ('BBC','BBQ','BBD','BBI','BBF','BBP','BBT','BBX','BBK','BBR','BBL','BBS','BBE')) ORDER BY yr DESC`);
     const result = { ok: true, years: r.recordset.map(x => x.yr) };
     setDC('years', result);
     res.json(result);
@@ -333,6 +345,7 @@ router.get('/detail/:cardType', async (req, res) => {
         SELECT COUNT(*) AS cnt, SUM(ISNULL(SumOrdQty, 0)) AS qty
         FROM OrdHD
         WHERE CAST(OrdDate AS DATE) = CAST(GETDATE() AS DATE)
+          AND ((PONo IS NULL OR UPPER(PONo) NOT LIKE '%SAMPLE%') AND LEFT(OrdNo, 3) IN ('BBC','BBQ','BBD','BBI','BBF','BBP','BBT','BBX','BBK','BBR','BBL','BBS','BBE'))
       `);
       const t = todayRes.recordset[0];
       const todayTotal = t?.cnt || 0;
@@ -347,6 +360,7 @@ router.get('/detail/:cardType', async (req, res) => {
             CAST(OrdDate AS DATE) < CAST(GETDATE() AS DATE)
             AND DATENAME(dw, OrdDate) <> 'Sunday'
             AND OrdDate IS NOT NULL
+            AND ((PONo IS NULL OR UPPER(PONo) NOT LIKE '%SAMPLE%') AND LEFT(OrdNo, 3) IN ('BBC','BBQ','BBD','BBI','BBF','BBP','BBT','BBX','BBK','BBR','BBL','BBS','BBE'))
           ORDER BY WorkDate DESC
         )
         SELECT 
@@ -355,7 +369,7 @@ router.get('/detail/:cardType', async (req, res) => {
           COUNT(o.OrdNo) AS OrderCount,
           SUM(ISNULL(o.SumOrdQty,0)) AS TotalQty
         FROM Last7Days w
-        LEFT JOIN OrdHD o ON CAST(o.OrdDate AS DATE) = w.WorkDate
+        LEFT JOIN OrdHD o ON CAST(o.OrdDate AS DATE) = w.WorkDate AND ((o.PONo IS NULL OR UPPER(o.PONo) NOT LIKE '%SAMPLE%') AND LEFT(o.OrdNo, 3) IN ('BBC','BBQ','BBD','BBI','BBF','BBP','BBT','BBX','BBK','BBR','BBL','BBS','BBE'))
         GROUP BY w.WorkDate
         ORDER BY w.WorkDate ASC
       `);
@@ -422,11 +436,11 @@ router.get('/detail/:cardType', async (req, res) => {
     // กำหนด WHERE + dateField ตาม cardType
     let where, dateCol = 'OrdDate';
     switch (cardType) {
-      case 'today': case 'month': where = '1=1'; break;
-      case 'completed': where = "(h.CloseStatus = 'Y' OR h.OrdStatus = 'C')"; break;
-      case 'wip': where = "h.OrdStatus IN ('P','N') AND h.CloseStatus <> 'Y'"; break;
+      case 'today': case 'month': where = "((h.PONo IS NULL OR UPPER(h.PONo) NOT LIKE '%SAMPLE%') AND LEFT(h.OrdNo, 3) IN ('BBC','BBQ','BBD','BBI','BBF','BBP','BBT','BBX','BBK','BBR','BBL','BBS','BBE'))"; break;
+      case 'completed': where = "(h.CloseStatus = 'Y' OR h.OrdStatus = 'C') AND ((h.PONo IS NULL OR UPPER(h.PONo) NOT LIKE '%SAMPLE%') AND LEFT(h.OrdNo, 3) IN ('BBC','BBQ','BBD','BBI','BBF','BBP','BBT','BBX','BBK','BBR','BBL','BBS','BBE'))"; break;
+      case 'wip': where = "h.OrdStatus IN ('P','N') AND h.CloseStatus <> 'Y' AND ((h.PONo IS NULL OR UPPER(h.PONo) NOT LIKE '%SAMPLE%') AND LEFT(h.OrdNo, 3) IN ('BBC','BBQ','BBD','BBI','BBF','BBP','BBT','BBX','BBK','BBR','BBL','BBS','BBE'))"; break;
       case 'overdue':
-        where = "h.DueDate < CAST(GETDATE() AS DATE) AND h.OrdStatus IN ('P','N') AND h.CloseStatus <> 'Y'";
+        where = "h.DueDate < CAST(GETDATE() AS DATE) AND h.OrdStatus IN ('P','N') AND h.CloseStatus <> 'Y' AND ((h.PONo IS NULL OR UPPER(h.PONo) NOT LIKE '%SAMPLE%') AND LEFT(h.OrdNo, 3) IN ('BBC','BBQ','BBD','BBI','BBF','BBP','BBT','BBX','BBK','BBR','BBL','BBS','BBE'))";
         dateCol = 'DueDate'; break;
       default: return res.status(400).json({ ok: false, error: 'Invalid cardType' });
     }

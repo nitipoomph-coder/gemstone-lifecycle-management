@@ -2,8 +2,9 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import AppLayout from './components/layout/AppLayout';
 import Dashboard from './pages/Dashboard';
 import DashboardDetail from './pages/DashboardDetail';
-import SIMPage from './pages/SIMPage';
-import ProcurementPage from './pages/ProcurementPage';
+import ProcurementDocPage from './pages/ProcurementDocPage';
+import RequisitionDocPage from './pages/RequisitionDocPage';
+import SampleDocPage from './pages/SampleDocPage';
 import OrderTrackerAdvanced from './pages/OrderTrackerAdvanced';
 import OrderDetailPage from './pages/OrderDetailPage';
 import ItemDetailPage from './pages/ItemDetailPage';
@@ -19,21 +20,21 @@ export default function App() {
           <Route path="/dashboard/detail" element={<DashboardDetail />} />
 
           {/* 1. จัดซื้อและรับเข้า — SPA, SRA, SRB, SIR */}
-          <Route path="/procurement/purchase" element={<ProcurementPage />} />
-          <Route path="/procurement/receive" element={<ProcurementPage />} />
-          <Route path="/procurement/receive-b" element={<ProcurementPage />} />
-          <Route path="/procurement/return" element={<ProcurementPage />} />
+          <Route path="/procurement/purchase" element={<ProcurementDocPage />} />
+          <Route path="/procurement/receive" element={<ProcurementDocPage />} />
+          <Route path="/procurement/receive-b" element={<ProcurementDocPage />} />
+          <Route path="/procurement/return" element={<ProcurementDocPage />} />
 
           {/* 2. ออเดอร์และการเบิก — SOA, SIA, SIB, SIP, SIS */}
-          <Route path="/orders/create" element={<PlaceholderPage />} />
-          <Route path="/orders/issue" element={<PlaceholderPage />} />
-          <Route path="/orders/issue-b" element={<PlaceholderPage />} />
-          <Route path="/orders/repair" element={<PlaceholderPage />} />
-          <Route path="/orders/dispatch-order" element={<PlaceholderPage />} />
+          <Route path="/orders/create" element={<RequisitionDocPage />} />
+          <Route path="/orders/issue" element={<RequisitionDocPage />} />
+          <Route path="/orders/issue-b" element={<RequisitionDocPage />} />
+          <Route path="/orders/repair" element={<RequisitionDocPage />} />
+          <Route path="/orders/dispatch-order" element={<RequisitionDocPage />} />
 
           {/* 3. ห้องตัวอย่าง — SSA, SIM */}
-          <Route path="/sample/order" element={<PlaceholderPage />} />
-          <Route path="/sample/dispatch" element={<SIMPage />} />
+          <Route path="/sample/order" element={<SampleDocPage />} />
+          <Route path="/sample/dispatch" element={<SampleDocPage />} />
 
           {/* 4. ตรวจสอบและนับสต็อก (ตาม DFD) */}
           <Route path="/inventory/check-dispatch" element={<PlaceholderPage />} />

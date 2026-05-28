@@ -181,6 +181,7 @@ gemstone-lifecycle-management/
    - Headings: `font-display` → Outfit
    - Body text: `font-body` → Prompt
    - Logo/Brand: `font-logo` → Cinzel
+10. **Loading Skeletons**: เมื่อมีการเพิ่ม/แก้ไข กล่องข้อมูล (Boxes/Cards) ในหน้าจอใด ๆ ต้องอัปเดตส่วนแสดงสถานะกำลังโหลด (Loading Skeleton) ให้สอดคล้องกันทั้งหน้าจอ เพื่อหลีกเลี่ยงอาการ Layout Shift โดยส่วนโหลดนี้ต้องคลุมเฉพาะพื้นที่แสดงผลของหน้านั้น ๆ (Content Outlet) ไม่ต้องโหลดส่วนเมนู (Sidebar/Topbar) ซ้ำ
 
 ### Backend Rules
 

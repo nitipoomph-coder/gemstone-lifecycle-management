@@ -29,7 +29,8 @@ function getTableConfig(docTypeOrNo) {
       headerTable: 'dbInventory.dbo.STOrdStockHD',
       detailTable: 'dbInventory.dbo.STOrdStockDT',
       idCol: 'OrdStockID',
-      prefix: 'SOA'
+      prefix: 'SOA',
+      selectFields: 'DocuNo, DocuDate, OrderNo, PONo, CustCode, DueDate, DocuStatus'
     };
   }
   if (code === 'SIA') {
@@ -38,11 +39,40 @@ function getTableConfig(docTypeOrNo) {
       headerTable: 'dbInventory.dbo.STIssStockHD',
       detailTable: 'dbInventory.dbo.STIssStockDT',
       idCol: 'IssStockID',
-      prefix: 'SIA'
+      prefix: 'SIA',
+      selectFields: "DocuNo, DocuDate, '' AS OrderNo, '' AS PONo, CustCode, NULL AS DueDate, DocuStatus"
     };
   }
-  // Add SIB, SIP, SIS later if they use different tables or logic.
-  // For now, support SOA and SIA as foundations.
+  if (code === 'SIB') {
+    return {
+      type: 'SIB',
+      headerTable: 'dbInventory.dbo.STRetStockHD',
+      detailTable: 'dbInventory.dbo.STRetStockDT',
+      idCol: 'RetStockID',
+      prefix: 'SIB',
+      selectFields: "DocuNo, DocuDate, '' AS OrderNo, '' AS PONo, VendorCode AS CustCode, NULL AS DueDate, DocuStatus"
+    };
+  }
+  if (code === 'SIP') {
+    return {
+      type: 'SIP',
+      headerTable: 'dbInventory.dbo.STRepStockHD',
+      detailTable: 'dbInventory.dbo.STRepStockDT',
+      idCol: 'RepStockID',
+      prefix: 'SIP',
+      selectFields: "DocuNo, DocuDate, '' AS OrderNo, '' AS PONo, CustCode, NULL AS DueDate, DocuStatus"
+    };
+  }
+  if (code === 'SIS') {
+    return {
+      type: 'SIS',
+      headerTable: 'dbInventory.dbo.STSenStockHD',
+      detailTable: 'dbInventory.dbo.STSenStockDT',
+      idCol: 'SenStockID',
+      prefix: 'SIS',
+      selectFields: "DocuNo, DocuDate, '' AS OrderNo, '' AS PONo, '' AS CustCode, NULL AS DueDate, DocuStatus"
+    };
+  }
 
   throw new Error(`Unsupported document identifier: ${docTypeOrNo}`);
 }
@@ -160,16 +190,58 @@ router.get('/documents/:docType', async (req, res) => {
     const config = getTableConfig(docType);
     const pool = await getPool();
 
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
+    const search = req.query.search || '';
+    const offset = (page - 1) * limit;
+
+    // Count Total
+    const countQuery = `
+      SELECT COUNT(*) as total
+      FROM ${config.headerTable}
+      WHERE DocuNo LIKE @prefix + '%'
+      ${search ? `AND DocuNo LIKE '%' + @search + '%'` : ''}
+    `;
+
+    const countResult = await pool.request()
+      .input('prefix', sql.VarChar(5), config.prefix)
+      .input('search', sql.VarChar(50), search)
+      .query(countQuery);
+      
+    const total = countResult.recordset[0].total;
+
+    // Fetch Paginated Data
+    let queryStr = `
+      SELECT
+        ${config.selectFields}
+      FROM ${config.headerTable}
+      WHERE DocuNo LIKE @prefix + '%'
+    `;
+    
+    if (search) {
+      queryStr += ` AND DocuNo LIKE '%' + @search + '%'`;
+    }
+
+    queryStr += `
+      ORDER BY DocuNo DESC
+      OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY
+    `;
+
     const result = await pool.request()
       .input('prefix', sql.VarChar(5), config.prefix)
-      .query(`
-        SELECT TOP 100
-          DocuNo, DocuDate, OrderNo, PONo, CustCode, DueDate, DocuStatus
-        FROM ${config.headerTable}
-        WHERE DocuNo LIKE @prefix + '%'
-        ORDER BY DocuNo DESC
-      `);
-    res.json({ ok: true, data: result.recordset });
+      .input('search', sql.VarChar(50), search)
+      .input('offset', sql.Int, offset)
+      .input('limit', sql.Int, limit)
+      .query(queryStr);
+
+    res.json({ 
+      ok: true, 
+      data: result.recordset,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit)
+    });
   } catch (err) {
     console.error('[REQ API Error]', err);
     res.status(500).json({ ok: false, error: err.message });

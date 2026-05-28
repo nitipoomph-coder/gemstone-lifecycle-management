@@ -24,10 +24,8 @@ const CARD_META: Record<CardType, { title: string; accent: string; icon: ReactNo
 function ChangeBadge({ pct, inverse }: { pct: number; inverse?: boolean }) {
   const isPos = pct > 0;
   const isNeg = pct < 0;
-  // inverse = true สำหรับ Overdue (ลดลง = ดี)
   const isGood = inverse ? isNeg : isPos;
   const isBad  = inverse ? isPos : isNeg;
-  // ใช้ color-mix แทน -50 shade เพื่อให้เห็นชัดทั้ง light/dark theme
   const color = isGood ? 'var(--color-success-500)' : isBad ? 'var(--color-danger-500)' : 'var(--color-text-secondary)';
   const bg    = isGood ? 'color-mix(in srgb, var(--color-success-500) 15%, transparent)' : isBad ? 'color-mix(in srgb, var(--color-danger-500) 15%, transparent)' : 'var(--color-surface-2)';
   const Icon  = isPos ? TrendingUp : isNeg ? TrendingDown : Minus;
@@ -38,32 +36,475 @@ function ChangeBadge({ pct, inverse }: { pct: number; inverse?: boolean }) {
   );
 }
 
+// ─── Custom Premium Glowing SVG Line Chart ──────────────────────────────────────
+function SVGLineChart({
+  monthly,
+  accentColor,
+  year1,
+  year2,
+  cardType,
+  showLabels
+}: {
+  monthly: any[];
+  accentColor: string;
+  year1: number;
+  year2: number;
+  cardType: string;
+  showLabels: boolean;
+}) {
+  const N = monthly.length;
+  if (N <= 1) return null;
+
+  // 1. Calculate global max value across both series for adaptive vertical scaling
+  const allValues = monthly.flatMap(m => [
+    m.year2 || 0,
+    m.isFuture ? 0 : (m.year1 || 0)
+  ]);
+  const rawMax = Math.max(...allValues, 10);
+
+  // 2. Compute Nice Ticks & Nice Maximum dynamically following international standards
+  const targets = [
+    1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 
+    1000, 2000, 2500, 5000, 10000, 20000, 25000, 50000, 
+    100000, 200000, 250000, 500000, 1000000
+  ];
+  const roughStep = rawMax / 4;
+  const niceStep = targets.find(t => t >= roughStep) || 1000000;
+  const maxVal = Math.ceil(rawMax / niceStep) * niceStep;
+
+  // Generate grid ticks as exact nice values
+  const gridTicks: number[] = [];
+  const numSteps = Math.round(maxVal / niceStep);
+  for (let i = 0; i <= numSteps; i++) {
+    gridTicks.push(i * niceStep);
+  }
+
+  // Smooth themed reference color that adapts perfectly to any card type
+  const refColor = `color-mix(in srgb, ${accentColor} 42%, transparent)`;
+
+  // SVG Coordinates space
+  const svgWidth = 1000;
+  const svgHeight = 250;
+  const paddingTop = 45;
+  const paddingBottom = 40;
+  const paddingLeft = 60;
+  const paddingRight = 60;
+  const chartWidth = svgWidth - paddingLeft - paddingRight;
+  const chartHeight = svgHeight - paddingTop - paddingBottom;
+
+  const points1: { x: number; y: number; val: number; label: string }[] = [];
+  const points2: { x: number; y: number; val: number; label: string }[] = [];
+
+  const marginX = 40; // ระยะห่างด้านซ้าย-ขวา เพื่อไม่ให้ตัวเลขกราฟจุดแรกและจุดสุดท้ายชนกับแกน Y และขอบขวา
+  monthly.forEach((m, i) => {
+    const x = paddingLeft + marginX + (i / (N - 1)) * (chartWidth - 2 * marginX);
+    
+    // Series 1: selected year or daily actual
+    if (!m.isFuture && m.year1 !== null && m.year1 !== undefined) {
+      const y = paddingTop + chartHeight - (m.year1 / maxVal) * chartHeight;
+      points1.push({ x, y, val: m.year1, label: m.label });
+    }
+
+    // Series 2: previous year or moving avg baseline
+    if (m.year2 !== null && m.year2 !== undefined) {
+      const y = paddingTop + chartHeight - (m.year2 / maxVal) * chartHeight;
+      points2.push({ x, y, val: m.year2, label: m.label });
+    }
+  });
+
+  // Mouse Tracking state for Interactive Hover Tooltip
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+
+  const handleMouseMove = (e: React.MouseEvent<SVGSVGElement, MouseEvent>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clientX = e.clientX - rect.left;
+    const clientY = e.clientY - rect.top;
+
+    // Convert to SVG coordinate space
+    const svgX = (clientX / rect.width) * svgWidth;
+    
+    // Find the closest point based on X coordinate
+    let closestIdx = 0;
+    let minDiff = Infinity;
+    for (let i = 0; i < N; i++) {
+      const xVal = paddingLeft + marginX + (i / (N - 1)) * (chartWidth - 2 * marginX);
+      const diff = Math.abs(svgX - xVal);
+      if (diff < minDiff) {
+        minDiff = diff;
+        closestIdx = i;
+      }
+    }
+
+    setHoveredIdx(closestIdx);
+    setMousePos({ x: clientX, y: clientY });
+  };
+
+  const handleMouseLeave = () => {
+    setHoveredIdx(null);
+  };
+
+  // Find corresponding hovered coordinate points
+  const hoveredX = hoveredIdx !== null ? paddingLeft + marginX + (hoveredIdx / (N - 1)) * (chartWidth - 2 * marginX) : 0;
+  const hoveredPoint1 = hoveredIdx !== null ? points1.find(p => Math.abs(p.x - hoveredX) < 1) : null;
+  const hoveredPoint2 = hoveredIdx !== null ? points2.find(p => Math.abs(p.x - hoveredX) < 1) : null;
+
+  // Construct lines paths
+  let pathD1 = '';
+  if (points1.length > 0) {
+    pathD1 = points1.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+  }
+
+  let areaD1 = '';
+  if (points1.length > 1) {
+    const first = points1[0];
+    const last = points1[points1.length - 1];
+    areaD1 = `${pathD1} L ${last.x} ${paddingTop + chartHeight} L ${first.x} ${paddingTop + chartHeight} Z`;
+  }
+
+  let pathD2 = '';
+  if (points2.length > 0) {
+    pathD2 = points2.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+  }
+
+  return (
+    <div style={{ position: 'relative', width: '100%', minHeight: 250 }}>
+      <svg
+        viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+        width="100%"
+        height="100%"
+        style={{ overflow: 'visible', display: 'block', cursor: 'crosshair' }}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+      >
+        <defs>
+          {/* Glowing Drop Shadow filter */}
+          <filter id="stock-glow" x="-10%" y="-10%" width="120%" height="120%">
+            <feDropShadow dx="0" dy="4" stdDeviation="6" floodColor={accentColor} floodOpacity="0.4" />
+          </filter>
+          {/* Smooth Vertical Gradient under the Line */}
+          <linearGradient id="stock-gradient" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={accentColor} stopOpacity="0.22" />
+            <stop offset="100%" stopColor={accentColor} stopOpacity="0.0" />
+          </linearGradient>
+        </defs>
+
+        {/* ─── Grid Lines (Nice Scale Aligned) ─── */}
+        {gridTicks.map((tickVal, idx) => {
+          const y = paddingTop + chartHeight - (tickVal / maxVal) * chartHeight;
+          return (
+            <g key={idx}>
+              <line
+                x1={paddingLeft}
+                y1={y}
+                x2={svgWidth - paddingRight}
+                y2={y}
+                stroke="var(--color-border-light)"
+                strokeDasharray="4 6"
+                strokeWidth="1"
+              />
+              <text
+                x={paddingLeft - 14}
+                y={y + 4}
+                fill="var(--color-text-tertiary)"
+                fontSize="11"
+                fontWeight="700"
+                textAnchor="end"
+                fontFamily="var(--font-sans)"
+              >
+                {tickVal.toLocaleString()}
+              </text>
+            </g>
+          );
+        })}
+
+        {/* ─── Series 2: Reference/Previous Line (Dashed) ─── */}
+        {pathD2 && (
+          <path
+            d={pathD2}
+            fill="none"
+            stroke={refColor}
+            strokeWidth="2.2"
+            strokeDasharray="4 5"
+          />
+        )}
+
+        {/* ─── Series 1: Area Gradient Fill ─── */}
+        {areaD1 && (
+          <path
+            d={areaD1}
+            fill="url(#stock-gradient)"
+          />
+        )}
+
+        {/* ─── Series 1: Primary Line (Glowing) ─── */}
+        {pathD1 && (
+          <path
+            d={pathD1}
+            fill="none"
+            stroke={accentColor}
+            strokeWidth="3.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            filter="url(#stock-glow)"
+          />
+        )}
+
+        {/* ─── Hover Guideline (Vertical) ─── */}
+        {hoveredIdx !== null && (
+          <line
+            x1={hoveredX}
+            y1={paddingTop}
+            x2={hoveredX}
+            y2={paddingTop + chartHeight}
+            stroke="var(--color-text-tertiary)"
+            strokeWidth="1.5"
+            opacity="0.45"
+            strokeDasharray="3 3"
+          />
+        )}
+
+        {/* ─── Series 2 Reference Nodes & Values (Anti-Collision Auto Positioning) ─── */}
+        {points2.map((p2, idx) => {
+          const p1 = points1.find(p => p.label === p2.label);
+          let drawBelow = true;
+
+          if (p1) {
+            const diffY = Math.abs(p1.y - p2.y);
+            // If nodes are close vertically, and primary (p1) is lower than ref (p2), draw ref ABOVE
+            if (diffY < 38 && p1.y > p2.y) {
+              drawBelow = false;
+            }
+          }
+
+          const isHovered = hoveredIdx !== null && Math.abs(p2.x - hoveredX) < 1;
+
+          return (
+            <g key={`y2-${idx}`}>
+              <circle
+                cx={p2.x}
+                cy={p2.y}
+                r={isHovered ? "6" : "4"}
+                fill="var(--color-surface-0)"
+                stroke={refColor}
+                strokeWidth={isHovered ? "3.5" : "2"}
+              />
+              {showLabels && (
+                <text
+                  x={p2.x}
+                  y={drawBelow ? p2.y + 16 : p2.y - 12}
+                  fill="var(--color-text-tertiary)"
+                  fontSize="10.5"
+                  fontWeight="700"
+                  textAnchor="middle"
+                  fontFamily="var(--font-sans)"
+                >
+                  {p2.val.toLocaleString()}
+                </text>
+              )}
+            </g>
+          );
+        })}
+
+        {/* ─── Series 1 Primary Nodes & Glowing Value Pills (Anti-Collision Auto Positioning) ─── */}
+        {points1.map((p1, idx) => {
+          const p2 = points2.find(p => p.label === p1.label);
+          let drawAbove = true;
+
+          if (p2) {
+            const diffY = Math.abs(p1.y - p2.y);
+            // If nodes are close vertically, and primary (p1) is lower than ref (p2), draw primary BELOW
+            if (diffY < 38 && p1.y > p2.y) {
+              drawAbove = false;
+            }
+          }
+
+          const pillY = drawAbove ? p1.y - 28 : p1.y + 10;
+          const textY = drawAbove ? p1.y - 15 : p1.y + 23;
+          const isHovered = hoveredIdx !== null && Math.abs(p1.x - hoveredX) < 1;
+
+          return (
+            <g key={`y1-${idx}`}>
+              <circle
+                cx={p1.x}
+                cy={p1.y}
+                r={isHovered ? "8" : "6"}
+                fill="var(--color-surface-0)"
+                stroke={accentColor}
+                strokeWidth={isHovered ? "4" : "2.5"}
+              />
+              {showLabels && (
+                <g>
+                  {/* Elegant glassmorphic pill background for value */}
+                  <rect
+                    x={p1.x - 27}
+                    y={pillY}
+                    width="54"
+                    height="18"
+                    rx="5"
+                    fill="var(--color-surface-1)"
+                    stroke="var(--color-border-light)"
+                    strokeWidth="1"
+                    opacity="0.95"
+                  />
+                  <text
+                    x={p1.x}
+                    y={textY}
+                    fill={accentColor}
+                    fontSize="11"
+                    fontWeight="900"
+                    textAnchor="middle"
+                    fontFamily="var(--font-sans)"
+                  >
+                    {p1.val.toLocaleString()}
+                  </text>
+                </g>
+              )}
+            </g>
+          );
+        })}
+
+        {/* ─── X-Axis Labels (Contrast Optimized for both Light/Dark Themes) ─── */}
+        {monthly.map((m, idx) => {
+          const x = paddingLeft + marginX + (idx / (N - 1)) * (chartWidth - 2 * marginX);
+          const isHovered = hoveredIdx === idx;
+          return (
+            <text
+              key={`x-${idx}`}
+              x={x}
+              y={svgHeight - 10}
+              fill={isHovered ? accentColor : (m.isFuture ? 'var(--color-text-tertiary)' : 'var(--color-text-primary)')}
+              opacity={m.isFuture && !isHovered ? 0.5 : 1}
+              fontSize="11.5"
+              fontWeight={isHovered ? "900" : "800"}
+              textAnchor="middle"
+              fontFamily="var(--font-display)"
+              letterSpacing="0.02em"
+            >
+              {m.label}
+            </text>
+          );
+        })}
+      </svg>
+
+      {/* ─── Premium Glassmorphic Floating Tooltip ─── */}
+      {hoveredIdx !== null && monthly[hoveredIdx] && (
+        <div style={{
+          position: 'absolute',
+          left: mousePos.x + 16,
+          top: mousePos.y - 48,
+          pointerEvents: 'none',
+          zIndex: 100,
+          background: 'rgba(23, 28, 41, 0.95)',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          borderRadius: '14px',
+          padding: '12px 16px',
+          boxShadow: '0 12px 30px -6px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.05)',
+          backdropFilter: 'blur(12px)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px',
+          color: '#fff',
+          fontSize: '0.75rem',
+          minWidth: '170px',
+          transform: mousePos.x > 750 ? 'translateX(-112%)' : 'none',
+          transition: 'transform 0.05s ease-out',
+        }}>
+          {/* Header (Month Name) */}
+          <div style={{ fontWeight: 900, color: '#fff', fontSize: '0.8rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '6px', marginBottom: '2px', fontFamily: 'var(--font-display)', letterSpacing: '0.04em' }}>
+            {monthly[hoveredIdx].labelTh || monthly[hoveredIdx].label || 'Month'}
+          </div>
+
+          {/* Series 1 Value (Solid Line / Current Year or Actual) */}
+          {hoveredPoint1 && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, color: 'rgba(255, 255, 255, 0.7)' }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: accentColor, display: 'inline-block' }} />
+                {cardType === 'today' ? 'Daily Actual' : `ปี ${year1}`}
+              </span>
+              <span style={{ fontWeight: 900, color: accentColor, fontFamily: 'var(--font-sans)', fontSize: '0.85rem' }}>
+                {hoveredPoint1.val.toLocaleString()}
+              </span>
+            </div>
+          )}
+
+          {/* Series 2 Value (Dashed Line / Comparison Year or Baseline) */}
+          {hoveredPoint2 && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, color: 'rgba(255, 255, 255, 0.7)' }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', border: `1.5px dashed color-mix(in srgb, ${accentColor} 60%, white)`, display: 'inline-block', background: 'rgba(255,255,255,0.1)' }} />
+                {cardType === 'today' ? '7d Average' : `ปี ${year2}`}
+              </span>
+              <span style={{ fontWeight: 900, color: 'rgba(255, 255, 255, 0.95)', fontFamily: 'var(--font-sans)', fontSize: '0.85rem' }}>
+                {hoveredPoint2.val.toLocaleString()}
+              </span>
+            </div>
+          )}
+
+          {/* Comparison / Difference if both points are valid */}
+          {hoveredPoint1 && hoveredPoint2 && (
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '6px', marginTop: '2px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontWeight: 700, color: 'rgba(255, 255, 255, 0.45)', fontSize: '0.68rem' }}>ผลต่าง (Diff)</span>
+              {(() => {
+                const diffVal = hoveredPoint1.val - hoveredPoint2.val;
+                const pct = hoveredPoint2.val > 0 ? +((diffVal / hoveredPoint2.val) * 100).toFixed(1) : 0;
+                const isPos = pct > 0;
+                const isNeg = pct < 0;
+                const isGood = cardType === 'overdue' ? isNeg : isPos;
+                const badgeColor = isGood ? 'rgb(34, 197, 94)' : isNeg ? 'rgb(239, 68, 68)' : 'rgba(255,255,255,0.5)';
+                return (
+                  <span style={{ fontWeight: 900, color: badgeColor, fontSize: '0.72rem', display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+                    {pct > 0 ? '+' : ''}{pct}%
+                  </span>
+                );
+              })()}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main Panel ──────────────────────────────────────────────────────────────
-export default function CardDetailPanel({ cardType, onClose }: { cardType: CardType; onClose: () => void }) {
+export default function CardDetailPanel({ cardType, selectedYear, onClose }: { cardType: CardType; selectedYear: string; onClose: () => void }) {
   const meta = CARD_META[cardType];
   const curYear = new Date().getFullYear();
 
+  // 1. External selected year (derived from prop selectedYear)
+  const extYear = (selectedYear && selectedYear !== 'all') ? parseInt(selectedYear) : curYear;
+
+  // 2. Local state for the internal comparison year (initialized to extYear - 1)
+  const [compareYear, setCompareYear] = useState(extYear - 1);
   const [years, setYears] = useState<number[]>([]);
-  const [year1, setYear1] = useState(curYear);
-  const [year2, setYear2] = useState(curYear - 1);
   const [data, setData] = useState<CardDetailData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showLabels, setShowLabels] = useState(false);
 
-  // Load available years once
+  const year1 = extYear;
+  const year2 = compareYear;
+
   useEffect(() => {
     fetchAvailableYears().then(y => { setYears(y); }).catch(() => {});
   }, []);
 
-  // Load detail when years change
+  // Sync compareYear when the external selectedYear changes
+  useEffect(() => {
+    if (selectedYear && selectedYear !== 'all') {
+      const parsed = parseInt(selectedYear);
+      setCompareYear(parsed - 1);
+    }
+  }, [selectedYear]);
+
+  // Load detail when cardType, extYear, or compareYear change
   useEffect(() => {
     setLoading(true); setError(null);
-    fetchCardDetail(cardType, year1, year2)
+    fetchCardDetail(cardType, extYear, compareYear)
       .then(d => { setData(d); setLoading(false); })
       .catch(e => { setError(e.message); setLoading(false); });
-  }, [cardType, year1, year2]);
+  }, [cardType, extYear, compareYear]);
 
-  const maxBar = data ? Math.max(...data.monthly.map(m => Math.max(m.year1 || 0, m.year2)), 1) : 1;
   const isInverse = cardType === 'overdue';
 
   return (
@@ -85,15 +526,25 @@ export default function CardDetailPanel({ cardType, onClose }: { cardType: CardT
           {meta.icon}
           <div>
             <h3 style={{ fontSize:'1.1rem', fontWeight:900, color:'var(--color-text-primary)', fontFamily:'var(--font-display)', letterSpacing:'-0.02em', margin:0 }}>
-              {cardType === 'today' ? `${meta.title} — Moving Average` : `${meta.title} — Year Comparison`}
+              {cardType === 'today' 
+                ? `${meta.title} — Moving Average` 
+                : cardType === 'wip'
+                ? `WIP by Customer (งานค้างตามรายชื่อลูกค้า)`
+                : `${meta.title} — Year Comparison`
+              }
             </h3>
             <p style={{ fontSize:'0.68rem', fontWeight:700, color:'var(--color-text-tertiary)', margin:'2px 0 0', textTransform:'uppercase', letterSpacing:'0.06em' }}>
-              {cardType === 'today' ? '7 working days moving average comparison (excluding Sundays/Holidays)' : 'Monthly breakdown with year-over-year analysis'}
+              {cardType === 'today' 
+                ? '7 working days moving average comparison (excluding Sundays/Holidays)' 
+                : cardType === 'wip'
+                ? 'Active Work In Progress orders & pieces currently in production stages'
+                : 'Monthly breakdown with year-over-year comparison'
+              }
             </p>
           </div>
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-          {/* Year / Period Selectors */}
+          {/* Year / Period Selector */}
           {cardType === 'today' ? (
             <div style={{ display:'flex', alignItems:'center', gap:8, padding:'6px 12px', borderRadius:14, background:'var(--color-surface-1)', border:'1px solid var(--color-border-light)' }}>
               <Calendar size={14} style={{ color: meta.accent }}/>
@@ -102,11 +553,8 @@ export default function CardDetailPanel({ cardType, onClose }: { cardType: CardT
           ) : (
             <div style={{ display:'flex', alignItems:'center', gap:8, padding:'6px 12px', borderRadius:14, background:'var(--color-surface-1)', border:'1px solid var(--color-border-light)' }}>
               <Calendar size={14} style={{ color:'var(--color-text-tertiary)' }}/>
-              <select value={year1} onChange={e => setYear1(+e.target.value)} style={{ border:'none', background:'transparent', fontSize:'0.8rem', fontWeight:800, color: meta.accent, outline:'none', cursor:'pointer' }}>
-                {years.map(y => <option key={y} value={y}>{y}</option>)}
-              </select>
-              <span style={{ fontSize:'0.65rem', fontWeight:800, color:'var(--color-text-quaternary)' }}>vs</span>
-              <select value={year2} onChange={e => setYear2(+e.target.value)} style={{ border:'none', background:'transparent', fontSize:'0.8rem', fontWeight:800, color:'var(--color-text-secondary)', outline:'none', cursor:'pointer' }}>
+              <span style={{ fontSize:'0.72rem', fontWeight:800, color:'var(--color-text-secondary)' }}>เปรียบเทียบกับปี:</span>
+              <select value={compareYear} onChange={e => setCompareYear(+e.target.value)} style={{ border:'none', background:'transparent', fontSize:'0.8rem', fontWeight:800, color: meta.accent, outline:'none', cursor:'pointer' }}>
                 {years.map(y => <option key={y} value={y}>{y}</option>)}
               </select>
             </div>
@@ -141,25 +589,41 @@ export default function CardDetailPanel({ cardType, onClose }: { cardType: CardT
 
               const summaryCards = [
                 {
-                  label: cardType === 'today' ? "Today's Orders" : `${year1} Orders`,
+                  label: cardType === 'today' 
+                    ? "Today's Orders" 
+                    : cardType === 'wip'
+                    ? `WIP Orders (${year1})`
+                    : `${year1} Orders`,
                   value: data.summary.year1Total,
                   color: meta.accent,
-                  badge: data.summary.changePct
+                  badge: cardType === 'wip' ? undefined : data.summary.changePct
                 },
                 {
-                  label: cardType === 'today' ? "7d Work Average" : `${year2} Orders`,
+                  label: cardType === 'today' 
+                    ? "7d Work Average" 
+                    : cardType === 'wip'
+                    ? `WIP Orders (${year2})`
+                    : `${year2} Orders`,
                   value: data.summary.year2Total,
                   color: 'var(--color-text-secondary)',
                   badge: undefined
                 },
                 {
-                  label: cardType === 'today' ? "Today's Piece Qty" : `${year1} Qty`,
+                  label: cardType === 'today' 
+                    ? "Today's Piece Qty" 
+                    : cardType === 'wip'
+                    ? `WIP Pieces (${year1})`
+                    : `${year1} Qty`,
                   value: data.summary.year1Qty,
                   color: meta.accent,
-                  badge: qtyChangePct
+                  badge: cardType === 'wip' ? undefined : qtyChangePct
                 },
                 {
-                  label: cardType === 'today' ? "7d Work Average Qty" : `${year2} Qty`,
+                  label: cardType === 'today' 
+                    ? "7d Work Average Qty" 
+                    : cardType === 'wip'
+                    ? `WIP Pieces (${year2})`
+                    : `${year2} Qty`,
                   value: data.summary.year2Qty,
                   color: 'var(--color-text-secondary)',
                   badge: undefined
@@ -182,62 +646,90 @@ export default function CardDetailPanel({ cardType, onClose }: { cardType: CardT
             })()}
           </div>
 
-          {/* ─── Monthly Bar Chart ─── */}
-          <div style={{ borderRadius:20, border:'1px solid var(--color-border-light)', overflow:'hidden' }}>
-            <div style={{ padding:'14px 20px', borderBottom:'1px solid var(--color-border-light)', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+          {/* ─── SVG Line Chart (Stock Style) ─── */}
+          <div style={{ borderRadius:20, border:'1px solid var(--color-border-light)', overflow:'hidden', background:'var(--color-surface-0)' }}>
+            <div style={{ padding:'14px 20px', borderBottom:'1px solid var(--color-border-light)', display:'flex', alignItems:'center', justifyContent:'space-between', gap: 16 }}>
               <span style={{ fontSize:'0.65rem', fontWeight:800, color:'var(--color-text-tertiary)', textTransform:'uppercase', letterSpacing:'0.08em' }}>
-                {cardType === 'today' ? 'Daily Actual vs Moving Average' : 'Monthly Comparison'}
+                {cardType === 'today' ? 'Daily Actual vs Moving Average' : 'Monthly Trend comparison'}
               </span>
-              {cardType === 'today' ? (
-                <div style={{ display:'flex', alignItems:'center', gap:16 }}>
-                  <span style={{ display:'flex', alignItems:'center', gap:6, fontSize:'0.65rem', fontWeight:700, color:'var(--color-text-secondary)' }}>
-                    <span style={{ width:10, height:10, borderRadius:3, background: meta.accent }}/> Daily Actual
-                  </span>
-                  <span style={{ display:'flex', alignItems:'center', gap:6, fontSize:'0.65rem', fontWeight:700, color:'var(--color-text-tertiary)' }}>
-                    <span style={{ width:10, height:10, borderRadius:3, background:'var(--color-border-strong)', opacity:0.5 }}/> 7d Average Baseline
-                  </span>
-                </div>
-              ) : (
-                <div style={{ display:'flex', alignItems:'center', gap:16 }}>
-                  <span style={{ display:'flex', alignItems:'center', gap:6, fontSize:'0.65rem', fontWeight:700, color:'var(--color-text-secondary)' }}>
-                    <span style={{ width:10, height:10, borderRadius:3, background: meta.accent }}/> {year1}
-                  </span>
-                  <span style={{ display:'flex', alignItems:'center', gap:6, fontSize:'0.65rem', fontWeight:700, color:'var(--color-text-tertiary)' }}>
-                    <span style={{ width:10, height:10, borderRadius:3, background:'var(--color-border-strong)', opacity:0.5 }}/> {year2}
-                  </span>
-                </div>
-              )}
-            </div>
-            <div style={{ padding:'20px 16px 12px', display:'flex', alignItems:'flex-end', gap:4, minHeight:200 }}>
-              {data.monthly.map((m, i) => (
-                <div key={m.month} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:3 }}>
-                  {/* Values above bars */}
-                  {!m.isFuture && (
-                    <span style={{ fontSize:'0.58rem', fontWeight:800, color: meta.accent, opacity: (m.year1||0)>0 ? 1 : 0.3 }}>
-                      {(m.year1||0).toLocaleString()}
-                    </span>
-                  )}
-                  {/* Bar pair */}
-                  <div style={{ display:'flex', gap:2, width:'100%', justifyContent:'center', alignItems:'flex-end', height:140 }}>
-                    {m.isFuture ? (
-                      <div style={{ flex:1, maxWidth:32, height:'100%', borderRadius:'6px 6px 2px 2px', border:'2px dashed var(--color-border-light)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                        <span style={{ fontSize:'0.5rem', fontWeight:800, color:'var(--color-text-quaternary)', writingMode:'vertical-rl', textOrientation:'mixed' }}>SOON</span>
-                      </div>
-                    ) : (
-                      <div style={{ flex:1, maxWidth:16, borderRadius:'4px 4px 1px 1px', background: meta.accent, transition:'height 0.5s cubic-bezier(0.16,1,0.3,1)', transitionDelay:`${i*40}ms`,
-                        height: `${Math.max(((m.year1||0)/maxBar)*130, 3)}px`,
-                        opacity: (m.year1||0)>0 ? 1 : 0.15,
-                      }}/>
-                    )}
-                    <div style={{ flex:1, maxWidth:16, borderRadius:'4px 4px 1px 1px', background:'var(--color-border-strong)', transition:'height 0.5s cubic-bezier(0.16,1,0.3,1)', transitionDelay:`${i*40+60}ms`,
-                      height: `${Math.max((m.year2/maxBar)*130, 3)}px`,
-                      opacity: m.year2>0 ? 0.4 : 0.1,
-                    }}/>
+              
+              <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+                {/* ─── Sleek Custom iOS-style Switch for Show Labels ─── */}
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', userSelect: 'none' }}>
+                  <div style={{ position: 'relative', width: 34, height: 18 }}>
+                    <input
+                      type="checkbox"
+                      checked={showLabels}
+                      onChange={e => setShowLabels(e.target.checked)}
+                      style={{ opacity: 0, width: 0, height: 0, position: 'absolute' }}
+                    />
+                    <div style={{
+                      width: 34,
+                      height: 18,
+                      borderRadius: 10,
+                      background: showLabels ? meta.accent : 'var(--color-surface-3)',
+                      border: '1px solid var(--color-border-light)',
+                      transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+                    }} />
+                    <div style={{
+                      position: 'absolute',
+                      left: showLabels ? 18 : 3,
+                      top: 3,
+                      width: 12,
+                      height: 12,
+                      borderRadius: '50%',
+                      background: '#fff',
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                      transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+                    }} />
                   </div>
-                  {/* Month / Day label */}
-                  <span style={{ fontSize:'0.52rem', fontWeight:700, color: m.isFuture ? 'var(--color-text-quaternary)' : 'var(--color-text-tertiary)', textTransform:'uppercase', whiteSpace:'nowrap' }}>{m.label}</span>
-                </div>
-              ))}
+                  <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    แสดงตัวเลข (Show Labels)
+                  </span>
+                </label>
+
+                {cardType === 'today' ? (
+                  <div style={{ display:'flex', alignItems:'center', gap:16 }}>
+                    <span style={{ display:'flex', alignItems:'center', gap:8, fontSize:'0.65rem', fontWeight:700, color:'var(--color-text-secondary)' }}>
+                      <svg width="20" height="6" style={{ overflow:'visible', display:'inline-block' }}>
+                        <line x1="0" y1="3" x2="20" y2="3" stroke={meta.accent} strokeWidth="3" strokeLinecap="round"/>
+                      </svg>
+                      Daily Actual
+                    </span>
+                    <span style={{ display:'flex', alignItems:'center', gap:8, fontSize:'0.65rem', fontWeight:700, color:'var(--color-text-tertiary)' }}>
+                      <svg width="20" height="6" style={{ overflow:'visible', display:'inline-block' }}>
+                        <line x1="0" y1="3" x2="20" y2="3" stroke={`color-mix(in srgb, ${meta.accent} 42%, transparent)`} strokeWidth="2.2" strokeDasharray="3 3" strokeLinecap="round"/>
+                      </svg>
+                      7d Average Baseline
+                    </span>
+                  </div>
+                ) : (
+                  <div style={{ display:'flex', alignItems:'center', gap:16 }}>
+                    <span style={{ display:'flex', alignItems:'center', gap:8, fontSize:'0.65rem', fontWeight:700, color:'var(--color-text-secondary)' }}>
+                      <svg width="20" height="6" style={{ overflow:'visible', display:'inline-block' }}>
+                        <line x1="0" y1="3" x2="20" y2="3" stroke={meta.accent} strokeWidth="3" strokeLinecap="round"/>
+                      </svg>
+                      ปี {year1}
+                    </span>
+                    <span style={{ display:'flex', alignItems:'center', gap:8, fontSize:'0.65rem', fontWeight:700, color:'var(--color-text-tertiary)' }}>
+                      <svg width="20" height="6" style={{ overflow:'visible', display:'inline-block' }}>
+                        <line x1="0" y1="3" x2="20" y2="3" stroke={`color-mix(in srgb, ${meta.accent} 42%, transparent)`} strokeWidth="2.2" strokeDasharray="3 3" strokeLinecap="round"/>
+                      </svg>
+                      ปี {year2}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div style={{ padding: '20px 24px' }}>
+              <SVGLineChart
+                monthly={data.monthly}
+                accentColor={meta.accent}
+                year1={year1}
+                year2={year2}
+                cardType={cardType}
+                showLabels={showLabels}
+              />
             </div>
           </div>
 
@@ -256,7 +748,9 @@ export default function CardDetailPanel({ cardType, onClose }: { cardType: CardT
                     <tr style={{ background:'var(--color-surface-1)' }}>
                       {(cardType === 'today'
                         ? ['Date', 'Day of Week', 'Actual Orders', 'Average Baseline', 'Actual Qty', 'Average Qty', 'Performance']
-                        : ['Customer', '', `${year1} Orders`, `${year2} Orders`, `${year1} Qty`, `${year2} Qty`, 'Change']
+                        : cardType === 'wip'
+                        ? ['Customer', 'Customer Name', `WIP Orders (${year1})`, `WIP Orders (${year2})`, `WIP Pieces (${year1})`, `WIP Pieces (${year2})`, 'Change']
+                        : ['Customer', 'Customer Name', `${year1} Orders`, `${year2} Orders`, `${year1} Qty`, `${year2} Qty`, 'Change']
                       ).map(h => (
                         <th key={h} style={{ padding:'10px 16px', textAlign: h.includes('Orders')||h.includes('Qty')||h.includes('Actual')||h.includes('Average')||h==='Change'||h==='Performance'?'right':'left', fontSize:'0.6rem', fontWeight:800, color:'var(--color-text-tertiary)', textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'1px solid var(--color-border-light)', whiteSpace:'nowrap' }}>{h}</th>
                       ))}

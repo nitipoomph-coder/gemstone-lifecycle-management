@@ -24,6 +24,11 @@ export default function ProcurementDocPage() {
   const [docList, setDocList] = useState<DocListItem[]>([]);
   const [selectedDocNo, setSelectedDocNo] = useState('');
   const [docDetail, setDocDetail] = useState<ProcDocDetail | null>(null);
+  
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [search, setSearch] = useState('');
+
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,27 +43,40 @@ export default function ProcurementDocPage() {
   ];
 
   // ─── Load document list ─────────────────────
-  useEffect(() => {
+  const loadDocList = async () => {
     setLoading(true);
     setError(null);
+
+    try {
+      const response = await fetchDocumentList(docType, { page, limit: 50, search });
+      const mappedList = response.data.map((d: any) => ({
+        no: d.docNumber,
+        date: d.docDate,
+        status: d.status
+      }));
+      setDocList(mappedList);
+      setTotalPages(response.totalPages || 1);
+      if (mappedList.length > 0 && !selectedDocNo) {
+        setSelectedDocNo(mappedList[0].no);
+      }
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     setDocList([]);
     setDocDetail(null);
     setSelectedDocNo('');
-
-    fetchDocumentList(docType)
-      .then(data => {
-        // Map data to expected DocumentLayout format
-        const mappedList = data.map(d => ({
-          no: d.docNumber,
-          date: d.docDate,
-          status: d.status
-        }));
-        setDocList(mappedList);
-        if (mappedList.length > 0) setSelectedDocNo(mappedList[0].no);
-      })
-      .catch(err => setError(err.message))
-      .finally(() => setLoading(false));
+    setPage(1);
+    setSearch('');
   }, [docType]);
+
+  useEffect(() => {
+    loadDocList();
+  }, [docType, page, search]);
 
   // ─── Load document detail ───────────────────
   useEffect(() => {
@@ -237,6 +255,13 @@ export default function ProcurementDocPage() {
       docList={docList}
       selectedDocNo={selectedDocNo}
       onSelectDoc={setSelectedDocNo}
+      onSearchList={(text) => {
+        setSearch(text);
+        setPage(1);
+      }}
+      page={page}
+      totalPages={totalPages}
+      onPageChange={setPage}
       docDetail={docDetail}
       loading={loading}
       detailLoading={detailLoading}

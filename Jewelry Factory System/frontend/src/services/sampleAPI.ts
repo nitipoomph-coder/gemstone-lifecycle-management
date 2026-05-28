@@ -1,4 +1,9 @@
-const API_BASE = '/api/requisition';
+// ============================================
+// Sample Room API Client (ห้องตัวอย่าง)
+// SSA, SIM endpoints
+// ============================================
+
+const API_BASE = '/api/sample';
 
 export interface FetchParams {
   page?: number;
@@ -6,7 +11,8 @@ export interface FetchParams {
   search?: string;
 }
 
-export async function fetchRequisitionDocuments(docType: string, params?: FetchParams) {
+/** ดึงรายการเอกสารห้องตัวอย่าง (SSA หรือ SIM) */
+export async function fetchSampleDocuments(docType: string, params?: FetchParams) {
   const query = new URLSearchParams();
   if (params?.page) query.append('page', String(params.page));
   if (params?.limit) query.append('limit', String(params.limit));
@@ -18,27 +24,10 @@ export async function fetchRequisitionDocuments(docType: string, params?: FetchP
   return { data: json.data, total: json.total, page: json.page, totalPages: json.totalPages };
 }
 
-export async function fetchRequisitionDocument(docuNo: string) {
+/** ดึงรายละเอียดเอกสารห้องตัวอย่าง (header + detail lines) */
+export async function fetchSampleDocument(docuNo: string) {
   const res = await fetch(`${API_BASE}/document/${encodeURIComponent(docuNo)}`);
   const json = await res.json();
   if (!json.ok) throw new Error(json.error);
   return { header: json.header, lines: json.lines };
-}
-
-export async function fetchOrderForRequisition(ordNo: string) {
-  const res = await fetch(`${API_BASE}/order/${encodeURIComponent(ordNo)}`);
-  const json = await res.json();
-  if (!json.ok) throw new Error(json.error);
-  return { header: json.header, lines: json.lines };
-}
-
-export async function saveRequisitionDocument(data: any) {
-  const res = await fetch(`${API_BASE}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  });
-  const json = await res.json();
-  if (!json.ok) throw new Error(json.error);
-  return json;
 }

@@ -13,10 +13,27 @@ router.get('/', async (req, res) => {
   try {
     const pool = await getPool();
 
+    // Parse selected year
+    const yearParam = req.query.year;
+    const selectedYear = (yearParam && yearParam !== 'all') ? parseInt(yearParam) : null;
+    const activeYear = selectedYear || new Date().getFullYear();
+    
+    // Set reference date for trend queries (Dec 31 of selected year if past, else today)
+    let refDate = new Date();
+    if (selectedYear && selectedYear < new Date().getFullYear()) {
+      refDate = new Date(selectedYear, 11, 31);
+    }
+
+    // Helper to generate a pre-configured request with common parameters
+    const getReq = () => pool.request()
+      .input('year', sql.Int, selectedYear)
+      .input('activeYear', sql.Int, activeYear)
+      .input('refDate', sql.Date, refDate);
+
     // ═══════════════════════════════════════════════════════════════════════════
     // 1. STAT CARDS (5 cards: Orders Today, Completed, WIP, Delay, This Month)
     // ═══════════════════════════════════════════════════════════════════════════
-    const statsResult = await pool.request().query(`
+    const statsResult = await getReq().query(`
       SELECT
         COUNT(CASE WHEN CAST(OrdDate AS DATE) = CAST(GETDATE() AS DATE) THEN 1 END) AS ordersToday,
         COUNT(CASE WHEN CloseStatus = 'Y' OR OrdStatus = 'C' THEN 1 END) AS completed,
@@ -24,23 +41,25 @@ router.get('/', async (req, res) => {
         COUNT(CASE WHEN DueDate < CAST(GETDATE() AS DATE) AND OrdStatus IN ('P','N') AND CloseStatus <> 'Y' THEN 1 END) AS delay
       FROM OrdHD
       WHERE ((PONo IS NULL OR UPPER(PONo) NOT LIKE '%SAMPLE%') AND LEFT(OrdNo, 3) IN ('BBC','BBQ','BBD','BBI','BBF','BBP','BBT','BBX','BBK','BBR','BBL','BBS','BBE'))
+        AND (@year IS NULL OR YEAR(OrdDate) = @year)
     `);
     const s = statsResult.recordset[0];
 
     // Week-over-week comparison
-    const weekResult = await pool.request().query(`
+    const weekResult = await getReq().query(`
       SELECT
         COUNT(CASE WHEN CAST(OrdDate AS DATE) >= DATEADD(day, -7, CAST(GETDATE() AS DATE)) THEN 1 END) AS thisWeek,
         COUNT(CASE WHEN CAST(OrdDate AS DATE) >= DATEADD(day, -14, CAST(GETDATE() AS DATE))
                     AND CAST(OrdDate AS DATE) < DATEADD(day, -7, CAST(GETDATE() AS DATE)) THEN 1 END) AS lastWeek
       FROM OrdHD
       WHERE ((PONo IS NULL OR UPPER(PONo) NOT LIKE '%SAMPLE%') AND LEFT(OrdNo, 3) IN ('BBC','BBQ','BBD','BBI','BBF','BBP','BBT','BBX','BBK','BBR','BBL','BBS','BBE'))
+        AND (@year IS NULL OR YEAR(OrdDate) = @year)
     `);
     const w = weekResult.recordset[0];
     const weekChange = w.lastWeek > 0 ? Math.round(((w.thisWeek - w.lastWeek) / w.lastWeek) * 100) : 0;
 
     // 7 working days average query (excluding Sundays and holidays)
-    const avgResult = await pool.request().query(`
+    const avgResult = await getReq().query(`
       WITH Last7Days AS (
         SELECT DISTINCT TOP 7 CAST(OrdDate AS DATE) AS WorkDate
         FROM OrdHD
@@ -49,6 +68,7 @@ router.get('/', async (req, res) => {
           AND DATENAME(dw, OrdDate) <> 'Sunday'
           AND OrdDate IS NOT NULL
           AND ((PONo IS NULL OR UPPER(PONo) NOT LIKE '%SAMPLE%') AND LEFT(OrdNo, 3) IN ('BBC','BBQ','BBD','BBI','BBF','BBP','BBT','BBX','BBK','BBR','BBL','BBS','BBE'))
+          AND (@year IS NULL OR YEAR(OrdDate) = @year)
         ORDER BY WorkDate DESC
       )
       SELECT 
@@ -63,23 +83,23 @@ router.get('/', async (req, res) => {
     const avg7Days = avgResult.recordset[0]?.avgOrders || 0;
 
     // This month summary
-    const monthResult = await pool.request().query(`
+    const monthResult = await getReq().query(`
       SELECT COUNT(*) AS ordCount, SUM(ISNULL(SumOrdQty,0)) AS totalQty
       FROM OrdHD
-      WHERE MONTH(OrdDate) = MONTH(GETDATE()) AND YEAR(OrdDate) = YEAR(GETDATE())
+      WHERE MONTH(OrdDate) = MONTH(GETDATE()) AND YEAR(OrdDate) = ISNULL(@year, YEAR(GETDATE()))
         AND ((PONo IS NULL OR UPPER(PONo) NOT LIKE '%SAMPLE%') AND LEFT(OrdNo, 3) IN ('BBC','BBQ','BBD','BBI','BBF','BBP','BBT','BBX','BBK','BBR','BBL','BBS','BBE'))
     `);
     const m = monthResult.recordset[0];
 
     // Year-over-year comparison (this month vs same month last year)
-    const yoyResult = await pool.request().query(`
+    const yoyResult = await getReq().query(`
       SELECT
         -- Completed: this month vs same month last year
-        COUNT(CASE WHEN (CloseStatus='Y' OR OrdStatus='C') AND MONTH(OrdDate)=MONTH(GETDATE()) AND YEAR(OrdDate)=YEAR(GETDATE()) THEN 1 END) AS compNow,
-        COUNT(CASE WHEN (CloseStatus='Y' OR OrdStatus='C') AND MONTH(OrdDate)=MONTH(GETDATE()) AND YEAR(OrdDate)=YEAR(GETDATE())-1 THEN 1 END) AS compLY,
+        COUNT(CASE WHEN (CloseStatus='Y' OR OrdStatus='C') AND MONTH(OrdDate)=MONTH(GETDATE()) AND YEAR(OrdDate)=@activeYear THEN 1 END) AS compNow,
+        COUNT(CASE WHEN (CloseStatus='Y' OR OrdStatus='C') AND MONTH(OrdDate)=MONTH(GETDATE()) AND YEAR(OrdDate)=@activeYear-1 THEN 1 END) AS compLY,
         -- This Month: this month vs same month last year
-        COUNT(CASE WHEN MONTH(OrdDate)=MONTH(GETDATE()) AND YEAR(OrdDate)=YEAR(GETDATE()) THEN 1 END) AS monthNow,
-        COUNT(CASE WHEN MONTH(OrdDate)=MONTH(GETDATE()) AND YEAR(OrdDate)=YEAR(GETDATE())-1 THEN 1 END) AS monthLY
+        COUNT(CASE WHEN MONTH(OrdDate)=MONTH(GETDATE()) AND YEAR(OrdDate)=@activeYear THEN 1 END) AS monthNow,
+        COUNT(CASE WHEN MONTH(OrdDate)=MONTH(GETDATE()) AND YEAR(OrdDate)=@activeYear-1 THEN 1 END) AS monthLY
       FROM OrdHD
       WHERE ((PONo IS NULL OR UPPER(PONo) NOT LIKE '%SAMPLE%') AND LEFT(OrdNo, 3) IN ('BBC','BBQ','BBD','BBI','BBF','BBP','BBT','BBX','BBK','BBR','BBL','BBS','BBE'))
     `);
@@ -88,8 +108,8 @@ router.get('/', async (req, res) => {
 
     const statCards = [
       {
-        label: 'Orders Today', value: s.ordersToday, change: '', trend: s.ordersToday >= avg7Days ? 'up' : 'down',
-        yoyPct: avg7Days > 0 ? Math.round(((s.ordersToday - avg7Days) / avg7Days) * 100) : (s.ordersToday > 0 ? 100 : 0), yoyLabel: 'vs 7d avg'
+        label: 'Orders Today', value: s.ordersToday, change: '', trend: 'up',
+        yoyPct: null, yoyLabel: ''
       },
       {
         label: 'Completed', value: s.completed, change: '', trend: 'good',
@@ -112,10 +132,10 @@ router.get('/', async (req, res) => {
     // ═══════════════════════════════════════════════════════════════════════════
     // 2. 7-DAY ORDER TREND (bar chart data)
     // ═══════════════════════════════════════════════════════════════════════════
-    const trendResult = await pool.request().query(`
+    const trendResult = await getReq().query(`
       ;WITH Last7 AS (
-        SELECT DATEADD(day, -6, CAST(GETDATE() AS DATE)) AS dt
-        UNION ALL SELECT DATEADD(day, 1, dt) FROM Last7 WHERE dt < CAST(GETDATE() AS DATE)
+        SELECT DATEADD(day, -6, CAST(@refDate AS DATE)) AS dt
+        UNION ALL SELECT DATEADD(day, 1, dt) FROM Last7 WHERE dt < CAST(@refDate AS DATE)
       )
       SELECT
         l.dt,
@@ -124,8 +144,10 @@ router.get('/', async (req, res) => {
       LEFT JOIN (
         SELECT CAST(OrdDate AS DATE) AS dt, COUNT(*) AS cnt
         FROM OrdHD
-        WHERE OrdDate >= DATEADD(day, -7, CAST(GETDATE() AS DATE))
+        WHERE OrdDate >= DATEADD(day, -7, CAST(@refDate AS DATE))
+          AND OrdDate <= CAST(@refDate AS DATE)
           AND ((PONo IS NULL OR UPPER(PONo) NOT LIKE '%SAMPLE%') AND LEFT(OrdNo, 3) IN ('BBC','BBQ','BBD','BBI','BBF','BBP','BBT','BBX','BBK','BBR','BBL','BBS','BBE'))
+          AND (@year IS NULL OR YEAR(OrdDate) = @year)
         GROUP BY CAST(OrdDate AS DATE)
       ) o ON l.dt = o.dt
       ORDER BY l.dt
@@ -140,7 +162,7 @@ router.get('/', async (req, res) => {
     // ═══════════════════════════════════════════════════════════════════════════
     // 3. PROCESS DISTRIBUTION (donut chart — items at each production stage)
     // ═══════════════════════════════════════════════════════════════════════════
-    const procResult = await pool.request().query(`
+    const procResult = await getReq().query(`
       SELECT
         SUM(CASE WHEN d.CastQty > 0 AND ISNULL(d.GrindQty,0) = 0 THEN 1 ELSE 0 END) AS casting,
         SUM(CASE WHEN d.GrindQty > 0 AND ISNULL(d.PolishQty,0) = 0 THEN 1 ELSE 0 END) AS grinding,
@@ -153,6 +175,7 @@ router.get('/', async (req, res) => {
       JOIN OrdHD h ON d.OrdNo = h.OrdNo
       WHERE h.OrdStatus IN ('P','N') AND h.CloseStatus <> 'Y'
         AND ((h.PONo IS NULL OR UPPER(h.PONo) NOT LIKE '%SAMPLE%') AND LEFT(h.OrdNo, 3) IN ('BBC','BBQ','BBD','BBI','BBF','BBP','BBT','BBX','BBK','BBR','BBL','BBS','BBE'))
+        AND (@year IS NULL OR YEAR(h.OrdDate) = @year)
     `);
     const p = procResult.recordset[0];
     const processDistribution = {
@@ -170,12 +193,13 @@ router.get('/', async (req, res) => {
     // ═══════════════════════════════════════════════════════════════════════════
     // 4. MATERIAL BREAKDOWN (Brass/Silver/Other for active orders)
     // ═══════════════════════════════════════════════════════════════════════════
-    const matResult = await pool.request().query(`
+    const matResult = await getReq().query(`
       SELECT ISNULL(OrdMat,'Other') AS material, COUNT(*) AS cnt,
              SUM(ISNULL(SumOrdQty,0)) AS totalQty
       FROM OrdHD
       WHERE OrdStatus IN ('P','N') AND CloseStatus <> 'Y'
         AND ((PONo IS NULL OR UPPER(PONo) NOT LIKE '%SAMPLE%') AND LEFT(OrdNo, 3) IN ('BBC','BBQ','BBD','BBI','BBF','BBP','BBT','BBX','BBK','BBR','BBL','BBS','BBE'))
+        AND (@year IS NULL OR YEAR(OrdDate) = @year)
       GROUP BY OrdMat ORDER BY cnt DESC
     `);
     const materialBreakdown = matResult.recordset.map(r => ({
@@ -188,11 +212,12 @@ router.get('/', async (req, res) => {
     // ═══════════════════════════════════════════════════════════════════════════
     // 5. ORDER TYPE (New vs Replenishment)
     // ═══════════════════════════════════════════════════════════════════════════
-    const kindResult = await pool.request().query(`
+    const kindResult = await getReq().query(`
       SELECT ISNULL(OrdKind,'Other') AS kind, COUNT(*) AS cnt
       FROM OrdHD
       WHERE OrdStatus IN ('P','N') AND CloseStatus <> 'Y'
         AND ((PONo IS NULL OR UPPER(PONo) NOT LIKE '%SAMPLE%') AND LEFT(OrdNo, 3) IN ('BBC','BBQ','BBD','BBI','BBF','BBP','BBT','BBX','BBK','BBR','BBL','BBS','BBE'))
+        AND (@year IS NULL OR YEAR(OrdDate) = @year)
       GROUP BY OrdKind ORDER BY cnt DESC
     `);
     const orderTypes = kindResult.recordset.map(r => ({
@@ -203,7 +228,7 @@ router.get('/', async (req, res) => {
     // ═══════════════════════════════════════════════════════════════════════════
     // 6. TOP CUSTOMERS (by active order count)
     // ═══════════════════════════════════════════════════════════════════════════
-    const custResult = await pool.request().query(`
+    const custResult = await getReq().query(`
       SELECT TOP 9
         h.CustCode,
         ISNULL(c.CustName, h.CustCode) AS custName,
@@ -213,6 +238,7 @@ router.get('/', async (req, res) => {
       LEFT JOIN GMCust c ON c.CustCode = h.CustCode
       WHERE h.OrdStatus IN ('P','N') AND h.CloseStatus <> 'Y'
         AND ((h.PONo IS NULL OR UPPER(h.PONo) NOT LIKE '%SAMPLE%') AND LEFT(h.OrdNo, 3) IN ('BBC','BBQ','BBD','BBI','BBF','BBP','BBT','BBX','BBK','BBR','BBL','BBS','BBE'))
+        AND (@year IS NULL OR YEAR(h.OrdDate) = @year)
       GROUP BY h.CustCode, c.CustName
       ORDER BY orderCount DESC
     `);
@@ -226,7 +252,7 @@ router.get('/', async (req, res) => {
     // ═══════════════════════════════════════════════════════════════════════════
     // 7. CRITICAL DELAY ORDERS (with PO & customer info)
     // ═══════════════════════════════════════════════════════════════════════════
-    const delayResult = await pool.request().query(`
+    const delayResult = await getReq().query(`
       SELECT TOP 8
         h.OrdNo,
         h.PONo,
@@ -240,6 +266,7 @@ router.get('/', async (req, res) => {
       WHERE h.DueDate < CAST(GETDATE() AS DATE)
         AND h.OrdStatus IN ('P','N') AND h.CloseStatus <> 'Y'
         AND ((h.PONo IS NULL OR UPPER(h.PONo) NOT LIKE '%SAMPLE%') AND LEFT(h.OrdNo, 3) IN ('BBC','BBQ','BBD','BBI','BBF','BBP','BBT','BBX','BBK','BBR','BBL','BBS','BBE'))
+        AND (@year IS NULL OR YEAR(h.OrdDate) = @year)
       ORDER BY h.DueDate ASC
     `);
     const delayOrders = delayResult.recordset.map(r => ({
@@ -255,7 +282,7 @@ router.get('/', async (req, res) => {
     // ═══════════════════════════════════════════════════════════════════════════
     // 8. RECENT ORDERS (Latest 6 orders — "Live Feed")
     // ═══════════════════════════════════════════════════════════════════════════
-    const recentResult = await pool.request().query(`
+    const recentResult = await getReq().query(`
       SELECT TOP 6
         h.OrdNo,
         h.PONo,
@@ -271,6 +298,7 @@ router.get('/', async (req, res) => {
         END AS status
       FROM OrdHD h
       WHERE ((h.PONo IS NULL OR UPPER(h.PONo) NOT LIKE '%SAMPLE%') AND LEFT(h.OrdNo, 3) IN ('BBC','BBQ','BBD','BBI','BBF','BBP','BBT','BBX','BBK','BBR','BBL','BBS','BBE'))
+        AND (@year IS NULL OR YEAR(h.OrdDate) = @year)
       ORDER BY h.OrdDate DESC
     `);
     const recentOrders = recentResult.recordset.map(r => ({
@@ -285,6 +313,29 @@ router.get('/', async (req, res) => {
     }));
 
     // ═══════════════════════════════════════════════════════════════════════════
+    // 9. STONE & FINDING SUMMARY (พลอย/อะไหล่ค้างในสายการผลิต)
+    // ═══════════════════════════════════════════════════════════════════════════
+    const sfResult = await getReq().query(`
+      SELECT
+        COUNT(*) AS totalItems,
+        SUM(CASE WHEN ISNULL(d.StoneQty, 0) = 0 AND ISNULL(d.FStoneStatus, '') NOT IN ('N','X') THEN 1 ELSE 0 END) AS stonePendingItems,
+        SUM(CASE WHEN ISNULL(d.StoneQty, 0) > 0 THEN 1 ELSE 0 END) AS stoneDoneItems,
+        SUM(CASE WHEN ISNULL(d.StoneQty, 0) = 0 AND ISNULL(d.FStoneStatus, '') NOT IN ('N','X') THEN ISNULL(d.ItemQty, 0) ELSE 0 END) AS stonePendingQty,
+        SUM(CASE WHEN ISNULL(d.FitQty, 0) = 0 AND ISNULL(d.FFitStatus, '') NOT IN ('N','X') THEN 1 ELSE 0 END) AS findingPendingItems,
+        SUM(CASE WHEN ISNULL(d.FitQty, 0) > 0 THEN 1 ELSE 0 END) AS findingDoneItems,
+        SUM(CASE WHEN ISNULL(d.FitQty, 0) = 0 AND ISNULL(d.FFitStatus, '') NOT IN ('N','X') THEN ISNULL(d.ItemQty, 0) ELSE 0 END) AS findingPendingQty
+      FROM OrdDT d
+      JOIN OrdHD h ON d.OrdNo = h.OrdNo
+      WHERE (@year IS NULL OR YEAR(h.OrdDate) = @year)
+    `);
+    const sf = sfResult.recordset[0];
+    const stoneFindings = {
+      totalItems: sf.totalItems,
+      stone: { pending: sf.stonePendingItems, done: sf.stoneDoneItems, pendingQty: sf.stonePendingQty },
+      finding: { pending: sf.findingPendingItems, done: sf.findingDoneItems, pendingQty: sf.findingPendingQty },
+    };
+
+    // ═══════════════════════════════════════════════════════════════════════════
     // RESPONSE
     // ═══════════════════════════════════════════════════════════════════════════
     res.json({
@@ -296,6 +347,7 @@ router.get('/', async (req, res) => {
       topCustomers,
       delayOrders,
       recentOrders,
+      stoneFindings,
     });
 
   } catch (err) {

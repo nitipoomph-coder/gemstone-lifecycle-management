@@ -26,6 +26,10 @@ export default function RequisitionDocPage() {
   const [docList, setDocList] = useState<DocListItem[]>([]);
   const [selectedDocNo, setSelectedDocNo] = useState('');
   const [docDetail, setDocDetail] = useState<any | null>(null);
+
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [search, setSearch] = useState('');
   
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -54,12 +58,15 @@ export default function RequisitionDocPage() {
     }
 
     try {
-      const data = await fetchRequisitionDocuments(docType);
-      const mappedList = data.map((d: any) => ({
+      const response = await fetchRequisitionDocuments(docType, { page, limit: 50, search });
+      const mappedList = response.data.map((d: any) => ({
         no: d.DocuNo,
-        date: d.DocuDate ? new Date(d.DocuDate).toLocaleDateString('th-TH') : ''
+        date: d.DocuDate ? new Date(d.DocuDate).toLocaleDateString('th-TH') : '',
+        status: d.DocuStatus
       }));
       setDocList(mappedList);
+      setTotalPages(response.totalPages || 1);
+      
       if (mappedList.length > 0 && !selectedDocNo) {
         setSelectedDocNo(mappedList[0].no);
       }
@@ -76,8 +83,13 @@ export default function RequisitionDocPage() {
 
   useEffect(() => {
     handleClear();
-    loadDocList();
+    setPage(1);
+    setSearch('');
   }, [docType]);
+
+  useEffect(() => {
+    loadDocList();
+  }, [docType, page, search]);
 
   useEffect(() => {
     if (selectedDocNo) {
@@ -167,6 +179,13 @@ export default function RequisitionDocPage() {
       docList={docList}
       selectedDocNo={selectedDocNo}
       onSelectDoc={setSelectedDocNo}
+      onSearchList={(text) => {
+        setSearch(text);
+        setPage(1);
+      }}
+      page={page}
+      totalPages={totalPages}
+      onPageChange={setPage}
       docDetail={docDetail}
       loading={loading}
       detailLoading={detailLoading}

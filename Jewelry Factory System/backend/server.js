@@ -46,11 +46,82 @@ const fs = require('fs');
 const path = require('path');
 
 // Register the Photo Bridge API Route
+// Register the Photo Bridge API Route (PS Photo / Cost)
+app.get('/api/photos/ps/:itemNo', (req, res) => {
+  const itemNo = req.params.itemNo.trim();
+  console.log(`[PhotoBridge PS] Serving Item: ${itemNo}`);
+
+  const searchDirs = [
+    '\\\\chongdts\\Chong Photo\\Cost'
+  ];
+
+  const formats = ['.jpg', '.jpeg', '.png', '.JPG', '.JPEG', '.PNG'];
+  let foundFile = null;
+
+  for (const baseDir of searchDirs) {
+    try {
+      for (const ext of formats) {
+        const testPath = path.join(baseDir, `${itemNo}${ext}`);
+        if (fs.existsSync(testPath)) {
+          foundFile = testPath;
+          break;
+        }
+      }
+    } catch (e) {
+      // Access denied or offline share - skip silently
+    }
+    if (foundFile) break;
+  }
+
+  if (foundFile) {
+    res.setHeader('X-Source-Origin', 'RealServer-PS');
+    return res.sendFile(foundFile);
+  }
+
+  res.status(404).send('PS Photo not found');
+});
+
+// Register the Photo Bridge API Route (CAD Photo / MoldCAD)
+app.get('/api/photos/cad/:itemNo', (req, res) => {
+  const itemNo = req.params.itemNo.trim();
+  console.log(`[PhotoBridge CAD] Serving Item: ${itemNo}`);
+
+  const searchDirs = [
+    '\\\\chongdts\\Chong Photo\\Mold',
+    '\\\\chongdts\\Chong Photo\\MoldCAD'
+  ];
+
+  const formats = ['.jpg', '.jpeg', '.png', '.JPG', '.JPEG', '.PNG'];
+  let foundFile = null;
+
+  for (const baseDir of searchDirs) {
+    try {
+      for (const ext of formats) {
+        const testPath = path.join(baseDir, `${itemNo}${ext}`);
+        if (fs.existsSync(testPath)) {
+          foundFile = testPath;
+          break;
+        }
+      }
+    } catch (e) {
+      // Access denied or offline share - skip silently
+    }
+    if (foundFile) break;
+  }
+
+  if (foundFile) {
+    res.setHeader('X-Source-Origin', 'RealServer-CAD');
+    return res.sendFile(foundFile);
+  }
+
+  res.status(404).send('CAD Photo not found');
+});
+
+// Original legacy endpoint for backwards compatibility
 app.get('/api/photos/:itemNo', (req, res) => {
   const itemNo = req.params.itemNo.trim();
-  console.log(`[PhotoBridge] Serving Item: ${itemNo}`);
+  console.log(`[PhotoBridge Legacy] Serving Item: ${itemNo}`);
 
-  // Try the real network path
   const searchDirs = [
     '\\\\chongdts\\Chong Photo\\Cost'
   ];
@@ -86,7 +157,8 @@ app.use('/api/orders', require('./routes/orders'));
 app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/search', require('./routes/search'));
 app.use('/api/procurement', require('./routes/procurement'));
-app.use('/api/requisition', require('./routes/requisition')); // Added Requisition routes (SOA, SIA, etc.)
+app.use('/api/requisition', require('./routes/requisition')); // Requisition routes (SOA, SIA, SIB, SIP, SIS)
+app.use('/api/sample', require('./routes/sample'));            // Sample Room routes (SSA, SIM)
 
 // ─── Global Error Handler (ดักจับ Error ที่หลุดรอด) ───────────────────────────
 app.use((err, req, res, next) => {

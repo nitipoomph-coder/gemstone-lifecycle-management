@@ -159,10 +159,14 @@ router.get('/', async (req, res) => {
     const fetchPromise = (async () => {
       console.log(`[EXEC SP] ${spName} | status: ${statusFilter} (${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()})`);
       const request = pool.request();
-      request.input('FromDate', sql.DateTime, startDate);
-      request.input('ToDate', sql.DateTime, endDate);
       
-      // ส่งพารามิเตอร์ Status ไปให้ SP กรองให้จาก Database เลย
+      // === [พารามิเตอร์ที่ใช้เรียกใช้งาน Stored Procedure (SP) ในฐานข้อมูล] ===
+      // 1) FromDate -> ตรงกับตัวแปร @FromDate ใน SP (กำหนดขอบเขตวันที่เริ่มต้น)
+      request.input('FromDate', sql.DateTime, startDate);
+      // 2) ToDate -> ตรงกับตัวแปร @ToDate ใน SP (กำหนดขอบเขตวันที่สิ้นสุด)
+      request.input('ToDate', sql.DateTime, endDate);
+      // 3) Status -> ตรงกับตัวแปร @Status ใน SP (รองรับค่า: 'pending', 'finish', 'All' เพื่อนำไปใช้คัดกรองใน WHERE Clause ในฝั่งฐานข้อมูล)
+      //    เงื่อนไขใน SP: (@Status = 'All' OR (@Status = 'pending' AND CloseStatus <> 'Y') OR (@Status = 'finish' AND CloseStatus = 'Y'))
       request.input('Status', sql.VarChar, statusFilter);
 
       const result = await request.execute(spName);
@@ -170,13 +174,20 @@ router.get('/', async (req, res) => {
       let rawData = result.recordset;
 
       // === [ADDED: มัดรวม 5 แกนหลักด้วย Node.js] ===
-      // (กรอง Pending/Finish ย้ายไปทำที่ Database SP แล้ว)
+      // (การคัดกรอง Pending/Finish ย้ายไปคัดกรองโดยสมบูรณ์ผ่าน @Status ในตัว Database SP แล้ว)
 
-      // 2. มัดรวมออเดอร์ที่กระจัดกระจาย โดยยึด 5 แกนหลัก (Cust, PO, Type, ShipTo, Material)
+      // 2. มัดรวมออเดอร์ที่กระจัดกระจาย โดยยึด 5 แกนหลัก + 1 วันกำหนดส่ง 
+      //    ซึ่งฟิลด์เหล่านี้ดึงมาจากคอลัมน์ผลลัพธ์ของ Stored Procedure (SP) ในระบบโดยตรง:
+      //    - r.CustCode      : รหัสลูกค้า (ตรงกับ SELECT h.CustCode ใน SP)
+      //    - r.PONo          : หมายเลขใบสั่งซื้อ (ตรงกับ SELECT h.PONo หรือ 'Group PO By ShipTo' ใน SP)
+      //    - r.OrdKind       : ชนิดออเดอร์ (ตรงกับ CASE WHEN h.OrdKind = 'NEW' THEN 'New' ELSE 'Replen' END ใน SP)
+      //    - r.CustMultiAddr : ที่อยู่ปลายทางการจัดส่ง (ตรงกับ SELECT h.CustMultiAddr ใน SP)
+      //    - r.OrdMat        : ชนิดวัสดุหลัก (ตรงกับ SELECT h.OrdMat ใน SP)
+      //    - r.CustDueDate   : วันกำหนดส่งมอบของลูกค้า (ตรงกับ SELECT h.CustDueDate ใน SP)
       const groupedMap = new Map();
       
       rawData.forEach(r => {
-        // สร้างกุญแจ 6 เงื่อนไข (เพิ่ม CustDueDate เพื่อไม่ให้ Group PO By ShipTo ที่ต่าง CustDueDate ถูกรวมซ้ำ)
+        // สร้างกุญแจ 6 เงื่อนไข (รวม CustDueDate เพื่อป้องกันไม่ให้ข้อมูลต่างกำหนดส่งถูกรวมทับกัน)
         const key = `${r.CustCode}|${r.PONo}|${r.OrdKind}|${r.CustMultiAddr}|${r.OrdMat}|${r.CustDueDate || ''}`;
         
         if (!groupedMap.has(key)) {

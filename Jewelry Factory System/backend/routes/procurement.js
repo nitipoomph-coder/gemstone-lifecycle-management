@@ -125,16 +125,36 @@ router.get('/documents/:docType', async (req, res) => {
     return res.json({ ok: false, error: `Invalid document type: ${docType}` });
   }
 
-  const cacheKey = `proc_docs_${docType}`;
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 50;
+  const search = req.query.search || '';
+  const offset = (page - 1) * limit;
+
+  const cacheKey = `proc_docs_${docType}_${page}_${limit}_${search}`;
   const cached = getCached(cacheKey);
-  if (cached) return res.json({ ok: true, data: cached });
+  if (cached) return res.json(cached);
 
   try {
     const pool = await getPool();
     const config = getTableConfig(docType);
 
-    const queryStr = `
-      SELECT TOP 200
+    // Count Total
+    const countQuery = `
+      SELECT COUNT(*) as total
+      FROM ${config.headerTable} h
+      WHERE h.DocuNo LIKE @prefix + '%'
+      ${search ? `AND h.DocuNo LIKE '%' + @search + '%'` : ''}
+    `;
+
+    const countResult = await pool.request()
+      .input('prefix', sql.VarChar(5), config.prefix)
+      .input('search', sql.VarChar(50), search)
+      .query(countQuery);
+      
+    const total = countResult.recordset[0].total;
+
+    let queryStr = `
+      SELECT
         h.DocuNo AS docNumber,
         CONVERT(VARCHAR(10), h.DocuDate, 103) AS docDate,
         ISNULL(h.VendorCode, '') AS supplier,
@@ -146,18 +166,39 @@ router.get('/documents/:docType', async (req, res) => {
       FROM ${config.headerTable} h
       LEFT JOIN dbInventory.dbo.GMVendor v ON h.VendorCode = v.VendorCode
       WHERE h.DocuNo LIKE @prefix + '%'
+    `;
+    
+    if (search) {
+      queryStr += ` AND h.DocuNo LIKE '%' + @search + '%'`;
+    }
+
+    queryStr += `
       ORDER BY h.DocuNo DESC
+      OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY
     `;
 
     const result = await pool.request()
       .input('prefix', sql.VarChar(5), config.prefix)
+      .input('search', sql.VarChar(50), search)
+      .input('offset', sql.Int, offset)
+      .input('limit', sql.Int, limit)
       .query(queryStr);
 
     const docs = result.recordset;
-    setCache(cacheKey, docs);
+    
+    const responseData = { 
+      ok: true, 
+      data: docs,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit)
+    };
 
-    console.log(`[PROC] ${docType} documents: ${docs.length} records`);
-    res.json({ ok: true, data: docs });
+    setCache(cacheKey, responseData);
+
+    console.log(`[PROC] ${docType} page ${page}: ${docs.length} records`);
+    res.json(responseData);
   } catch (err) {
     console.error(`❌ [PROC] Error fetching ${docType} documents:`, err.message);
     res.status(500).json({ ok: false, error: err.message });

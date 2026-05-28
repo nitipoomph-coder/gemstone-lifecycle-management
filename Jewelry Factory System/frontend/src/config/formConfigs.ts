@@ -23,7 +23,7 @@ export interface FormConfig {
   code: string;
   titleTh: string;
   groupLabel: string;                                    // ชื่อกลุ่มเมนู เช่น 'จัดซื้อและรับเข้า'
-  apiType: 'procurement' | 'requisition' | 'none';       // ระบุ API backend ที่ใช้
+  apiType: 'procurement' | 'requisition' | 'sample' | 'none'; // ระบุ API backend ที่ใช้
   hasPhoto?: boolean;                                    // แสดง photo panel (เฉพาะ SOA)
   headerFields: FormFieldDef[];
   stoneFields?: FormFieldDef[];
@@ -296,7 +296,7 @@ const sibConfig: FormConfig = {
   code: 'SIB',
   titleTh: 'บันทึกเบิกพลอย B',
   groupLabel: 'ออเดอร์และการเบิก',
-  apiType: 'none',
+  apiType: 'requisition',
   headerFields: [
     { name: 'docNumber', label: 'เลขที่', readOnly: true },
     { name: 'docDate', label: 'วันที่เอกสาร', type: 'date' },
@@ -343,7 +343,7 @@ const sisConfig: FormConfig = {
   code: 'SIS',
   titleTh: 'บันทึกส่งพลอย งานออเดอร์',
   groupLabel: 'ออเดอร์และการเบิก',
-  apiType: 'none',
+  apiType: 'requisition',
   headerFields: [
     { name: 'docNumber', label: 'เลขที่', readOnly: true },
     { name: 'docDate', label: 'วันที่เอกสาร', type: 'date' },
@@ -375,7 +375,7 @@ const sipConfig: FormConfig = {
   code: 'SIP',
   titleTh: 'บันทึกเบิกพลอย งานซ่อม',
   groupLabel: 'ออเดอร์และการเบิก',
-  apiType: 'none',
+  apiType: 'requisition',
   headerFields: [
     { name: 'docNumber', label: 'เลขที่', readOnly: true },
     { name: 'docDate', label: 'วันที่เอกสาร', type: 'date' },
@@ -420,7 +420,8 @@ const ssaConfig: FormConfig = {
   code: 'SSA',
   titleTh: 'บันทึกออเดอร์พลอย ห้องตัวอย่าง',
   groupLabel: 'ห้องตัวอย่าง',
-  apiType: 'none',
+  apiType: 'sample',
+  hasPhoto: true,
   headerFields: [
     { name: 'docNumber', label: 'เลขที่', readOnly: true },
     { name: 'docDate', label: 'วันที่เอกสาร', type: 'date' },
@@ -477,7 +478,7 @@ const simConfig: FormConfig = {
   code: 'SIM',
   titleTh: 'บันทึกส่งพลอย ห้องตัวอย่าง',
   groupLabel: 'ห้องตัวอย่าง',
-  apiType: 'none',
+  apiType: 'sample',
   headerFields: [
     { name: 'docNumber', label: 'เลขที่', readOnly: true },
     { name: 'docDate', label: 'วันที่เอกสาร', type: 'date' },

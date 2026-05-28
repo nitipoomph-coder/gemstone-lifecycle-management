@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Topbar from '../components/layout/Topbar';
-import { fetchDashboardData, type DashboardData, type CardType } from '../services/dashboardAPI';
+import { fetchDashboardData, fetchAvailableYears, type DashboardData, type CardType } from '../services/dashboardAPI';
 import CardDetailPanel from '../components/dashboard/CardDetailPanel';
-import { AlertTriangle, RefreshCw, TrendingUp, Package, Users, BarChart3, Clock, ArrowRight } from 'lucide-react';
+import { AlertTriangle, RefreshCw, TrendingUp, Package, Users, BarChart3, Clock, ArrowRight, Gem, Wrench, Calendar } from 'lucide-react';
 
 const shimmerStyle: React.CSSProperties = {
   background: 'linear-gradient(90deg, var(--color-surface-1) 25%, var(--color-surface-2) 50%, var(--color-surface-1) 75%)',
@@ -31,6 +31,10 @@ export default function Dashboard() {
   const [error, setError] = useState<string | null>(null);
   const [clock, setClock] = useState('');
   const [expandedCard, setExpandedCard] = useState<CardType | null>(null);
+  
+  // Year filter states (default to current year)
+  const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
+  const [yearsList, setYearsList] = useState<number[]>([]);
 
   // Stat card → CardType mapping
   const CARD_TYPE_MAP: Record<string, CardType> = {
@@ -38,33 +42,69 @@ export default function Dashboard() {
     'Work In Progress': 'wip', 'Overdue': 'overdue', 'This Month': 'month',
   };
 
-  const load = () => {
+  const load = (yr?: string) => {
     setLoading(true); setError(null);
-    fetchDashboardData().then(d => { setData(d); setLoading(false); }).catch(() => { setError('Cannot connect to database'); setLoading(false); });
+    const targetYear = yr !== undefined ? yr : selectedYear;
+    fetchDashboardData(targetYear)
+      .then(d => { setData(d); setLoading(false); })
+      .catch(() => { setError('Cannot connect to database'); setLoading(false); });
   };
 
+  // 1) Load available years once on mount
   useEffect(() => {
-    load();
+    fetchAvailableYears()
+      .then(list => setYearsList(list))
+      .catch(() => {});
+  }, []);
+
+  // 2) Keep clock ticking independently
+  useEffect(() => {
     const t = setInterval(() => {
       const n = new Date();
       setClock(n.toLocaleDateString('en-US', { weekday:'short', day:'2-digit', month:'short', year:'numeric' }) + ' · ' + n.toLocaleTimeString('en-US', { hour12: false }));
     }, 1000);
-    // 🔄 Auto-refresh data ทุก 5 นาที (ตรงกับ cache TTL backend)
-    const r = setInterval(() => {
-      fetchDashboardData().then(d => setData(d)).catch(() => {});
-    }, 5 * 60 * 1000);
-    return () => { clearInterval(t); clearInterval(r); };
+    return () => clearInterval(t);
   }, []);
+
+  // 3) Reload data when selectedYear changes, and setup auto-refresh
+  useEffect(() => {
+    load(selectedYear);
+    const r = setInterval(() => {
+      fetchDashboardData(selectedYear).then(d => setData(d)).catch(() => {});
+    }, 5 * 60 * 1000);
+    return () => clearInterval(r);
+  }, [selectedYear]);
 
   // Loading
   if (loading) return (
     <>
       <Topbar breadcrumb={[{ label: 'JEWELRY SMART FACTORY', path: '/' }, { label: 'DASHBOARD' }]} />
-      <div className="flex-1 p-6" style={{ background: 'var(--color-surface-0)' }}>
-        <div className="mx-auto max-w-[1480px] flex flex-col gap-4">
-          <div className="grid grid-cols-5 gap-4">{Array.from({length:5}).map((_,i) => <div key={i} style={{height:100,...shimmerStyle}}/>)}</div>
-          <div className="grid grid-cols-3 gap-4">{Array.from({length:3}).map((_,i) => <div key={i} style={{height:260,...shimmerStyle}}/>)}</div>
-          <div className="grid grid-cols-2 gap-4">{Array.from({length:2}).map((_,i) => <div key={i} style={{height:200,...shimmerStyle}}/>)}</div>
+      <div className="content-scrollbar flex-1 overflow-y-auto p-5" style={{ background: 'var(--color-surface-1)' }}>
+        <div className="mx-auto flex flex-col gap-4" style={{ maxWidth:'100%' }}>
+          {/* Header Skeleton */}
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-end', paddingBottom:8 }}>
+            <div style={{ width: 220, height: 32, ...shimmerStyle }}/>
+            <div style={{ display:'flex', gap:12 }}>
+              <div style={{ width: 180, height: 38, ...shimmerStyle }}/>
+              <div style={{ width: 140, height: 38, ...shimmerStyle }}/>
+              <div style={{ width: 40, height: 40, ...shimmerStyle }}/>
+            </div>
+          </div>
+          
+          {/* Row 1: Stat Cards */}
+          <div className="grid grid-cols-5 gap-4">{Array.from({length:5}).map((_,i) => <div key={i} style={{height:120,...shimmerStyle}}/>)}</div>
+          
+          {/* Row 2: Stone & Finding */}
+          <div className="grid grid-cols-2 gap-4">{Array.from({length:2}).map((_,i) => <div key={i} style={{height:180,...shimmerStyle}}/>)}</div>
+          
+          {/* Row 3: Trend, Donut, Material */}
+          <div className="grid grid-cols-3 gap-4">{Array.from({length:3}).map((_,i) => <div key={i} style={{height:280,...shimmerStyle}}/>)}</div>
+          
+          {/* Row 4: Overdue & Customers */}
+          <div className="grid grid-cols-[1fr_1.4fr] gap-4">{Array.from({length:2}).map((_,i) => <div key={i} style={{height:320,...shimmerStyle}}/>)}</div>
+          
+          {/* Row 5: Recent Orders */}
+          <div style={{height:140,...shimmerStyle}}/>
         </div>
       </div>
     </>
@@ -134,7 +174,45 @@ export default function Dashboard() {
                 <Clock size={16} style={{ color:'var(--color-brand-500)' }}/>
                 <span style={{ fontSize:'0.85rem', fontWeight:800, color:'var(--color-text-primary)', fontFamily:'var(--font-display)', letterSpacing:'-0.01em' }}>{clock}</span>
               </div>
-              <button onClick={load} style={{ width:40, height:40, borderRadius:12, border:'1px solid var(--color-border-light)', background:'var(--color-surface-0)', color:'var(--color-text-secondary)', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', transition:'all 0.2s' }}
+              
+              {/* Year Dropdown Selector */}
+              <div style={{ position:'relative', display:'flex', alignItems:'center' }}>
+                <select
+                  value={selectedYear}
+                  onChange={e => setSelectedYear(e.target.value)}
+                  style={{
+                    padding:'8px 32px 8px 36px',
+                    borderRadius:14,
+                    background:'var(--color-surface-0)',
+                    border:'1px solid var(--color-border-light)',
+                    fontSize:'0.85rem',
+                    fontWeight:800,
+                    color:'var(--color-text-primary)',
+                    fontFamily:'var(--font-display)',
+                    cursor:'pointer',
+                    outline:'none',
+                    appearance:'none',
+                    WebkitAppearance:'none',
+                    transition:'all 0.2s',
+                    boxShadow:'0 2px 12px -4px rgba(0,0,0,0.04)',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor='var(--color-brand-400)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor='var(--color-border-light)'; }}
+                >
+                  <option value="all">All Years (ทั้งหมด)</option>
+                  {yearsList.map(yr => (
+                    <option key={yr} value={yr.toString()}>{yr}</option>
+                  ))}
+                </select>
+                <span style={{ position:'absolute', left:14, top:'50%', transform:'translateY(-50%)', pointerEvents:'none', display:'flex', alignItems:'center', color:'var(--color-brand-500)' }}>
+                  <Calendar size={14}/>
+                </span>
+                <span style={{ position:'absolute', right:14, top:'50%', transform:'translateY(-50%)', pointerEvents:'none', display:'flex', alignItems:'center', color:'var(--color-text-tertiary)', fontSize:'0.5rem' }}>
+                  ▼
+                </span>
+              </div>
+
+              <button onClick={() => load(selectedYear)} style={{ width:40, height:40, borderRadius:12, border:'1px solid var(--color-border-light)', background:'var(--color-surface-0)', color:'var(--color-text-secondary)', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', transition:'all 0.2s' }}
                 onMouseEnter={e => { e.currentTarget.style.borderColor='var(--color-brand-400)'; e.currentTarget.style.color='var(--color-brand-500)'; }}
                 onMouseLeave={e => { e.currentTarget.style.borderColor='var(--color-border-light)'; e.currentTarget.style.color='var(--color-text-secondary)'; }}
               >
@@ -196,10 +274,114 @@ export default function Dashboard() {
 
           {/* ═══ Expandable Detail Panel ═══ */}
           {expandedCard && (
-            <CardDetailPanel cardType={expandedCard} onClose={() => setExpandedCard(null)} />
+            <CardDetailPanel cardType={expandedCard} selectedYear={selectedYear} onClose={() => setExpandedCard(null)} />
           )}
+          {/* ═══ Stone & Finding Cards ═══ */}
+          {d.stoneFindings && (() => {
+            const sf = d.stoneFindings;
 
-          {/* ═══ Middle Row: Trend | Donut | Material ═══ */}
+            const sfCard = (opts: { icon: React.ReactNode; title: string; subtitle: string; pending: number; pendingQty: number; done: number; accentColor: string; bgAccent: string; borderAccent: string; navPath: string; navLabel: string }) => (
+              <div style={{
+                ...cardStyle(), padding: 0, display: 'flex', flexDirection: 'column',
+                border: `1px solid ${opts.borderAccent}`,
+              }}
+                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = `0 8px 28px -8px ${opts.borderAccent}`; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '0 2px 12px -4px rgba(0,0,0,0.04)'; }}
+              >
+                {/* Header */}
+                <div style={{ padding: '18px 24px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ width: 38, height: 38, borderRadius: 12, background: opts.bgAccent, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {opts.icon}
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.82rem', fontWeight: 900, color: 'var(--color-text-primary)', letterSpacing: '-0.01em' }}>{opts.title}</div>
+                      <div style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--color-text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{opts.subtitle}</div>
+                    </div>
+                  </div>
+                  <button onClick={() => navigate(opts.navPath)} style={{
+                    display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.62rem', fontWeight: 800,
+                    color: opts.accentColor, background: opts.bgAccent, border: 'none',
+                    padding: '6px 14px', borderRadius: 20, cursor: 'pointer',
+                    textTransform: 'uppercase', letterSpacing: '0.05em', transition: 'all 0.2s',
+                  }}
+                    onMouseEnter={e => { e.currentTarget.style.filter = 'brightness(0.9)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.filter = ''; }}
+                  >
+                    {opts.navLabel} <ArrowRight size={11}/>
+                  </button>
+                </div>
+
+                {/* Body */}
+                <div style={{ padding: '0 24px 20px', flex: 1, display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  {/* Numbers row */}
+                  <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12 }}>
+                    <div>
+                      <div style={{ fontSize: '2rem', fontWeight: 900, color: opts.accentColor, fontFamily: 'var(--font-display)', letterSpacing: '-0.02em', lineHeight: 1 }}>
+                        {opts.pending.toLocaleString()}
+                      </div>
+                      <div style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--color-text-tertiary)', marginTop: 4 }}>Items Pending</div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--color-text-primary)', fontFamily: 'var(--font-display)', lineHeight: 1 }}>
+                        {opts.pendingQty.toLocaleString()}
+                      </div>
+                      <div style={{ fontSize: '0.6rem', fontWeight: 700, color: 'var(--color-text-tertiary)', marginTop: 4, textTransform: 'uppercase' }}>pcs pending</div>
+                    </div>
+                  </div>
+
+                  {/* Stats row */}
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <div style={{ flex: 1, padding: '10px 14px', borderRadius: 12, background: 'var(--color-surface-1)', border: '1px solid var(--color-border-light)', textAlign: 'center' }}>
+                      <div style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--color-success-500)', fontFamily: 'var(--font-display)' }}>{opts.done.toLocaleString()}</div>
+                      <div style={{ fontSize: '0.55rem', fontWeight: 800, color: 'var(--color-text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 2 }}>Done</div>
+                    </div>
+                    <div style={{ flex: 1, padding: '10px 14px', borderRadius: 12, background: 'var(--color-surface-1)', border: '1px solid var(--color-border-light)', textAlign: 'center' }}>
+                      <div style={{ fontSize: '1rem', fontWeight: 900, color: opts.accentColor, fontFamily: 'var(--font-display)' }}>{opts.pending.toLocaleString()}</div>
+                      <div style={{ fontSize: '0.55rem', fontWeight: 800, color: 'var(--color-text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 2 }}>Pending</div>
+                    </div>
+                    <div style={{ flex: 1, padding: '10px 14px', borderRadius: 12, background: 'var(--color-surface-1)', border: '1px solid var(--color-border-light)', textAlign: 'center' }}>
+                      <div style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--color-text-primary)', fontFamily: 'var(--font-display)' }}>{(opts.pending + opts.done).toLocaleString()}</div>
+                      <div style={{ fontSize: '0.55rem', fontWeight: 800, color: 'var(--color-text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 2 }}>Total</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+
+            return (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                {sfCard({
+                  icon: <Gem size={18} style={{ color: 'oklch(0.65 0.2 280)' }}/>,
+                  title: 'Stone (พลอย)',
+                  subtitle: 'Gemstone preparation status',
+                  pending: sf.stone.pending,
+                  pendingQty: sf.stone.pendingQty,
+                  done: sf.stone.done,
+                  accentColor: 'oklch(0.65 0.2 280)',
+                  bgAccent: 'oklch(0.65 0.2 280 / 0.1)',
+                  borderAccent: 'oklch(0.65 0.2 280 / 0.25)',
+                  navPath: '/procurement/purchase',
+                  navLabel: 'จัดซื้อพลอย',
+                })}
+                {sfCard({
+                  icon: <Wrench size={18} style={{ color: 'oklch(0.7 0.15 55)' }}/>,
+                  title: 'Finding (อะไหล่)',
+                  subtitle: 'Finding preparation status',
+                  pending: sf.finding.pending,
+                  pendingQty: sf.finding.pendingQty,
+                  done: sf.finding.done,
+                  accentColor: 'oklch(0.7 0.15 55)',
+                  bgAccent: 'oklch(0.7 0.15 55 / 0.1)',
+                  borderAccent: 'oklch(0.7 0.15 55 / 0.25)',
+                  navPath: '/spare-parts/order',
+                  navLabel: 'สต็อกอะไหล่',
+                })}
+              </div>
+            );
+          })()}
+
+
           <div style={{ display:'grid', gridTemplateColumns:'1.2fr 1fr 1fr', gap:16 }}>
 
             {/* 7-Day Trend */}

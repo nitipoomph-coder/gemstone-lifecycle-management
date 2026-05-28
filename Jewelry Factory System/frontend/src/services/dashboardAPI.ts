@@ -66,6 +66,12 @@ export interface RecentOrder {
   status: string;
 }
 
+export interface StoneFindingSummary {
+  totalItems: number;
+  stone: { pending: number; done: number; pendingQty: number };
+  finding: { pending: number; done: number; pendingQty: number };
+}
+
 export interface DashboardData {
   statCards: StatCard[];
   orderTrend: TrendPoint[];
@@ -75,12 +81,14 @@ export interface DashboardData {
   topCustomers: TopCustomer[];
   delayOrders: DelayOrder[];
   recentOrders: RecentOrder[];
+  stoneFindings: StoneFindingSummary;
 }
 
 import { BASE_URL } from './orderTrackerAPI';
 
-export const fetchDashboardData = async (): Promise<DashboardData> => {
-  const res = await fetch(`${BASE_URL}/dashboard`, {
+export const fetchDashboardData = async (year?: number | string): Promise<DashboardData> => {
+  const url = year ? `${BASE_URL}/dashboard?year=${year}` : `${BASE_URL}/dashboard`;
+  const res = await fetch(url, {
     headers: { 'bypass-tunnel-reminder': 'true' }
   });
   if (!res.ok) throw new Error(`Dashboard API error: ${res.status}`);

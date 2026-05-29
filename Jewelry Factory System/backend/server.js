@@ -159,6 +159,7 @@ app.use('/api/search', require('./routes/search'));
 app.use('/api/procurement', require('./routes/procurement'));
 app.use('/api/requisition', require('./routes/requisition')); // Requisition routes (SOA, SIA, SIB, SIP, SIS)
 app.use('/api/sample', require('./routes/sample'));            // Sample Room routes (SSA, SIM)
+app.use('/api/lock', require('./routes/lock'));                // Document locking
 
 // ─── Global Error Handler (ดักจับ Error ที่หลุดรอด) ───────────────────────────
 app.use((err, req, res, next) => {

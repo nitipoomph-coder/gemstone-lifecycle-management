@@ -4,7 +4,7 @@ import DocumentLayout from '../components/document/DocumentLayout';
 import type { DocListItem, BreadcrumbItem } from '../components/document/DocumentLayout';
 import { formConfigMap } from '../config/formConfigs';
 import {
-  fetchDocumentList, fetchDocumentDetail
+  fetchDocumentList, fetchDocumentDetail, generateNextDocumentNumber
 } from '../services/procurementAPI';
 import type { ProcDocDetail, ProcDocLine } from '../services/procurementAPI';
 
@@ -24,6 +24,7 @@ export default function ProcurementDocPage() {
   const [docList, setDocList] = useState<DocListItem[]>([]);
   const [selectedDocNo, setSelectedDocNo] = useState('');
   const [docDetail, setDocDetail] = useState<ProcDocDetail | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
   
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -70,6 +71,7 @@ export default function ProcurementDocPage() {
     setDocList([]);
     setDocDetail(null);
     setSelectedDocNo('');
+    setIsEditing(false);
     setPage(1);
     setSearch('');
   }, [docType]);
@@ -78,17 +80,80 @@ export default function ProcurementDocPage() {
     loadDocList();
   }, [docType, page, search]);
 
-  // ─── Load document detail ───────────────────
   useEffect(() => {
     if (!selectedDocNo) return;
     setDetailLoading(true);
+    setIsEditing(false);
+    setError(null);
     fetchDocumentDetail(selectedDocNo)
       .then(setDocDetail)
-      .catch(err => setError(err.message))
+      .catch(err => {
+        setError(err.message);
+        setDocDetail(null);
+      })
       .finally(() => setDetailLoading(false));
   }, [selectedDocNo]);
 
   // ─── Print Template ──────────────────────────
+  const handleNew = async () => {
+    setDetailLoading(true);
+    try {
+      const nextNo = await generateNextDocumentNumber(docType);
+      setSelectedDocNo('');
+      setDocDetail({
+        header: {
+          docNumber: nextNo,
+          docDate: new Date().toLocaleDateString('th-TH'),
+          currency: 'THB',
+          exchangeRate: 1,
+          totalQty: 0,
+          totalAmount: 0,
+          status: 'N'
+        },
+        lines: []
+      });
+    } catch (err: any) {
+      setError(err.message || 'Failed to generate new document');
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const handleEdit = async () => {
+    if (!selectedDocNo) return;
+    setDetailLoading(true);
+    try {
+      const res = await fetch('/api/lock/acquire', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ docNo: selectedDocNo, user: 'Staff' })
+      });
+      const json = await res.json();
+      if (!json.ok) {
+        alert(`ไม่สามารถแก้ไขได้: ${json.error} (Locked by ${json.lockedBy || 'someone'})`);
+        return;
+      }
+      setIsEditing(true);
+    } catch (err: any) {
+      alert('Failed to acquire lock: ' + err.message);
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const handleCancel = async () => {
+    if (isEditing && selectedDocNo) {
+      await fetch('/api/lock/release', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ docNo: selectedDocNo, user: 'Staff' })
+      }).catch(e => console.error(e));
+    }
+    setIsEditing(false);
+    setSelectedDocNo('');
+    setDocDetail(null);
+  };
+
   const getPrintTemplate = () => {
     if (!docDetail) return null;
     const lines = docDetail.lines || [];
@@ -259,6 +324,11 @@ export default function ProcurementDocPage() {
         setSearch(text);
         setPage(1);
       }}
+      onSearchSubmit={(text) => {
+        if (text.trim()) {
+          setSelectedDocNo(text.trim());
+        }
+      }}
       page={page}
       totalPages={totalPages}
       onPageChange={setPage}
@@ -268,6 +338,10 @@ export default function ProcurementDocPage() {
       error={error}
       onClearError={() => setError(null)}
       hasPhoto={false}
+      isEditing={isEditing}
+      onNew={handleNew}
+      onEdit={handleEdit}
+      onCancel={handleCancel}
       printTemplate={getPrintTemplate()}
     />
   );

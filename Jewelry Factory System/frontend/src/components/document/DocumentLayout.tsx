@@ -28,6 +28,7 @@ export interface DocumentLayoutProps {
   onSelectDoc: (docNo: string) => void;
   onSearchList?: (text: string) => void;
   docDetail: any | null;
+  isEditing?: boolean;
 
   loading: boolean;
   detailLoading: boolean;
@@ -39,6 +40,10 @@ export interface DocumentLayoutProps {
 
   onNew?: () => void;
   onSave?: () => void;
+  onEdit?: () => void;
+  onSearchClick?: () => void;
+  onSearchSubmit?: (text: string) => void;
+  onDelete?: () => void;
   onCancel?: () => void;
   onFetchRef?: (refNo: string) => void;
 
@@ -56,6 +61,7 @@ export default function DocumentLayout({
   selectedDocNo,
   onSelectDoc,
   docDetail,
+  isEditing = false,
   loading,
   detailLoading,
   error,
@@ -64,6 +70,10 @@ export default function DocumentLayout({
   printTemplate,
   onNew,
   onSave,
+  onEdit,
+  onSearchClick,
+  onSearchSubmit,
+  onDelete,
   onCancel,
   onFetchRef,
   page = 1,
@@ -74,6 +84,9 @@ export default function DocumentLayout({
   const [searchText, setSearchText] = useState('');
   const [refInput, setRefInput] = useState('');
   
+  const [showToolbarSearch, setShowToolbarSearch] = useState(false);
+  const [toolbarSearchText, setToolbarSearchText] = useState('');
+
   const [selectedLineIdx, setSelectedLineIdx] = useState<number>(0);
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
 
@@ -180,7 +193,7 @@ export default function DocumentLayout({
        key === 'detail' ? (line.detail || line.ItemDesc) :
        key === 'note' ? (line.note || line.GoodRemark) :
        line[key]);
-    return val ?? '';
+    return (val === null || val === undefined || val === '') ? '-' : val;
   };
 
   const getHeaderValue = (h: any, name: string): string => {
@@ -215,7 +228,8 @@ export default function DocumentLayout({
               (h.status === 'A' || h.DocuStatus === 'A') ? 'อนุมัติ' : 
               (h.status || h.DocuStatus || h.SenStatus || ''),
     };
-    return map[name] ?? (h[name] || '');
+    const finalVal = map[name] ?? h[name];
+    return (finalVal === null || finalVal === undefined || finalVal === '') ? '-' : finalVal;
   };
 
   const isEditingRef = !selectedDocNo;
@@ -230,19 +244,49 @@ export default function DocumentLayout({
           <button onClick={onNew} className="flex items-center gap-1.5 rounded px-2.5 py-1.5 text-[13px] font-medium transition-colors text-[var(--color-accent-500)] hover:bg-[var(--color-surface-2)]">
             <FilePlus size={15} /> <span className="hidden md:inline">สร้างใหม่</span>
           </button>
-          <button onClick={onSave} disabled={detailLoading || !docDetail} className="flex items-center gap-1.5 rounded px-2.5 py-1.5 text-[13px] font-medium transition-colors hover:bg-[var(--color-surface-2)] disabled:opacity-50">
+          <button onClick={onSave} disabled={detailLoading || !docDetail || (!isEditing && !!selectedDocNo)} className="flex items-center gap-1.5 rounded px-2.5 py-1.5 text-[13px] font-medium transition-colors hover:bg-[var(--color-surface-2)] disabled:opacity-50">
             <Save size={15} /> <span className="hidden md:inline">บันทึก</span>
           </button>
-          <button className="flex items-center gap-1.5 rounded px-2.5 py-1.5 text-[13px] font-medium transition-colors text-[var(--color-success-500)] hover:bg-[var(--color-surface-2)]">
+          <button onClick={onEdit} disabled={!docDetail || isEditing} className="flex items-center gap-1.5 rounded px-2.5 py-1.5 text-[13px] font-medium transition-colors text-[var(--color-success-500)] hover:bg-[var(--color-surface-2)] disabled:opacity-50">
             <Edit3 size={15} /> <span className="hidden md:inline">แก้ไข</span>
           </button>
-          <button className="flex items-center gap-1.5 rounded px-2.5 py-1.5 text-[13px] font-medium transition-colors text-[var(--color-accent-500)] hover:bg-[var(--color-surface-2)]">
-            <Search size={15} /> <span className="hidden md:inline">ค้นหา</span>
-          </button>
+          {showToolbarSearch ? (
+            <div className="flex items-center bg-[var(--color-surface-0)] border border-[var(--color-brand-500)] rounded px-2 py-1 ml-1 mr-1 transition-all">
+              <Search size={13} className="text-[var(--color-brand-500)] mr-1.5" />
+              <input
+                type="text"
+                autoFocus
+                placeholder="ระบุเลขที่เอกสาร..."
+                value={toolbarSearchText}
+                onChange={e => setToolbarSearchText(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    if (onSearchSubmit) onSearchSubmit(toolbarSearchText);
+                    setShowToolbarSearch(false);
+                    setToolbarSearchText('');
+                  } else if (e.key === 'Escape') {
+                    setShowToolbarSearch(false);
+                  }
+                }}
+                onBlur={() => setShowToolbarSearch(false)}
+                className="bg-transparent border-none outline-none text-[12px] w-48 text-[var(--color-text-primary)]"
+              />
+            </div>
+          ) : (
+            <button onClick={() => {
+              if (onSearchSubmit) {
+                setShowToolbarSearch(true);
+              } else if (onSearchClick) {
+                onSearchClick();
+              }
+            }} className="flex items-center gap-1.5 rounded px-2.5 py-1.5 text-[13px] font-medium transition-colors text-[var(--color-accent-500)] hover:bg-[var(--color-surface-2)]">
+              <Search size={15} /> <span className="hidden md:inline">ค้นหา</span>
+            </button>
+          )}
           
           <span className="mx-1 h-5 w-px bg-[var(--color-border-default)]" />
           
-          <button className="flex items-center gap-1.5 rounded px-2.5 py-1.5 text-[13px] font-medium transition-colors text-[var(--color-danger-500)] hover:bg-[var(--color-danger-500)]/10">
+          <button onClick={onDelete} disabled={!docDetail} className="flex items-center gap-1.5 rounded px-2.5 py-1.5 text-[13px] font-medium transition-colors text-[var(--color-danger-500)] hover:bg-[var(--color-danger-500)]/10 disabled:opacity-50">
             <Trash2 size={15} /> <span className="hidden md:inline">ลบ</span>
           </button>
           <button onClick={onCancel} className="flex items-center gap-1.5 rounded px-2.5 py-1.5 text-[13px] font-medium transition-colors hover:bg-[var(--color-surface-2)]">
@@ -407,7 +451,7 @@ export default function DocumentLayout({
                         return (
                           <FieldRow key={f.name} label={f.label}
                             value={val}
-                            type={f.type} readOnly={f.readOnly || !!selectedDocNo} options={f.options}
+                            type={f.type} readOnly={f.readOnly || (!!selectedDocNo && !isEditing)} options={f.options}
                             hasSearch={f.hasSearch}
                             colSpan={f.colSpan} 
                             compact={hasPhoto} />
@@ -425,8 +469,8 @@ export default function DocumentLayout({
                           {formConfig.stoneFields.map(f => (
                             <FieldRow key={f.name} label={f.label} 
                               value={getCellValue(lines[selectedLineIdx] || {}, f.name, selectedLineIdx)}
-                              type={f.type} options={f.options} readOnly={f.readOnly || !!selectedDocNo}
-                              colSpan={f.colSpan === 2 ? 2 : undefined} compact />
+                              type={f.type} options={f.options} readOnly={f.readOnly || (!!selectedDocNo && !isEditing)}
+                              colSpan={f.colSpan} compact />
                           ))}
                         </div>
                       </div>
@@ -726,7 +770,12 @@ function MiniCard({ icon, label, value, accent }: { icon: React.ReactNode; label
 
 function FieldRow({ label, value, type, readOnly, options, hasSearch, colSpan, compact }:
   { label: string; value: string | number; type?: string; readOnly?: boolean; options?: string[]; hasSearch?: boolean; colSpan?: number; compact?: boolean }) {
-  const cls = colSpan === 2 ? 'col-span-2' : '';
+  const colSpanClass = 
+    colSpan === 6 ? 'col-span-6' :
+    colSpan === 5 ? 'col-span-5' :
+    colSpan === 4 ? 'col-span-4' :
+    colSpan === 3 ? 'col-span-3' :
+    colSpan === 2 ? 'col-span-2' : '';
   const h = compact ? 'h-7 text-[12px]' : 'h-7 text-[12px]';
   
   let displayValue = value ?? '';
@@ -735,14 +784,14 @@ function FieldRow({ label, value, type, readOnly, options, hasSearch, colSpan, c
   }
 
   return (
-    <div className={`flex items-center gap-2 ${cls}`}>
+    <div className={`flex items-center gap-2 ${colSpanClass}`}>
       <span className={`w-24 shrink-0 text-right ${compact ? 'text-[11px] font-bold' : 'text-[11px] font-medium'} text-[var(--color-text-tertiary)]`}>
         {label}
       </span>
       <div className="relative flex-1">
         {type === 'select' && options ? (
           <select value={String(displayValue)} disabled={readOnly} onChange={() => {}}
-            className={`${h} w-full rounded border border-[var(--color-border-strong)] bg-[var(--color-surface-0)] px-2 text-[var(--color-text-primary)] outline-none focus:border-[var(--color-brand-500)] ${readOnly ? 'bg-[var(--color-surface-2)] text-[var(--color-text-secondary)] opacity-70' : ''}`}>
+            className={`${h} w-full rounded border border-[var(--color-border-strong)] bg-[var(--color-surface-0)] px-2 text-[var(--color-text-primary)] outline-none focus:border-[var(--color-brand-500)] ${readOnly ? 'bg-[var(--color-surface-2)] text-[var(--color-text-primary)] font-semibold' : ''}`}>
             <option value="">{displayValue !== '' ? displayValue : '-- เลือก --'}</option>
             {options.map(o => <option key={o} value={o}>{o}</option>)}
           </select>
@@ -750,7 +799,7 @@ function FieldRow({ label, value, type, readOnly, options, hasSearch, colSpan, c
           <input type="text"
             value={displayValue} readOnly={readOnly} onChange={() => {}}
             className={`${h} w-full rounded border border-[var(--color-border-strong)] px-2 font-mono text-[var(--color-text-primary)] outline-none focus:border-[var(--color-brand-500)] ${
-              readOnly ? 'bg-[var(--color-surface-2)] text-[var(--color-text-secondary)] font-semibold' : 'bg-[var(--color-surface-0)]'
+              readOnly ? 'bg-[var(--color-surface-2)] text-[var(--color-text-primary)] font-semibold' : 'bg-[var(--color-surface-0)]'
             } ${type === 'number' ? 'text-right text-[var(--color-brand-600)]' : ''}`} />
         )}
         {hasSearch && !readOnly && (

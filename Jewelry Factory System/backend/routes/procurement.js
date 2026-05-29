@@ -113,6 +113,53 @@ function getTableConfig(docTypeOrNo) {
 }
 
 // ============================================
+// GET /api/procurement/next-number/:docType
+// Generate next document number (Auto-increment)
+// Format: PREFIX + YYMM + 3-4 digits (e.g. SPA2605001)
+// ============================================
+router.get('/next-number/:docType', async (req, res) => {
+  const { docType } = req.params;
+  try {
+    const pool = await getPool();
+    const config = getTableConfig(docType);
+    
+    // Format: YYMM
+    const date = new Date();
+    const yy = String(date.getFullYear()).slice(-2);
+    let mm = String(date.getMonth() + 1);
+    if (mm.length === 1) mm = '0' + mm;
+    const prefix = `${config.prefix}${yy}${mm}`;
+
+    const query = `
+      SELECT MAX(DocuNo) as maxDoc
+      FROM ${config.headerTable}
+      WHERE DocuNo LIKE @prefix + '%'
+    `;
+    
+    const result = await pool.request()
+      .input('prefix', sql.VarChar(10), prefix)
+      .query(query);
+
+    const maxDoc = result.recordset[0].maxDoc;
+    let nextNum = 1;
+    if (maxDoc) {
+      const numPart = maxDoc.replace(prefix, '');
+      const parsedNum = parseInt(numPart, 10);
+      if (!isNaN(parsedNum)) {
+        nextNum = parsedNum + 1;
+      }
+    }
+
+    // Default to 3 digits, e.g. 001
+    const nextDocNo = `${prefix}${String(nextNum).padStart(3, '0')}`;
+    res.json({ ok: true, data: nextDocNo });
+  } catch (err) {
+    console.error(`❌ [PROC] Error generating next number for ${docType}:`, err.message);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// ============================================
 // GET /api/procurement/documents/:docType
 // ดึงรายการเอกสาร (Document List) ตาม docType
 // docType: SPA | SRA | SRB | SIR

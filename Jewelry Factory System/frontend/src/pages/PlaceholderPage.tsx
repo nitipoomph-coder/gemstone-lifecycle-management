@@ -1,4 +1,5 @@
 
+import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   FilePlus, Save, Pencil, Search, Trash2, Printer, FileSpreadsheet, X,
@@ -49,6 +50,8 @@ const variantStyles = {
 export default function PlaceholderPage() {
   const location = useLocation();
   const navigate = useNavigate();
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchText, setSearchText] = useState('');
 
   let groupLabel = '';
   let groupId = '';
@@ -90,10 +93,35 @@ export default function PlaceholderPage() {
             if (btn.id.startsWith('sep')) {
               return <span key={btn.id} className="mx-1 h-5 w-px" style={{ background: 'var(--color-border-default)' }} />;
             }
+            if (btn.id === 'search' && showSearch) {
+              return (
+                <div key="search-input" className="flex items-center bg-[var(--color-surface-0)] border border-[var(--color-brand-500)] rounded px-2 py-1 mx-1">
+                  <Search size={13} className="text-[var(--color-brand-500)] mr-1.5" />
+                  <input
+                    type="text"
+                    autoFocus
+                    placeholder="ค้นหา..."
+                    value={searchText}
+                    onChange={e => setSearchText(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' || e.key === 'Escape') {
+                        setShowSearch(false);
+                        setSearchText('');
+                      }
+                    }}
+                    onBlur={() => setShowSearch(false)}
+                    className="bg-transparent border-none outline-none text-[12px] w-48 text-[var(--color-text-primary)]"
+                  />
+                </div>
+              );
+            }
             return (
               <button
                 key={btn.id}
-                onClick={() => { if (btn.id === 'close') navigate('/'); }}
+                onClick={() => {
+                  if (btn.id === 'close') navigate('/');
+                  else if (btn.id === 'search') setShowSearch(true);
+                }}
                 className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors duration-150 ${variantStyles[btn.variant]}`}
                 style={{ border: btn.variant === 'default' ? '1px solid var(--color-border-light)' : 'none', fontFamily: 'var(--font-display)' }}
                 title={btn.label}

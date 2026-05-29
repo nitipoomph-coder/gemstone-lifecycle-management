@@ -125,6 +125,11 @@ export default function SampleDocPage() {
         setSearch(text);
         setPage(1);
       }}
+      onSearchSubmit={(text) => {
+        if (text.trim()) {
+          setSelectedDocNo(text.trim());
+        }
+      }}
       page={page}
       totalPages={totalPages}
       onPageChange={setPage}

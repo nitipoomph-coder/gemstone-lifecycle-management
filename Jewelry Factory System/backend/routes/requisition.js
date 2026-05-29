@@ -78,6 +78,50 @@ function getTableConfig(docTypeOrNo) {
 }
 
 // ============================================
+// GET /api/requisition/next-number/:docType
+// Generate next document number (Auto-increment)
+// ============================================
+router.get('/next-number/:docType', async (req, res) => {
+  const { docType } = req.params;
+  try {
+    const pool = await getPool();
+    const config = getTableConfig(docType);
+    
+    const date = new Date();
+    const yy = String(date.getFullYear()).slice(-2);
+    let mm = String(date.getMonth() + 1);
+    if (mm.length === 1) mm = '0' + mm;
+    const prefix = `${config.prefix}${yy}${mm}`;
+
+    const query = `
+      SELECT MAX(DocuNo) as maxDoc
+      FROM ${config.headerTable}
+      WHERE DocuNo LIKE @prefix + '%'
+    `;
+    
+    const result = await pool.request()
+      .input('prefix', sql.VarChar(10), prefix)
+      .query(query);
+
+    const maxDoc = result.recordset[0].maxDoc;
+    let nextNum = 1;
+    if (maxDoc) {
+      const numPart = maxDoc.replace(prefix, '');
+      const parsedNum = parseInt(numPart, 10);
+      if (!isNaN(parsedNum)) {
+        nextNum = parsedNum + 1;
+      }
+    }
+
+    const nextDocNo = `${prefix}${String(nextNum).padStart(3, '0')}`;
+    res.json({ ok: true, data: nextDocNo });
+  } catch (err) {
+    console.error(`❌ [REQ] Error generating next number for ${docType}:`, err.message);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// ============================================
 // GET /api/requisition/order/:ordNo
 // ค้นหาข้อมูลออเดอร์เพื่อเตรียมทำ SOA / เบิก
 // ============================================

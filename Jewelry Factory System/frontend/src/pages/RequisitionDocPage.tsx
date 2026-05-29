@@ -7,7 +7,8 @@ import {
   fetchRequisitionDocuments, 
   fetchRequisitionDocument,
   fetchOrderForRequisition,
-  saveRequisitionDocument
+  saveRequisitionDocument,
+  generateNextDocumentNumber
 } from '../services/requisitionAPI';
 
 const routeToDocType: Record<string, string> = {
@@ -26,6 +27,7 @@ export default function RequisitionDocPage() {
   const [docList, setDocList] = useState<DocListItem[]>([]);
   const [selectedDocNo, setSelectedDocNo] = useState('');
   const [docDetail, setDocDetail] = useState<any | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
 
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -139,10 +141,60 @@ export default function RequisitionDocPage() {
     }
   };
 
-  const handleClear = () => {
+  const handleClear = async () => {
+    if (isEditing && selectedDocNo) {
+      await fetch('/api/lock/release', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ docNo: selectedDocNo, user: 'Staff' })
+      }).catch(e => console.error(e));
+    }
+    setIsEditing(false);
     setSelectedDocNo('');
     setDocDetail(null);
     setError(null);
+  };
+
+  const handleNew = async () => {
+    setDetailLoading(true);
+    try {
+      const nextNo = await generateNextDocumentNumber(docType);
+      setSelectedDocNo('');
+      setDocDetail({
+        header: {
+          DocuNo: nextNo,
+          DocuDate: new Date().toISOString(),
+          DocuStatus: 'N'
+        },
+        lines: []
+      });
+    } catch (err: any) {
+      setError(err.message || 'Failed to generate new document');
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const handleEdit = async () => {
+    if (!selectedDocNo) return;
+    setDetailLoading(true);
+    try {
+      const res = await fetch('/api/lock/acquire', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ docNo: selectedDocNo, user: 'Staff' })
+      });
+      const json = await res.json();
+      if (!json.ok) {
+        alert(`ไม่สามารถแก้ไขได้: ${json.error} (Locked by ${json.lockedBy || 'someone'})`);
+        return;
+      }
+      setIsEditing(true);
+    } catch (err: any) {
+      alert('Failed to acquire lock: ' + err.message);
+    } finally {
+      setDetailLoading(false);
+    }
   };
 
   const handleSave = async () => {
@@ -183,6 +235,11 @@ export default function RequisitionDocPage() {
         setSearch(text);
         setPage(1);
       }}
+      onSearchSubmit={(text) => {
+        if (text.trim()) {
+          setSelectedDocNo(text.trim());
+        }
+      }}
       page={page}
       totalPages={totalPages}
       onPageChange={setPage}
@@ -192,7 +249,9 @@ export default function RequisitionDocPage() {
       error={error}
       onClearError={() => setError(null)}
       hasPhoto={hasPhoto}
-      onNew={handleClear}
+      isEditing={isEditing}
+      onNew={handleNew}
+      onEdit={handleEdit}
       onSave={handleSave}
       onCancel={handleClear}
       onFetchRef={handleFetchRef}

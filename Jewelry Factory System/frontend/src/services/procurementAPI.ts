@@ -111,3 +111,11 @@ export async function fetchProcSummary(docType: string): Promise<ProcSummary> {
   if (!json.ok) throw new Error(json.error || 'Failed to fetch summary');
   return json.data;
 }
+
+/** Generate next document number (auto-increment) */
+export async function generateNextDocumentNumber(docType: string): Promise<string> {
+  const res = await fetch(`${API_BASE}/next-number/${docType}`);
+  const json = await res.json();
+  if (!json.ok) throw new Error(json.error || 'Failed to generate next number');
+  return json.data;
+}

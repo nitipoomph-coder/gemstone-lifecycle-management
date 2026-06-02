@@ -347,3 +347,159 @@ h1, h2, h3, h4, h5, h6 {
 
 .stagger-4 { animation-delay: 180ms; }
 .stagger-5 { animation-delay: 240ms; }
+
+/* ============================================
+   2026 SIDEBAR MODERNIZATION — Animations & Utilities
+   ============================================ */
+
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 0 0 var(--pulse-color, oklch(0.68 0.14 245 / 0.4)); }
+  50% { box-shadow: 0 0 8px 2px var(--pulse-color, oklch(0.68 0.14 245 / 0.15)); }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes accentShimmer {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes subtleBreathe {
+  0%, 100% { opacity: 0.12; }
+  50% { opacity: 0.2; }
+}
+
+/* Hero image overlay for sidebar footer section */
+.sidebar-hero-bg {
+  position: relative;
+  overflow: hidden;
+}
+.sidebar-hero-bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: var(--hero-bg-url);
+  background-size: cover;
+  background-position: center;
+  opacity: 0.08;
+  filter: saturate(0.3) brightness(1.2);
+  pointer-events: none;
+  transition: opacity 0.6s ease;
+}
+.sidebar-hero-bg:hover::before {
+  opacity: 0.14;
+}
+
+/* Active nav accent bar */
+.nav-accent-bar {
+  position: relative;
+}
+.nav-accent-bar::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--accent-bar-color, var(--color-brand-500));
+  transform: scaleY(0);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.nav-accent-bar.active::before {
+  transform: scaleY(1);
+}
+
+/* Scroll area fade gradients */
+.scroll-fade-container {
+  position: relative;
+}
+.scroll-fade-container::before,
+.scroll-fade-container::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 24px;
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.scroll-fade-container::before {
+  top: 0;
+  background: linear-gradient(to bottom, var(--color-sidebar), transparent);
+}
+.scroll-fade-container::after {
+  bottom: 0;
+  background: linear-gradient(to top, var(--color-sidebar), transparent);
+}
+.scroll-fade-container.fade-top::before { opacity: 1; }
+.scroll-fade-container.fade-bottom::after { opacity: 1; }
+
+/* Sidebar brand accent line */
+.brand-accent-line {
+  height: 2px;
+  background: linear-gradient(90deg,
+    var(--color-brand-500),
+    var(--color-accent-500),
+    var(--color-brand-500)
+  );
+  background-size: 200% 100%;
+  animation: accentShimmer 4s ease-in-out infinite;
+  border-radius: 1px;
+}
+
+/* Active group dot pulse */
+.group-active-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-brand-500);
+  animation: pulseGlow 2s ease-in-out infinite;
+  --pulse-color: var(--color-brand-500);
+}
+
+/* Sub-item active indicator */
+.sub-item-active-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--color-brand-500);
+  flex-shrink: 0;
+}
+
+/* Nav item hover micro-animation */
+.nav-item-hover {
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+.nav-item-hover:hover {
+  transform: translateX(2px);
+}
+
+/* Badge pill */
+.nav-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  background: var(--color-brand-50);
+  color: var(--color-brand-500);
+  font-family: var(--font-display);
+}

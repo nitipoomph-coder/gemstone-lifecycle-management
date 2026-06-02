@@ -14,6 +14,8 @@ export interface NavMenuGroup {
   icon: string;
   path?: string;
   items?: NavMenuItem[];
+  badge?: number;
+  accentColor?: string;
 }
 
 // ============================================

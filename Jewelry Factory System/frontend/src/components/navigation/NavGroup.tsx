@@ -8,6 +8,7 @@ import {
   BarChart3,
   Home,
   Wrench,
+  LayoutList,
 } from 'lucide-react';
 import type { NavMenuGroup } from '../../types';
 
@@ -19,6 +20,7 @@ const iconComponents: Record<string, React.ElementType> = {
   'bar-chart-3': BarChart3,
   'home': Home,
   'wrench': Wrench,
+  'layout-list': LayoutList,
 };
 
 interface NavGroupProps {
@@ -38,7 +40,9 @@ export default function NavGroup({ group, isOpen, onToggle, collapsed = false }:
     : items.some(item => location.pathname === item.path);
   const IconComponent = iconComponents[group.icon] || PackageCheck;
 
-  // Collapsed mode — icon only with tooltip
+  const accentColor = group.accentColor || 'var(--color-brand-500)';
+
+  // Collapsed mode — icon only with tooltip + glow ring
   if (collapsed) {
     return (
       <div className="mb-1 flex justify-center">
@@ -50,8 +54,11 @@ export default function NavGroup({ group, isOpen, onToggle, collapsed = false }:
               onToggle();
             }
           }}
-          className={`flex h-9 w-9 items-center justify-center rounded-lg transition-colors duration-150 hover:bg-[var(--color-sidebar-hover)] ${isGroupActive ? 'bg-[var(--color-sidebar-hover)]' : ''
+          className={`flex h-9 w-9 items-center justify-center rounded-lg transition-all duration-200 hover:bg-[var(--color-sidebar-hover)] ${isGroupActive ? 'bg-[var(--color-sidebar-hover)]' : ''
             }`}
+          style={isGroupActive ? {
+            boxShadow: `0 0 12px 1px color-mix(in oklch, ${accentColor} 25%, transparent)`,
+          } : undefined}
           title={group.label}
         >
           <IconComponent
@@ -68,7 +75,7 @@ export default function NavGroup({ group, isOpen, onToggle, collapsed = false }:
 
   return (
     <div className="mb-0.5">
-      {/* Group Header */}
+      {/* Group Header with accent bar */}
       <button
         onClick={() => {
           if (group.path) {
@@ -77,9 +84,19 @@ export default function NavGroup({ group, isOpen, onToggle, collapsed = false }:
             onToggle();
           }
         }}
-        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left transition-colors duration-150 hover:bg-[var(--color-sidebar-hover)]"
+        className={`nav-accent-bar nav-item-hover flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left transition-colors duration-150 hover:bg-[var(--color-sidebar-hover)] ${isGroupActive || isOpen ? 'active' : ''}`}
+        style={{
+          '--accent-bar-color': accentColor,
+        } as React.CSSProperties}
       >
-        <span className="flex w-5 shrink-0 items-center justify-center">
+        {/* Active indicator dot */}
+        <span className="flex w-5 shrink-0 items-center justify-center relative">
+          {(isGroupActive || isOpen) && (
+            <span
+              className="group-active-dot absolute -left-1.5"
+              style={{ '--pulse-color': accentColor, background: accentColor } as React.CSSProperties}
+            />
+          )}
           <IconComponent
             size={15}
             className={`transition-colors duration-150 ${isGroupActive || isOpen
@@ -97,17 +114,25 @@ export default function NavGroup({ group, isOpen, onToggle, collapsed = false }:
         >
           {group.label}
         </span>
+
+        {/* Badge count for groups with items */}
+        {items.length > 0 && (
+          <span className="nav-badge opacity-50">
+            {items.length}
+          </span>
+        )}
+
         {items.length > 0 && (
           <ChevronRight
             size={12}
-            className={`shrink-0 text-[var(--color-sidebar-text)] opacity-50 transition-transform duration-300 ${isOpen ? 'rotate-90' : ''
+            className={`shrink-0 text-[var(--color-sidebar-text)] opacity-40 transition-transform duration-300 ${isOpen ? 'rotate-90' : ''
               }`}
             style={{ transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)' }}
           />
         )}
       </button>
 
-      {/* Group Items — accordion animation */}
+      {/* Group Items — accordion with slide animation */}
       <div
         className="overflow-hidden transition-all duration-300"
         style={{
@@ -115,20 +140,26 @@ export default function NavGroup({ group, isOpen, onToggle, collapsed = false }:
           transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)',
         }}
       >
-        {items.map(item => {
+        {items.map((item, idx) => {
           const isActive = location.pathname === item.path;
           return (
             <button
               key={item.id}
               onClick={() => navigate(item.path)}
-              className={`flex w-full items-center gap-2 rounded py-1.5 pl-10 pr-3 text-left transition-all duration-150 ${isActive
-                ? 'bg-[var(--color-brand-50)]' // 🌟 เปลี่ยนเป็นสีฟ้าอ่อนของ Theme
+              className={`nav-item-hover flex w-full items-center gap-2 rounded py-1.5 pl-10 pr-3 text-left transition-all duration-150 ${isActive
+                ? 'bg-[var(--color-brand-50)]'
                 : 'hover:bg-[var(--color-sidebar-hover)]'
                 }`}
+              style={isOpen ? {
+                animation: `slideInLeft 0.25s cubic-bezier(0.16, 1, 0.3, 1) ${idx * 40}ms both`,
+              } : undefined}
             >
+              {/* Active sub-item dot */}
+              {isActive && <span className="sub-item-active-dot" />}
+
               <span
                 className={`flex-1 truncate text-[12.5px] leading-relaxed transition-colors duration-150 ${isActive
-                  ? 'font-bold text-[var(--color-sidebar-text-active)]' // 🌟 ใช้สีน้ำเงินเข้มและปรับให้หนาขึ้น
+                  ? 'font-bold text-[var(--color-sidebar-text-active)]'
                   : 'text-[var(--color-sidebar-text)] hover:text-[var(--color-sidebar-text-active)]'
                   }`}
                 title={item.label}
@@ -137,9 +168,9 @@ export default function NavGroup({ group, isOpen, onToggle, collapsed = false }:
               </span>
               {item.code && (
                 <span
-                  className={`shrink-0 text-[10px] transition-colors duration-150 ${isActive
-                    ? 'text-[var(--color-sidebar-text-active)] opacity-70' // 🌟 ปรับสี code ด้านหลังให้ชัดขึ้นนิดนึง
-                    : 'text-[var(--color-sidebar-text)] opacity-40'
+                  className={`shrink-0 rounded px-1 py-0.5 text-[9px] font-mono font-bold tracking-wider transition-colors duration-150 ${isActive
+                    ? 'bg-[var(--color-brand-100)] text-[var(--color-brand-600)]'
+                    : 'text-[var(--color-sidebar-text)] opacity-30'
                     }`}
                 >
                   {item.code}

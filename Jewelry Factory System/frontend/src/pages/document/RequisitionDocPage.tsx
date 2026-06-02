@@ -1,15 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import DocumentLayout from '../components/document/DocumentLayout';
-import type { DocListItem, BreadcrumbItem } from '../components/document/DocumentLayout';
-import { formConfigMap } from '../config/formConfigs';
-import { 
-  fetchRequisitionDocuments, 
+import DocumentLayout from '../../components/layout/DocumentLayout';
+import type { DocListItem, BreadcrumbItem } from '../../components/layout/DocumentLayout';
+import { formConfigMap } from '../../config/formConfigs';
+import {
+  fetchRequisitionDocuments,
   fetchRequisitionDocument,
   fetchOrderForRequisition,
   saveRequisitionDocument,
   generateNextDocumentNumber
-} from '../services/requisitionAPI';
+} from '../../services/requisitionAPI';
 
 const routeToDocType: Record<string, string> = {
   '/orders/create': 'SOA',
@@ -32,14 +32,14 @@ export default function RequisitionDocPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState('');
-  
+
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const groupLabel = formConfig?.groupLabel || 'ออเดอร์และการเบิก';
   const itemLabel = formConfig?.titleTh || docType;
-  
+
   const breadcrumb: BreadcrumbItem[] = [
     { label: 'JEWELRY SMART FACTORY', path: '/' },
     { label: groupLabel },
@@ -52,7 +52,7 @@ export default function RequisitionDocPage() {
     setLoading(true);
     setError(null);
     setDocList([]);
-    
+
     // For UI Only modules, just show empty
     if (formConfig?.apiType === 'none') {
       setLoading(false);
@@ -68,7 +68,7 @@ export default function RequisitionDocPage() {
       }));
       setDocList(mappedList);
       setTotalPages(response.totalPages || 1);
-      
+
       if (mappedList.length > 0 && !selectedDocNo) {
         setSelectedDocNo(mappedList[0].no);
       }
@@ -199,7 +199,7 @@ export default function RequisitionDocPage() {
 
   const handleSave = async () => {
     if (!docDetail?.header) return;
-    
+
     if (formConfig?.apiType === 'none') {
       alert('ระบบนี้อยู่ในช่วงพัฒนา (UI Only)');
       return;

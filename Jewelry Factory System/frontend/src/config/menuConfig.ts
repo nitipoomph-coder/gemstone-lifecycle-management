@@ -9,6 +9,7 @@ export const menuConfig: NavMenuGroup[] = [
     label: 'ภาพรวม',
     icon: 'home',
     path: '/',
+    accentColor: 'var(--color-brand-500)',
   },
 
   // ─── Entity 1: จัดการออเดอร์และการสั่งซื้อ ───
@@ -16,6 +17,7 @@ export const menuConfig: NavMenuGroup[] = [
     id: 'procurement',
     label: 'จัดซื้อและรับเข้า',
     icon: 'package-check',
+    accentColor: 'var(--color-accent-500)',
     items: [
       { id: 'spa', label: 'บันทึกสั่งซื้อพลอย', code: 'SPA', path: '/procurement/purchase' },
       { id: 'sra', label: 'บันทึกรับพลอย', code: 'SRA', path: '/procurement/receive' },
@@ -29,6 +31,7 @@ export const menuConfig: NavMenuGroup[] = [
     id: 'orders',
     label: 'ออเดอร์และการเบิก',
     icon: 'clipboard-list',
+    accentColor: 'var(--color-info-500)',
     items: [
       { id: 'soa', label: 'บันทึกออเดอร์พลอย', code: 'SOA', path: '/orders/create' },
       { id: 'sia', label: 'บันทึกเบิกพลอย', code: 'SIA', path: '/orders/issue' },
@@ -43,6 +46,7 @@ export const menuConfig: NavMenuGroup[] = [
     id: 'sample',
     label: 'ห้องตัวอย่าง',
     icon: 'flask-conical',
+    accentColor: 'var(--color-success-500)',
     items: [
       { id: 'ssa', label: 'บันทึกออเดอร์พลอย ห้องตัวอย่าง', code: 'SSA', path: '/sample/order' },
       { id: 'sim', label: 'บันทึกส่งพลอย ห้องตัวอย่าง', code: 'SIM', path: '/sample/dispatch' },
@@ -54,6 +58,7 @@ export const menuConfig: NavMenuGroup[] = [
     id: 'inventory',
     label: 'ตรวจสอบและนับสต็อก',
     icon: 'bar-chart-3',
+    accentColor: 'var(--color-danger-500)',
     items: [
       { id: 'check-dispatch', label: 'ตรวจสอบส่งพลอย งานออเดอร์', path: '/inventory/check-dispatch' },
       { id: 'check-sample', label: 'ตรวจสอบเบิก ห้องตัวอย่าง', path: '/inventory/check-sample' },
@@ -69,6 +74,7 @@ export const menuConfig: NavMenuGroup[] = [
     id: 'order-tracker',
     label: 'Order Tracker',
     icon: 'layout-list',
+    accentColor: 'var(--color-brand-600)',
     items: [
       { id: 'ot-list',   label: 'รายการ Order (Pending)', path: '/order-tracker' },
     ],
@@ -79,6 +85,7 @@ export const menuConfig: NavMenuGroup[] = [
     id: 'spare-parts',
     label: 'ระบบสต็อกอะไหล่',
     icon: 'wrench',
+    accentColor: 'var(--color-proc-plating)',
     items: [
       { id: 'sp-order', label: 'บันทึกออเดอร์อะไหล่', path: '/spare-parts/order' },
       { id: 'sp-issue', label: 'บันทึกเบิกอะไหล่', path: '/spare-parts/issue' },

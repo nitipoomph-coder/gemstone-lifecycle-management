@@ -183,6 +183,29 @@ gemstone-lifecycle-management/
    - Logo/Brand: `font-logo` → Cinzel
 10. **Loading Skeletons**: เมื่อมีการเพิ่ม/แก้ไข กล่องข้อมูล (Boxes/Cards) ในหน้าจอใด ๆ ต้องอัปเดตส่วนแสดงสถานะกำลังโหลด (Loading Skeleton) ให้สอดคล้องกันทั้งหน้าจอ เพื่อหลีกเลี่ยงอาการ Layout Shift โดยส่วนโหลดนี้ต้องคลุมเฉพาะพื้นที่แสดงผลของหน้านั้น ๆ (Content Outlet) ไม่ต้องโหลดส่วนเมนู (Sidebar/Topbar) ซ้ำ
 
+## Frontend Architecture Rules (UI Layout Patterns)
+
+เพื่อป้องกันการเกิดภาวะโค้ดปนเปื้อน (Code Pollution) และลดความเกี่ยวเนื่องกันอย่างหนาแน่นเกินไป (Tight Coupling) ระบบจึงถูกขับเคลื่อนด้วยหลักการ **Inversion of Control (IoC) / Slot Injections** ผ่านคอมโพเนนต์ส่วนกลางสูงสุดตัวเดียวคือ `DocumentLayout.tsx`
+
+## Skills & Portfolio Data Rules
+1. **Single Source of Truth:** ข้อมูลสกิล ผลงาน หรือใบเซอร์ทั้งหมดของระบบ ต้องสถิตอยู่ภายในไดเรกทอรี `src/config/` เท่านั้น (ห้าม Hardcode สตริงข้อมูลลงในไฟล์ UI `.tsx` โดยตรง)
+2. **Icon Mapping:** ให้ผูกตัวแปร Object ของ Icon Library (`lucide-react`) เข้ากับโครงสร้างของอาเรย์ข้อมูลในไฟล์ Config โดยตรง เพื่อหลีกเลี่ยงการใช้คำสั่ง `switch-case` ค้นหาชื่อไอคอนภายหลังในฝั่ง Component
+
+### กฎเหล็กในการรักษามาตรฐานสากล:
+1. **DocumentLayout (The Shell)** มีหน้าที่รับผิดชอบแต่เพียงระบบรอบนอก (เช่น โครงปุ่มทูลบาร์, กล่องแถบค้นหาเอกสารฝั่งซ้าย, ระบบสถานะ Loading/Error) โดยจะ**ไม่รับรู้ข้อมูลเชิงธุรกิจใดๆ** ทั้งสิ้น
+2. **ห้ามทำการ Hardcode หรือฝังเงื่อนไขเฉพาะเมนู** (เช่น ดักเงื่อนไขข้อมูลพลอย หรือยิงเรียก URL API ของรูปภาพ PS/CAD) ภายในไฟล์ `DocumentLayout.tsx` เด็ดขาด
+3. หากมีหน้าจอใดที่ต้องการแสดงผลโครงสร้างข้อมูลเฉพาะตัว ให้ทำการป้อนโค้ด JSX ชิ้นส่วนนั้นผ่านกล่องรับฝาก (Extensible Props Slots) แทน:
+
+```typescript
+// คุณสมบัติยืดหยุ่นที่ถูกจัดเตรียมไว้ให้หน้าลูกเรียกใช้
+interface DocumentLayoutProps {
+  renderHeaderSummary?: (header: any, lines: any[]) => React.ReactNode; // ชิ้นส่วนสรุปหัวด้านบน
+  renderSubDetailPanel?: (selectedLine: any, idx: number) => React.ReactNode; // ชิ้นส่วนข้อมูลเชิงลึกขอด้านล่างฟอร์ม
+  renderRightSidePanel?: (selectedLine: any, idx: number) => React.ReactNode; // ชิ้นส่วนรูปภาพ/สถิติแถบขวา
+  renderFooterStats?: (lines: any[]) => React.ReactNode; // แถบข้อมูลสรุปท้ายตารางประมวลผล
+  customModal?: React.ReactNode; // กล่องเปรียบเทียบรูปภาพป๊อปอัปภายนอก
+}
+
 ### Backend Rules
 
 1. **Module System**: CommonJS (`require` / `module.exports`) — `"type": "commonjs"` ใน package.json

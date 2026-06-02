@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import DocumentLayout from '../components/document/DocumentLayout';
-import type { DocListItem, BreadcrumbItem } from '../components/document/DocumentLayout';
-import { formConfigMap } from '../config/formConfigs';
+import DocumentLayout from '../../components/layout/DocumentLayout';
+import type { DocListItem, BreadcrumbItem } from '../../components/layout/DocumentLayout';
+import { formConfigMap } from '../../config/formConfigs';
 import {
-  fetchDocumentList, fetchDocumentDetail, generateNextDocumentNumber
-} from '../services/procurementAPI';
-import type { ProcDocDetail, ProcDocLine } from '../services/procurementAPI';
+  fetchDocumentList,
+  fetchDocumentDetail,
+  generateNextDocumentNumber,
+  updateDocumentHeader,
+} from '../../services/procurementAPI';
+import type { ProcDocDetail, ProcDocLine } from '../../services/procurementAPI';
 
 // ─── Route → docType mapping ──────────────────
 const routeToDocType: Record<string, string> = {
@@ -25,7 +28,8 @@ export default function ProcurementDocPage() {
   const [selectedDocNo, setSelectedDocNo] = useState('');
   const [docDetail, setDocDetail] = useState<ProcDocDetail | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  
+  const [editDraft, setEditDraft] = useState<Record<string, string>>({});
+
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState('');
@@ -36,7 +40,7 @@ export default function ProcurementDocPage() {
 
   const groupLabel = formConfig?.groupLabel || 'จัดซื้อและรับเข้า';
   const itemLabel = formConfig?.titleTh || docType;
-  
+
   const breadcrumb: BreadcrumbItem[] = [
     { label: 'JEWELRY SMART FACTORY', path: '/' },
     { label: groupLabel, path: '/procurement/purchase' },
@@ -47,13 +51,12 @@ export default function ProcurementDocPage() {
   const loadDocList = async () => {
     setLoading(true);
     setError(null);
-
     try {
       const response = await fetchDocumentList(docType, { page, limit: 50, search });
       const mappedList = response.data.map((d: any) => ({
         no: d.docNumber,
         date: d.docDate,
-        status: d.status
+        status: d.status,
       }));
       setDocList(mappedList);
       setTotalPages(response.totalPages || 1);
@@ -72,6 +75,7 @@ export default function ProcurementDocPage() {
     setDocDetail(null);
     setSelectedDocNo('');
     setIsEditing(false);
+    setEditDraft({});
     setPage(1);
     setSearch('');
   }, [docType]);
@@ -84,6 +88,7 @@ export default function ProcurementDocPage() {
     if (!selectedDocNo) return;
     setDetailLoading(true);
     setIsEditing(false);
+    setEditDraft({});
     setError(null);
     fetchDocumentDetail(selectedDocNo)
       .then(setDocDetail)
@@ -94,29 +99,36 @@ export default function ProcurementDocPage() {
       .finally(() => setDetailLoading(false));
   }, [selectedDocNo]);
 
-  // ─── Print Template ──────────────────────────
+  // ─── Handlers ───────────────────────────────
+
   const handleNew = async () => {
     setDetailLoading(true);
     try {
       const nextNo = await generateNextDocumentNumber(docType);
       setSelectedDocNo('');
-      setDocDetail({
-        header: {
-          docNumber: nextNo,
-          docDate: new Date().toLocaleDateString('th-TH'),
-          currency: 'THB',
-          exchangeRate: 1,
-          totalQty: 0,
-          totalAmount: 0,
-          status: 'N'
-        },
-        lines: []
-      });
+      setIsEditing(true);
+      const newHeader = {
+        docNumber: nextNo,
+        docDate: new Date().toLocaleDateString('th-TH'),
+        currency: 'THB',
+        exchangeRate: 1,
+        totalQty: 0,
+        totalAmount: 0,
+        status: 'N',
+      };
+      setDocDetail({ header: newHeader as any, lines: [] });
+      setEditDraft(Object.fromEntries(
+        Object.entries(newHeader).map(([k, v]) => [k, String(v)])
+      ));
     } catch (err: any) {
       setError(err.message || 'Failed to generate new document');
     } finally {
       setDetailLoading(false);
     }
+  };
+
+  const handleFieldChange = (fieldName: string, value: string) => {
+    setEditDraft(prev => ({ ...prev, [fieldName]: value }));
   };
 
   const handleEdit = async () => {
@@ -126,16 +138,45 @@ export default function ProcurementDocPage() {
       const res = await fetch('/api/lock/acquire', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ docNo: selectedDocNo, user: 'Staff' })
+        body: JSON.stringify({ docNo: selectedDocNo, user: 'Staff' }),
       });
       const json = await res.json();
       if (!json.ok) {
         alert(`ไม่สามารถแก้ไขได้: ${json.error} (Locked by ${json.lockedBy || 'someone'})`);
         return;
       }
+      if (docDetail?.header) {
+        setEditDraft(Object.fromEntries(
+          Object.entries(docDetail.header).map(([k, v]) => [k, String(v ?? '')])
+        ));
+      }
       setIsEditing(true);
     } catch (err: any) {
       alert('Failed to acquire lock: ' + err.message);
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!docDetail?.header) return;
+    setDetailLoading(true);
+    try {
+      const updatedHeader = { ...docDetail.header, ...editDraft };
+      await updateDocumentHeader(selectedDocNo, updatedHeader);
+
+      await fetch('/api/lock/release', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ docNo: selectedDocNo, user: 'Staff' }),
+      }).catch(e => console.error('Lock release error:', e));
+
+      setDocDetail(prev => prev ? { ...prev, header: updatedHeader as any } : null);
+      setIsEditing(false);
+      setEditDraft({});
+      loadDocList();
+    } catch (err: any) {
+      setError(err.message || 'บันทึกไม่สำเร็จ');
     } finally {
       setDetailLoading(false);
     }
@@ -146,31 +187,49 @@ export default function ProcurementDocPage() {
       await fetch('/api/lock/release', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ docNo: selectedDocNo, user: 'Staff' })
+        body: JSON.stringify({ docNo: selectedDocNo, user: 'Staff' }),
       }).catch(e => console.error(e));
     }
     setIsEditing(false);
+    setEditDraft({});
     setSelectedDocNo('');
     setDocDetail(null);
   };
 
+  // ─── Print Template ──────────────────────────
   const getPrintTemplate = () => {
     if (!docDetail) return null;
     const lines = docDetail.lines || [];
     const totalQty = lines.reduce((s, l) => s + (l.qty || 0), 0);
     const totalAmount = lines.reduce((s, l) => s + (l.amount || 0), 0);
-    
+
     return (
       <div className="print-only" style={{ color: '#000000', backgroundColor: '#ffffff', padding: '0px', fontFamily: '"Arial", "Prompt", sans-serif' }}>
-        {/* Header Grid Table (Company Header, Supply, Doc Info) */}
         <table style={{ width: '100%', borderCollapse: 'collapse', border: '1.5px solid #000000', tableLayout: 'fixed' }}>
           <tbody>
             <tr>
+              {/* คอลัมน์ฝั่งซ้าย: โลโก้และข้อมูลบริษัท ใช้ Flexbox จัดเรียง */}
               <td colSpan={2} style={{ border: '1.5px solid #000000', padding: '12px 16px', verticalAlign: 'middle' }}>
-                <div style={{ fontSize: '20px', fontWeight: 'bold', fontFamily: 'Georgia, serif' }}>
-                  Chong Lerdlum Co.,Ltd. &nbsp;บริษัท จงเลิศล้ำ จำกัด
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  <img
+                    src="/iconCLL.jpg"
+                    alt="Company Logo"
+                    style={{ height: '60px', width: 'auto', objectFit: 'contain' }}
+                  />
+                  <div>
+                    <div style={{ fontSize: '18px', fontWeight: 'bold', fontFamily: 'Georgia, serif' }}>
+                      Chong Lerdlum Co.,Ltd. &nbsp;บริษัท จงเลิศล้ำ จำกัด
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#333333', marginTop: '4px' }}>
+                      224, 224/10 Moo.7 Samrong Nuea, Mueang Samut Prakan, Samut Prakan 10270 Thailand
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#333333' }}>
+                      Tel: 66-2-7540596 &nbsp;&nbsp;Email: hello@clljewelry.com &nbsp;&nbsp;Website: www.clljewelry.com
+                    </div>
+                  </div>
                 </div>
               </td>
+              {/* คอลัมน์ฝั่งขวา: ประเภทเอกสาร */}
               <td style={{ border: '1px solid #000000', width: '30%', padding: '10px', textAlign: 'center', verticalAlign: 'middle' }}>
                 <div style={{ fontSize: '18px', fontWeight: 'bold', letterSpacing: '0.5px' }}>
                   {docType === 'SPA' ? 'Purchase Order' : (docType === 'SRA' || docType === 'SRB') ? 'Goods Receipt' : 'Goods Return'}
@@ -194,7 +253,6 @@ export default function ProcurementDocPage() {
           </tbody>
         </table>
 
-        {/* Metadata Grid Table */}
         <table style={{ width: '100%', borderCollapse: 'collapse', border: '1.5px solid #000000', borderTop: 'none', tableLayout: 'fixed', textAlign: 'center', fontSize: '11px' }}>
           <thead>
             <tr style={{ backgroundColor: '#f0f0f0', fontWeight: 'bold' }}>
@@ -210,18 +268,10 @@ export default function ProcurementDocPage() {
               <td style={{ border: '1px solid #000000', borderTop: 'none', padding: '5px', width: '10%' }}>
                 {docType === 'SPA' ? 'Order By' : (docType === 'SIR' ? 'Return By' : 'Rec By')}
               </td>
-              <td style={{ border: '1px solid #000000', borderTop: 'none', padding: '5px', width: '12.5%' }}>
-                Approved By
-              </td>
-              <td style={{ border: '1px solid #000000', borderTop: 'none', padding: '5px', width: '12.5%' }}>
-                Total Qty
-              </td>
-              <td style={{ border: '1px solid #000000', borderTop: 'none', padding: '5px', width: '15%' }}>
-                Total Amount
-              </td>
-              <td style={{ border: '1px solid #000000', borderTop: 'none', padding: '5px', width: '10%' }}>
-                Currency
-              </td>
+              <td style={{ border: '1px solid #000000', borderTop: 'none', padding: '5px', width: '12.5%' }}>Approved By</td>
+              <td style={{ border: '1px solid #000000', borderTop: 'none', padding: '5px', width: '12.5%' }}>Total Qty</td>
+              <td style={{ border: '1px solid #000000', borderTop: 'none', padding: '5px', width: '15%' }}>Total Amount</td>
+              <td style={{ border: '1px solid #000000', borderTop: 'none', padding: '5px', width: '10%' }}>Currency</td>
             </tr>
           </thead>
           <tbody>
@@ -246,7 +296,6 @@ export default function ProcurementDocPage() {
           </tbody>
         </table>
 
-        {/* Details Table */}
         <table style={{ width: '100%', borderCollapse: 'collapse', border: '1.5px solid #000000', borderTop: 'none', tableLayout: 'fixed', fontSize: '10px' }}>
           <thead>
             <tr style={{ backgroundColor: '#f0f0f0', fontWeight: 'bold', textAlign: 'center', height: '22px' }}>
@@ -303,7 +352,6 @@ export default function ProcurementDocPage() {
           </tbody>
         </table>
 
-        {/* Bottom Footers Row */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px', fontSize: '11px', fontWeight: 'bold', padding: '4px 8px' }}>
           <div>( R75-413-A1 )</div>
           <div style={{ fontFamily: 'monospace' }}>Page &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;1 / 1</div>
@@ -325,9 +373,7 @@ export default function ProcurementDocPage() {
         setPage(1);
       }}
       onSearchSubmit={(text) => {
-        if (text.trim()) {
-          setSelectedDocNo(text.trim());
-        }
+        if (text.trim()) setSelectedDocNo(text.trim());
       }}
       page={page}
       totalPages={totalPages}
@@ -339,7 +385,10 @@ export default function ProcurementDocPage() {
       onClearError={() => setError(null)}
       hasPhoto={false}
       isEditing={isEditing}
+      editDraft={editDraft}
+      onFieldChange={handleFieldChange}
       onNew={handleNew}
+      onSave={handleSave}
       onEdit={handleEdit}
       onCancel={handleCancel}
       printTemplate={getPrintTemplate()}

@@ -38,12 +38,12 @@ export default function ItemDetailPage() {
       ]} />
 
       <div className="custom-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
-        
+
         {/* Action Bar */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
           <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-            <button 
-              onClick={() => navigate(-1)} 
+            <button
+              onClick={() => navigate(-1)}
               style={{
                 display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px',
                 background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)',
@@ -54,10 +54,10 @@ export default function ItemDetailPage() {
             >
               <ChevronLeft size={16} /> BACK
             </button>
-            <div style={{ 
-              padding: '10px 24px', background: 'var(--color-brand-500)', 
-              color: '#fff', borderRadius: '16px', fontWeight: 900, 
-              fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '12px', 
+            <div style={{
+              padding: '10px 24px', background: 'var(--color-brand-500)',
+              color: '#fff', borderRadius: '16px', fontWeight: 900,
+              fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '12px',
               boxShadow: '0 8px 24px -8px var(--color-brand-500)',
               fontFamily: 'var(--font-display)', letterSpacing: '0.02em'
             }}>
@@ -76,15 +76,15 @@ export default function ItemDetailPage() {
         </div>
 
         {/* ─── MASTER DASHBOARD CARD ─── */}
-        <div style={{ 
-          background: 'var(--color-surface-0)', borderRadius: '24px', 
-          border: '1px solid var(--color-border-light)', 
-          boxShadow: '0 20px 50px -12px rgba(0,0,0,0.08), 0 0 0 1px var(--color-border-light)', 
-          overflow: 'hidden', marginBottom: '24px' 
+        <div style={{
+          background: 'var(--color-surface-0)', borderRadius: '24px',
+          border: '1px solid var(--color-border-light)',
+          boxShadow: '0 20px 50px -12px rgba(0,0,0,0.08), 0 0 0 1px var(--color-border-light)',
+          overflow: 'hidden', marginBottom: '24px'
         }}>
-          
+
           <div style={{ display: 'flex', flexWrap: 'wrap' }}>
-            
+
             {/* Left Column */}
             <div style={{ flex: '1 1 320px', padding: '32px', borderRight: '1px solid var(--color-border-light)', background: 'color-mix(in srgb, var(--color-surface-1), transparent 50%)' }}>
               <h3 style={{ fontSize: '0.7rem', fontWeight: 900, color: 'var(--color-brand-600)', marginBottom: '24px', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '10px', letterSpacing: '0.1em' }}>
@@ -138,7 +138,7 @@ export default function ItemDetailPage() {
 
             {/* Right Column */}
             <div style={{ flex: '1 1 320px', padding: '32px', borderLeft: '1px solid var(--color-border-light)', background: 'var(--color-surface-0)' }}>
-               <h3 style={{ fontSize: '0.7rem', fontWeight: 900, color: 'var(--color-accent-600)', marginBottom: '24px', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <h3 style={{ fontSize: '0.7rem', fontWeight: 900, color: 'var(--color-accent-600)', marginBottom: '24px', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <FileText size={16} /> Production Notes
               </h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -164,7 +164,7 @@ export default function ItemDetailPage() {
             <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, fontSize: '0.78rem' }}>
               <thead>
                 <tr>
-                  {[ 'No.', 'Stone Code', 'Visual', 'Stone Name', 'Shape', 'Size', 'Cut', 'Grade', 'Set', 'Wt (ct)', 'Qty', 'Modified' ].map((h, i) => (
+                  {['No.', 'Stone Code', 'Visual', 'Stone Name', 'Shape', 'Size', 'Cut', 'Grade', 'Set', 'Wt (ct)', 'Qty', 'Modified'].map((h, i) => (
                     <th key={h} style={{
                       background: 'color-mix(in srgb, var(--color-surface-1), transparent 5%)',
                       backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
@@ -209,9 +209,9 @@ function FieldRow({ label, value, highlight, bold, warning }: any) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--color-border-light)' }}>
       <div style={{ width: '110px', fontSize: '0.65rem', color: 'var(--color-text-tertiary)', fontWeight: 800, textTransform: 'uppercase' }}>{label}</div>
-      <div style={{ 
-        flex: 1, fontSize: '0.8rem', 
-        fontWeight: highlight || bold || warning ? 800 : 600, 
+      <div style={{
+        flex: 1, fontSize: '0.8rem',
+        fontWeight: highlight || bold || warning ? 800 : 600,
         color: warning ? 'var(--color-accent-600)' : highlight ? 'var(--color-brand-600)' : 'var(--color-text-secondary)',
         background: highlight ? 'color-mix(in srgb, var(--color-brand-500), transparent 94%)' : warning ? 'color-mix(in srgb, var(--color-accent-500), transparent 94%)' : 'transparent',
         padding: highlight || warning ? '4px 12px' : '4px 0', borderRadius: '8px'
@@ -224,7 +224,7 @@ function FieldRow({ label, value, highlight, bold, warning }: any) {
 
 function TabBtn({ label, active, onClick, icon }: any) {
   return (
-    <button 
+    <button
       onClick={onClick}
       style={{
         padding: '16px 32px', fontSize: '0.75rem', fontWeight: 800, border: 'none', cursor: 'pointer',

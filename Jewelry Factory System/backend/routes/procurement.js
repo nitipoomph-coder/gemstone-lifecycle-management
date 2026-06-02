@@ -122,7 +122,7 @@ router.get('/next-number/:docType', async (req, res) => {
   try {
     const pool = await getPool();
     const config = getTableConfig(docType);
-    
+
     // Format: YYMM
     const date = new Date();
     const yy = String(date.getFullYear()).slice(-2);
@@ -131,11 +131,11 @@ router.get('/next-number/:docType', async (req, res) => {
     const prefix = `${config.prefix}${yy}${mm}`;
 
     const query = `
-      SELECT MAX(DocuNo) as maxDoc
-      FROM ${config.headerTable}
-      WHERE DocuNo LIKE @prefix + '%'
-    `;
-    
+        SELECT MAX(DocuNo) as maxDoc
+        FROM ${config.headerTable}
+        WHERE DocuNo LIKE @prefix + '%'
+      `;
+
     const result = await pool.request()
       .input('prefix', sql.VarChar(10), prefix)
       .query(query);
@@ -187,42 +187,42 @@ router.get('/documents/:docType', async (req, res) => {
 
     // Count Total
     const countQuery = `
-      SELECT COUNT(*) as total
-      FROM ${config.headerTable} h
-      WHERE h.DocuNo LIKE @prefix + '%'
-      ${search ? `AND h.DocuNo LIKE '%' + @search + '%'` : ''}
-    `;
+        SELECT COUNT(*) as total
+        FROM ${config.headerTable} h
+        WHERE h.DocuNo LIKE @prefix + '%'
+        ${search ? `AND h.DocuNo LIKE '%' + @search + '%'` : ''}
+      `;
 
     const countResult = await pool.request()
       .input('prefix', sql.VarChar(5), config.prefix)
       .input('search', sql.VarChar(50), search)
       .query(countQuery);
-      
+
     const total = countResult.recordset[0].total;
 
     let queryStr = `
-      SELECT
-        h.DocuNo AS docNumber,
-        CONVERT(VARCHAR(10), h.DocuDate, 103) AS docDate,
-        ISNULL(h.VendorCode, '') AS supplier,
-        ISNULL(v.VendorName, '') AS supplierName,
-        ISNULL(h.CurrCode, 'THB') AS currency,
-        ISNULL(h.${config.amtCol}, 0) AS totalAmount,
-        ISNULL(h.${config.qtyCol}, 0) AS totalQty,
-        ISNULL(h.DocuStatus, '') AS status
-      FROM ${config.headerTable} h
-      LEFT JOIN dbInventory.dbo.GMVendor v ON h.VendorCode = v.VendorCode
-      WHERE h.DocuNo LIKE @prefix + '%'
-    `;
-    
+        SELECT
+          h.DocuNo AS docNumber,
+          CONVERT(VARCHAR(10), h.DocuDate, 103) AS docDate,
+          ISNULL(h.VendorCode, '') AS supplier,
+          ISNULL(v.VendorName, '') AS supplierName,
+          ISNULL(h.CurrCode, 'THB') AS currency,
+          ISNULL(h.${config.amtCol}, 0) AS totalAmount,
+          ISNULL(h.${config.qtyCol}, 0) AS totalQty,
+          ISNULL(h.DocuStatus, '') AS status
+        FROM ${config.headerTable} h
+        LEFT JOIN dbInventory.dbo.GMVendor v ON h.VendorCode = v.VendorCode
+        WHERE h.DocuNo LIKE @prefix + '%'
+      `;
+
     if (search) {
       queryStr += ` AND h.DocuNo LIKE '%' + @search + '%'`;
     }
 
     queryStr += `
-      ORDER BY h.DocuNo DESC
-      OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY
-    `;
+        ORDER BY h.DocuNo DESC
+        OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY
+      `;
 
     const result = await pool.request()
       .input('prefix', sql.VarChar(5), config.prefix)
@@ -232,9 +232,9 @@ router.get('/documents/:docType', async (req, res) => {
       .query(queryStr);
 
     const docs = result.recordset;
-    
-    const responseData = { 
-      ok: true, 
+
+    const responseData = {
+      ok: true,
       data: docs,
       total,
       page,
@@ -285,29 +285,29 @@ router.get('/document/:docNo', async (req, res) => {
 
     // 1. Fetch Header
     const headerQuery = `
-      SELECT
-        h.DocuNo AS docNumber,
-        CONVERT(VARCHAR(10), h.DocuDate, 103) AS docDate,
-        ISNULL(CONVERT(VARCHAR(10), h.DocuDate, 103), '') AS purchaseDate,
-        ${dueDateSelect},
-        '' AS receiveDate,
-        ISNULL(h.VendorCode, '') AS supplierCode,
-        ISNULL(v.VendorName, '') AS supplierName,
-        ${buyerSelect},
-        ISNULL(h.CurrCode, 'THB') AS currency,
-        ISNULL(h.${config.amtCol}, 0) AS totalAmount,
-        ISNULL(h.${config.qtyCol}, 0) AS totalQty,
-        ${refSelect},
-        '' AS billNumber,
-        ${invSelect},
-        ${remarkSelect},
-        ISNULL(h.ExchRate, 1) AS exchangeRate,
-        '' AS category,
-        ISNULL(h.DocuStatus, '') AS status
-      FROM ${config.headerTable} h
-      LEFT JOIN dbInventory.dbo.GMVendor v ON h.VendorCode = v.VendorCode
-      WHERE h.DocuNo = @docNo
-    `;
+        SELECT
+          h.DocuNo AS docNumber,
+          CONVERT(VARCHAR(10), h.DocuDate, 103) AS docDate,
+          ISNULL(CONVERT(VARCHAR(10), h.DocuDate, 103), '') AS purchaseDate,
+          ${dueDateSelect},
+          '' AS receiveDate,
+          ISNULL(h.VendorCode, '') AS supplierCode,
+          ISNULL(v.VendorName, '') AS supplierName,
+          ${buyerSelect},
+          ISNULL(h.CurrCode, 'THB') AS currency,
+          ISNULL(h.${config.amtCol}, 0) AS totalAmount,
+          ISNULL(h.${config.qtyCol}, 0) AS totalQty,
+          ${refSelect},
+          '' AS billNumber,
+          ${invSelect},
+          ${remarkSelect},
+          ISNULL(h.ExchRate, 1) AS exchangeRate,
+          '' AS category,
+          ISNULL(h.DocuStatus, '') AS status
+        FROM ${config.headerTable} h
+        LEFT JOIN dbInventory.dbo.GMVendor v ON h.VendorCode = v.VendorCode
+        WHERE h.DocuNo = @docNo
+      `;
 
     const hdr = await pool.request()
       .input('docNo', sql.VarChar(20), docNo)
@@ -325,38 +325,38 @@ router.get('/document/:docNo', async (req, res) => {
     const remark2Field = config.hasGoodDesc ? 'ISNULL(d.GoodDescCH, \'\')' : '\'\'';
 
     const detailQuery = `
-      SELECT
-        d.ListNo AS seq,
-        ISNULL(d.GoodCode, '') AS stoneCode,
-        ${descField} AS stoneName,
-        ISNULL(d.GoodColorCode, '') AS color,
-        ISNULL(d.GoodShapeCode, '') AS shape,
-        ISNULL(s.GoodShapeNameEng, '') AS shapeName,
-        ISNULL(d.GoodSizeCode, '') AS size,
-        ISNULL(d.GoodSpecCode, '') AS characteristic,
-        ISNULL(sp.GoodSpecNameEng, '') AS specName,
-        ISNULL(d.GoodGradeCode, '') AS grade,
-        ISNULL(d.GoodThick, '') AS height,
-        ISNULL(d.${config.detailUnitCol}, '') AS unit,
-        '' AS warehouse,
-        ISNULL(d.${config.detailWeightCol}, 0) AS weight,
-        ISNULL(d.${config.detailQtyCol}, 0) AS qty,
-        ISNULL(d.${config.detailPriceCol}, 0) AS price,
-        ISNULL(d.${config.detailAmntCol}, 0) AS amount,
-        ${ctPriceField} AS ctPerPc,
-        ${orderNumField} AS orderNumber,
-        ${customerField} AS customer,
-        '' AS jobNumber,
-        '' AS useStone,
-        ${remarkField} AS remark,
-        ${remark1Field} AS remark1,
-        ${remark2Field} AS remark2
-      FROM ${config.detailTable} d
-      LEFT JOIN dbInventory.dbo.GMGoodShape s ON d.GoodShapeCode = s.GoodShapeCode
-      LEFT JOIN dbInventory.dbo.GMGoodSpec sp ON d.GoodSpecCode = sp.GoodSpecCode
-      WHERE d.${config.idCol} = (SELECT ${config.idCol} FROM ${config.headerTable} WHERE DocuNo = @docNo)
-      ORDER BY d.ListNo
-    `;
+        SELECT
+          d.ListNo AS seq,
+          ISNULL(d.GoodCode, '') AS stoneCode,
+          ${descField} AS stoneName,
+          ISNULL(d.GoodColorCode, '') AS color,
+          ISNULL(d.GoodShapeCode, '') AS shape,
+          ISNULL(s.GoodShapeNameEng, '') AS shapeName,
+          ISNULL(d.GoodSizeCode, '') AS size,
+          ISNULL(d.GoodSpecCode, '') AS characteristic,
+          ISNULL(sp.GoodSpecNameEng, '') AS specName,
+          ISNULL(d.GoodGradeCode, '') AS grade,
+          ISNULL(d.GoodThick, '') AS height,
+          ISNULL(d.${config.detailUnitCol}, '') AS unit,
+          '' AS warehouse,
+          ISNULL(d.${config.detailWeightCol}, 0) AS weight,
+          ISNULL(d.${config.detailQtyCol}, 0) AS qty,
+          ISNULL(d.${config.detailPriceCol}, 0) AS price,
+          ISNULL(d.${config.detailAmntCol}, 0) AS amount,
+          ${ctPriceField} AS ctPerPc,
+          ${orderNumField} AS orderNumber,
+          ${customerField} AS customer,
+          '' AS jobNumber,
+          '' AS useStone,
+          ${remarkField} AS remark,
+          ${remark1Field} AS remark1,
+          ${remark2Field} AS remark2
+        FROM ${config.detailTable} d
+        LEFT JOIN dbInventory.dbo.GMGoodShape s ON d.GoodShapeCode = s.GoodShapeCode
+        LEFT JOIN dbInventory.dbo.GMGoodSpec sp ON d.GoodSpecCode = sp.GoodSpecCode
+        WHERE d.${config.idCol} = (SELECT ${config.idCol} FROM ${config.headerTable} WHERE DocuNo = @docNo)
+        ORDER BY d.ListNo
+      `;
 
     const dtl = await pool.request()
       .input('docNo', sql.VarChar(20), docNo)
@@ -392,15 +392,15 @@ router.get('/summary/:docType', async (req, res) => {
     const config = getTableConfig(docType);
 
     const queryStr = `
-      SELECT
-        COUNT(*) AS docCount,
-        ISNULL(SUM(${config.amtCol}), 0) AS totalValue,
-        ISNULL(SUM(${config.qtyCol}), 0) AS totalQty,
-        MIN(CONVERT(VARCHAR(10), DocuDate, 103)) AS earliestDate,
-        MAX(CONVERT(VARCHAR(10), DocuDate, 103)) AS latestDate
-      FROM ${config.headerTable}
-      WHERE DocuNo LIKE @prefix + '%'
-    `;
+        SELECT
+          COUNT(*) AS docCount,
+          ISNULL(SUM(${config.amtCol}), 0) AS totalValue,
+          ISNULL(SUM(${config.qtyCol}), 0) AS totalQty,
+          MIN(CONVERT(VARCHAR(10), DocuDate, 103)) AS earliestDate,
+          MAX(CONVERT(VARCHAR(10), DocuDate, 103)) AS latestDate
+        FROM ${config.headerTable}
+        WHERE DocuNo LIKE @prefix + '%'
+      `;
 
     const result = await pool.request()
       .input('prefix', sql.VarChar(5), config.prefix)
@@ -414,3 +414,106 @@ router.get('/summary/:docType', async (req, res) => {
 });
 
 module.exports = router;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// เพิ่ม endpoint นี้ใน procurement.js ก่อนบรรทัด: module.exports = router;
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ============================================
+// PUT /api/procurement/document/:docNo
+// อัปเดต header ของเอกสาร (เฉพาะ field ที่แก้ไขได้)
+// ============================================
+router.put('/document/:docNo', async (req, res) => {
+  const { docNo } = req.params;
+  const { header } = req.body;
+
+  if (!header) {
+    return res.status(400).json({ ok: false, error: 'header is required' });
+  }
+
+  try {
+    const pool = await getPool();
+    const config = getTableConfig(docNo);
+    const request = pool.request().input('docNo', sql.VarChar(20), docNo);
+    const setClauses = [];
+
+    // ─── Fields ที่ทุก docType แก้ได้ ────────────────
+    if (header.docDate) {
+      const parsed = new Date(header.docDate);
+      if (!isNaN(parsed.getTime())) {
+        setClauses.push('DocuDate = @docDate');
+        request.input('docDate', sql.DateTime, parsed);
+      }
+    }
+    if (header.supplierCode !== undefined) {
+      setClauses.push('VendorCode = @vendorCode');
+      request.input('vendorCode', sql.VarChar(20), header.supplierCode || null);
+    }
+    if (header.currency !== undefined) {
+      setClauses.push('CurrCode = @currency');
+      request.input('currency', sql.VarChar(10), header.currency || 'THB');
+    }
+    if (header.exchangeRate !== undefined) {
+      const rate = parseFloat(header.exchangeRate);
+      if (!isNaN(rate)) {
+        setClauses.push('ExchRate = @exchRate');
+        request.input('exchRate', sql.Decimal(18, 6), rate);
+      }
+    }
+
+    // ─── SPA เท่านั้น ─────────────────────────────────
+    if (config.type === 'SPA') {
+      if (header.dueDate) {
+        const parsed = new Date(header.dueDate);
+        if (!isNaN(parsed.getTime())) {
+          setClauses.push('DueDate = @dueDate');
+          request.input('dueDate', sql.DateTime, parsed);
+        }
+      }
+      if (header.buyer !== undefined) {
+        setClauses.push('BuyName = @buyName');
+        request.input('buyName', sql.VarChar(50), header.buyer || null);
+      }
+    }
+
+    // ─── SRA / SRB / SIR ──────────────────────────────
+    if (config.type === 'SRA' || config.type === 'SRB' || config.type === 'SIR') {
+      if (header.refNumber !== undefined) {
+        setClauses.push('RefDocuNo = @refDocuNo');
+        request.input('refDocuNo', sql.VarChar(20), header.refNumber || null);
+      }
+    }
+
+    if (setClauses.length === 0) {
+      return res.json({ ok: true, message: 'Nothing to update' });
+    }
+
+    const updateQuery = `
+      UPDATE ${config.headerTable}
+      SET ${setClauses.join(', ')}
+      WHERE DocuNo = @docNo
+    `;
+
+    const result = await request.query(updateQuery);
+
+    if (result.rowsAffected[0] === 0) {
+      return res.status(404).json({ ok: false, error: 'Document not found' });
+    }
+
+    // Invalidate cache เพื่อให้ refetch ได้ข้อมูลใหม่
+    cache.delete(`proc_doc_${docNo}`);
+    // Invalidate list cache ทั้งหมดของ docType นี้
+    for (const key of cache.keys()) {
+      if (key.startsWith(`proc_docs_${config.type}`)) {
+        cache.delete(key);
+      }
+    }
+
+    console.log(`[PROC] ✅ Updated ${docNo}: ${result.rowsAffected[0]} row(s), fields: ${setClauses.join(', ')}`);
+    res.json({ ok: true, updated: result.rowsAffected[0] });
+
+  } catch (err) {
+    console.error(`❌ [PROC] Error updating ${docNo}:`, err.message);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});

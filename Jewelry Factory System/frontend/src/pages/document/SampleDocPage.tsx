@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import DocumentLayout from '../components/document/DocumentLayout';
-import type { DocListItem, BreadcrumbItem } from '../components/document/DocumentLayout';
-import { formConfigMap } from '../config/formConfigs';
+import DocumentLayout from '../../components/layout/DocumentLayout';
+import type { DocListItem, BreadcrumbItem } from '../../components/layout/DocumentLayout';
+import { formConfigMap } from '../../config/formConfigs';
 import {
   fetchSampleDocuments,
   fetchSampleDocument,
-} from '../services/sampleAPI';
+} from '../../services/sampleAPI';
 
 // ─── Route → docType mapping ──────────────────
 const routeToDocType: Record<string, string> = {
@@ -53,7 +53,7 @@ export default function SampleDocPage() {
       }));
       setDocList(mappedList);
       setTotalPages(response.totalPages || 1);
-      
+
       if (mappedList.length > 0 && !selectedDocNo) {
         setSelectedDocNo(mappedList[0].no);
       }

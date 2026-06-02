@@ -119,3 +119,18 @@ export async function generateNextDocumentNumber(docType: string): Promise<strin
   if (!json.ok) throw new Error(json.error || 'Failed to generate next number');
   return json.data;
 }
+
+// ✅ ฟังก์ชันใหม่ — อัปเดต header กลับไปที่ DB
+/** Update document header fields (PUT) */
+export async function updateDocumentHeader(
+  docNo: string,
+  header: Partial<ProcDocHeader>
+): Promise<void> {
+  const res = await fetch(`${API_BASE}/document/${encodeURIComponent(docNo)}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ header }),
+  });
+  const json = await res.json();
+  if (!json.ok) throw new Error(json.error || 'Failed to update document');
+}

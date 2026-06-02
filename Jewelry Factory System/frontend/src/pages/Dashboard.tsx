@@ -120,7 +120,7 @@ export default function Dashboard() {
             <AlertTriangle size={26} style={{ color: 'var(--color-danger-500)' }} />
           </div>
           <p style={{ fontSize: '0.85rem', color: 'var(--color-text-tertiary)' }}>{error}</p>
-          <button onClick={load} className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold" style={{ background:'var(--color-brand-500)', color:'#fff' }}>
+          <button onClick={() => load()} className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold" style={{ background:'var(--color-brand-500)', color:'#fff' }}>
             <RefreshCw size={14}/> Retry
           </button>
         </div>

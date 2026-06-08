@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { RefreshCw, AlertTriangle, Search, Package, DollarSign, ClipboardList, Check, FileSpreadsheet, Image, X } from 'lucide-react';
 import Topbar from '../components/layout/Topbar';
-import { fetchOrderDetail, fetchOrderByPo, fetchOrderByGroup, updateOrderRemarks, type OrderDetail } from '../services/orderTrackerAPI';
+import { fetchOrderDetail, fetchOrderByPo, fetchOrderByGroup, updateOrderRemarks, type OrderDetail } from '../services/poTrackerAPI';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 const fDate = (d: string | null | undefined) => {
@@ -1344,7 +1344,7 @@ export default function OrderDetailPage() {
         hideSearch
         breadcrumb={[
           { label: 'JEWELRY SMART FACTORY', path: '/' },
-          { label: 'ORDER TRACKER', path: '/order-tracker' },
+          { label: 'PO TRACKER', path: '/po-tracker' },
           { label: pageTitle },
         ]} 
       />
@@ -1499,10 +1499,10 @@ export default function OrderDetailPage() {
               <Image size={16} /> Photo
             </button>
 
-            {/* Close (Back to Order Tracker) */}
+            {/* Close (Back to PO Tracker) */}
             <button
-              onClick={() => navigate('/order-tracker')}
-              title="Close & return to Order Tracker"
+              onClick={() => navigate('/po-tracker')}
+              title="Close & return to PO Tracker"
               style={{
                 display: 'flex', alignItems: 'center', gap: '6px',
                 padding: '8px 16px', borderRadius: '12px',

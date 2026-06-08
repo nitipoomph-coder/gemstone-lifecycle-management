@@ -3,12 +3,45 @@ const router = express.Router();
 const { getPool, sql } = require('../db');
 
 // ─── Detail Cache (แยกจาก main dashboard cache — TTL 10 นาที) ──────────────────
+// ใช้สำหรับ cache ข้อมูลที่ query ซ้ำบ่อย เช่น years, detail drilldown
 const detailCache = new Map();
 const DETAIL_TTL = 10 * 60 * 1000;
 function getDC(k) { const e = detailCache.get(k); if (!e) return null; if (Date.now() > e.ex) { detailCache.delete(k); return null; } return e.d; }
 function setDC(k, d) { detailCache.set(k, { d, ex: Date.now() + DETAIL_TTL }); }
 
-// ─── GET /api/dashboard ────────────────────────────────────────────────────────
+/*
+ * ╔═══════════════════════════════════════════════════════════════════════════════╗
+ * ║                        DASHBOARD ROUTES OVERVIEW                            ║
+ * ╠═══════════════════════════════════════════════════════════════════════════════╣
+ * ║  Route                          │ Dashboard Page      │ Description         ║
+ * ╟──────────────────────────────────┼─────────────────────┼─────────────────────╢
+ * ║  GET /api/dashboard              │ Main Dashboard      │ Stat cards, charts  ║
+ * ║  GET /api/dashboard/years        │ All Dashboards      │ Available years     ║
+ * ║  GET /api/dashboard/detail/:type │ Main Dashboard      │ Card drill-down     ║
+ * ║  GET /api/dashboard/sales-summary│ Sales Dashboard     │ Sales by rep/year   ║
+ * ║  GET /api/dashboard/customer-summary│ Customer Dashboard│ Sales by cust/year  ║
+ * ╚═══════════════════════════════════════════════════════════════════════════════╝
+ *
+ * OrdNo Prefix Filter Policy:
+ * - Main Dashboard & Sales Dashboard: ใช้ IN allowlist (รวมทุก order type)
+ * - Customer Dashboard: ใช้ NOT IN blocklist ตาม Legacy VB.NET (FrmSalesYear_SumCust)
+ *   → ไม่นับ BBP, BBK, BBS, BBL, BBT, BBD (เป็นรายการพิเศษ/ภายใน)
+ */
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// [MAIN DASHBOARD] GET /api/dashboard
+// ใช้โดย: หน้า Main Dashboard (หน้าแรก)
+// หน้าที่: ดึงข้อมูลรวมทั้งหมดในครั้งเดียว ประกอบด้วย 9 ส่วน:
+//   1. Stat Cards (5 cards)   — สรุปยอด Orders วันนี้, Completed, WIP, Overdue, เดือนนี้
+//   2. 7-Day Order Trend      — กราฟแท่ง 7 วันล่าสุด
+//   3. Process Distribution   — Donut chart สถานะ production (Casting→Packing)
+//   4. Material Breakdown     — สัดส่วนวัสดุ (Brass/Silver/Tin)
+//   5. Order Types            — New vs Replenishment
+//   6. Top Customers          — ลูกค้า active orders สูงสุด 9 อันดับ
+//   7. Critical Delay Orders  — รายการ overdue เรียงจากเก่าสุด
+//   8. Recent Orders          — 6 รายการล่าสุด (Live Feed)
+//   9. Stone & Finding        — สรุปพลอย/อะไหล่ค้างในสายการผลิต
+// ═══════════════════════════════════════════════════════════════════════════════
 router.get('/', async (req, res) => {
   try {
     const pool = await getPool();
@@ -17,7 +50,7 @@ router.get('/', async (req, res) => {
     const yearParam = req.query.year;
     const selectedYear = (yearParam && yearParam !== 'all') ? parseInt(yearParam) : null;
     const activeYear = selectedYear || new Date().getFullYear();
-    
+
     // Set reference date for trend queries (Dec 31 of selected year if past, else today)
     let refDate = new Date();
     if (selectedYear && selectedYear < new Date().getFullYear()) {
@@ -357,25 +390,56 @@ router.get('/', async (req, res) => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// GET /api/dashboard/years — ปีที่มีข้อมูลในระบบ
+// [ALL DASHBOARDS] GET /api/dashboard/years
+// ใช้โดย: ทุก Dashboard (Main, Sales, Customer)
+// หน้าที่: ดึงปีที่มีข้อมูล OrdHD อยู่ในระบบ สำหรับให้ user เลือก filter
+//         มี cache TTL 10 นาทีเพื่อลด load
 // ═══════════════════════════════════════════════════════════════════════════════
 router.get('/years', async (req, res) => {
   try {
     const cached = getDC('years');
-    if (cached) return res.json(cached);
+    if (cached) return res.json({ ok: true, years: cached });
+
     const pool = await getPool();
-    const r = await pool.request().query(`SELECT DISTINCT YEAR(OrdDate) as yr FROM OrdHD WHERE OrdDate IS NOT NULL AND ((PONo IS NULL OR UPPER(PONo) NOT LIKE '%SAMPLE%') AND LEFT(OrdNo, 3) IN ('BBC','BBQ','BBD','BBI','BBF','BBP','BBT','BBX','BBK','BBR','BBL','BBS','BBE')) ORDER BY yr DESC`);
-    const result = { ok: true, years: r.recordset.map(x => x.yr) };
-    setDC('years', result);
-    res.json(result);
+
+    // 1. ประกาศตัวแปร request ให้ถูกต้องตามโครงสร้างระบบเดิมของคุณ
+    const request = pool.request();
+
+    // 2. ยิง Query ไปที่ฐานข้อมูลจริง
+    const query = `
+      SELECT DISTINCT YEAR(OrdDate) AS yr 
+      FROM OrdHD 
+      WHERE OrdDate IS NOT NULL 
+      ORDER BY yr DESC
+    `;
+    const result = await request.query(query);
+
+    // 3. นำข้อมูลแปลงเป็น Array ของปี [2026, 2025, 2024, ...]
+    let years = result.recordset.map(row => row.yr);
+
+    // 4. บล็อกให้เหลือเฉพาะ 6 ปีล่าสุด
+    if (years.length > 6) {
+      years = years.slice(0, 6);
+    }
+
+    // 5. จัดเรียงจากน้อยไปมาก เพื่อให้ปุ่มบนเว็บเรียงจากอดีตมาปัจจุบัน (เช่น 2021 -> 2026)
+    years.sort((a, b) => a - b);
+
+    setDC('years', years);
+    res.json({ ok: true, years });
   } catch (err) {
+    console.error('[API ERROR] /api/dashboard/years:', err.message);
     res.status(500).json({ ok: false, error: err.message });
   }
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// GET /api/dashboard/detail/:cardType?year1=2026&year2=2025
-// cardType: today | completed | wip | overdue | month
+// [MAIN DASHBOARD — DRILL DOWN] GET /api/dashboard/detail/:cardType
+// ใช้โดย: หน้า Main Dashboard เมื่อ user คลิกที่ Stat Card
+// หน้าที่: แสดง Detail Popup เปรียบเทียบ 2 ปี (year1 vs year2)
+//   - cardType: 'today' | 'completed' | 'wip' | 'overdue' | 'month'
+//   - 'today' → เทียบวันนี้กับค่าเฉลี่ย 7 วันทำงานล่าสุด
+//   - อื่นๆ   → เทียบรายเดือน + breakdown ลูกค้า top 10
 // ═══════════════════════════════════════════════════════════════════════════════
 router.get('/detail/:cardType', async (req, res) => {
   try {
@@ -565,4 +629,178 @@ router.get('/detail/:cardType', async (req, res) => {
   }
 });
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// [SALES DASHBOARD] GET /api/dashboard/sales-summary?years=2024,2025
+// ใช้โดย: หน้า Sales Dashboard (SalesDashboard.tsx)
+// หน้าที่: ดึงยอดขายรวม (SumOrdExchAmnt) จับกลุ่มตาม Sales Rep และปี
+//         เพื่อแสดง Bar Chart เปรียบเทียบยอดขายแต่ละ Sales ข้ามหลายปี
+//         JOIN GMCust → GMEmp เพื่อ map CustCode → SalesName
+// ═══════════════════════════════════════════════════════════════════════════════
+router.get('/sales-summary', async (req, res) => {
+  try {
+    const pool = await getPool();
+    let years = (req.query.years || '').split(',').map(y => parseInt(y)).filter(y => !isNaN(y));
+    if (years.length > 6) {
+      years = years.sort((a, b) => a - b).slice(-6);
+    }
+
+    if (years.length === 0) years.push(new Date().getFullYear());
+    // Build the IN clause dynamically for years
+    const yearParams = years.map((_, i) => `@y${i}`).join(',');
+    const request = pool.request();
+    years.forEach((y, i) => request.input(`y${i}`, sql.Int, y));
+
+    const query = `
+      SELECT 
+        e.SalesName AS id,
+        e.SalesName AS name,
+        MAX(e.EmpType) AS empType,
+        MAX(e.SalesLV) AS salesLv,
+        YEAR(h.OrdDate) AS yr,
+        SUM(ISNULL(h.SumOrdExchAmnt, 0)) AS totalSales
+      FROM OrdHD h
+      JOIN GMCust c ON h.CustCode = c.CustCode
+      JOIN GMEmp e ON c.SalesName = e.SalesName
+      WHERE YEAR(h.OrdDate) IN (${yearParams})
+        AND h.OrdStatus IN ('P','N','C') AND h.CloseStatus <> 'Y' -- Adjust as needed
+      GROUP BY e.SalesName, YEAR(h.OrdDate)
+    `;
+    const result = await request.query(query);
+
+    // Format data into the structure expected by frontend
+    const salesMap = {};
+    result.recordset.forEach(row => {
+      if (!salesMap[row.id]) {
+        salesMap[row.id] = {
+          id: row.id,
+          name: row.name,
+          empType: row.empType,
+          salesLv: row.salesLv,
+          data: {}
+        };
+      }
+      salesMap[row.id].data[row.yr.toString()] = row.totalSales;
+    });
+
+    const data = Object.values(salesMap).sort((a, b) => {
+      const lastYr = Math.max(...years).toString();
+      return (b.data[lastYr] || 0) - (a.data[lastYr] || 0);
+    });
+
+    res.json({ ok: true, data });
+  } catch (err) {
+    console.error('[API ERROR] /api/dashboard/sales-summary:', err.message);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// [CUSTOMER DASHBOARD] GET /api/dashboard/customer-summary?years=2024,2025
+// ใช้โดย: หน้า Customer Dashboard (CustomerDashboard.tsx)
+// หน้าที่: ดึงยอดขายรวม (SumOrdExchAmnt) จับกลุ่มตาม Customer และปี/เดือน
+//         เพื่อแสดง Bar Chart, Monthly Breakdown, Breakdown Table
+//
+// ⚠️ OrdNo Filter: ใช้ NOT IN blocklist ตาม Legacy VB.NET (FrmSalesYear_SumCust)
+//    → ไม่นับ BBP, BBK, BBS, BBL, BBT, BBD
+//    → กรองเฉพาะ CustStatus = 'Y' (ลูกค้า Active เท่านั้น)
+// ═══════════════════════════════════════════════════════════════════════════════
+router.get('/customer-summary', async (req, res) => {
+  try {
+    const pool = await getPool();
+    const years = (req.query.years || '').split(',').map(y => parseInt(y)).filter(y => !isNaN(y));
+    if (years.length === 0) years.push(new Date().getFullYear());
+
+    // สร้าง parameterized IN clause สำหรับปีที่ต้องการ
+    const yearParams = years.map((_, i) => `@y${i}`).join(',');
+    const request = pool.request();
+    years.forEach((y, i) => request.input(`y${i}`, sql.Int, y));
+
+    // Query ตาม Logic เดิมของ FrmSalesYear_SumCust.vb:
+    //   - ใช้ NOT IN blocklist แทน IN allowlist
+    //   - กรองเฉพาะ CustStatus = 'Y' (Active customers)
+    //   - ดึง SumOrdExchAmnt (ยอดแลกเปลี่ยนเงินตรา)
+    const query = `
+      SELECT 
+        h.CustCode AS id,
+        ISNULL(MAX(c.CustName), h.CustCode) AS name,
+        MAX(c.CustStatus) AS custStatus,
+        MAX(c.SalesName) AS salesName,
+        YEAR(h.OrdDate) AS yr,
+        MONTH(h.OrdDate) AS mth,
+        SUM(ISNULL(h.SumOrdExchAmnt, 0)) AS totalSales,
+        SUM(ISNULL(h.SumOrdQty, 0)) AS totalQty
+      FROM OrdHD h
+      LEFT JOIN GMCust c ON h.CustCode = c.CustCode
+      WHERE YEAR(h.OrdDate) IN (${yearParams})
+        AND SUBSTRING(h.OrdNo, 1, 3) NOT IN ('BBP','BBK','BBS','BBL','BBT','BBD')
+        AND c.CustStatus = 'Y'
+      GROUP BY h.CustCode, YEAR(h.OrdDate), MONTH(h.OrdDate)
+    `;
+    const result = await request.query(query);
+
+    // จัดกลุ่มข้อมูลตาม CustCode → แยก yearly total + monthly breakdown
+    const custMap = {};
+    const curYear = new Date().getFullYear();
+    const curMonth = new Date().getMonth() + 1;
+
+    result.recordset.forEach(row => {
+      if (!custMap[row.id]) {
+        custMap[row.id] = {
+          id: row.id,
+          name: row.name,
+          custStatus: row.custStatus,
+          salesName: row.salesName,
+          data: {},
+          monthly: {},
+          dataQty: {},
+          monthlyQty: {},
+          currentMonthSales: 0
+        };
+      }
+
+      const yrStr = row.yr.toString();
+      const mthStr = row.mth.toString();
+
+      if (!custMap[row.id].data[yrStr]) {
+        custMap[row.id].data[yrStr] = 0;
+      }
+      custMap[row.id].data[yrStr] += row.totalSales;
+
+      if (!custMap[row.id].monthly[yrStr]) {
+        custMap[row.id].monthly[yrStr] = {};
+      }
+      custMap[row.id].monthly[yrStr][mthStr] = row.totalSales;
+
+      if (!custMap[row.id].dataQty[yrStr]) {
+        custMap[row.id].dataQty[yrStr] = 0;
+      }
+      custMap[row.id].dataQty[yrStr] += row.totalQty;
+
+      if (!custMap[row.id].monthlyQty[yrStr]) {
+        custMap[row.id].monthlyQty[yrStr] = {};
+      }
+      custMap[row.id].monthlyQty[yrStr][mthStr] = row.totalQty;
+
+      if (row.yr === curYear && row.mth === curMonth) {
+        custMap[row.id].currentMonthSales += row.totalSales;
+      }
+    });
+
+    // เรียงลำดับ: ยอดเดือนปัจจุบันมากสุดก่อน → ถ้าเท่ากันดูยอดปีรวม
+    const curYearStr = curYear.toString();
+    const data = Object.values(custMap).sort((a, b) => {
+      if (b.currentMonthSales !== a.currentMonthSales) {
+        return (b.currentMonthSales || 0) - (a.currentMonthSales || 0);
+      }
+      return (b.data[curYearStr] || 0) - (a.data[curYearStr] || 0);
+    });
+
+    res.json({ ok: true, data });
+  } catch (err) {
+    console.error('[API ERROR] /api/dashboard/customer-summary:', err.message);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 module.exports = router;
+

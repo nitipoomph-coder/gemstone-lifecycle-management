@@ -12,6 +12,18 @@ export const menuConfig: NavMenuGroup[] = [
     accentColor: 'var(--color-brand-500)',
   },
 
+  // ─── Sales Dashboards ───
+  {
+    id: 'sales-dashboard',
+    label: 'รายงานยอดขาย',
+    icon: 'trending-up',
+    accentColor: 'var(--color-success-500)',
+    items: [
+      { id: 'dash-sales', label: 'ยอดขายตามพนักงาน', path: '/dashboard/sales' },
+      { id: 'dash-cust', label: 'ยอดขายตามลูกค้า', path: '/dashboard/customer' },
+    ],
+  },
+
   // ─── Entity 1: จัดการออเดอร์และการสั่งซื้อ ───
   {
     id: 'procurement',
@@ -69,14 +81,14 @@ export const menuConfig: NavMenuGroup[] = [
     ],
   },
 
-  // ─── Order Tracker (ระบบใหม่) ───
+  // ─── PO Tracker (ระบบใหม่) ───
   {
     id: 'order-tracker',
-    label: 'Order Tracker',
+    label: 'PO Tracker',
     icon: 'layout-list',
     accentColor: 'var(--color-brand-600)',
     items: [
-      { id: 'ot-list',   label: 'รายการ Order (Pending)', path: '/order-tracker' },
+      { id: 'ot-list', label: 'รายการ Order (Pending)', path: '/po-tracker' },
     ],
   },
 

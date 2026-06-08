@@ -9,31 +9,34 @@ export default function ItemDetailPage() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'stone' | 'finding' | 'cast'>('stone');
 
-  // Mock Data
-  const itemData = {
-    pdsNo: 'PDS26040921', from: 'PDN26040201', psNo: 'PS248652A', itemNo: id || 'BES32753A',
-    round: 'R2', sales: 'Buum-Buum', customer: 'N031', metal: 'B-Brass', productType: 'E-Earring',
-    sampleQty: [2, 0, 2], devNo: '25FW-FG-03', size: '', length: '', collection: '10_25FW-FG',
-    stampOn: '1.Mold', stamp: 'MG', source: '', estMetalWt: '', targetPrice: '0.00',
-    orderNo: '', orderRingSize: '', enamelEpoxy: '', plating: '14K-YGH0.125M/EC',
-    dueDate: '22/04/2026', receiveDate: '27/04/2026', cancelDate: '',
-    castWt: 11.10, filingWt: 0.00, finishWt: 0.00,
-    remarks: ['แค้ขอบล้นด้านในที่รองกระเปาะ', 'ให้เลี้ยงปีกเพื่อรองรับพลอย', 'ออเดอร์พลอยหลุดเยอะมาก']
+  const itemData: any = {
+    itemNo: id || 'UNKNOWN',
+    pdsNo: 'PDS-001',
+    from: 'REF-001',
+    psNo: 'PS-1234',
+    customer: 'Cust-A',
+    sales: 'Sales-A',
+    productType: 'Ring',
+    collection: 'Summer',
+    devNo: 'D-001',
+    metal: 'Gold',
+    stampOn: '18K',
+    plating: 'Rhodium',
+    dueDate: '2026-12-31',
+    targetPrice: '500',
+    castWt: '5',
+    filingWt: '4',
+    finishWt: '3',
+    remarks: []
   };
 
-  const stoneList = [
-    { no: 1, code: 'CZ', photo: true, name: 'White CZ', shape: 'PS', size: '9*14', cut: 'FAC', grade: 'A', set: 'GSH', wt: '0.0000', qty: 2, modifyDate: '06/11/2024' },
-    { no: 2, code: 'CZ', photo: true, name: 'White CZ', shape: 'PS', size: '5*8', cut: 'FAC', grade: 'A', set: 'GSH', wt: '0.0000', qty: 2, modifyDate: '06/11/2024' },
-    { no: 3, code: 'CZ', photo: true, name: 'White CZ', shape: 'RD', size: '8', cut: 'FAC', grade: 'A', set: 'GSH', wt: '0.0000', qty: 2, modifyDate: '06/11/2024' },
-    { no: 4, code: 'CZ', photo: true, name: 'White CZ', shape: 'RD', size: '6', cut: 'FAC', grade: 'A', set: 'GSH', wt: '0.0000', qty: 6, modifyDate: '06/11/2024' },
-    { no: 5, code: 'CZ', photo: true, name: 'White CZ', shape: 'RD', size: '4', cut: 'FAC', grade: 'A', set: 'GSH', wt: '0.0000', qty: 2, modifyDate: '06/11/2024' }
-  ];
+  const stoneList: any[] = [];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--color-surface-1)' }}>
       <Topbar breadcrumb={[
         { label: 'JEWELRY SMART FACTORY', path: '/' },
-        { label: 'ORDER TRACKER', path: '/order-tracker' },
+        { label: 'PO TRACKER', path: '/po-tracker' },
         { label: itemData.itemNo }
       ]} />
 
@@ -142,7 +145,7 @@ export default function ItemDetailPage() {
                 <FileText size={16} /> Production Notes
               </h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {itemData.remarks.map((rmk, idx) => (
+                {itemData.remarks.map((rmk: string, idx: number) => (
                   <div key={idx} style={{ background: 'color-mix(in srgb, var(--color-accent-500), transparent 94%)', padding: '14px', borderRadius: '12px', borderLeft: '4px solid var(--color-accent-500)', fontSize: '0.75rem' }}>
                     <b>Note {idx + 1}:</b> {rmk}
                   </div>
@@ -177,7 +180,7 @@ export default function ItemDetailPage() {
                 </tr>
               </thead>
               <tbody>
-                {activeTab === 'stone' && stoneList.map((st, i) => (
+                {activeTab === 'stone' && stoneList.map((st: any, i: number) => (
                   <tr key={i} className="detail-row-hover" style={{ background: i % 2 === 0 ? 'transparent' : 'color-mix(in srgb, var(--color-surface-1), transparent 80%)' }}>
                     <td style={{ padding: '16px 20px', fontWeight: 800, color: 'var(--color-brand-600)', borderBottom: '1px solid var(--color-border-light)' }}>{st.no}</td>
                     <td style={{ padding: '16px 20px', borderBottom: '1px solid var(--color-border-light)' }}>{st.code}</td>

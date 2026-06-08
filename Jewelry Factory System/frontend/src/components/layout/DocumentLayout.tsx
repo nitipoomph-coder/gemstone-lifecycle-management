@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import Topbar from './Topbar';
 import type { FormConfig, TableColumnDef } from '../../config/formConfigs';
 import {
-  FilePlus, Save, Edit3, Search, Trash2, CornerUpLeft, Printer, X, FileText,
-  Package, TrendingUp, Calendar, DollarSign, Hash, RefreshCw, FileSpreadsheet
+  FilePlus, Save, Edit3, Search, Trash2, CornerUpLeft, Printer, X,
+  Package, Calendar, RefreshCw, FileSpreadsheet
 } from 'lucide-react';
 
 export interface DocListItem {
@@ -27,6 +27,7 @@ export interface DocumentLayoutProps {
   selectedDocNo: string;
   onSelectDoc: (docNo: string) => void;
   onSearchList?: (text: string) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   docDetail: any | null;
   isEditing?: boolean;
 
@@ -81,14 +82,15 @@ export default function DocumentLayout({
   onSearchSubmit,
   onDelete,
   onCancel,
-  onFetchRef,
+  // removed onFetchRef
   page = 1,
   totalPages = 1,
   onPageChange
 }: DocumentLayoutProps) {
   const navigate = useNavigate();
-  const [searchText, setSearchText] = useState('');
-  const [refInput, setRefInput] = useState('');
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [searchText] = useState('');
+  // removed unused refInput
 
   const [showToolbarSearch, setShowToolbarSearch] = useState(false);
   const [toolbarSearchText, setToolbarSearchText] = useState('');
@@ -143,12 +145,13 @@ export default function DocumentLayout({
     ? docList
     : docList.filter(d => d.no.toLowerCase().includes(searchText.toLowerCase()));
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const totalWeight = lines.reduce((s: number, l: any) => s + Number(l.weight || 0), 0);
-  const totalQty = lines.reduce((s: number, l: any) => s + Number(l.qty || l.ItemQty || l.GoodQty || 0), 0);
-  const totalAmount = lines.reduce((s: number, l: any) => s + Number(l.amount || l.total || 0), 0);
+  // removed unused totalQty and totalAmount
 
   const tableColumns: TableColumnDef[] = formConfig?.tableColumns || [];
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const getCellValue = (line: any, key: string, idx: number): string | number => {
     if (key === 'seq') return idx + 1;
     const colDef = formConfig?.tableColumns?.find(c => c.key === key);
@@ -185,6 +188,7 @@ export default function DocumentLayout({
     return (val === null || val === undefined || val === '') ? '-' : val;
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const getHeaderValue = (h: any, name: string): string => {
     const map: Record<string, string> = {
       docNumber: h.docNumber || h.DocuNo,
@@ -288,7 +292,7 @@ export default function DocumentLayout({
           <button onClick={() => window.print()} className="flex items-center gap-1.5 rounded-lg border border-[var(--color-border-light)] px-3 py-1.5 text-[13px] font-medium transition-colors hover:bg-[var(--color-surface-1)] text-[var(--color-text-secondary)] bg-[var(--color-surface-0)]">
             <Printer size={15} /> <span className="hidden md:inline">พิมพ์</span>
           </button>
-          <button className="flex items-center gap-1.5 rounded-lg border border-[#107C41]/30 px-3 py-1.5 text-[13px] font-medium transition-colors text-[#107C41] hover:bg-[#107C41]/5 bg-[var(--color-surface-0)]">
+          <button className="flex items-center gap-1.5 rounded-lg border border-[var(--color-success-500)]/30 px-3 py-1.5 text-[13px] font-medium transition-colors text-[var(--color-success-600)] hover:bg-[var(--color-success-500)]/10 bg-[var(--color-surface-0)]">
             <FileSpreadsheet size={15} /> <span className="hidden md:inline">Excel</span>
           </button>
 
@@ -368,9 +372,6 @@ export default function DocumentLayout({
               <>
                 {/* Header Section */}
                 <div className="p-6 flex flex-col border-b border-white/10 relative overflow-hidden">
-                  <div className="absolute -right-4 -top-4 text-white/5">
-                    <Package size={120} strokeWidth={1} />
-                  </div>
 
                   <span className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-[var(--color-brand-400)] mb-1 z-10">
                     {formConfig?.titleTh || _docType}
@@ -382,8 +383,8 @@ export default function DocumentLayout({
                     <Calendar size={12} /> {getHeaderValue(header, 'docDate')}
                   </span>
 
-                  <div className="mt-5 inline-flex items-center gap-2 bg-[#2ecc71]/10 text-[#2ecc71] px-3 py-1.5 rounded-full self-start border border-[#2ecc71]/20 z-10 shadow-lg shadow-[#2ecc71]/5 backdrop-blur-sm">
-                    <div className="w-1.5 h-1.5 rounded-full bg-[#2ecc71] shadow-[0_0_8px_#2ecc71]"></div>
+                  <div className="mt-5 inline-flex items-center gap-2 bg-[var(--color-success-500)]/10 text-[var(--color-success-500)] px-3 py-1.5 rounded-full self-start border border-[var(--color-success-500)]/20 z-10 shadow-lg shadow-[var(--color-success-500)]/5 backdrop-blur-sm">
+                    <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-success-500)] shadow-[0_0_8px_var(--color-success-500)]"></div>
                     <span className="text-[10px] font-black tracking-widest uppercase">
                       {header.status === 'C' ? 'Canceled' : header.status === 'A' ? 'Approved' : 'Normal'}
                     </span>
@@ -395,7 +396,7 @@ export default function DocumentLayout({
                   <div className="flex flex-col gap-1.5">
                     <span className="text-[10px] font-bold uppercase text-white/40 tracking-widest">มูลค่ารวม - Total Value</span>
                     <div className="flex items-baseline gap-2">
-                      <span className="text-[28px] font-black text-[#f1c40f] font-mono tracking-tight drop-shadow-md">
+                      <span className="text-[22px] font-black text-[var(--color-accent-500)] font-mono tracking-tight drop-shadow-md">
                         {Number(getHeaderValue(header, 'totalAmount') || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </span>
                     </div>
@@ -405,7 +406,7 @@ export default function DocumentLayout({
                   <div className="flex flex-col gap-1.5">
                     <span className="text-[10px] font-bold uppercase text-white/40 tracking-widest">จำนวนรวม - Quantity</span>
                     <div className="flex items-baseline gap-2">
-                      <span className="text-2xl font-black text-white font-mono tracking-tight">
+                      <span className="text-[22px] font-black text-white font-mono tracking-tight">
                         {Number(getHeaderValue(header, 'totalQty') || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </span>
                     </div>
@@ -415,7 +416,7 @@ export default function DocumentLayout({
                   <div className="flex flex-col gap-1.5">
                     <span className="text-[10px] font-bold uppercase text-white/40 tracking-widest">น้ำหนักสุทธิ - Net Weight</span>
                     <div className="flex items-baseline gap-2">
-                      <span className="text-2xl font-black text-white font-mono tracking-tight">
+                      <span className="text-[22px] font-black text-white font-mono tracking-tight">
                         {totalWeight.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}
                       </span>
                     </div>
@@ -438,10 +439,10 @@ export default function DocumentLayout({
                           )}
                         </div>
                         <div className="flex flex-wrap gap-1.5 mt-1">
-                          {lines[selectedLineIdx]?.GoodColorCode && <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#f1c40f]/20 text-[#f1c40f] border border-[#f1c40f]/20">{lines[selectedLineIdx].GoodColorCode}</span>}
-                          {lines[selectedLineIdx]?.GoodShapeCode && <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-white/10 text-white border border-white/10">{lines[selectedLineIdx].GoodShapeCode} Shape</span>}
-                          {lines[selectedLineIdx]?.GoodSizeCode && <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-white/10 text-white/80 border border-white/10">Size {lines[selectedLineIdx].GoodSizeCode}</span>}
-                          {lines[selectedLineIdx]?.GoodGradeCode && <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#e67e22]/20 text-[#e67e22] border border-[#e67e22]/20">Grade {lines[selectedLineIdx].GoodGradeCode}</span>}
+                          {lines[selectedLineIdx]?.GoodColorCode && <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[var(--color-accent-500)]/20 text-[var(--color-accent-500)] border border-[var(--color-accent-500)]/20">{lines[selectedLineIdx].GoodColorCode}</span>}
+                          {lines[selectedLineIdx]?.GoodShapeCode && <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[var(--color-surface-1)]/30 text-white border border-[var(--color-border-light)]">{lines[selectedLineIdx].GoodShapeCode} Shape</span>}
+                          {lines[selectedLineIdx]?.GoodSizeCode && <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[var(--color-surface-1)]/30 text-white/80 border border-[var(--color-border-light)]">Size {lines[selectedLineIdx].GoodSizeCode}</span>}
+                          {lines[selectedLineIdx]?.GoodGradeCode && <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[var(--color-warning-50)] text-[var(--color-warning-600)] border border-[var(--color-warning-100)]">Grade {lines[selectedLineIdx].GoodGradeCode}</span>}
                           {lines[selectedLineIdx]?.InveCode && <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-white/10 text-white/80 border border-white/10 tracking-wider">{lines[selectedLineIdx].InveCode}</span>}
                         </div>
                       </div>
@@ -454,7 +455,7 @@ export default function DocumentLayout({
                   <span className="text-[10px] font-bold uppercase text-white/40 tracking-widest">Timeline</span>
                   <div className="flex gap-4">
                     <div className="flex flex-col items-center mt-1">
-                      <div className="w-2.5 h-2.5 rounded-full bg-[#2ecc71] shadow-[0_0_10px_#2ecc71]"></div>
+                      <div className="w-2.5 h-2.5 rounded-full bg-[var(--color-success-500)] shadow-[0_0_10px_var(--color-success-500)]"></div>
                       <div className="w-px flex-1 bg-white/20 my-1"></div>
                     </div>
                     <div className="flex flex-col pb-2">
@@ -488,7 +489,7 @@ export default function DocumentLayout({
                 {/* Section 01: Header */}
                 <div className="bg-[var(--color-surface-0)] rounded-2xl shadow-sm border border-[var(--color-border-light)] overflow-visible">
                   <div className="border-b border-[var(--color-border-light)] px-6 py-4 flex items-center gap-4 bg-[var(--color-surface-0)] rounded-t-2xl">
-                    <div className="bg-[var(--color-surface-900)] text-white text-xs font-black w-8 h-8 rounded-lg flex items-center justify-center shadow-sm">01</div>
+                    <div className="bg-[var(--color-brand-500)] text-white text-xs font-black w-8 h-8 rounded-lg flex items-center justify-center shadow-sm">01</div>
                     <h2 className="text-base font-bold text-[var(--color-text-primary)] tracking-wide">ข้อมูลเอกสาร <span className="text-[var(--color-text-tertiary)] font-medium text-sm ml-2">Order Information</span></h2>
                   </div>
                   <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-6">
@@ -497,7 +498,7 @@ export default function DocumentLayout({
                       const val = (isEditing && !f.readOnly && editDraft[f.name] !== undefined) ? editDraft[f.name] : dbVal;
 
                       return (
-                        <div key={f.name} className={`flex flex-col gap-2 relative ${f.colSpan ?\`col-span-\${f.colSpan}\` : ''}`}>
+                        <div key={f.name} className={`flex flex-col gap-2 relative ${f.colSpan ? `col-span-${f.colSpan}` : ''}`}>
                     <label className="text-[12px] font-bold text-[var(--color-text-tertiary)] uppercase flex items-center gap-1 z-10 bg-[var(--color-surface-0)] px-1 absolute -top-2.5 left-2">
                       {f.label} {(!f.readOnly || f.name === 'docNumber') && <span className="text-[var(--color-danger-500)]">*</span>}
                     </label>
@@ -530,7 +531,7 @@ export default function DocumentLayout({
             {!hasPhoto && formConfig?.stoneFields && lines.length > 0 && (
               <div className="bg-[var(--color-surface-0)] rounded-2xl shadow-sm border border-[var(--color-border-light)] overflow-visible">
                 <div className="border-b border-[var(--color-border-light)] px-6 py-4 flex items-center gap-4 bg-[var(--color-surface-0)] rounded-t-2xl">
-                  <div className="bg-[var(--color-surface-900)] text-white text-xs font-black w-8 h-8 rounded-lg flex items-center justify-center shadow-sm">02</div>
+                  <div className="bg-[var(--color-brand-500)] text-white text-xs font-black w-8 h-8 rounded-lg flex items-center justify-center shadow-sm">02</div>
                   <h2 className="text-base font-bold text-[var(--color-text-primary)] tracking-wide">ข้อมูลพลอย <span className="text-[var(--color-text-tertiary)] font-medium text-sm ml-2">Gemstone Specification</span></h2>
                 </div>
                 <div className="p-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-x-6 gap-y-6">
@@ -556,7 +557,7 @@ export default function DocumentLayout({
             {!hasPhoto && (
               <div className="bg-[var(--color-surface-0)] rounded-2xl shadow-sm border border-[var(--color-border-light)] overflow-visible">
                 <div className="border-b border-[var(--color-border-light)] px-6 py-4 flex items-center gap-4 bg-[var(--color-surface-0)] rounded-t-2xl">
-                  <div className="bg-[var(--color-surface-900)] text-white text-xs font-black w-8 h-8 rounded-lg flex items-center justify-center shadow-sm">03</div>
+                  <div className="bg-[var(--color-brand-500)] text-white text-xs font-black w-8 h-8 rounded-lg flex items-center justify-center shadow-sm">03</div>
                   <h2 className="text-base font-bold text-[var(--color-text-primary)] tracking-wide">หมายเหตุ <span className="text-[var(--color-text-tertiary)] font-medium text-sm ml-2">Notes & Remarks</span></h2>
                 </div>
                 <div className="p-6">
@@ -578,7 +579,7 @@ export default function DocumentLayout({
             <div className="bg-[var(--color-surface-0)] rounded-2xl shadow-sm border border-[var(--color-border-light)] overflow-hidden flex flex-col">
               <div className="border-b border-[var(--color-border-light)] px-6 py-4 flex items-center justify-between bg-[var(--color-surface-0)] rounded-t-2xl">
                 <div className="flex items-center gap-4">
-                  <div className="bg-[var(--color-surface-900)] text-white text-xs font-black w-8 h-8 rounded-lg flex items-center justify-center shadow-sm">04</div>
+                  <div className="bg-[var(--color-brand-500)] text-white text-xs font-black w-8 h-8 rounded-lg flex items-center justify-center shadow-sm">04</div>
                   <h2 className="text-base font-bold text-[var(--color-text-primary)] tracking-wide">รายการสั่งซื้อ <span className="text-[var(--color-text-tertiary)] font-medium text-sm ml-2">Line Items • {lines.length} รายการ</span></h2>
                 </div>
                 {!isEditing && (
@@ -600,6 +601,7 @@ export default function DocumentLayout({
                     </tr>
                   </thead>
                   <tbody className="text-[13px] font-medium">
+                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                     {lines.map((line: any, i: number) => {
                       const isSelected = selectedLineIdx === i;
                       return (

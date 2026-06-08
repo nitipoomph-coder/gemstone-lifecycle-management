@@ -1,4 +1,4 @@
-// src/pages/OrderTrackerAdvanced.tsx
+// src/pages/POTrackerAdvanced.tsx
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Topbar from '../components/layout/Topbar';
@@ -6,7 +6,7 @@ import OrderTable from '../components/dashboard/OrderTable'; // 👈 Import ต�
 import { fetchOrders, type OrderSummary } from '../services/orderAPI';
 import { RefreshCw, AlertTriangle, Package, LayoutGrid, DollarSign, X } from 'lucide-react';
 
-export default function OrderTrackerAdvanced() {
+export default function POTrackerAdvanced() {
   const navigate = useNavigate();
   const [orders, setOrders] = useState<OrderSummary[]>([]);
   const [filtered, setFiltered] = useState<OrderSummary[]>([]);
@@ -251,7 +251,7 @@ export default function OrderTrackerAdvanced() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--color-surface-1)', fontFamily: 'var(--font-body)' }}>
-      <Topbar breadcrumb={[{ label: 'JEWELRY SMART FACTORY', path: '/' }, { label: 'ORDER TRACKER' }]} />
+      <Topbar breadcrumb={[{ label: 'JEWELRY SMART FACTORY', path: '/' }, { label: 'PO TRACKER' }]} />
 
       <div className="content-scrollbar flex-1 overflow-y-auto" style={{ padding: '24px' }}>
         {/* ─── KPI TILES ─── */}

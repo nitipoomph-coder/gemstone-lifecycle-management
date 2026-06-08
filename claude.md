@@ -112,6 +112,7 @@ gemstone-lifecycle-management/
     │       ├── pages/
     │       │   ├── Dashboard.tsx              # หน้าภาพรวม (home)
     │       │   ├── DashboardDetail.tsx         # Dashboard detail drilldown
+    │       │   ├── CustomerDashboard.tsx       # ⭐ Yearly Sales By Customer (กราฟเปรียบเทียบยอดขายลูกค้า)
     │       │   ├── OrderTrackerAdvanced.tsx    # ⭐ Order Tracker main (list view)
     │       │   ├── OrderTrackerPage.tsx        # Order Tracker (legacy/alternate)
     │       │   ├── OrderDetailPage.tsx         # Order detail (by ord/po/group)
@@ -468,3 +469,41 @@ API_PORT=3001
 - ห้ามลบหน้าเพจเดิม (เช่น `SOAPage.tsx`, `ProcurementPage.tsx`) จนกว่าการสร้าง Unified Layout และเพจใหม่จะเสร็จสมบูรณ์และทดสอบแล้วว่าไม่มีข้อผิดพลาด
 - ก่อนลบไฟล์เก่า ต้องตรวจสอบ Routing ใน `App.tsx` ว่าชี้ไปยัง Component ใหม่ทั้งหมดแล้ว
 - ตรวจสอบให้แน่ใจว่าได้ย้าย API Calls ไปไว้ใน Services อย่างถูกต้องแล้ว
+
+---
+
+## Customer Dashboard (Yearly Sales By Customer)
+
+### ภาพรวม
+หน้า `CustomerDashboard.tsx` แสดงกราฟเปรียบเทียบยอดขายรายลูกค้า ข้ามหลายปี
+- **2 โหมดการแสดงผล**: Monthly View (กราฟรายเดือนรวม) / Yearly Breakdown (กราฟรายลูกค้า)
+
+### Year-Color Mapping
+สีของปีถูก Map แบบ Fixed ตาม Index ของ `availableYears` (ไม่ใช่ `selectedYears`) เพื่อป้องกันสีเลื่อนเมื่อกดเปิด-ปิดปี
+- ใช้ `COLORS` array ที่อ้างอิง CSS Custom Properties ทั้งหมด (**ห้าม Hardcode HEX/RGB**)
+
+### Filter System (Frontend-side filtering)
+ข้อมูลถูก filter ที่ฝั่ง Frontend ด้วย `useMemo` — ไม่ได้ filter ที่ Backend
+
+| Filter             | ตัวเลือก                                                     | State Variable    |
+|--------------------|--------------------------------------------------------------|-------------------|
+| **Customer Group** | All Customers, N008, MLT, N083, N044, N051, General          | `selectedGroup`   |
+| **Sales Rep**      | All Sales, (ชื่อ placeholder — แก้ไขภายหลัง)                  | `selectedSales`   |
+
+- "General" = ลูกค้าที่ไม่ได้อยู่ในกลุ่มไหนเลย (N008/MLT/N083/N044/N051)
+- ปุ่ม Filter ใช้ Radio-button style (วงกลมเล็กด้านหน้า)
+
+### Growth Indicator Design
+ไอคอน Growth ใช้ `ArrowUpRight` / `ArrowDownRight` จาก `lucide-react` (size 16, strokeWidth 2.5)
+- ขนาดฟอนต์: 0.78rem / fontWeight: 900
+- Border-left accent 3px สี success/danger
+- Border-radius: 20px (pill shape)
+- Background: color-mix 14% ของสี success/danger
+- Flat indicator: ใช้ `Minus` icon (size 14, strokeWidth 3)
+
+### API Endpoint
+`GET /api/dashboard/customer-summary?years=2025,2026`
+- OrdNo Filter: NOT IN blocklist (`BBP, BBK, BBS, BBL, BBT, BBD`)
+- กรองเฉพาะ `CustStatus = 'Y'` (Active customers)
+- Return: `{ ok, data: [{ id, name, custStatus, salesName, data: {year: total}, monthly: {year: {month: total}}, currentMonthSales }] }`
+

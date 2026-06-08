@@ -1,4 +1,4 @@
-// src/services/orderTrackerAPI.ts
+// src/services/poTrackerAPI.ts
 
 const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname.startsWith('192.168.'));
 export const BASE_URL = isLocal ? `http://${window.location.hostname}:3001/api` : 'https://fresh-camels-change.loca.lt/api';

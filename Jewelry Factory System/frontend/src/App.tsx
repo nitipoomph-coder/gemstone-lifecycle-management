@@ -5,10 +5,12 @@ import DashboardDetail from './pages/DashboardDetail';
 import ProcurementDocPage from './pages/document/ProcurementDocPage';
 import RequisitionDocPage from './pages/document/RequisitionDocPage';
 import SampleDocPage from './pages/document/SampleDocPage';
-import OrderTrackerAdvanced from './pages/OrderTrackerAdvanced';
+import POTrackerAdvanced from './pages/POTrackerAdvanced';
 import OrderDetailPage from './pages/OrderDetailPage';
 import ItemDetailPage from './pages/ItemDetailPage';
 import PlaceholderPage from './pages/PlaceholderPage';
+import SalesDashboard from './pages/SalesDashboard';
+import CustomerDashboard from './pages/CustomerDashboard';
 
 export default function App() {
   return (
@@ -18,6 +20,8 @@ export default function App() {
           {/* Dashboard */}
           <Route path="/" element={<Dashboard />} />
           <Route path="/dashboard/detail" element={<DashboardDetail />} />
+          <Route path="/dashboard/sales" element={<SalesDashboard />} />
+          <Route path="/dashboard/customer" element={<CustomerDashboard />} />
 
           {/* 1. จัดซื้อและรับเข้า — SPA, SRA, SRB, SIR */}
           <Route path="/procurement/purchase" element={<ProcurementDocPage />} />
@@ -56,13 +60,13 @@ export default function App() {
           <Route path="/spare-parts/check-item" element={<PlaceholderPage />} />
           <Route path="/spare-parts/check-status" element={<PlaceholderPage />} />
 
-          {/* Order Tracker */}
-          <Route path="/order-tracker" element={<OrderTrackerAdvanced />} />
-          <Route path="/order-tracker/group/:cust/:addr/:kind/:mat/:duedate" element={<OrderDetailPage />} />
-          <Route path="/order-tracker/po/:poNo" element={<OrderDetailPage />} />
-          <Route path="/order-tracker/ord/:ordNo" element={<OrderDetailPage />} />
-          {/* legacy compat */}
-          <Route path="/order-tracker/:ordNo" element={<OrderDetailPage />} />
+          {/* PO Tracker */}
+          <Route path="/po-tracker" element={<POTrackerAdvanced />} />
+          <Route path="/po-tracker/group/:cust/:addr/:kind/:mat/:duedate" element={<OrderDetailPage />} />
+          <Route path="/po-tracker/po/:poNo" element={<OrderDetailPage />} />
+          <Route path="/po-tracker/ord/:ordNo" element={<OrderDetailPage />} />
+          {/* Fallback route */}
+          <Route path="/po-tracker/:ordNo" element={<OrderDetailPage />} />
           <Route path="/item-detail/:id" element={<ItemDetailPage />} />
 
           {/* Fallback */}

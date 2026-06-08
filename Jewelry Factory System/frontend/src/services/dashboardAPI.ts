@@ -84,7 +84,7 @@ export interface DashboardData {
   stoneFindings: StoneFindingSummary;
 }
 
-import { BASE_URL } from './orderTrackerAPI';
+import { BASE_URL } from './poTrackerAPI';
 
 export const fetchDashboardData = async (year?: number | string): Promise<DashboardData> => {
   const url = year ? `${BASE_URL}/dashboard?year=${year}` : `${BASE_URL}/dashboard`;
@@ -150,5 +150,25 @@ export const fetchAvailableYears = async (): Promise<number[]> => {
   if (!res.ok) throw new Error(`Years API error: ${res.status}`);
   const json = await res.json();
   return json.years || [];
+};
+
+export const fetchSalesSummary = async (years: string[]): Promise<any[]> => {
+  const yearsParam = years.join(',');
+  const res = await fetch(`${BASE_URL}/dashboard/sales-summary?years=${yearsParam}`, {
+    headers: { 'bypass-tunnel-reminder': 'true' }
+  });
+  if (!res.ok) throw new Error(`Sales summary API error: ${res.status}`);
+  const json = await res.json();
+  return json.data || [];
+};
+
+export const fetchCustomerSummary = async (years: string[]): Promise<any[]> => {
+  const yearsParam = years.join(',');
+  const res = await fetch(`${BASE_URL}/dashboard/customer-summary?years=${yearsParam}`, {
+    headers: { 'bypass-tunnel-reminder': 'true' }
+  });
+  if (!res.ok) throw new Error(`Customer summary API error: ${res.status}`);
+  const json = await res.json();
+  return json.data || [];
 };
 

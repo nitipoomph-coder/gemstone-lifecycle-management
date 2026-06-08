@@ -486,8 +486,8 @@ export default function Dashboard() {
               {sectionTitle(
                 <><AlertTriangle size={14} style={{color:'var(--color-danger-500)'}}/></>,
                 'Overdue Orders',
-                <button onClick={() => navigate('/order-tracker')} style={{ display:'flex', alignItems:'center', gap:4, fontSize:'0.65rem', fontWeight:800, color:'var(--color-brand-600)', background:'var(--color-brand-50)', border:'none', padding:'6px 12px', borderRadius:20, cursor:'pointer', textTransform:'uppercase', letterSpacing:'0.05em' }}>
-                  View Tracker <ArrowRight size={12}/>
+                <button onClick={() => navigate('/po-tracker')} style={{ display:'flex', alignItems:'center', gap:4, fontSize:'0.65rem', fontWeight:800, color:'var(--color-brand-600)', background:'var(--color-brand-50)', border:'none', padding:'6px 12px', borderRadius:20, cursor:'pointer', textTransform:'uppercase', letterSpacing:'0.05em' }}>
+                  View PO Tracker <ArrowRight size={12}/>
                 </button>
               )}
               <div style={{ overflowX:'auto' }}>
@@ -504,7 +504,7 @@ export default function Dashboard() {
                       <tr key={i} style={{ borderBottom:'1px solid var(--color-border-light)', transition:'background 0.2s', cursor:'pointer' }}
                         onMouseEnter={e => e.currentTarget.style.background='var(--color-surface-1)'}
                         onMouseLeave={e => e.currentTarget.style.background='transparent'}
-                        onClick={() => navigate(`/order-tracker/${o.ordNo}`)}
+                        onClick={() => navigate(`/po-tracker/${o.ordNo}`)}
                       >
                         <td style={{ padding:'10px 16px', fontWeight:800, color:'var(--color-brand-600)' }}>{o.ordNo}</td>
                         <td style={{ padding:'10px 16px', fontWeight:600, color:'var(--color-text-secondary)' }}>{o.poNo}</td>
@@ -536,7 +536,7 @@ export default function Dashboard() {
                 <div key={i} style={{ padding:'16px 20px', borderRight: i<5?'1px solid var(--color-border-light)':'none', cursor:'pointer', transition:'background 0.2s' }}
                   onMouseEnter={e => e.currentTarget.style.background='var(--color-surface-1)'}
                   onMouseLeave={e => e.currentTarget.style.background='transparent'}
-                  onClick={() => navigate(`/order-tracker/${o.ordNo}`)}
+                  onClick={() => navigate(`/po-tracker/${o.ordNo}`)}
                 >
                   <div style={{ fontSize:'0.78rem', fontWeight:900, color:'var(--color-text-primary)', marginBottom:4 }}>{o.ordNo}</div>
                   <div style={{ fontSize:'0.62rem', fontWeight:700, color:'var(--color-text-tertiary)', marginBottom:8 }}>{o.custCode} · {o.material}</div>

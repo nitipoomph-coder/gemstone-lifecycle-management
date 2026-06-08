@@ -503,11 +503,11 @@ export default function OrderTable({
         encodeURIComponent(pickerOrder.CustDueDate || '-')
       ].join('/');
 
-      navigate(`/order-tracker/group/${path}?${query.toString()}`);
+      navigate(`/po-tracker/group/${path}?${query.toString()}`);
     } else {
       // ส่งแบบปกติ (PO หรือ Ord)
       const key = encodeURIComponent(pickerOrder.PONo || pickerOrder.OrdNo);
-      navigate(`/order-tracker/po/${key}?view=${view}`);
+      navigate(`/po-tracker/po/${key}?view=${view}`);
     }
   };
 

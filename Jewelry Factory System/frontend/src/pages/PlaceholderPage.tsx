@@ -85,13 +85,10 @@ export default function PlaceholderPage() {
       <Topbar breadcrumb={breadcrumb} />
       <div className="content-scrollbar flex flex-1 flex-col overflow-y-auto">
         {/* Toolbar */}
-        <div
-          className="flex items-center gap-1 px-5 py-1.5"
-          style={{ background: 'var(--color-surface-0)', borderBottom: '1px solid var(--color-border-light)' }}
-        >
+        <div className="flex items-center gap-1 px-5 py-1.5 bg-[var(--color-surface-0)] border-b border-[var(--color-border-light)]">
           {activeToolbar.map(btn => {
             if (btn.id.startsWith('sep')) {
-              return <span key={btn.id} className="mx-1 h-5 w-px" style={{ background: 'var(--color-border-default)' }} />;
+              return <span key={btn.id} className="mx-1 h-5 w-px bg-[var(--color-border-default)]" />;
             }
             if (btn.id === 'search' && showSearch) {
               return (
@@ -122,8 +119,8 @@ export default function PlaceholderPage() {
                   if (btn.id === 'close') navigate('/');
                   else if (btn.id === 'search') setShowSearch(true);
                 }}
-                className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors duration-150 ${variantStyles[btn.variant]}`}
-                style={{ border: btn.variant === 'default' ? '1px solid var(--color-border-light)' : 'none', fontFamily: 'var(--font-display)' }}
+                className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors duration-150 ${variantStyles[btn.variant]} ${btn.variant === 'default' ? 'border border-[var(--color-border-light)]' : ''}`}
+                style={{ fontFamily: 'var(--font-display)' }}
                 title={btn.label}
               >
                 {btn.icon && <btn.icon size={13} />}
@@ -135,8 +132,8 @@ export default function PlaceholderPage() {
 
         {/* Body */}
         <div className="flex flex-1 gap-4 p-5">
-          <div className="flex-1 flex flex-col items-center justify-center rounded-xl" style={{ background: 'var(--color-surface-1)', border: '1px solid var(--color-border-light)' }}>
-            <div className="flex items-center justify-center mb-6 w-20 h-20 rounded-full" style={{ background: 'var(--color-warning-50)', border: '2px solid var(--color-warning-100)' }}>
+          <div className="flex-1 flex flex-col items-center justify-center rounded-xl bg-[var(--color-surface-1)] border border-[var(--color-border-light)]">
+            <div className="flex items-center justify-center mb-6 w-20 h-20 rounded-full bg-[var(--color-warning-50)] border-2 border-[var(--color-warning-100)]">
                <AlertTriangle size={36} className="text-[var(--color-warning-600)]" />
             </div>
             <h2 className="text-2xl font-bold tracking-[0.1em] text-[var(--color-text-primary)] mb-3 text-center" style={{ fontFamily: 'var(--font-logo)' }}>
@@ -158,8 +155,8 @@ export default function PlaceholderPage() {
             
             <button 
               onClick={() => navigate('/')}
-              className="mt-8 px-6 py-2.5 rounded-lg text-sm font-semibold transition-all hover:opacity-90 active:scale-95 flex items-center gap-2"
-              style={{ background: 'var(--color-brand-600)', color: 'var(--color-text-inverse)', fontFamily: 'var(--font-display)' }}
+              className="mt-8 px-6 py-2.5 rounded-lg text-sm font-semibold transition-all hover:opacity-90 active:scale-95 flex items-center gap-2 bg-[var(--color-brand-600)] text-[var(--color-text-inverse)]"
+              style={{ fontFamily: 'var(--font-display)' }}
             >
               <Undo2 size={16} />
               กลับหน้าภาพรวม

@@ -48,12 +48,18 @@
   --color-info-600: oklch(0.80 0.11 220);
 
   /* Factory Production Process Stages */
-  --color-proc-casting: oklch(0.58 0.16 250);   /* Soft Slate Blue */
-  --color-proc-grinding: oklch(0.58 0.16 300);  /* Soft Amethyst Violet */
-  --color-proc-polishing: oklch(0.60 0.16 165); /* Vibrant Mint Green */
-  --color-proc-plating: oklch(0.72 0.14 85);    /* Rich Gold Plating */
-  --color-proc-qc: oklch(0.65 0.18 45);         /* Alert Orange for QC */
-  --color-proc-packing: oklch(0.52 0.15 135);   /* Forest Green for Final Packing */
+  --color-proc-casting: oklch(0.58 0.16 250);
+  /* Soft Slate Blue */
+  --color-proc-grinding: oklch(0.58 0.16 300);
+  /* Soft Amethyst Violet */
+  --color-proc-polishing: oklch(0.60 0.16 165);
+  /* Vibrant Mint Green */
+  --color-proc-plating: oklch(0.72 0.14 85);
+  /* Rich Gold Plating */
+  --color-proc-qc: oklch(0.65 0.18 45);
+  /* Alert Orange for QC */
+  --color-proc-packing: oklch(0.52 0.15 135);
+  /* Forest Green for Final Packing */
 
   /* Surface */
   --color-surface-0: oklch(0.18 0.03 250);
@@ -93,6 +99,7 @@
     --theme-calendar-invert: invert(1);
     --theme-dark-invert: invert(1);
   }
+
   :root:has(body.theme-modern-dark) {
     color-scheme: dark;
   }
@@ -138,6 +145,7 @@
     --color-sidebar-accent: oklch(0.85 0.15 80);
     --color-sidebar-divider: oklch(0.22 0.01 80);
   }
+
   :root:has(body.theme-dark-gold) {
     color-scheme: dark;
   }
@@ -153,7 +161,8 @@
     --color-brand-200: oklch(0.85 0.06 260);
     --color-brand-300: oklch(0.75 0.08 260);
     --color-brand-400: oklch(0.65 0.12 260);
-    --color-brand-500: oklch(0.40 0.16 260); /* Main Royal Blue */
+    --color-brand-500: oklch(0.40 0.16 260);
+    /* Main Royal Blue */
     --color-brand-600: oklch(0.30 0.14 260);
     --color-brand-700: oklch(0.25 0.10 260);
     --color-brand-800: oklch(0.20 0.08 260);
@@ -162,7 +171,8 @@
     /* Accent Hues (Gold - For highlights) */
     --color-accent-50: oklch(0.98 0.02 80);
     --color-accent-100: oklch(0.95 0.05 80);
-    --color-accent-500: oklch(0.65 0.16 80); /* Rich Gold */
+    --color-accent-500: oklch(0.65 0.16 80);
+    /* Rich Gold */
     --color-accent-600: oklch(0.55 0.14 80);
 
     /* Surface (White & Light Gray) */
@@ -187,24 +197,30 @@
     --color-sidebar: oklch(1.0 0 0);
     --color-sidebar-hover: oklch(0.96 0.01 260);
     --color-sidebar-text: oklch(0.40 0.02 260);
-    --color-sidebar-text-active: oklch(0.25 0.10 260); /* Darker blue active text */
-    --color-sidebar-accent: oklch(0.65 0.16 80); /* Gold icons */
+    --color-sidebar-text-active: oklch(0.25 0.10 260);
+    /* Darker blue active text */
+    --color-sidebar-accent: oklch(0.65 0.16 80);
+    /* Gold icons */
     --color-sidebar-divider: oklch(0.94 0.01 260);
   }
+
   :root:has(body.theme-royal-white) {
     color-scheme: light;
   }
+
   /* Universal custom style overrides for native date pickers and inputs */
   input[type="date"] {
     color-scheme: inherit;
     font-family: inherit;
   }
+
   input[type="date"]::-webkit-calendar-picker-indicator {
     cursor: pointer;
     filter: var(--theme-calendar-invert, none);
     opacity: 0.6;
     transition: opacity 0.2s;
   }
+
   input[type="date"]::-webkit-calendar-picker-indicator:hover {
     opacity: 1;
   }
@@ -215,6 +231,7 @@
     background-color: var(--color-surface-1);
     color: var(--color-text-primary);
   }
+
   select option {
     background-color: var(--color-surface-1);
     color: var(--color-text-primary);
@@ -230,7 +247,12 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   font-family: var(--font-display);
 }
 
@@ -238,9 +260,11 @@ h1, h2, h3, h4, h5, h6 {
 .custom-scrollbar::-webkit-scrollbar {
   width: 4px;
 }
+
 .custom-scrollbar::-webkit-scrollbar-track {
   background: transparent;
 }
+
 .custom-scrollbar::-webkit-scrollbar-thumb {
   background: var(--color-sidebar-divider);
   border-radius: 2px;
@@ -249,9 +273,11 @@ h1, h2, h3, h4, h5, h6 {
 .content-scrollbar::-webkit-scrollbar {
   width: 6px;
 }
+
 .content-scrollbar::-webkit-scrollbar-track {
   background: transparent;
 }
+
 .content-scrollbar::-webkit-scrollbar-thumb {
   background: var(--color-border-default);
   border-radius: 3px;
@@ -259,8 +285,13 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Animations */
 @keyframes skeletonShimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
 }
 
 @keyframes fadeInUp {
@@ -268,6 +299,7 @@ h1, h2, h3, h4, h5, h6 {
     opacity: 0;
     transform: translateY(12px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -278,9 +310,17 @@ h1, h2, h3, h4, h5, h6 {
   animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-.stagger-1 { animation-delay: 0ms; }
-.stagger-2 { animation-delay: 60ms; }
-.stagger-3 { animation-delay: 120ms; }
+.stagger-1 {
+  animation-delay: 0ms;
+}
+
+.stagger-2 {
+  animation-delay: 60ms;
+}
+
+.stagger-3 {
+  animation-delay: 120ms;
+}
 
 /* Hide print-only elements by default (screen mode) */
 .print-only {
@@ -291,8 +331,11 @@ h1, h2, h3, h4, h5, h6 {
    A4 PRINT STYLESHEET (High Fidelity ERP)
    ============================================ */
 @media print {
+
   /* Reset document and background colors for black-and-white print output */
-  html, body, #root {
+  html,
+  body,
+  #root {
     background-color: #ffffff !important;
     background: #ffffff !important;
     color: #000000 !important;
@@ -307,7 +350,7 @@ h1, h2, h3, h4, h5, h6 {
   }
 
   /* Force top-level wrappers to clear flex layout limits */
-  #root > div,
+  #root>div,
   main,
   .flex.h-screen {
     display: block !important;
@@ -359,16 +402,28 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
-.stagger-4 { animation-delay: 180ms; }
-.stagger-5 { animation-delay: 240ms; }
+.stagger-4 {
+  animation-delay: 180ms;
+}
+
+.stagger-5 {
+  animation-delay: 240ms;
+}
 
 /* ============================================
    2026 SIDEBAR MODERNIZATION — Animations & Utilities
    ============================================ */
 
 @keyframes pulseGlow {
-  0%, 100% { box-shadow: 0 0 0 0 var(--pulse-color, oklch(0.68 0.14 245 / 0.4)); }
-  50% { box-shadow: 0 0 8px 2px var(--pulse-color, oklch(0.68 0.14 245 / 0.15)); }
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 var(--pulse-color, oklch(0.68 0.14 245 / 0.4));
+  }
+
+  50% {
+    box-shadow: 0 0 8px 2px var(--pulse-color, oklch(0.68 0.14 245 / 0.15));
+  }
 }
 
 @keyframes slideInLeft {
@@ -376,6 +431,7 @@ h1, h2, h3, h4, h5, h6 {
     opacity: 0;
     transform: translateX(-8px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
@@ -383,14 +439,29 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 @keyframes accentShimmer {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
 @keyframes subtleBreathe {
-  0%, 100% { opacity: 0.12; }
-  50% { opacity: 0.2; }
+
+  0%,
+  100% {
+    opacity: 0.12;
+  }
+
+  50% {
+    opacity: 0.2;
+  }
 }
 
 /* Hero image overlay for sidebar footer section */
@@ -398,6 +469,7 @@ h1, h2, h3, h4, h5, h6 {
   position: relative;
   overflow: hidden;
 }
+
 .sidebar-hero-bg::before {
   content: '';
   position: absolute;
@@ -410,6 +482,7 @@ h1, h2, h3, h4, h5, h6 {
   pointer-events: none;
   transition: opacity 0.6s ease;
 }
+
 .sidebar-hero-bg:hover::before {
   opacity: 0.14;
 }
@@ -418,6 +491,7 @@ h1, h2, h3, h4, h5, h6 {
 .nav-accent-bar {
   position: relative;
 }
+
 .nav-accent-bar::before {
   content: '';
   position: absolute;
@@ -430,6 +504,7 @@ h1, h2, h3, h4, h5, h6 {
   transform: scaleY(0);
   transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
+
 .nav-accent-bar.active::before {
   transform: scaleY(1);
 }
@@ -438,6 +513,7 @@ h1, h2, h3, h4, h5, h6 {
 .scroll-fade-container {
   position: relative;
 }
+
 .scroll-fade-container::before,
 .scroll-fade-container::after {
   content: '';
@@ -450,25 +526,32 @@ h1, h2, h3, h4, h5, h6 {
   opacity: 0;
   transition: opacity 0.3s ease;
 }
+
 .scroll-fade-container::before {
   top: 0;
   background: linear-gradient(to bottom, var(--color-sidebar), transparent);
 }
+
 .scroll-fade-container::after {
   bottom: 0;
   background: linear-gradient(to top, var(--color-sidebar), transparent);
 }
-.scroll-fade-container.fade-top::before { opacity: 1; }
-.scroll-fade-container.fade-bottom::after { opacity: 1; }
+
+.scroll-fade-container.fade-top::before {
+  opacity: 1;
+}
+
+.scroll-fade-container.fade-bottom::after {
+  opacity: 1;
+}
 
 /* Sidebar brand accent line */
 .brand-accent-line {
   height: 2px;
   background: linear-gradient(90deg,
-    var(--color-brand-500),
-    var(--color-accent-500),
-    var(--color-brand-500)
-  );
+      var(--color-brand-500),
+      var(--color-accent-500),
+      var(--color-brand-500));
   background-size: 200% 100%;
   animation: accentShimmer 4s ease-in-out infinite;
   border-radius: 1px;
@@ -497,6 +580,7 @@ h1, h2, h3, h4, h5, h6 {
 .nav-item-hover {
   transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
 }
+
 .nav-item-hover:hover {
   transform: translateX(2px);
 }

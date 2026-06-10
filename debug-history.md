@@ -2,6 +2,10 @@
 
 ไฟล์นี้ใช้สำหรับบันทึกปัญหาที่เคยเกิดขึ้น (Errors/Bugs/UI Issues) และวิธีการแก้ไข เพื่อป้องกันการเกิดซ้ำและเป็น knowledge base สำหรับนักพัฒนาในอนาคต
 
+> **📋 กฎ**: ทุกครั้งที่เกิด Bug/Error/UI Issue ที่ต้องแก้ไข ต้องบันทึกลงไฟล์นี้ตามรูปแบบด้านล่าง พร้อมอัปเดต `claude.md` ให้ตรงกัน
+
+---
+
 ## [2026-06-04] UI Inconsistency in Document Pages
 
 **ปัญหาที่พบ:**
@@ -31,6 +35,7 @@
 - **Component ไหนที่ไม่ได้ใช้งาน (Dead Code) ควรลบออกทันที** ไม่ควรคอมเมนต์ทิ้งไว้เพื่อป้องกันความสับสน
 
 ---
+
 ## [2026-06-04] TypeScript & JSX Syntax Errors in Dashboard and Item Detail Pages
 
 **ปัญหาที่พบ:**
@@ -77,8 +82,9 @@
 
 **ข้อควรระวังในอนาคต (Preventive Action):**
 - **ตรวจสอบ Dependencies:** เมื่อมีการนำไฟล์ styles ที่ไม่ใช่ CSS ธรรมดา (เช่น .scss, .sass, .less) เข้ามาใช้ในโปรเจกต์ Vite ต้องมั่นใจว่าได้ติดตั้ง preprocessor ที่ตรงกันใน `devDependencies` เสมอ
- 
+
 ---
+
 ## [2026-06-06] CustomerDashboard — Year-Color Mapping Fix & Data Table Modal Removal
 
 **ปัญหาที่พบ:**
@@ -109,4 +115,83 @@
 - **Color Mapping ใน Charts**: เมื่อมีการ Toggle ข้อมูลเข้า-ออก ต้องใช้ Index จากแหล่งข้อมูลคงที่ (เช่น `availableYears`) ไม่ใช่จากอาเรย์ที่เปลี่ยนแปลงได้ (เช่น `selectedYears`)
 - **ห้ามใช้ HEX/RGB ตรงๆ ใน Component**: ตรวจสอบ `index.css` ก่อนว่ามี Theme Variable ที่ใกล้เคียงอยู่แล้วหรือไม่ หากไม่มี ให้เพิ่ม Variable ใหม่ใน `@theme` block ทุก Theme
 - **อัปเดตเอกสารทุกครั้ง**: เมื่อลบ/เพิ่มฟีเจอร์ ต้องอัปเดต `claude.md` และ `debug-history.md` ให้ตรงกัน
- 
+
+---
+
+## [2026-06-09] CustomerDashboard — White Screen (Cannot read properties of undefined)
+
+**ปัญหาที่พบ:**
+1. หน้า Customer Dashboard กลายเป็นจอขาว (White screen of death) หลังจากเปลี่ยนมาใช้ Recharts
+2. **ทั้งเว็บไม่แสดงผล** — ไม่ใช่แค่หน้า Customer Dashboard แต่ทุกหน้า (รวมถึง Dashboard หลัก) เป็นจอขาวหมด เพราะ React crash ตั้งแต่ root level
+3. Browser Console ไม่แสดง Error ใดๆ (Silent failure) ทำให้ Debug ยากมาก
+
+**สาเหตุ:**
+- มีการ Rewrite `CustomerDashboard.tsx` จากเวอร์ชัน Pure CSS/HTML chart (709 บรรทัด) ไปเป็นเวอร์ชันที่ใช้ **Recharts library** (363 บรรทัด)
+- เวอร์ชันที่ใช้ Recharts มีปัญหาเรื่อง **Runtime Error ที่ React catch แล้วทำให้ Render tree ทั้งหมดพัง** (React 19 StrictMode ไม่แสดง Error boundary โดย default)
+- การเข้าถึง Nested Object แบบ `RAW[y][m][g]` ในฟังก์ชัน `chartData` (สำหรับโหมด Yearly) โดยที่ไม่ได้ใช้ Optional Chaining (`?.`) — เมื่อข้อมูล `availableYears` และ `RAW` ถูกดึง/คำนวณแบบ Asynchronous จังหวะที่ `availableYears` มีค่า `[2024, 2025]` แต่ `RAW` อาจจะยังไม่ทันสร้าง property ของปีนั้นๆ เสร็จ ทำให้ `RAW[y]` เป็น `undefined` จึงเกิด Error: Cannot read properties of undefined
+- นอกจากนี้ ฟังก์ชัน `fmt` และ `fmtTip` ที่ใช้เป็น `LabelFormatter` ใน Recharts ถูกระบุพารามิเตอร์เป็น `(v: number)` ซึ่งไม่ตรงกับ Type ที่ Library Recharts ต้องการ (`LabelFormatter` สามารถโยนค่ากลับมาเป็น `string | number` ได้) ส่งผลให้เกิด Type Error ทำให้ Vite ไม่สามารถ Compile โค้ดส่งไปแสดงผลบนเบราว์เซอร์ได้ (จอขาว)
+
+**การแก้ไขที่ดำเนินการ (Resolution):**
+1. **Revert กลับไปเวอร์ชัน Pure CSS/HTML chart** — ลบ Recharts dependency ออกจาก Component และกลับไปใช้โค้ดเดิมที่วาด Bar Chart ด้วย CSS flexbox + inline styles
+2. ตรวจสอบด้วยคำสั่ง `npm run build` ผ่าน 100% เรียบร้อยแล้ว ไม่มีแจ้งเตือน TypeScript Errors
+
+**ไฟล์ที่แก้ไข:**
+- `frontend/src/pages/CustomerDashboard.tsx` — revert กลับเป็น Pure CSS/HTML chart (709 บรรทัด)
+
+**ข้อควรระวังในอนาคต (Preventive Action):**
+- **Safe Object Access**: เมื่อต้องเข้าถึง Nested Object หลายชั้น ต้องใช้ Optional Chaining (`?.`) เสมอเพื่อป้องกัน Runtime Error ที่ทำให้แอปพังทั้งหน้า
+- **Library Type Mismatch**: เมื่อใช้งาน Library ภายนอก (Third-party) อย่าง Recharts ควรให้พารามิเตอร์ใน Callback functions ตรงตาม Type Signature ที่ Library กำหนด หรือใช้ `any` คู่กับการป้องกัน Runtime Error
+- **React 19 Silent Crash**: React 19 StrictMode จะไม่แสดง Error overlay เมื่อ Component crash ในบางกรณี ทำให้ได้แค่จอขาว — ควรเพิ่ม `ErrorBoundary` component ครอบ Route ทั้งหมดเพื่อ catch และแสดง Error ที่เกิดขึ้น
+- **ห้าม Rewrite ทั้งไฟล์โดยไม่ทดสอบ**: เมื่อต้องการเปลี่ยน Library หรือ Rewrite Component ขนาดใหญ่ ควรทำเป็นขั้นตอน ทดสอบทีละ Feature และ verify ด้วย `npm run build` ก่อน commit
+
+---
+
+## [2026-06-09] Vite Compile Error (TS2322: LabelFormatter type mismatch)
+
+**ปัญหาที่พบ:**
+1. หน้า Customer Dashboard กลายเป็นจอขาวอีกครั้ง และเซิร์ฟเวอร์ `npm run dev` พ่น Error ออกมาเมื่อมีพยายามแก้ไขโค้ดหรือ Restart
+
+**สาเหตุ:**
+- Linter ของ TypeScript ตรวจพบว่า Function `fmt` และ `fmtTip` ถูกระบุพารามิเตอร์เป็น `(v: number)` ซึ่งไม่ตรงกับ Type ที่ Library `Recharts` ต้องการ (`LabelFormatter` สามารถโยนค่ากลับมาเป็น `string | number` ได้)
+- ส่งผลให้เกิด Type Error ทำให้ Vite ไม่สามารถ Compile โค้ดส่งไปแสดงผลบนเบราว์เซอร์ได้ (จอขาว)
+
+**การแก้ไขที่ดำเนินการ (Resolution):**
+1. ปรับแก้พารามิเตอร์ของ `fmt` และ `fmtTip` ให้รับ `(v: any)` และดักทาง Type ป้องกันไว้ก่อน (`if (typeof v !== 'number') return String(v);`)
+2. ตรวจสอบด้วยคำสั่ง `npm run build` ผ่าน 100% เรียบร้อย
+
+**ข้อควรระวังในอนาคต (Preventive Action):**
+- **Library Type Mismatch**: เมื่อใช้งาน Library ภายนอก (Third-party) อย่าง Recharts ควรให้พารามิเตอร์ใน Callback functions ตรงตาม Type Signature ที่ Library กำหนด หรือใช้ `any` คู่กับการป้องกัน Runtime Error
+
+---
+
+## [2026-06-09] debug-history.md — Corrupted UTF-16 Null Bytes
+
+**ปัญหาที่พบ:**
+1. ไฟล์ `debug-history.md` มีข้อมูล encoding เสีย (UTF-16 null bytes ปนกับ UTF-8) ตั้งแต่บรรทัดที่ 117 เป็นต้นไป ทำให้อ่านเนื้อหาไม่ได้
+
+**สาเหตุ:**
+- AI Agent ก่อนหน้าเขียนข้อมูลลงไฟล์โดยใช้ encoding ที่ผิดพลาด (UTF-16 LE แทนที่จะเป็น UTF-8) ทำให้เกิด null bytes (`\x00`) แทรกอยู่ระหว่างตัวอักษรทุกตัว
+
+**การแก้ไขที่ดำเนินการ (Resolution):**
+1. ลบส่วนที่ encoding เสียออกทั้งหมด
+2. เขียนเนื้อหา debug entries ที่เคยอยู่ในส่วน encoding เสียใหม่ด้วย UTF-8 ถูกต้อง
+
+**ข้อควรระวังในอนาคต (Preventive Action):**
+- **ตรวจสอบไฟล์หลังเขียน**: เมื่อ AI Agent เขียนไฟล์เสร็จ ควรตรวจสอบว่าเนื้อหาถูกต้องและอ่านได้ก่อน commit
+
+---
+
+## [2026-06-10] Syntax Error in CustomerDashboard (Fuzzy Match Failure)
+
+**ปัญหาที่พบ:**
+1. เกิด Syntax Error ในไฟล์ `CustomerDashboard.tsx` บริเวณบรรทัดที่ 180-192 ทำให้หน้าเว็บกลายเป็นจอขาว (Compile ไม่ผ่าน)
+2. มีการเรียกใช้ตัวแปร `yoy` ที่ยังไม่ได้ประกาศ (Cannot find name 'yoy') และวงเล็บปีกกาปิดไม่ครบสมบูรณ์
+
+**สาเหตุ:**
+- การใช้เครื่องมือแก้ไขโค้ดอัตโนมัติ (Tool) ในการพยายามเปลี่ยน Logic การคำนวณเปอร์เซ็นต์ Year-over-Year (YoY) เกิดการจับคู่โค้ดเดิม (Fuzzy match) คลาดเคลื่อน ทำให้เอาโค้ดไปแทรกผิดจุดในบล็อก `summaries useMemo` ซึ่งทำให้โครงสร้าง Syntax พังทั้งหมด
+
+**การแก้ไขที่ดำเนินการ (Resolution):**
+1. **Manual Restore:** เข้าไปตรวจสอบและแก้ไขโครงสร้าง Syntax ตรงบริเวณบรรทัด 180-192 แบบ Manual ให้กลับมาเป็นแบบเดิมที่ถูกต้อง โดยคืนค่า `return { ...g, yearTotals, totalAllSelected, pct, maxYear, minYear };` กลับคืนมาให้ Typescript ทำงานได้ปกติ
+
+**ข้อควรระวังในอนาคต (Preventive Action):**
+- **Strict Target Matching:** เมื่อสั่งแก้โค้ดที่มีโครงสร้างซ้ำๆ กัน (เช่นบล็อก `useMemo` ที่คล้ายกัน) ต้องระบุ `TargetContent` ให้กว้างและครอบคลุมที่สุด เพื่อป้องกันไม่ให้ระบบนำไปเขียนทับผิดบล็อก

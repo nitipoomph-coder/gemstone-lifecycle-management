@@ -11,11 +11,13 @@
 | Module                 | รหัสเอกสาร                          | สถานะ              |
 |------------------------|--------------------------------------|--------------------|
 | ภาพรวม (Dashboard)      | —                                    | ✅ Live             |
-| จัดซื้อและรับเข้า        | SPA, SRA, SRB, SIR                   | 🟡 SIR done, อื่น placeholder |
-| ออเดอร์และการเบิก       | SOA, SIA, SIB, SIP, SIS             | ⬜ Placeholder      |
-| ห้องตัวอย่าง            | SSA, SIM                             | 🟡 SIM done        |
+| Sales Dashboard        | —                                    | ✅ Live             |
+| Customer Dashboard     | —                                    | ✅ Live             |
+| จัดซื้อและรับเข้า        | SPA, SRA, SRB, SIR                   | 🟡 DocumentLayout done |
+| ออเดอร์และการเบิก       | SOA, SIA, SIB, SIP, SIS             | 🟡 DocumentLayout done |
+| ห้องตัวอย่าง            | SSA, SIM                             | 🟡 DocumentLayout done |
 | ตรวจสอบและนับสต็อก      | Check Dispatch/Sample/Purchase/Stock | ⬜ Placeholder      |
-| Order Tracker          | —                                    | ✅ Live (core feature) |
+| PO Tracker             | —                                    | ✅ Live (core feature) |
 | สต็อกอะไหล่             | SP-Order, SP-Issue, SP-Receive, …    | ⬜ Placeholder      |
 
 ### Key Feature: Order Tracker
@@ -79,7 +81,7 @@
 ```
 gemstone-lifecycle-management/
 ├── claude.md                          # ← ไฟล์นี้ (project context)
-├── Project_phase1.code-workspace      # VS Code Workspace config
+├── debug-history.md                   # 🔧 บันทึกปัญหาและการแก้ไข
 │
 └── Jewelry Factory System/
     ├── .gitignore
@@ -100,35 +102,42 @@ gemstone-lifecycle-management/
     │       │
     │       ├── components/
     │       │   ├── layout/
-    │       │   │   ├── AppLayout.tsx   # Shell layout (Sidebar + Topbar + Outlet)
-    │       │   │   ├── Sidebar.tsx     # Left nav sidebar
-    │       │   │   └── Topbar.tsx      # Top bar (search, theme switcher, breadcrumb)
+    │       │   │   ├── AppLayout.tsx        # Shell layout (Sidebar + Topbar + Outlet)
+    │       │   │   ├── DocumentLayout.tsx   # 🏗️ Unified Document Layout (IoC/Slot Injection)
+    │       │   │   ├── Sidebar.tsx          # Left nav sidebar
+    │       │   │   └── Topbar.tsx           # Top bar (search, theme switcher, breadcrumb)
     │       │   ├── dashboard/
-    │       │   │   ├── StatCard.tsx    # Dashboard stat card component
-    │       │   │   └── OrderTable.tsx  # Order summary table component
+    │       │   │   ├── StatCard.tsx         # Dashboard stat card component
+    │       │   │   ├── CardDetailPanel.tsx  # Dashboard card drill-down panel (YoY comparison)
+    │       │   │   └── OrderTable.tsx       # Order summary table component
     │       │   └── navigation/
-    │       │       └── NavGroup.tsx    # Collapsible nav group component
+    │       │       └── NavGroup.tsx         # Collapsible nav group component
     │       │
     │       ├── pages/
     │       │   ├── Dashboard.tsx              # หน้าภาพรวม (home)
     │       │   ├── DashboardDetail.tsx         # Dashboard detail drilldown
+    │       │   ├── SalesDashboard.tsx          # ⭐ Sales Summary By Rep (กราฟเปรียบเทียบยอดขาย Sales)
     │       │   ├── CustomerDashboard.tsx       # ⭐ Yearly Sales By Customer (กราฟเปรียบเทียบยอดขายลูกค้า)
-    │       │   ├── OrderTrackerAdvanced.tsx    # ⭐ Order Tracker main (list view)
-    │       │   ├── OrderTrackerPage.tsx        # Order Tracker (legacy/alternate)
+    │       │   ├── POTrackerAdvanced.tsx       # ⭐ PO Tracker main (list view — เดิมชื่อ OrderTrackerAdvanced)
     │       │   ├── OrderDetailPage.tsx         # Order detail (by ord/po/group)
     │       │   ├── ItemDetailPage.tsx          # Item-level detail
-    │       │   ├── SIRPage.tsx                # บันทึกคืนพลอย
-    │       │   ├── SIMPage.tsx                # บันทึกส่งพลอย ห้องตัวอย่าง
-    │       │   └── PlaceholderPage.tsx         # Placeholder for unimplemented modules
+    │       │   ├── PlaceholderPage.tsx         # Placeholder for unimplemented modules
+    │       │   └── document/
+    │       │       ├── ProcurementDocPage.tsx   # 🏗️ จัดซื้อและรับเข้า (SPA, SRA, SRB, SIR)
+    │       │       ├── RequisitionDocPage.tsx   # 🏗️ ออเดอร์และการเบิก (SOA, SIA, SIB, SIP, SIS)
+    │       │       └── SampleDocPage.tsx        # 🏗️ ห้องตัวอย่าง (SSA, SIM)
     │       │
     │       ├── services/
-    │       │   ├── orderTrackerAPI.ts  # API client for Order Tracker endpoints
+    │       │   ├── poTrackerAPI.ts     # API client for PO Tracker endpoints
     │       │   ├── orderAPI.ts        # API client for order detail endpoints
-    │       │   └── dashboardAPI.ts    # API client for dashboard stats
+    │       │   ├── dashboardAPI.ts    # API client for dashboard/sales/customer stats
+    │       │   ├── procurementAPI.ts  # API client for procurement document endpoints
+    │       │   ├── requisitionAPI.ts  # API client for requisition document endpoints
+    │       │   └── sampleAPI.ts       # API client for sample room endpoints
     │       │
     │       ├── config/
     │       │   ├── menuConfig.ts      # Sidebar menu structure definition
-    │       │   └── formConfigs.ts     # Document form field configurations
+    │       │   └── formConfigs.ts     # Document form field configurations (all doc types)
     │       │
     │       ├── contexts/
     │       │   └── ThemeContext.tsx    # Theme provider (dark-gold/royal-white/modern-dark)
@@ -139,22 +148,22 @@ gemstone-lifecycle-management/
     │       └── assets/                # Static assets (images, icons)
     │
     └── backend/                       # ⭐ Express + MSSQL
-        ├── server.js                  # Express app entry point
+        ├── server.js                  # Express app entry (+ Photo Bridge routes)
         ├── db.js                      # SQL Server connection pool (singleton)
         ├── .env                       # 🔒 Local env (gitignored)
         ├── .env.example               # Env template
         ├── package.json
         │
         ├── routes/
-        │   ├── orders.js              # ⭐ /api/orders — Order Tracker APIs
-        │   ├── dashboard.js           # /api/dashboard — Dashboard stats
-        │   └── search.js              # /api/search — Global search
+        │   ├── orders.js              # ⭐ /api/orders — PO Tracker APIs
+        │   ├── dashboard.js           # /api/dashboard — Dashboard/Sales/Customer stats
+        │   ├── search.js              # /api/search — Global search
+        │   ├── procurement.js         # /api/procurement — Procurement document APIs
+        │   ├── requisition.js         # /api/requisition — Requisition document APIs
+        │   ├── sample.js              # /api/sample — Sample room APIs
+        │   └── lock.js                # /api/lock — Document locking
         │
-        ├── update_sp.js               # Utility: update stored procedures
-        ├── get_sp*.js                 # Utility: inspect stored procedures
-        ├── revert_sp.js               # Utility: revert SP changes
-        ├── sp_dump.txt                # SP definition dump
-        └── test*.js                   # Ad-hoc test scripts (gitignored)
+        └── check_sales.js             # Utility: sales data inspection
 ```
 
 ---
@@ -167,6 +176,9 @@ gemstone-lifecycle-management/
 2. **Encoding**: UTF-8 ทุกไฟล์ (รองรับ Thai text)
 3. **Line Ending**: CRLF (Windows environment)
 4. **Git**: ห้าม commit `.env`, `node_modules/`, `dist/`, test scripts
+5. **📋 Documentation Rule**: ทุกครั้งที่ทำการเพิ่ม/ลบ/แก้ไขฟีเจอร์ หรือแก้ bug ต้องอัปเดตไฟล์เอกสารให้ตรงกันเสมอ:
+   - `claude.md` — อัปเดต Folder Structure, Business Modules, API Endpoints, และ Section ที่เกี่ยวข้อง
+   - `debug-history.md` — บันทึกปัญหาที่เกิดขึ้นและวิธีแก้ไข (เฉพาะกรณี Bug/Error เท่านั้น)
 
 ### Frontend Rules
 
@@ -294,7 +306,7 @@ npm run dev
 
 ## API Endpoints
 
-### Order Tracker
+### PO Tracker
 
 | Method | Endpoint                                    | Description                           |
 |--------|---------------------------------------------|---------------------------------------|
@@ -316,20 +328,40 @@ npm run dev
 
 ### Dashboard
 
-| Method | Endpoint          | Description      |
-|--------|-------------------|------------------|
-| GET    | `/api/dashboard`  | Dashboard stats  |
+| Method | Endpoint                              | Description                        |
+|--------|---------------------------------------|------------------------------------|
+| GET    | `/api/dashboard`                      | Main Dashboard stats (9 sections)  |
+| GET    | `/api/dashboard/years`                | Available years for filter         |
+| GET    | `/api/dashboard/detail/:cardType`     | Card drill-down (YoY comparison)   |
+| GET    | `/api/dashboard/sales-summary`        | Sales by rep/year (SalesDashboard) |
+| GET    | `/api/dashboard/customer-summary`     | Sales by cust/year (CustomerDashboard) |
 
-### Search
+### Documents (Unified DocumentLayout)
 
-| Method | Endpoint       | Description      |
-|--------|----------------|------------------|
-| GET    | `/api/search`  | Global search    |
+| Method | Endpoint                              | Description                        |
+|--------|---------------------------------------|------------------------------------|
+| GET    | `/api/procurement/list`               | รายการเอกสารจัดซื้อ (SPA/SRA/SRB/SIR) |
+| GET    | `/api/procurement/:docNo`             | รายละเอียดเอกสารจัดซื้อ              |
+| GET    | `/api/requisition/list`               | รายการเอกสารเบิก (SOA/SIA/SIB/SIP/SIS) |
+| GET    | `/api/requisition/:docNo`             | รายละเอียดเอกสารเบิก                 |
+| GET    | `/api/sample/list`                    | รายการเอกสารห้องตัวอย่าง (SSA/SIM)   |
+| GET    | `/api/sample/:docNo`                  | รายละเอียดเอกสารห้องตัวอย่าง          |
+| POST   | `/api/lock/acquire`                   | ล็อคเอกสารสำหรับแก้ไข                |
+| POST   | `/api/lock/release`                   | ปลดล็อคเอกสาร                      |
 
-### System
+### Photo Bridge (Network File Server → HTTP)
+
+| Method | Endpoint                    | Description                              |
+|--------|-----------------------------|------------------------------------------|
+| GET    | `/api/photos/ps/:itemNo`    | PS Photo (Cost) จาก `\\chongdts\Chong Photo\Cost` |
+| GET    | `/api/photos/cad/:itemNo`   | CAD Photo จาก `\\chongdts\Chong Photo\Mold(CAD)` |
+| GET    | `/api/photos/:itemNo`       | Legacy endpoint (backwards compat)       |
+
+### Search & System
 
 | Method | Endpoint       | Description               |
 |--------|----------------|---------------------------|
+| GET    | `/api/search`  | Global search             |
 | GET    | `/api/health`  | Health check (API + DB)   |
 
 ---

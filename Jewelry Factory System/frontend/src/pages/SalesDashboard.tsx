@@ -6,7 +6,7 @@ import { fetchSalesSummary, fetchAvailableYears } from '../services/dashboardAPI
 const COLORS = [
   'var(--color-brand-300)', 'var(--color-brand-500)', 'var(--color-brand-700)',
   'var(--color-proc-plating)', 'var(--color-proc-polishing)', 'var(--color-info-500)',
-  '#f59e0b', '#10b981', '#8b5cf6', '#ec4899', '#f43f5e', '#06b6d4'
+  'var(--color-chart-1)', 'var(--color-chart-2)', 'var(--color-chart-3)', 'var(--color-chart-4)', 'var(--color-chart-5)', 'var(--color-chart-6)'
 ];
 
 export default function SalesDashboard() {
@@ -114,7 +114,7 @@ export default function SalesDashboard() {
               <div style={{ display: 'flex', gap: 8 }}>
                 {availableYears.map((yr) => {
                   const isSelected = selectedYears.includes(yr);
-                  const colorIdx = selectedYears.indexOf(yr);
+                  const colorIdx = availableYears.indexOf(yr);
                   return (
                     <button
                       key={yr}
@@ -237,7 +237,7 @@ export default function SalesDashboard() {
                             )}
 
                             {/* Hover Tooltip */}
-                            <div className="opacity-0 hover:opacity-100 absolute -top-10 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[0.65rem] py-1 px-2 rounded pointer-events-none whitespace-nowrap transition-opacity z-10 font-bold" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+                            <div className="opacity-0 hover:opacity-100 absolute -top-10 left-1/2 -translate-x-1/2 text-[0.65rem] py-1 px-2 rounded pointer-events-none whitespace-nowrap transition-opacity z-10 font-bold" style={{ background: 'var(--color-surface-800)', color: 'var(--color-text-primary)', fontFamily: 'Inter, system-ui, sans-serif' }}>
                               ${val.toLocaleString()}
                             </div>
                           </div>

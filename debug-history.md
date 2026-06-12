@@ -193,5 +193,100 @@
 **การแก้ไขที่ดำเนินการ (Resolution):**
 1. **Manual Restore:** เข้าไปตรวจสอบและแก้ไขโครงสร้าง Syntax ตรงบริเวณบรรทัด 180-192 แบบ Manual ให้กลับมาเป็นแบบเดิมที่ถูกต้อง โดยคืนค่า `return { ...g, yearTotals, totalAllSelected, pct, maxYear, minYear };` กลับคืนมาให้ Typescript ทำงานได้ปกติ
 
-**ข้อควรระวังในอนาคต (Preventive Action):**
 - **Strict Target Matching:** เมื่อสั่งแก้โค้ดที่มีโครงสร้างซ้ำๆ กัน (เช่นบล็อก `useMemo` ที่คล้ายกัน) ต้องระบุ `TargetContent` ให้กว้างและครอบคลุมที่สุด เพื่อป้องกันไม่ให้ระบบนำไปเขียนทับผิดบล็อก
+
+---
+
+## [2026-06-11] UI/UX Redundancy in Summary Cards
+
+**ปัญหาที่พบ:**
+1. การ์ดสรุปยอด (Summary Cards) มีการแสดงผลตัวเลขที่ซ้ำซ้อนกันมากเกินไป ทำให้ผู้ใช้งานอ่านข้อมูลยากและสับสน
+2. ก่อนหน้านี้การ์ดแสดงยอดรวมของทุกปี, แล้วก็แยกยอดรายปี, แล้วค่อยมาแจกแจงเปอร์เซ็นต์แบบ YoY ด้านล่างอีก ทำให้ใช้พื้นที่เยอะและดูรกรุงรัง
+
+**สาเหตุ:**
+- การออกแบบ UI ในตอนแรกพยายามยัดข้อมูลทุกมิติเข้าไปในการ์ดเดียวโดยไม่ได้จัดกลุ่ม ทำให้เกิดความซ้ำซ้อนของข้อมูล (Redundancy)
+
+**การแก้ไขที่ดำเนินการ (Resolution):**
+1. **Combine Data & YoY Percentage:** รวบตัวเลขแสดงผลยอดขายรายปีกับเปอร์เซ็นต์การเติบโต (YoY) ให้อยู่คู่กันในแต่ละบรรทัดเลย
+2. **Highlight Latest Year:** ทำให้ยอดของปีล่าสุด (บรรทัดแรก) เป็นตัวอักษรขนาดใหญ่และหนาขึ้น พร้อมใส่สีที่สอดคล้องกับแนวโน้ม (เขียว/แดง) ส่วนปีเก่ากว่าให้เป็นตัวเล็กและสีโทนเทา เพื่อให้จุดสนใจไปตกที่ปีปัจจุบันทันที
+3. ลบส่วน "Latest Year Total" และส่วน "Percentage Comparisons" ที่แยกอยู่เดี่ยวๆ ออกทั้งหมด
+
+**ข้อควรระวังในอนาคต (Preventive Action):**
+- **Data Presentation:** เวลาออกแบบ Dashboard ที่มีการเปรียบเทียบข้อมูลจำนวนมาก ควรนำบริบทที่เกี่ยวข้องกัน (เช่น ยอดขาย กับ การเติบโต) มาวางติดกัน และใช้ขนาด/สีตัวอักษรเป็นตัวสร้าง Hierarchy (ลำดับความสำคัญ) เสมอ
+
+---
+
+## [2026-06-12] Hardcoded Colors & Line Chart Layout Issues
+
+**ปัญหาที่พบ:**
+1. **Hardcoded HEX ใน SalesDashboard**: COLORS array มี HEX 6 ตัว (`#f59e0b`, `#10b981`, `#8b5cf6`, `#ec4899`, `#f43f5e`, `#06b6d4`) และ Year Selector ใช้ `selectedYears.indexOf(yr)` ทำให้สีเลื่อนเมื่อ toggle ปี
+2. **Hardcoded HEX ใน CustomerDetailModal**: Table header ใช้ `#1c3150`, alternating rows ใช้ `#fffcd5`, footer ใช้ `#fdfbc8` ทำให้เมื่อเปลี่ยน Theme สีจะไม่เปลี่ยนตาม
+3. **Hardcoded HEX ใน CustomerDashboard**: Mode toggle button ใช้ `#fff` แทนที่จะใช้ `var(--color-text-inverse)`
+4. **CSS Variables ขาดหาย**: `--color-text-quaternary` ถูกใช้ ~23 จุด แต่ไม่เคยถูกประกาศใน `index.css`, `--color-warning-500` ก็เช่นกัน
+5. **Line Chart ชนขอบ**: เส้นกราฟ Line Chart ถูกตัดที่ขอบขวาของ container เพราะ `margin.right = 0` ไม่มี padding
+6. **Line Chart ดูแปลก**: จุดข้อมูล (dots) เล็กเกินไป, Y-axis label ถูกตัดเพราะ left margin ติดลบ (`-20`), ไม่มี XAxis padding ทำให้จุดข้อมูลชิดขอบ
+
+**สาเหตุ:**
+- HEX colors ถูกใส่ตั้งแต่เริ่มสร้างไฟล์โดยไม่ได้ตรวจสอบ Theme System
+- CSS Variables ถูกใช้ใน Component แต่ไม่ได้ประกาศใน `@theme` block
+- Recharts chart margins ถูกตั้งค่าให้ชิดขอบเกินไป (right=0, left=-20)
+
+**การแก้ไขที่ดำเนินการ (Resolution):**
+1. **Theme System (`index.css`):**
+   - เพิ่ม `--color-text-quaternary` ในทุก 3 Theme (Modern Dark, Dark Gold, Royal White)
+   - เพิ่ม `--color-warning-500` ใน @theme และ Royal White override
+   - เพิ่ม `--color-chart-1` ถึง `--color-chart-6` สำหรับ chart color arrays ทุก 3 Theme
+   - เพิ่ม `--color-table-header`, `--color-table-row-alt`, `--color-table-footer` ทุก 3 Theme
+2. **SalesDashboard.tsx:**
+   - แทนที่ HEX 6 ตัวใน COLORS array ด้วย `var(--color-chart-*)` CSS Custom Properties
+   - เปลี่ยน Year Selector color index จาก `selectedYears.indexOf(yr)` เป็น `availableYears.indexOf(yr)` สำหรับ Fixed mapping
+   - แทนที่ Tooltip `bg-gray-800 text-white` ด้วย `var(--color-surface-800)` และ `var(--color-text-primary)`
+3. **CustomerDetailModal.tsx:**
+   - Table header: `#1c3150` → `var(--color-table-header)`
+   - Alternating rows: `#fffcd5` → `var(--color-table-row-alt)`
+   - Footer: `#fdfbc8` → `var(--color-table-footer)`
+   - Header text: `white` → `var(--color-text-inverse)`
+4. **CustomerDashboard.tsx:**
+   - Mode button: `#fff` → `var(--color-text-inverse)`
+   - Bar Chart: margin `{ right: 0, left: -20 }` → `{ right: 30, left: 10 }`, YAxis width=70
+   - Line Chart: margin `{ right: 0, left: -20 }` → `{ right: 40, left: 10 }`, XAxis padding `{ left: 30, right: 30 }`, YAxis width=70
+   - Line dots: r=4 → r=6, activeDot r=6 → r=8, strokeWidth=2 → 3
+
+**ไฟล์ที่แก้ไข:**
+- `frontend/src/index.css` — เพิ่ม CSS variables ใหม่ 14 ตัว (ครบทุก 3 themes)
+- `frontend/src/pages/SalesDashboard.tsx` — แก้ COLORS, color index, tooltip
+- `frontend/src/pages/CustomerDashboard.tsx` — แก้ '#fff', chart margins/padding/dots
+- `frontend/src/components/dashboard/CustomerDetailModal.tsx` — แก้ table colors
+- `claude.md` — อัปเดต Design System section
+- `debug-history.md` — เพิ่ม entry นี้
+
+**ข้อควรระวังในอนาคต (Preventive Action):**
+- **ห้ามใช้ HEX/RGB ตรงๆ ใน Component**: ต้องสร้าง CSS Variable ใน `index.css` ก่อนเสมอ — ให้ครบทุก 3 Theme
+- **ตรวจสอบ CSS Variables ก่อนใช้**: ถ้าจะใช้ `var(--color-xxx)` ต้องมั่นใจว่าประกาศไว้แล้วใน `@theme` block
+- **Chart Margins**: Recharts ต้องมี margin เพียงพอ (right ≥ 30, left ≥ 10) เพื่อป้องกันไม่ให้กราฟชนขอบ โดยเฉพาะ Line Chart ที่ต้องมี XAxis padding ด้วย
+- **Year-Color Index**: ใช้ `availableYears.indexOf()` แทน `selectedYears.indexOf()` เสมอเพื่อ Fixed color mapping
+
+---
+
+## [2026-06-12] Incorrect Customer Group Mapping Logic
+
+**ปัญหาที่พบ:**
+การจัดกลุ่มลูกค้าใน `CustomerDashboard` และ `CustomerDetailModal` ทำงานผิดพลาด เนื่องจากใช้เพียงแค่เงื่อนไข `startsWith` เบื้องต้น เช่น `custId.startsWith('N008')` ซึ่งทำให้รหัสอื่นที่ควรอยู่ในกลุ่มนี้ (เช่น N048, N066-N075) ถูกโยนไปอยู่ในกลุ่ม General และมีโค้ดที่ซ้ำซ้อน (Duplicate logic) กระจายอยู่ในหลาย Component
+
+**สาเหตุ:**
+- ขาด Single Source of Truth (SSOT) สำหรับนิยามกลุ่มลูกค้า ทำให้แต่ละ Component เขียนเงื่อนไข `if-else` เช็ค string ด้วยตัวเอง
+- ใช้ `startsWith` แบบหยาบๆ ไม่ได้ระบุ array ของ prefix ที่ถูกต้องตามที่ Business Logic กำหนด
+
+**การแก้ไขที่ดำเนินการ (Resolution):**
+1. สร้างไฟล์ `src/config/customerGroups.ts` เป็น Single Source of Truth
+2. กำหนดโครงสร้าง `CUSTOMER_GROUPS` ให้รองรับ array ของ prefixes:
+   - N008 Group: `['N008', 'N048', 'N066', 'N067', 'N068', 'N069', 'N070', 'N071', 'N072', 'N073', 'N074', 'N075']`
+   - MLT Group: `['U411', ..., 'U426']` (16 รหัส)
+   - N083 Group: `['N083', 'N086', 'N087', 'N088', 'N089']`
+   - N044 Group: `['N044']`
+   - N051 Group: `['N051']`
+3. สร้าง helper function `getCustomerGroupId(custCode)` สำหรับเช็คว่ารหัสลูกค้าอยู่ในกลุ่มไหน
+4. Refactor ไฟล์ `CustomerDashboard.tsx` และ `CustomerDetailModal.tsx` ให้ลบ `if-else` แบบ hardcode ออก และเรียกใช้ `getCustomerGroupId` แทน
+
+**ข้อควรระวังในอนาคต (Preventive Action):**
+- **Single Source of Truth**: Data Mapping หรือ Business Logic Rule ที่ซับซ้อนและต้องใช้หลายจุด ต้องสร้างเป็น Config แยก (เช่น ในโฟลเดอร์ `src/config/`) ห้ามเขียน Hardcode กระจายตาม Component เด็ดขาด

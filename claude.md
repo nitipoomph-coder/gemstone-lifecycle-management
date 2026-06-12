@@ -66,13 +66,15 @@
 
 ### Design System
 
-| Aspect       | Details                                         |
-|--------------|--------------------------------------------------|
-| Theme Engine | 3 themes via `ThemeContext` + CSS custom properties |
-| Themes       | `modern-dark` (default), `dark-gold`, `royal-white` |
-| Color System | OKLCH color space                                |
-| Fonts        | **Cinzel** (logo), **Outfit** (headings/display), **Prompt** (body) |
-| Animations   | `fadeInUp`, skeleton shimmer, stagger classes    |
+| Aspect        | Details                                         |
+|---------------|--------------------------------------------------|
+| Theme Engine  | 3 themes via `ThemeContext` + CSS custom properties |
+| Themes        | `modern-dark` (default), `dark-gold`, `royal-white` |
+| Color System  | OKLCH color space                                |
+| Fonts         | **Cinzel** (logo), **Outfit** (headings/display), **Prompt** (body) |
+| Chart Colors  | `--color-chart-1` ~ `--color-chart-6` (semantic, ครบทุก theme) |
+| Table Colors  | `--color-table-header`, `--color-table-row-alt`, `--color-table-footer` |
+| Animations    | `fadeInUp`, skeleton shimmer, stagger classes    |
 
 ---
 
@@ -109,7 +111,8 @@ gemstone-lifecycle-management/
     │       │   ├── dashboard/
     │       │   │   ├── StatCard.tsx         # Dashboard stat card component
     │       │   │   ├── CardDetailPanel.tsx  # Dashboard card drill-down panel (YoY comparison)
-    │       │   │   └── OrderTable.tsx       # Order summary table component
+    │       │   │   ├── OrderTable.tsx       # Order summary table component
+    │       │   │   └── CustomerDetailModal.tsx # Customer Dashboard detail breakdown matrix
     │       │   └── navigation/
     │       │       └── NavGroup.tsx         # Collapsible nav group component
     │       │
@@ -137,7 +140,8 @@ gemstone-lifecycle-management/
     │       │
     │       ├── config/
     │       │   ├── menuConfig.ts      # Sidebar menu structure definition
-    │       │   └── formConfigs.ts     # Document form field configurations (all doc types)
+    │       │   ├── formConfigs.ts     # Document form field configurations (all doc types)
+    │       │   └── customerGroups.ts  # SSOT for customer group mapping (N008, MLT, etc.)
     │       │
     │       ├── contexts/
     │       │   └── ThemeContext.tsx    # Theme provider (dark-gold/royal-white/modern-dark)
@@ -522,8 +526,27 @@ API_PORT=3001
 | **Customer Group** | All Customers, N008, MLT, N083, N044, N051, General          | `selectedGroup`   |
 | **Sales Rep**      | All Sales, (ชื่อ placeholder — แก้ไขภายหลัง)                  | `selectedSales`   |
 
-- "General" = ลูกค้าที่ไม่ได้อยู่ในกลุ่มไหนเลย (N008/MLT/N083/N044/N051)
+- **Customer Group Mapping**: จัดการผ่าน SSOT ที่ `src/config/customerGroups.ts`
+  - N008 Group: N008, N048, N066-N075
+  - MLT Group: U411-U426
+  - N083 Group: N083, N086-N089
+  - N044 Group: N044
+  - N051 Group: N051
+  - General: ลูกค้าที่ไม่ตรงกับกลุ่มด้านบน
 - ปุ่ม Filter ใช้ Radio-button style (วงกลมเล็กด้านหน้า)
+- **Default Chart Grouping**: เนื่องจากบางกลุ่มมียอดขายสูงมากจนไปกดสเกลกราฟของกลุ่มอื่นให้มองไม่เห็น กราฟถูกตั้งค่าให้เลือกเฉพาะ 4 กลุ่มแรก (Top 4) ขึ้นมาเป็นค่าเริ่มต้น หากมีกลุ่มที่ 5, 6, ... หรือ General จะถูก Uncheck ซ่อนไว้ก่อน เพื่อให้กราฟ Scale สวยงาม (ผู้ใช้สามารถติ๊กเปิดดูภายหลังได้)
+
+### Interactive Charts & Matrix Modal
+1. **Recharts Integration**: เปลี่ยนจากการใช้ CSS Chart ล้วนมาเป็น library `recharts`
+   - สามารถ Toggle เป็น Bar Chart และ Line Chart ได้
+   - โชว์ Label บนกราฟ หรือ Tooltip ตามการทำงานที่สมบูรณ์ขึ้น
+   - **Chart Margins**: Bar Chart ใช้ `{ top: 20, right: 30, left: 10, bottom: 5 }`, Line Chart ใช้ `{ top: 20, right: 40, left: 10, bottom: 5 }` เพื่อป้องกันชนขอบ
+   - **XAxis Padding** (Line Chart): `{ left: 30, right: 30 }` ป้องกันจุดข้อมูลชิดขอบ
+   - **YAxis**: width=70, dx=-5 ป้องกัน label ถูกตัด
+   - **Dot Markers**: Line Chart ใช้ r=6, strokeWidth=3, activeDot r=8
+2. **CustomerDetailModal**: กล่องป๊อปอัปเมื่อกดปุ่ม "Detail Breakdown"
+   - เป็นหน้าต่างสรุปตัวเลขแบบ Matrix (รายลูกค้า × รายเดือน) พร้อมช่อง Yearly Total 
+   - แสดงผลแบบ Drop-in ใช้งานง่ายและปรับแต่ง UI/CSS แบบ Premium Glassmorphism
 
 ### Growth Indicator Design
 ไอคอน Growth ใช้ `ArrowUpRight` / `ArrowDownRight` จาก `lucide-react` (size 16, strokeWidth 2.5)

@@ -11,12 +11,13 @@ import ItemDetailPage from './pages/ItemDetailPage';
 import PlaceholderPage from './pages/PlaceholderPage';
 import SalesDashboard from './pages/SalesDashboard';
 import CustomerDashboard from './pages/CustomerDashboard';
+import ErrorBoundary from './components/ErrorBoundary';
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route element={<AppLayout />}>
+        <Route element={<ErrorBoundary><AppLayout /></ErrorBoundary>}>
           {/* Dashboard */}
           <Route path="/" element={<Dashboard />} />
           <Route path="/dashboard/detail" element={<DashboardDetail />} />

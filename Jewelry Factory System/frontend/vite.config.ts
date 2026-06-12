@@ -8,6 +8,9 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  optimizeDeps: {
+    include: ['recharts', 'lodash', 'lodash/isFunction', 'lodash/isNil']
+  },
   server: {
     port: 3000,
     proxy: {

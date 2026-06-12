@@ -1,20 +1,44 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import Topbar from '../components/layout/Topbar';
-import { CalendarDays, DollarSign, Building2, RefreshCw, Users, Search, ChevronDown } from 'lucide-react';
+import { CalendarDays, Building2, RefreshCw, Users, Search, ChevronDown } from 'lucide-react';
 import { fetchCustomerSummary, fetchAvailableYears } from '../services/dashboardAPI';
+import { ALL_GROUPS, getCustomerGroupId } from '../config/customerGroups';
+import CustomerDetailModal from '../components/dashboard/CustomerDetailModal';
+import ErrorBoundary from '../components/ErrorBoundary';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList } from 'recharts';
 
-const ALL_GROUPS = [
-  { id: 'N008', label: 'N008 Group', color: 'var(--color-brand-500)' },
-  { id: 'MLT', label: 'MLT Group', color: 'var(--color-proc-polishing)' },
-  { id: 'N083', label: 'N083 Group', color: 'var(--color-proc-plating)' },
-  { id: 'N044', label: 'N044 Group', color: 'var(--color-proc-grinding)' },
-  { id: 'N051', label: 'N051 Group', color: 'var(--color-proc-packing)' },
-  { id: 'General', label: 'General', color: 'var(--color-text-tertiary)' },
-];
+
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-const fullMONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-
+// Custom Tooltip for Recharts
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="glass-panel" style={{ padding: '12px 16px', borderRadius: 12, border: '1px solid var(--color-border-light)', minWidth: 200 }}>
+        <p style={{ fontSize: '0.85rem', fontWeight: 900, color: 'var(--color-text-primary)', marginBottom: 8, borderBottom: '1px solid var(--color-border-light)', paddingBottom: 6 }}>
+          {label}
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {payload.map((entry: any, index: number) => {
+            if (entry.value === 0) return null;
+            return (
+              <div key={index} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', fontWeight: 800 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--color-text-secondary)' }}>
+                  <span style={{ width: 8, height: 8, borderRadius: 2, background: entry.color }} />
+                  {ALL_GROUPS.find(g => g.id === entry.dataKey)?.label || (String(entry.dataKey).length === 4 ? `Year ${entry.dataKey}` : entry.name)}
+                </div>
+                <span style={{ color: entry.color }}>
+                  ${entry.value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
 
 export default function CustomerDashboard() {
   const [availableYears, setAvailableYears] = useState<string[]>([]);
@@ -23,12 +47,15 @@ export default function CustomerDashboard() {
 
   // New State mappings
   const [mode, setMode] = useState<'yearly' | 'monthly'>('yearly');
+  const [monthlySeries, setMonthlySeries] = useState<'year' | 'group'>('year');
   const [selectedYears, setSelectedYears] = useState<string[]>([]);
   const [selectedMonths, setSelectedMonths] = useState<string[]>(MONTHS.map((_, i) => String(i + 1)));
-  const [selGroups, setSelGroups] = useState<string[]>(ALL_GROUPS.map(g => g.id));
+  const [selGroups, setSelGroups] = useState<string[]>(ALL_GROUPS.slice(0, 4).map(g => g.id));
   const [showMonthDropdown, setShowMonthDropdown] = useState(false);
   const [showLabels, setShowLabels] = useState(true);
-  const [searchCustId, setSearchCustId] = useState('');
+
+  // Modal State
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Auto-hide labels when > 3 groups selected
   useEffect(() => {
@@ -93,13 +120,7 @@ export default function CustomerDashboard() {
     });
 
     custData.forEach(cust => {
-      const custId = (cust.id || '').toUpperCase();
-      let gId = 'General';
-      if (custId.startsWith('N008')) gId = 'N008';
-      else if (custId.startsWith('MLT')) gId = 'MLT';
-      else if (custId.startsWith('N083')) gId = 'N083';
-      else if (custId.startsWith('N044')) gId = 'N044';
-      else if (custId.startsWith('N051')) gId = 'N051';
+      const gId = getCustomerGroupId(cust.id || '');
 
       availableYears.forEach(y => {
         MONTHS.forEach((m, mi) => {
@@ -124,43 +145,34 @@ export default function CustomerDashboard() {
       });
     } else {
       const sortedMonths = [...selectedMonths].sort((a, b) => parseInt(a) - parseInt(b));
-      return sortedMonths.map(mStr => {
-        const m = MONTHS[parseInt(mStr) - 1];
-        const r: any = { label: m };
-        sortedSel.forEach(g => {
-          r[g] = activeYears.reduce((sum, y) => sum + (RAW[y]?.[m]?.[g] || 0), 0);
+      if (monthlySeries === 'year') {
+        // mode monthly: X-axis = Month, Series = Years (YoY Comparison)
+        return sortedMonths.map(mStr => {
+          const m = MONTHS[parseInt(mStr) - 1];
+          const r: any = { label: m };
+          activeYears.forEach(y => {
+            r[y] = sortedSel.reduce((sum, g) => sum + (RAW[y]?.[m]?.[g] || 0), 0);
+          });
+          return r;
         });
-        return r;
-      });
+      } else {
+        // mode monthly: Alternating Years for the same month (Jan 25, Jan 26, Feb 25...), Series = Groups
+        const list: any[] = [];
+        sortedMonths.forEach(mStr => {
+          activeYears.forEach(y => {
+            const m = MONTHS[parseInt(mStr) - 1];
+            const label = activeYears.length > 1 ? `${m} ${String(y).slice(2)}` : m;
+            const r: any = { label, sortKey: `${mStr.padStart(2, '0')}-${y}` };
+            sortedSel.forEach(g => {
+              r[g] = RAW[y]?.[m]?.[g] || 0;
+            });
+            list.push(r);
+          });
+        });
+        return list;
+      }
     }
   }, [mode, activeYears, selectedMonths, sortedSel, RAW]);
-
-  // Compute CSS chart scales dynamically
-  const { maxVal, gridTicks } = useMemo(() => {
-    let rawMax = 0;
-    chartData.forEach(row => {
-      sortedSel.forEach(g => {
-        if ((row[g] || 0) > rawMax) rawMax = row[g] || 0;
-      });
-    });
-    rawMax = Math.max(rawMax, 1000);
-
-    const targets = [
-      1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500,
-      1000, 2000, 2500, 5000, 10000, 15000, 20000, 25000, 30000, 35000, 40000, 45000, 50000,
-      100000, 200000, 300000, 400000, 500000, 1000000, 2000000, 5000000, 10000000
-    ];
-    const roughStep = rawMax / 5;
-    const niceStep = targets.find(t => t >= roughStep) || 10000000;
-    const computedMax = Math.ceil(rawMax / niceStep) * niceStep;
-
-    const ticks: number[] = [];
-    const numSteps = Math.round(computedMax / niceStep);
-    for (let i = 0; i <= numSteps + 1; i++) {
-      ticks.push(i * niceStep);
-    }
-    return { maxVal: (numSteps + 1) * niceStep, gridTicks: ticks };
-  }, [chartData, sortedSel]);
 
   // Summary Cards computation
   const summaries = useMemo(() => {
@@ -175,7 +187,8 @@ export default function CustomerDashboard() {
         yearTotals[y] = selectedMonths.reduce((s, mStr) => s + (RAW[y]?.[MONTHS[parseInt(mStr) - 1]]?.[gId] || 0), 0);
       });
 
-      const totalAllSelected = activeYears.reduce((sum, y) => sum + yearTotals[y], 0);
+      const latestYear = activeYears.length > 0 ? activeYears[activeYears.length - 1] : null;
+      const totalLatestYear = latestYear ? (yearTotals[latestYear] || 0) : 0;
 
       let pct = null;
       if (maxYear && minYear && maxYear !== minYear) {
@@ -186,28 +199,33 @@ export default function CustomerDashboard() {
         }
       }
 
-      return { ...g, yearTotals, totalAllSelected, pct, maxYear, minYear };
+      return { ...g, yearTotals, totalLatestYear, pct, maxYear, minYear, latestYear };
     });
   }, [sortedSel, activeYears, selectedMonths, RAW]);
 
   // Grand Total computation
-  const { grandTotal, grandYoy, grandPct } = useMemo(() => {
+  const { grandTotal, grandYoy, grandLatestYear } = useMemo(() => {
     let gTotal = 0;
-    
+
     const grandYearTotals: Record<string, number> = {};
     activeYears.forEach(y => {
       grandYearTotals[y] = 0;
     });
 
     summaries.forEach(g => {
-      gTotal += g.totalAllSelected;
       activeYears.forEach(y => {
         grandYearTotals[y] += (g.yearTotals[y] || 0);
       });
     });
 
-    const gYoy: { currYr: string, prevYr: string, pct: number | null }[] = [];
     const reversedYears = [...activeYears].reverse();
+    const latestYear = reversedYears.length > 0 ? reversedYears[0] : null;
+
+    if (latestYear) {
+      gTotal = grandYearTotals[latestYear] || 0;
+    }
+
+    const gYoy: { currYr: string, prevYr: string, pct: number | null }[] = [];
     for (let i = 0; i < reversedYears.length - 1; i++) {
       const currYr = reversedYears[i];
       const prevYr = reversedYears[i + 1];
@@ -220,33 +238,8 @@ export default function CustomerDashboard() {
       gYoy.push({ currYr, prevYr, pct });
     }
 
-    let gPct = null; // Used for the Total text color
-    if (reversedYears.length > 1) {
-       const currVal = grandYearTotals[reversedYears[0]];
-       const prevVal = grandYearTotals[reversedYears[reversedYears.length - 1]];
-       if (prevVal > 0) {
-         gPct = ((currVal - prevVal) / prevVal) * 100;
-       }
-    }
-
-    return { grandTotal: gTotal, grandYoy: gYoy, grandPct: gPct };
+    return { grandTotal: gTotal, grandYoy: gYoy, grandLatestYear: latestYear };
   }, [summaries, activeYears]);
-
-  // Filter individual customers for the Details Table
-  const tableData = useMemo(() => {
-    return custData.filter(cust => {
-      const custId = (cust.id || '').toUpperCase();
-      let gId = 'General';
-      if (custId.startsWith('N008')) gId = 'N008';
-      else if (custId.startsWith('MLT')) gId = 'MLT';
-      else if (custId.startsWith('N083')) gId = 'N083';
-      else if (custId.startsWith('N044')) gId = 'N044';
-      else if (custId.startsWith('N051')) gId = 'N051';
-      const groupMatch = selGroups.includes(gId);
-      const searchMatch = searchCustId === '' || custId.includes(searchCustId.toUpperCase());
-      return groupMatch && searchMatch;
-    });
-  }, [custData, selGroups, searchCustId]);
 
   const toggleGroup = (id: string) => {
     setSelGroups(prev =>
@@ -354,7 +347,7 @@ export default function CustomerDashboard() {
                     style={{
                       display: 'flex', alignItems: 'center', gap: 8,
                       padding: '8px 20px', borderRadius: 12, fontSize: '0.8rem', fontWeight: 800,
-                      color: mode === item.id ? '#fff' : 'var(--color-text-tertiary)',
+                      color: mode === item.id ? 'var(--color-text-inverse)' : 'var(--color-text-tertiary)',
                       background: mode === item.id ? 'var(--color-proc-polishing)' : 'transparent',
                       cursor: 'pointer', transition: 'all 0.2s',
                       boxShadow: mode === item.id ? '0 2px 8px -2px rgba(0,0,0,0.2)' : 'none'
@@ -494,8 +487,6 @@ export default function CustomerDashboard() {
           {/* Summary Cards */}
           <div style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fit, minmax(220px, 1fr))`, gap: 16 }}>
             {summaries.map((g, idx) => {
-              const pos = g.pct !== null && g.pct >= 0;
-              const titleColor = g.pct === null ? 'var(--color-text-primary)' : pos ? 'var(--color-success-500)' : 'var(--color-danger-500)';
               return (
                 <div key={g.id} style={{ background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)', borderRadius: 16, padding: '20px', borderTop: `4px solid ${g.color}`, boxShadow: '0 4px 16px -4px rgba(0,0,0,0.04)', transition: 'all 0.3s ease', animation: 'fadeInUp 0.4s ease-out both', animationDelay: `${idx * 0.05}s` }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
@@ -503,50 +494,43 @@ export default function CustomerDashboard() {
                     <span style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)', fontWeight: 800, textTransform: 'uppercase' }}>{g.label}</span>
                   </div>
 
-                  {/* Individual Year Totals */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 12 }}>
-                    {[...activeYears].reverse().map(yr => (
-                      <div key={yr} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 4, borderBottom: '1px solid var(--color-border-light)' }}>
-                        <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--color-text-tertiary)' }}>{yr}</span>
-                        <span style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--color-text-primary)' }}>
-                          ${g.yearTotals[yr].toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
+                  {/* Years Breakdown & YoY */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {[...activeYears].reverse().map((yr, i, arr) => {
+                      const prevYr = arr[i + 1];
+                      const currVal = g.yearTotals[yr] || 0;
+                      const prevVal = prevYr ? (g.yearTotals[prevYr] || 0) : null;
+                      let pct = null;
+                      if (prevVal !== null && prevVal > 0) {
+                        pct = ((currVal - prevVal) / prevVal) * 100;
+                      }
 
-                  {/* Overall Total across selected years */}
-                  <div style={{ fontSize: '1.3rem', fontWeight: 900, color: titleColor, letterSpacing: '-0.5px', marginBottom: 6, textAlign: 'right', transition: 'color 0.3s' }}>
-                    ${g.totalAllSelected.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </div>
+                      const isLatest = i === 0;
+                      const itemColor = pct === null ? 'var(--color-text-primary)' : pct >= 0 ? 'var(--color-success-500)' : 'var(--color-danger-500)';
+                      const valColor = isLatest ? itemColor : 'var(--color-text-primary)';
 
-                  {/* Percentage Comparisons */}
-                  {activeYears.length > 1 ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 8, alignItems: 'flex-end' }}>
-                      {[...activeYears].reverse().map((yr, i, arr) => {
-                        const prevYr = arr[i + 1];
-                        if (!prevYr) return null;
-                        
-                        const currVal = g.yearTotals[yr] || 0;
-                        const prevVal = g.yearTotals[prevYr] || 0;
-                        let yoyPct = null;
-                        if (prevVal > 0) {
-                          yoyPct = ((currVal - prevVal) / prevVal) * 100;
-                        }
-                        
-                        return (
-                          <div key={`${yr}-vs-${prevYr}`} style={{ fontSize: '0.75rem', fontWeight: 800, color: yoyPct === null ? 'var(--color-text-tertiary)' : yoyPct >= 0 ? 'var(--color-success-500)' : 'var(--color-danger-500)' }}>
-                            {yoyPct === null ? `— No prior data` : `${yoyPct >= 0 ? '↑ +' : '↓ '}${yoyPct.toFixed(2)}%`}
-                            <span style={{ fontSize: '0.65rem', color: 'var(--color-text-quaternary)' }}> ({yr} vs {prevYr})</span>
+                      return (
+                        <div key={yr} style={{ display: 'flex', justifyContent: 'space-between', alignItems: isLatest ? 'flex-end' : 'center', paddingBottom: isLatest ? 8 : 4, borderBottom: isLatest ? '2px solid var(--color-border-light)' : '1px dashed var(--color-border-light)' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                            <span style={{ fontSize: isLatest ? '0.85rem' : '0.75rem', fontWeight: 900, color: 'var(--color-text-secondary)' }}>{yr}</span>
+                            {prevYr && (
+                              <span style={{ fontSize: '0.7rem', fontWeight: 800, color: pct === null ? 'var(--color-text-tertiary)' : itemColor }}>
+                                {pct === null ? '— No Existing Data' : `${pct >= 0 ? '↑ +' : '↓ '}${pct.toFixed(2)}%`}
+                              </span>
+                            )}
                           </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--color-text-tertiary)', textAlign: 'right', marginTop: 8 }}>
-                      — Add another year to compare
-                    </div>
-                  )}
+                          <span style={{ fontSize: isLatest ? '1.3rem' : '0.95rem', fontWeight: 900, color: valColor, transition: 'color 0.3s' }}>
+                            ${currVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                      );
+                    })}
+                    {activeYears.length === 1 && (
+                      <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--color-text-tertiary)', textAlign: 'right', marginTop: 4 }}>
+                        — Add another year to compare
+                      </div>
+                    )}
+                  </div>
                 </div>
               );
             })}
@@ -554,19 +538,38 @@ export default function CustomerDashboard() {
 
           {/* Main Chart Section */}
           <div style={{ background: 'var(--color-surface-0)', borderRadius: 24, padding: 32, border: '1px solid var(--color-border-light)', boxShadow: '0 8px 32px -8px rgba(0,0,0,0.04)', animation: 'fadeInUp 0.4s ease-out' }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 40 }}>
+            {/* Dynamic Chart Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 32 }}>
               <div>
-                <h2 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--color-text-primary)', display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                  {mode === 'yearly' ? <Building2 size={18} /> : <CalendarDays size={18} />}
+                <h2 style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--color-text-primary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 12 }}>
                   {mode === 'yearly' ? `Annual Sales Comparison` : `Monthly Sales Breakdown`}
+                  <button
+                    onClick={() => setIsModalOpen(true)}
+                    className="glass-button hover-lift hover:text-blue-400"
+                    style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', borderRadius: 20, fontSize: '0.7rem', fontWeight: 800, color: 'var(--color-brand-500)', cursor: 'pointer' }}
+                  >
+                    <Search size={14} /> Detail Breakdown
+                  </button>
                 </h2>
                 <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--color-text-tertiary)', fontWeight: 700 }}>
                   Unit: USD · Grouped Layout {showLabels ? '· Value Labels Displayed' : '· Value Labels Hidden (select ≤ 3 groups)'}
                 </p>
 
+                {/* Chart Mode Toggles */}
+                {mode === 'monthly' && (
+                  <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                    <button onClick={() => setMonthlySeries('year')} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 12px', borderRadius: 16, fontSize: '0.7rem', fontWeight: 800, background: monthlySeries === 'year' ? 'var(--color-brand-600)' : 'var(--color-surface-1)', color: monthlySeries === 'year' ? 'white' : 'var(--color-text-secondary)', border: '1px solid var(--color-border-light)', cursor: 'pointer', transition: 'all 0.2s' }}>
+                      <CalendarDays size={14} /> Compare by Year
+                    </button>
+                    <button onClick={() => setMonthlySeries('group')} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 12px', borderRadius: 16, fontSize: '0.7rem', fontWeight: 800, background: monthlySeries === 'group' ? 'var(--color-brand-600)' : 'var(--color-surface-1)', color: monthlySeries === 'group' ? 'white' : 'var(--color-text-secondary)', border: '1px solid var(--color-border-light)', cursor: 'pointer', transition: 'all 0.2s' }}>
+                      <Users size={14} /> Compare by Group
+                    </button>
+                  </div>
+                )}
+
                 {/* Chart Legend */}
                 <div style={{ display: 'flex', gap: 12, marginTop: 16, flexWrap: 'wrap' }}>
-                  {sortedSel.map(gId => {
+                  {mode === 'yearly' || (mode === 'monthly' && monthlySeries === 'group') ? sortedSel.map(gId => {
                     const g = ALL_GROUPS.find(x => x.id === gId)!;
                     return (
                       <div key={gId} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.7rem', fontWeight: 800, color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>
@@ -574,22 +577,33 @@ export default function CustomerDashboard() {
                         {g.label}
                       </div>
                     );
+                  }) : activeYears.map((y, idx) => {
+                    const YEAR_COLORS = ['var(--color-brand-500)', 'var(--color-proc-polishing)', 'var(--color-proc-plating)', 'var(--color-proc-grinding)', 'var(--color-success-500)', 'var(--color-warning-500)'];
+                    const color = YEAR_COLORS[idx % YEAR_COLORS.length];
+                    return (
+                      <div key={y} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.7rem', fontWeight: 800, color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>
+                        <span style={{ width: 10, height: 10, borderRadius: 2, background: color }} />
+                        Year {y}
+                      </div>
+                    );
                   })}
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)', fontWeight: 800, textTransform: 'uppercase', marginBottom: 4 }}>
-                  Grand Total (Selected Range)
+                <div style={{ fontSize: '0.95rem', color: 'var(--color-text-primary)', fontWeight: 900, textTransform: 'uppercase', marginBottom: 2 }}>
+                  Grand Total {grandLatestYear ? `(${grandLatestYear})` : ''}
                 </div>
-                <div style={{ fontSize: '1.5rem', fontWeight: 900, color: grandPct === null ? 'var(--color-text-primary)' : grandPct >= 0 ? 'var(--color-success-500)' : 'var(--color-danger-500)', transition: 'color 0.3s' }}>
+                <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--color-text-primary)' }}>
                   ${grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
                 {grandYoy.length > 0 && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 4, alignItems: 'flex-end' }}>
-                    {grandYoy.map(({ currYr, prevYr, pct }) => (
-                      <div key={`${currYr}-${prevYr}`} style={{ fontSize: '0.8rem', fontWeight: 800, color: pct === null ? 'var(--color-text-tertiary)' : pct >= 0 ? 'var(--color-success-500)' : 'var(--color-danger-500)' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 2, alignItems: 'flex-end' }}>
+                    {grandYoy.slice(0, 1).map(({ currYr, prevYr, pct }) => (
+                      <div key={`${currYr}-${prevYr}`} style={{ fontSize: '0.8rem', fontWeight: 800, color: pct === null ? 'var(--color-text-tertiary)' : pct >= 0 ? 'var(--color-success-600)' : 'var(--color-danger-600)', background: pct === null ? 'transparent' : pct >= 0 ? 'var(--color-success-50)' : 'var(--color-danger-50)', padding: '4px 10px', borderRadius: 12 }}>
                         {pct === null ? `— No prior data` : `${pct >= 0 ? '↑ +' : '↓ '}${pct.toFixed(2)}%`}
-                        <span style={{ fontSize: '0.7rem', color: 'var(--color-text-quaternary)' }}> ({currYr} vs {prevYr})</span>
+                        <span style={{ fontSize: '0.7rem', color: pct === null ? 'var(--color-text-quaternary)' : pct >= 0 ? 'var(--color-success-600)' : 'var(--color-danger-600)', opacity: 0.8, marginLeft: 6 }}>
+                          Compared to {prevYr}
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -597,160 +611,52 @@ export default function CustomerDashboard() {
               </div>
             </div>
 
-            {/* Pure CSS Dynamic Chart */}
-            <div style={{ display: 'flex', height: 400 }}>
-              {/* Y-Axis */}
-              <div style={{ display: 'flex', flexDirection: 'column-reverse', justifyContent: 'space-between', paddingRight: 16, paddingBottom: 30, zIndex: 10 }}>
-                {gridTicks.map((tick, i) => (
-                  <div key={i} style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--color-text-quaternary)', textAlign: 'right' }}>
-                    {formatAxisValue(tick)}
-                  </div>
-                ))}
-              </div>
-
-              {/* Chart Body */}
-              <div className="content-scrollbar" style={{ flex: 1, overflowX: 'auto', position: 'relative' }}>
-                <div style={{ position: 'relative', height: '100%', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, paddingBottom: 40, minWidth: mode === 'yearly' ? 'auto' : 800 }}>
-
-                  {/* Grid Lines */}
-                  <div style={{ position: 'absolute', inset: '0 0 40px 0', display: 'flex', flexDirection: 'column-reverse', justifyContent: 'space-between', pointerEvents: 'none', zIndex: 0 }}>
-                    {gridTicks.map((_, i) => (
-                      <div key={i} style={{ borderTop: '1px dashed var(--color-border-light)', width: '100%', transition: 'all 0.4s ease-out' }} />
-                    ))}
-                  </div>
-
-                  {chartData.map((row) => (
-                    <div key={row.label} className="group" style={{ flex: 1, height: '100%', position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', zIndex: 1 }}>
-
-                      {/* GROUPED BARS */}
-                      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 4, height: '100%' }}>
-                        {sortedSel.map(gId => {
-                          const g = ALL_GROUPS.find(x => x.id === gId)!;
-                          const val = row[gId] || 0;
-                          const pct = maxVal > 0 ? (val / maxVal) * 100 : 0;
-                          return (
-                            <div key={gId} style={{
-                              flex: 1, maxWidth: 40, height: `${pct}%`, background: g.color,
-                              borderRadius: '6px 6px 0 0', position: 'relative',
-                              transition: 'all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)',
-                              transformOrigin: 'bottom'
-                            }}>
-                              {showLabels && val > 0 && (
-                                <div style={{
-                                  position: 'absolute', top: -18, left: '50%', transform: 'translateX(-50%)',
-                                  fontSize: '0.65rem', fontWeight: 800, color: g.color, pointerEvents: 'none'
-                                }}>
-                                  {formatAxisValue(val).replace('$', '')}
-                                </div>
-                              )}
-                              {/* Tooltip */}
-                              <div className="opacity-0 hover:opacity-100 absolute -top-10 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[0.65rem] py-1 px-2 rounded pointer-events-none whitespace-nowrap transition-opacity z-10 font-bold" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                                ${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                      {/* X-Axis Label */}
-                      <div style={{ position: 'absolute', bottom: -30, left: 0, width: '100%', textAlign: 'center', fontSize: '0.8rem', fontWeight: 800, color: 'var(--color-text-secondary)' }}>
-                        {row.label}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+            {/* Recharts Component */}
+            <div style={{ display: 'flex', height: 400, marginTop: 24 }}>
+              <ErrorBoundary>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData} margin={{ top: 20, right: 30, left: 10, bottom: 5 }}>
+                    <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--color-border-light)" opacity={0.5} />
+                    <XAxis dataKey="label" tick={{ fontSize: 11, fill: 'var(--color-text-secondary)', fontWeight: 800 }} axisLine={false} tickLine={false} dy={10} />
+                    <YAxis tickFormatter={(val) => formatAxisValue(val)} tick={{ fontSize: 11, fill: 'var(--color-text-quaternary)', fontWeight: 700 }} axisLine={false} tickLine={false} dx={-5} width={70} />
+                    <Tooltip content={<CustomTooltip />} cursor={{ fill: 'var(--color-surface-1)', opacity: 0.4 }} />
+                    {mode === 'yearly' || (mode === 'monthly' && monthlySeries === 'group') ? sortedSel.map((gId) => {
+                      const g = ALL_GROUPS.find(x => x.id === gId)!;
+                      return (
+                        <Bar key={gId} dataKey={gId} fill={g.color} radius={[4, 4, 0, 0]} maxBarSize={40}>
+                          {showLabels && (
+                            <LabelList dataKey={gId} position="top" formatter={(val: any) => val > 0 ? formatAxisValue(Number(val)).replace('$', '') : ''} style={{ fontSize: 10, fill: g.color, fontWeight: 800 }} />
+                          )}
+                        </Bar>
+                      );
+                    }) : activeYears.map((y, idx) => {
+                      const YEAR_COLORS = ['var(--color-brand-500)', 'var(--color-proc-polishing)', 'var(--color-proc-plating)', 'var(--color-proc-grinding)', 'var(--color-success-500)', 'var(--color-warning-500)'];
+                      const color = YEAR_COLORS[idx % YEAR_COLORS.length];
+                      return (
+                        <Bar key={y} dataKey={y} name={`Year ${y}`} fill={color} radius={[4, 4, 0, 0]} maxBarSize={40}>
+                          {showLabels && (
+                            <LabelList dataKey={y} position="top" formatter={(val: any) => val > 0 ? formatAxisValue(Number(val)).replace('$', '') : ''} style={{ fontSize: 10, fill: color, fontWeight: 800 }} />
+                          )}
+                        </Bar>
+                      );
+                    })}
+                  </BarChart>
+                </ResponsiveContainer>
+              </ErrorBoundary>
             </div>
           </div>
-
-          {/* Details Table */}
-          <div style={{ background: 'var(--color-surface-0)', borderRadius: 24, padding: 24, border: '1px solid var(--color-border-light)', boxShadow: '0 4px 20px -4px rgba(0,0,0,0.03)', animation: 'fadeInUp 0.5s ease-out' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h3 style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--color-text-primary)', textTransform: 'uppercase', margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <DollarSign size={16} style={{ color: 'var(--color-proc-polishing)' }} /> Active Customers Breakdown
-              </h3>
-              <div style={{ position: 'relative' }}>
-                <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-tertiary)' }} />
-                <input 
-                  type="text" 
-                  placeholder="Search Cust ID..." 
-                  value={searchCustId} 
-                  onChange={e => setSearchCustId(e.target.value)} 
-                  style={{ padding: '8px 12px 8px 34px', borderRadius: 10, border: '1px solid var(--color-border-light)', fontSize: '0.75rem', fontWeight: 600, background: 'var(--color-surface-1)', color: 'var(--color-text-primary)', width: 220, transition: 'all 0.2s', outline: 'none' }} 
-                  className="focus:border-blue-400 focus:bg-white"
-                />
-              </div>
-            </div>
-            <div style={{ overflowX: 'auto', paddingBottom: '16px' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '800px' }}>
-                <thead>
-                  <tr>
-                    <th style={{ width: '200px', minWidth: '200px', textAlign: 'left', padding: '12px 16px', fontSize: '0.7rem', fontWeight: 800, color: 'var(--color-text-tertiary)', textTransform: 'uppercase', borderBottom: '2px solid var(--color-border-light)', whiteSpace: 'nowrap' }}>Cust ID</th>
-                    <th style={{ width: '150px', minWidth: '150px', textAlign: 'left', padding: '12px 16px', fontSize: '0.7rem', fontWeight: 800, color: 'var(--color-text-tertiary)', textTransform: 'uppercase', borderBottom: '2px solid var(--color-border-light)' }}>Customer Group</th>
-                    {mode === 'yearly' ? activeYears.map(yr => (
-                      <th key={yr} style={{ width: '150px', minWidth: '120px', textAlign: 'left', padding: '12px 16px', fontSize: '0.7rem', fontWeight: 800, color: 'var(--color-text-tertiary)', textTransform: 'uppercase', borderBottom: '2px solid var(--color-border-light)' }}>{yr} Total</th>
-                    )) : selectedMonths.map(mStr => (
-                      <th key={mStr} style={{ width: '120px', minWidth: '100px', textAlign: 'left', padding: '12px 16px', fontSize: '0.7rem', fontWeight: 800, color: 'var(--color-text-tertiary)', textTransform: 'uppercase', borderBottom: '2px solid var(--color-border-light)' }}>{fullMONTHS[parseInt(mStr) - 1]}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {tableData.length === 0 ? (
-                    <tr>
-                      <td colSpan={15} style={{ padding: '32px', textAlign: 'center', color: 'var(--color-text-tertiary)', fontWeight: 800 }}>
-                        No customers found for the selected groups.
-                      </td>
-                    </tr>
-                  ) : tableData.map((cust, idx) => {
-                    const custId = (cust.id || '').toUpperCase();
-                    let gId = 'General';
-                    if (custId.startsWith('N008')) gId = 'N008';
-                    else if (custId.startsWith('MLT')) gId = 'MLT';
-                    else if (custId.startsWith('N083')) gId = 'N083';
-                    else if (custId.startsWith('N044')) gId = 'N044';
-                    else if (custId.startsWith('N051')) gId = 'N051';
-
-                    const groupColor = ALL_GROUPS.find(g => g.id === gId)?.color || 'var(--color-text-tertiary)';
-
-                    return (
-                      <tr key={cust.id} style={{ borderBottom: idx === tableData.length - 1 ? 'none' : '1px solid var(--color-border-light)' }}>
-                        <td style={{ padding: '16px', fontSize: '0.8rem', fontWeight: 800, color: 'var(--color-text-primary)', whiteSpace: 'nowrap' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <span style={{ width: 8, height: 8, borderRadius: '50%', background: groupColor }} />
-                            {cust.id}
-                          </div>
-                          <div style={{ fontSize: '0.65rem', color: 'var(--color-text-tertiary)', marginTop: '4px', paddingLeft: 16 }}>
-                            {cust.custStatus ? `Status: ${cust.custStatus}` : ''} {cust.salesName ? `· Sales: ${cust.salesName}` : ''}
-                          </div>
-                        </td>
-                        <td style={{ padding: '16px', fontSize: '0.75rem', fontWeight: 800, color: groupColor, textTransform: 'uppercase' }}>
-                          {ALL_GROUPS.find(g => g.id === gId)?.label || 'General'}
-                        </td>
-                        {mode === 'yearly' ? activeYears.map(yr => {
-                          const val = selectedMonths.reduce((s, mStr) => s + (cust.monthly?.[yr]?.[mStr] || 0), 0);
-                          return (
-                            <td key={yr} style={{ padding: '16px', textAlign: 'left', fontSize: '0.8rem', fontWeight: 700, fontFamily: 'Inter, system-ui, sans-serif', color: val > 0 ? 'var(--color-text-primary)' : 'var(--color-text-quaternary)' }}>
-                              {val > 0 ? `$${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-'}
-                            </td>
-                          );
-                        }) : selectedMonths.map(mStr => {
-                          const val = activeYears.reduce((sum, y) => sum + (cust.monthly?.[y]?.[mStr] || 0), 0);
-                          return (
-                            <td key={mStr} style={{ padding: '16px', textAlign: 'left', fontSize: '0.8rem', fontWeight: 700, fontFamily: 'Inter, system-ui, sans-serif', color: val > 0 ? 'var(--color-text-primary)' : 'var(--color-text-quaternary)' }}>
-                              {val > 0 ? `$${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-'}
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
         </div>
       </div>
+
+      {/* Detail Breakdown Modal */}
+      <CustomerDetailModal 
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        custData={custData}
+        activeYears={activeYears}
+        selGroups={selGroups}
+        ALL_GROUPS={ALL_GROUPS}
+      />
     </>
   );
 }

@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import AppLayout from './components/layout/AppLayout';
 import Dashboard from './pages/Dashboard';
 import DashboardDetail from './pages/DashboardDetail';
@@ -11,18 +11,44 @@ import ItemDetailPage from './pages/ItemDetailPage';
 import PlaceholderPage from './pages/PlaceholderPage';
 import SalesDashboard from './pages/SalesDashboard';
 import CustomerDashboard from './pages/CustomerDashboard';
-import ErrorBoundary from './components/ErrorBoundary';
+import CustomerReportPage from './pages/CustomerReportPage';
+import LoginPage from './pages/LoginPage';
+
+import { useLocation } from 'react-router-dom';
+
+const ProtectedRoute = () => {
+  const token = localStorage.getItem('auth_token');
+  const role = localStorage.getItem('auth_role');
+  const isAuthenticated = token !== null && role !== null;
+  const location = useLocation();
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // Prevent sales from accessing root Production Dashboard
+  if (role === 'sales' && location.pathname === '/') {
+    return <Navigate to="/dashboard/customer" replace />;
+  }
+
+  return <Outlet />;
+};
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route element={<ErrorBoundary><AppLayout /></ErrorBoundary>}>
-          {/* Dashboard */}
+        {/* Full screen routes (no layout) */}
+        <Route path="/login" element={<LoginPage />} />
+        <Route element={<ProtectedRoute />}>
+          <Route element={<AppLayout />}>
+            {/* Dashboard */}
           <Route path="/" element={<Dashboard />} />
           <Route path="/dashboard/detail" element={<DashboardDetail />} />
           <Route path="/dashboard/sales" element={<SalesDashboard />} />
           <Route path="/dashboard/customer" element={<CustomerDashboard />} />
+          <Route path="/dashboard/customer-report" element={<CustomerReportPage />} />
+
 
           {/* 1. จัดซื้อและรับเข้า — SPA, SRA, SRB, SIR */}
           <Route path="/procurement/purchase" element={<ProcurementDocPage />} />
@@ -72,6 +98,7 @@ export default function App() {
 
           {/* Fallback */}
           <Route path="*" element={<PlaceholderPage />} />
+          </Route>
         </Route>
       </Routes>
     </BrowserRouter>

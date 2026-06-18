@@ -1,3 +1,4 @@
+import { fetchWithAuth } from '../utils/fetchWithAuth';
 // src/services/dashboardAPI.ts
 
 export interface StatCard {
@@ -88,7 +89,7 @@ import { BASE_URL } from './poTrackerAPI';
 
 export const fetchDashboardData = async (year?: number | string): Promise<DashboardData> => {
   const url = year ? `${BASE_URL}/dashboard?year=${year}` : `${BASE_URL}/dashboard`;
-  const res = await fetch(url, {
+  const res = await fetchWithAuth(url, {
     headers: { 'bypass-tunnel-reminder': 'true' }
   });
   if (!res.ok) throw new Error(`Dashboard API error: ${res.status}`);
@@ -136,7 +137,7 @@ export interface CardDetailData {
 export type CardType = 'today' | 'completed' | 'wip' | 'overdue' | 'month';
 
 export const fetchCardDetail = async (cardType: CardType, year1: number, year2: number): Promise<CardDetailData> => {
-  const res = await fetch(`${BASE_URL}/dashboard/detail/${cardType}?year1=${year1}&year2=${year2}`, {
+  const res = await fetchWithAuth(`${BASE_URL}/dashboard/detail/${cardType}?year1=${year1}&year2=${year2}`, {
     headers: { 'bypass-tunnel-reminder': 'true' }
   });
   if (!res.ok) throw new Error(`Detail API error: ${res.status}`);
@@ -144,7 +145,7 @@ export const fetchCardDetail = async (cardType: CardType, year1: number, year2: 
 };
 
 export const fetchAvailableYears = async (): Promise<number[]> => {
-  const res = await fetch(`${BASE_URL}/dashboard/years`, {
+  const res = await fetchWithAuth(`${BASE_URL}/dashboard/years`, {
     headers: { 'bypass-tunnel-reminder': 'true' }
   });
   if (!res.ok) throw new Error(`Years API error: ${res.status}`);
@@ -154,7 +155,7 @@ export const fetchAvailableYears = async (): Promise<number[]> => {
 
 export const fetchSalesSummary = async (years: string[]): Promise<any[]> => {
   const yearsParam = years.join(',');
-  const res = await fetch(`${BASE_URL}/dashboard/sales-summary?years=${yearsParam}`, {
+  const res = await fetchWithAuth(`${BASE_URL}/dashboard/sales-summary?years=${yearsParam}`, {
     headers: { 'bypass-tunnel-reminder': 'true' }
   });
   if (!res.ok) throw new Error(`Sales summary API error: ${res.status}`);
@@ -164,7 +165,7 @@ export const fetchSalesSummary = async (years: string[]): Promise<any[]> => {
 
 export const fetchCustomerSummary = async (years: string[]): Promise<any[]> => {
   const yearsParam = years.join(',');
-  const res = await fetch(`${BASE_URL}/dashboard/customer-summary?years=${yearsParam}`, {
+  const res = await fetchWithAuth(`${BASE_URL}/dashboard/customer-summary?years=${yearsParam}`, {
     headers: { 'bypass-tunnel-reminder': 'true' }
   });
   if (!res.ok) throw new Error(`Customer summary API error: ${res.status}`);

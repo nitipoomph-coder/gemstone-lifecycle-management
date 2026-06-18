@@ -1,3 +1,4 @@
+import { fetchWithAuth } from '../utils/fetchWithAuth';
 // src/services/orderAPI.ts
 
 export interface OrderSummary {
@@ -45,7 +46,7 @@ export const fetchOrders = async (params: { status?: 'pending' | 'finish' | 'all
 
     const url = queryParams.toString() ? `${baseUrl}?${queryParams.toString()}` : baseUrl;
 
-    const response = await fetch(url);
+    const response = await fetchWithAuth(url);
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
     const result = await response.json();

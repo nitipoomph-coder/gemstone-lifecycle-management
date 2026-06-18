@@ -10,6 +10,7 @@ export const menuConfig: NavMenuGroup[] = [
     icon: 'Home',
     path: '/',
     accentColor: 'var(--color-brand-500)',
+    roles: ['admin'],
   },
 
   // ─── Sales Dashboards ───
@@ -18,18 +19,20 @@ export const menuConfig: NavMenuGroup[] = [
     label: 'Sales Analytics',
     icon: 'trending-up',
     accentColor: 'var(--color-success-500)',
+    roles: ['admin', 'sales'],
     items: [
       //{ id: 'dash-sales', label: 'Sales by Employee', path: '/dashboard/sales' },
       { id: 'dash-cust', label: 'Sales by Customer', path: '/dashboard/customer' },
     ],
   },
 
-  // ─── Entity 1: จัดการออเดอร์และการสั่งซื้อ ───
+  // ─── Entity 1: Procurement & Receiving ───
   {
     id: 'procurement',
     label: 'Procurement & Receiving',
     icon: 'package-check',
     accentColor: 'var(--color-accent-500)',
+    roles: ['admin'],
     items: [
       { id: 'spa', label: 'Gem Purchase Order', code: 'SPA', path: '/procurement/purchase' },
       { id: 'sra', label: 'Gem Receipt', code: 'SRA', path: '/procurement/receive' },
@@ -38,12 +41,13 @@ export const menuConfig: NavMenuGroup[] = [
     ],
   },
 
-  // ─── Entity 2: ออเดอร์และการเบิก ───
+  // ─── Entity 2: Orders & Issues ───
   {
     id: 'orders',
     label: 'Orders & Issues',
     icon: 'clipboard-list',
     accentColor: 'var(--color-info-500)',
+    roles: ['admin'],
     items: [
       { id: 'soa', label: 'Gem Order', code: 'SOA', path: '/orders/create' },
       { id: 'sia', label: 'Gem Issue', code: 'SIA', path: '/orders/issue' },
@@ -53,24 +57,26 @@ export const menuConfig: NavMenuGroup[] = [
     ],
   },
 
-  // ─── Entity 3: ห้องตัวอย่าง ───
+  // ─── Entity 3: Sample Room ───
   {
     id: 'sample',
     label: 'Sample Department',
     icon: 'flask-conical',
     accentColor: 'var(--color-success-500)',
+    roles: ['admin'],
     items: [
       { id: 'ssa', label: 'Sample Request', code: 'SSA', path: '/sample/order' },
       { id: 'sim', label: 'Sample Dispatch', code: 'SIM', path: '/sample/dispatch' },
     ],
   },
 
-  // ─── Entity 4: ตรวจสอบและนับสต็อก ───
+  // ─── Entity 4: Inventory Control ───
   {
     id: 'inventory',
     label: 'Inventory Control',
     icon: 'bar-chart-3',
     accentColor: 'var(--color-danger-500)',
+    roles: ['admin'],
     items: [
       { id: 'check-dispatch', label: 'Check Dispatch for Order', path: '/inventory/check-dispatch' },
       { id: 'check-sample', label: 'Check Sample Issue', path: '/inventory/check-sample' },
@@ -87,17 +93,19 @@ export const menuConfig: NavMenuGroup[] = [
     label: 'PO Tracker',
     icon: 'layout-list',
     accentColor: 'var(--color-brand-600)',
+    roles: ['admin'],
     items: [
-      { id: 'ot-list', label: 'รายการ Order (Pending)', path: '/po-tracker' },
+      { id: 'ot-list', label: 'Pending Orders', path: '/po-tracker' },
     ],
   },
 
-  // ─── Entity 5: สต็อกอะไหล่ ───
+  // ─── Entity 5: Spare Parts ───
   {
     id: 'spare-parts',
     label: 'Spare Parts',
     icon: 'wrench',
     accentColor: 'var(--color-proc-plating)',
+    roles: ['admin'],
     items: [
       { id: 'sp-order', label: 'Spare Parts Order', path: '/spare-parts/order' },
       { id: 'sp-issue', label: 'Spare Parts Issue', path: '/spare-parts/issue' },

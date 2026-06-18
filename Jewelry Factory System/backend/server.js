@@ -153,13 +153,16 @@ app.get('/api/photos/:itemNo', (req, res) => {
 });
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
-app.use('/api/orders', require('./routes/orders'));
-app.use('/api/dashboard', require('./routes/dashboard'));
-app.use('/api/search', require('./routes/search'));
-app.use('/api/procurement', require('./routes/procurement'));
-app.use('/api/requisition', require('./routes/requisition')); // Requisition routes (SOA, SIA, SIB, SIP, SIS)
-app.use('/api/sample', require('./routes/sample'));            // Sample Room routes (SSA, SIM)
-app.use('/api/lock', require('./routes/lock'));                // Document locking
+const authMiddleware = require('./middleware/authMiddleware');
+
+app.use('/api/auth', require('./routes/auth'));                // Login API
+app.use('/api/orders', authMiddleware, require('./routes/orders'));
+app.use('/api/dashboard', authMiddleware, require('./routes/dashboard'));
+app.use('/api/search', authMiddleware, require('./routes/search'));
+app.use('/api/procurement', authMiddleware, require('./routes/procurement'));
+app.use('/api/requisition', authMiddleware, require('./routes/requisition')); // Requisition routes (SOA, SIA, SIB, SIP, SIS)
+app.use('/api/sample', authMiddleware, require('./routes/sample'));            // Sample Room routes (SSA, SIM)
+app.use('/api/lock', authMiddleware, require('./routes/lock'));                // Document locking
 
 // ─── Global Error Handler (ดักจับ Error ที่หลุดรอด) ───────────────────────────
 app.use((err, req, res, next) => {

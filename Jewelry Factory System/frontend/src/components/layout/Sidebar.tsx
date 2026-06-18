@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, LogOut } from 'lucide-react';
 import NavGroup from '../navigation/NavGroup';
 import { menuConfig } from '../../config/menuConfig';
 
@@ -15,10 +15,13 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
   const scrollRef = useRef<HTMLElement>(null);
   const [scrollState, setScrollState] = useState<'top' | 'middle' | 'bottom'>('top');
 
+  const role = (localStorage.getItem('auth_role') || 'sales').toLowerCase();
+  const filteredMenu = menuConfig.filter(g => !g.roles || g.roles.includes(role));
+
   // Accordion: only one group open at a time
-  const activeGroupId = menuConfig.find(g =>
+  const activeGroupId = filteredMenu.find(g =>
     g.path ? g.path === location.pathname : (g.items || []).some(item => item.path === location.pathname)
-  )?.id || 'procurement';
+  )?.id || 'sales-dashboard';
 
   const [openGroupId, setOpenGroupId] = useState<string>(activeGroupId);
 
@@ -30,6 +33,12 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       setOpenGroupId(found.id);
     }
   }, [location.pathname]);
+
+  const handleLogout = () => {
+    localStorage.removeItem('auth_role');
+    localStorage.removeItem('auth_user');
+    navigate('/login');
+  };
 
   const handleGroupToggle = (groupId: string) => {
     setOpenGroupId(prev => (prev === groupId ? '' : groupId));
@@ -61,7 +70,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
           <button
             onClick={onToggle}
             className="flex h-8 w-8 items-center justify-center rounded-md text-[var(--color-sidebar-text)] opacity-60 transition-all hover:bg-[var(--color-sidebar-hover)] hover:opacity-100"
-            title="ขยายแถบเมนู"
+            title="Expand Menu"
           >
             <PanelLeftOpen size={16} />
           </button>
@@ -71,7 +80,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
 
         {/* Icons only — click to expand sidebar + open group */}
         <nav className="flex flex-1 flex-col items-center gap-1.5 py-2 w-full px-2">
-          {menuConfig.map(group => (
+          {filteredMenu.map(group => (
             <NavGroup
               key={group.id}
               group={group}
@@ -88,14 +97,14 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         {/* User avatar only */}
         <div className="py-3 w-full flex justify-center" style={{ borderTop: '1px solid var(--color-sidebar-divider)' }}>
           <div
-            className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold shadow-sm"
+            className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold shadow-sm uppercase"
             style={{ 
               background: 'var(--color-brand-500)',
               color: 'var(--color-text-inverse)'
             }}
-            title="มหาเศรษฐี ศรีมงคล — ฝ่ายขาย"
+            title={`${localStorage.getItem('auth_user') || 'User'} — ${role}`}
           >
-            อิชิ
+            {localStorage.getItem('auth_user')?.[0] || 'U'}
           </div>
         </div>
       </aside>
@@ -133,7 +142,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         <button
           onClick={onToggle}
           className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[var(--color-sidebar-text)] opacity-60 transition-all hover:bg-[var(--color-sidebar-hover)] hover:opacity-100"
-          title="ย่อแถบเมนู"
+          title="Collapse Menu"
         >
           <PanelLeftClose size={16} />
         </button>
@@ -148,7 +157,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
           onScroll={handleScroll}
           className="custom-scrollbar h-full overflow-y-auto px-3 py-1"
         >
-          {menuConfig.map(group => (
+          {filteredMenu.map(group => (
             <NavGroup
               key={group.id}
               group={group}
@@ -177,16 +186,19 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
             color: 'var(--color-text-inverse)'
           }}
         >
-          อิชิ
+          {localStorage.getItem('auth_user')?.[0] || 'U'}
         </div>
         <div className="min-w-0 flex-1 relative z-10">
           <div className="truncate text-[13.5px] font-bold text-[var(--color-sidebar-text-active)] drop-shadow-sm">
-            มหาเศรษฐี ศรีมงคล
+            {localStorage.getItem('auth_user') || 'User'}
           </div>
-          <div className="text-[11px] font-medium text-[var(--color-sidebar-text)] opacity-80 mt-0.5">
-            ฝ่ายขาย
+          <div className="text-[11px] font-medium text-[var(--color-sidebar-text)] opacity-80 mt-0.5 uppercase">
+            {role}
           </div>
         </div>
+        <button onClick={handleLogout} className="relative z-10 text-[var(--color-sidebar-text)] hover:text-white transition-colors" title="Logout">
+          <LogOut size={16} />
+        </button>
       </div>
     </aside>
   );

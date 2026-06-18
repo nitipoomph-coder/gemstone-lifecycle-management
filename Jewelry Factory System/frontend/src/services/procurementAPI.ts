@@ -1,3 +1,4 @@
+import { fetchWithAuth } from '../utils/fetchWithAuth';
 // ============================================
 // Procurement & Receiving API Client
 // SPA, SRA, SRB, SIR endpoints
@@ -90,7 +91,7 @@ export async function fetchDocumentList(docType: string, params?: FetchParams) {
   if (params?.limit) query.append('limit', String(params.limit));
   if (params?.search) query.append('search', params.search);
 
-  const res = await fetch(`${API_BASE}/documents/${docType}?${query.toString()}`);
+  const res = await fetchWithAuth(`${API_BASE}/documents/${docType}?${query.toString()}`);
   const json = await res.json();
   if (!json.ok) throw new Error(json.error || 'Failed to fetch document list');
   return { data: json.data, total: json.total, page: json.page, totalPages: json.totalPages };
@@ -98,7 +99,7 @@ export async function fetchDocumentList(docType: string, params?: FetchParams) {
 
 /** Fetch document detail by docNo */
 export async function fetchDocumentDetail(docNo: string): Promise<ProcDocDetail> {
-  const res = await fetch(`${API_BASE}/document/${docNo}`);
+  const res = await fetchWithAuth(`${API_BASE}/document/${docNo}`);
   const json = await res.json();
   if (!json.ok) throw new Error(json.error || 'Failed to fetch document');
   return json.data;
@@ -106,7 +107,7 @@ export async function fetchDocumentDetail(docNo: string): Promise<ProcDocDetail>
 
 /** Fetch summary statistics for a document type */
 export async function fetchProcSummary(docType: string): Promise<ProcSummary> {
-  const res = await fetch(`${API_BASE}/summary/${docType}`);
+  const res = await fetchWithAuth(`${API_BASE}/summary/${docType}`);
   const json = await res.json();
   if (!json.ok) throw new Error(json.error || 'Failed to fetch summary');
   return json.data;
@@ -114,7 +115,7 @@ export async function fetchProcSummary(docType: string): Promise<ProcSummary> {
 
 /** Generate next document number (auto-increment) */
 export async function generateNextDocumentNumber(docType: string): Promise<string> {
-  const res = await fetch(`${API_BASE}/next-number/${docType}`);
+  const res = await fetchWithAuth(`${API_BASE}/next-number/${docType}`);
   const json = await res.json();
   if (!json.ok) throw new Error(json.error || 'Failed to generate next number');
   return json.data;
@@ -126,7 +127,7 @@ export async function updateDocumentHeader(
   docNo: string,
   header: Partial<ProcDocHeader>
 ): Promise<void> {
-  const res = await fetch(`${API_BASE}/document/${encodeURIComponent(docNo)}`, {
+  const res = await fetchWithAuth(`${API_BASE}/document/${encodeURIComponent(docNo)}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ header }),

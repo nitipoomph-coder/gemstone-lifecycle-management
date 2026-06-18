@@ -1,3 +1,4 @@
+import { fetchWithAuth } from '../utils/fetchWithAuth';
 // src/services/poTrackerAPI.ts
 
 const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname.startsWith('192.168.'));
@@ -122,7 +123,7 @@ export async function fetchOrders(params?: {
   if (params?.dateFrom) qs.set('dateFrom', params.dateFrom);
   if (params?.dateTo) qs.set('dateTo', params.dateTo);
 
-  const res = await fetch(`${BASE_URL}/orders?${qs}`, {
+  const res = await fetchWithAuth(`${BASE_URL}/orders?${qs}`, {
     headers: { 'bypass-tunnel-reminder': 'true' }
   });
   if (!res.ok) throw new Error(`API error: ${res.status}`);
@@ -133,7 +134,7 @@ export async function fetchOrders(params?: {
 
 // ─── fetchOrderDetail (by OrdNo) ──────────────────────────────────────────────
 export async function fetchOrderDetail(ordNo: string): Promise<OrderDetail> {
-  const res = await fetch(`${BASE_URL}/orders/${encodeURIComponent(ordNo)}`, {
+  const res = await fetchWithAuth(`${BASE_URL}/orders/${encodeURIComponent(ordNo)}`, {
     headers: { 'bypass-tunnel-reminder': 'true' }
   });
   if (!res.ok) throw new Error(`API error: ${res.status}`);
@@ -156,7 +157,7 @@ export interface OrderDetailByPo {
 }
 
 export async function fetchOrderByPo(poNo: string): Promise<OrderDetailByPo> {
-  const res = await fetch(`${BASE_URL}/orders/by-po/${encodeURIComponent(poNo)}`, {
+  const res = await fetchWithAuth(`${BASE_URL}/orders/by-po/${encodeURIComponent(poNo)}`, {
     headers: { 'bypass-tunnel-reminder': 'true' }
   });
   if (!res.ok) throw new Error(`API error ${res.status} — PO "${poNo}" not found`);
@@ -166,7 +167,7 @@ export async function fetchOrderByPo(poNo: string): Promise<OrderDetailByPo> {
 // ─── fetchOrderByGroup ────────────────────────────────────────────────────────
 export async function fetchOrderByGroup(cust: string, addr: string, kind: string, mat: string, duedate: string): Promise<OrderDetailByPo> {
   const path = [cust, encodeURIComponent(addr), encodeURIComponent(kind), encodeURIComponent(mat), encodeURIComponent(duedate)].join('/');
-  const res = await fetch(`${BASE_URL}/orders/group/${path}`, {
+  const res = await fetchWithAuth(`${BASE_URL}/orders/group/${path}`, {
     headers: { 'bypass-tunnel-reminder': 'true' }
   });
   if (!res.ok) throw new Error(`API error ${res.status} — Group data not found`);
@@ -188,7 +189,7 @@ export async function fetchSearch(query: string, type?: string): Promise<SearchR
   qs.set('q', query);
   if (type && type !== 'all') qs.set('type', type);
 
-  const res = await fetch(`${BASE_URL}/search?${qs.toString()}`, {
+  const res = await fetchWithAuth(`${BASE_URL}/search?${qs.toString()}`, {
     headers: { 'bypass-tunnel-reminder': 'true' }
   });
   if (!res.ok) throw new Error(`API error: ${res.status}`);
@@ -208,7 +209,7 @@ export async function updateOrderRemarks(payload: {
   PkRemark: string;
   ProdRemark: string;
 }): Promise<{ ok: boolean }> {
-  const res = await fetch(`${BASE_URL}/orders/remarks`, {
+  const res = await fetchWithAuth(`${BASE_URL}/orders/remarks`, {
     method: 'POST',
     headers: { 
       'bypass-tunnel-reminder': 'true',

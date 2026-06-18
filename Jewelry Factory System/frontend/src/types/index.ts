@@ -6,6 +6,7 @@ export interface NavMenuItem {
   label: string;
   code?: string;
   path: string;
+  roles?: string[];
 }
 
 export interface NavMenuGroup {
@@ -16,6 +17,7 @@ export interface NavMenuGroup {
   items?: NavMenuItem[];
   badge?: number;
   accentColor?: string;
+  roles?: string[];
 }
 
 // ============================================

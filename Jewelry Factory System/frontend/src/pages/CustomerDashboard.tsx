@@ -1,10 +1,9 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Topbar from '../components/layout/Topbar';
 import { CalendarDays, Building2, RefreshCw, Users, Search, ChevronDown } from 'lucide-react';
 import { fetchCustomerSummary, fetchAvailableYears } from '../services/dashboardAPI';
 import { ALL_GROUPS, getCustomerGroupId } from '../config/customerGroups';
-import CustomerDetailModal from '../components/dashboard/CustomerDetailModal';
-import ErrorBoundary from '../components/ErrorBoundary';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList } from 'recharts';
 
 
@@ -54,15 +53,12 @@ export default function CustomerDashboard() {
   const [showMonthDropdown, setShowMonthDropdown] = useState(false);
   const [showLabels, setShowLabels] = useState(true);
 
-  // Modal State
-  const [isModalOpen, setIsModalOpen] = useState(false);
-
   // Auto-hide labels when > 3 groups selected
   useEffect(() => {
     setShowLabels(selGroups.length <= 3);
   }, [selGroups.length]);
 
-  // Close dropdown on outside click
+  const navigate = useNavigate();
   const dropdownRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -138,11 +134,22 @@ export default function CustomerDashboard() {
   // Build chartData based on mode
   const chartData = useMemo(() => {
     if (mode === "yearly") {
-      return activeYears.map(y => {
-        const r: any = { label: String(y) };
-        sortedSel.forEach(g => { r[g] = selectedMonths.reduce((s, mStr) => s + (RAW[y]?.[MONTHS[parseInt(mStr) - 1]]?.[g] || 0), 0); });
-        return r;
-      });
+      if (monthlySeries === 'year') {
+        return sortedSel.map(gId => {
+          const g = ALL_GROUPS.find(x => x.id === gId)!;
+          const r: any = { label: g.label };
+          activeYears.forEach(y => {
+            r[y] = selectedMonths.reduce((s, mStr) => s + (RAW[y]?.[MONTHS[parseInt(mStr) - 1]]?.[gId] || 0), 0);
+          });
+          return r;
+        });
+      } else {
+        return activeYears.map(y => {
+          const r: any = { label: String(y) };
+          sortedSel.forEach(g => { r[g] = selectedMonths.reduce((s, mStr) => s + (RAW[y]?.[MONTHS[parseInt(mStr) - 1]]?.[g] || 0), 0); });
+          return r;
+        });
+      }
     } else {
       const sortedMonths = [...selectedMonths].sort((a, b) => parseInt(a) - parseInt(b));
       if (monthlySeries === 'year') {
@@ -323,6 +330,19 @@ export default function CustomerDashboard() {
             </div>
 
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <button
+                onClick={() => navigate('/dashboard/customer-report')}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  padding: '8px 16px', borderRadius: 12, fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase',
+                  color: '#fff', background: 'var(--color-proc-polishing)', border: 'none',
+                  cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 4px 12px color-mix(in srgb, var(--color-proc-polishing) 40%, transparent)'
+                }}
+                className="hover:-translate-y-0.5 active:scale-95"
+              >
+                <Search size={14} />
+                Full Report Matrix
+              </button>
               <button
                 onClick={() => window.location.reload()}
                 style={{
@@ -543,21 +563,14 @@ export default function CustomerDashboard() {
               <div>
                 <h2 style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--color-text-primary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 12 }}>
                   {mode === 'yearly' ? `Annual Sales Comparison` : `Monthly Sales Breakdown`}
-                  <button
-                    onClick={() => setIsModalOpen(true)}
-                    className="glass-button hover-lift hover:text-blue-400"
-                    style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', borderRadius: 20, fontSize: '0.7rem', fontWeight: 800, color: 'var(--color-brand-500)', cursor: 'pointer' }}
-                  >
-                    <Search size={14} /> Detail Breakdown
-                  </button>
+
                 </h2>
                 <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--color-text-tertiary)', fontWeight: 700 }}>
                   Unit: USD · Grouped Layout {showLabels ? '· Value Labels Displayed' : '· Value Labels Hidden (select ≤ 3 groups)'}
                 </p>
 
                 {/* Chart Mode Toggles */}
-                {mode === 'monthly' && (
-                  <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
                     <button onClick={() => setMonthlySeries('year')} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 12px', borderRadius: 16, fontSize: '0.7rem', fontWeight: 800, background: monthlySeries === 'year' ? 'var(--color-brand-600)' : 'var(--color-surface-1)', color: monthlySeries === 'year' ? 'white' : 'var(--color-text-secondary)', border: '1px solid var(--color-border-light)', cursor: 'pointer', transition: 'all 0.2s' }}>
                       <CalendarDays size={14} /> Compare by Year
                     </button>
@@ -565,11 +578,10 @@ export default function CustomerDashboard() {
                       <Users size={14} /> Compare by Group
                     </button>
                   </div>
-                )}
 
                 {/* Chart Legend */}
                 <div style={{ display: 'flex', gap: 12, marginTop: 16, flexWrap: 'wrap' }}>
-                  {mode === 'yearly' || (mode === 'monthly' && monthlySeries === 'group') ? sortedSel.map(gId => {
+                  {monthlySeries === 'group' ? sortedSel.map(gId => {
                     const g = ALL_GROUPS.find(x => x.id === gId)!;
                     return (
                       <div key={gId} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.7rem', fontWeight: 800, color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>
@@ -612,51 +624,40 @@ export default function CustomerDashboard() {
             </div>
 
             {/* Recharts Component */}
-            <div style={{ display: 'flex', height: 400, marginTop: 24 }}>
-              <ErrorBoundary>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData} margin={{ top: 20, right: 30, left: 10, bottom: 5 }}>
-                    <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--color-border-light)" opacity={0.5} />
-                    <XAxis dataKey="label" tick={{ fontSize: 11, fill: 'var(--color-text-secondary)', fontWeight: 800 }} axisLine={false} tickLine={false} dy={10} />
-                    <YAxis tickFormatter={(val) => formatAxisValue(val)} tick={{ fontSize: 11, fill: 'var(--color-text-quaternary)', fontWeight: 700 }} axisLine={false} tickLine={false} dx={-5} width={70} />
-                    <Tooltip content={<CustomTooltip />} cursor={{ fill: 'var(--color-surface-1)', opacity: 0.4 }} />
-                    {mode === 'yearly' || (mode === 'monthly' && monthlySeries === 'group') ? sortedSel.map((gId) => {
-                      const g = ALL_GROUPS.find(x => x.id === gId)!;
-                      return (
-                        <Bar key={gId} dataKey={gId} fill={g.color} radius={[4, 4, 0, 0]} maxBarSize={40}>
-                          {showLabels && (
-                            <LabelList dataKey={gId} position="top" formatter={(val: any) => val > 0 ? formatAxisValue(Number(val)).replace('$', '') : ''} style={{ fontSize: 10, fill: g.color, fontWeight: 800 }} />
-                          )}
-                        </Bar>
-                      );
-                    }) : activeYears.map((y, idx) => {
-                      const YEAR_COLORS = ['var(--color-brand-500)', 'var(--color-proc-polishing)', 'var(--color-proc-plating)', 'var(--color-proc-grinding)', 'var(--color-success-500)', 'var(--color-warning-500)'];
-                      const color = YEAR_COLORS[idx % YEAR_COLORS.length];
-                      return (
-                        <Bar key={y} dataKey={y} name={`Year ${y}`} fill={color} radius={[4, 4, 0, 0]} maxBarSize={40}>
-                          {showLabels && (
-                            <LabelList dataKey={y} position="top" formatter={(val: any) => val > 0 ? formatAxisValue(Number(val)).replace('$', '') : ''} style={{ fontSize: 10, fill: color, fontWeight: 800 }} />
-                          )}
-                        </Bar>
-                      );
-                    })}
-                  </BarChart>
-                </ResponsiveContainer>
-              </ErrorBoundary>
+            <div style={{ height: 420, padding: '20px 16px 16px' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData} margin={{ top: 20, right: 24, left: 0, bottom: 5 }}>
+                  <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--color-border-light)" opacity={0.5} />
+                  <XAxis dataKey="label" tick={{ fontSize: 11, fill: 'var(--color-text-secondary)', fontWeight: 800 }} axisLine={false} tickLine={false} dy={10} />
+                  <YAxis tickFormatter={(val) => formatAxisValue(val)} tick={{ fontSize: 11, fill: 'var(--color-text-quaternary)', fontWeight: 700 }} axisLine={false} tickLine={false} dx={-5} width={70} />
+                  <Tooltip content={<CustomTooltip />} cursor={{ fill: 'var(--color-surface-1)', opacity: 0.4 }} />
+                  {monthlySeries === 'group' ? sortedSel.map((gId) => {
+                    const g = ALL_GROUPS.find(x => x.id === gId)!;
+                    return (
+                      <Bar key={gId} dataKey={gId} fill={g.color} radius={[4, 4, 0, 0]} maxBarSize={40}>
+                        {showLabels && (
+                          <LabelList dataKey={gId} position="top" formatter={(val: any) => val > 0 ? formatAxisValue(Number(val)).replace('$', '') : ''} style={{ fontSize: 10, fill: g.color, fontWeight: 800 }} />
+                        )}
+                      </Bar>
+                    );
+                  }) : activeYears.map((y, idx) => {
+                    const YEAR_COLORS = ['var(--color-brand-500)', 'var(--color-proc-polishing)', 'var(--color-proc-plating)', 'var(--color-proc-grinding)', 'var(--color-success-500)', 'var(--color-warning-500)'];
+                    const color = YEAR_COLORS[idx % YEAR_COLORS.length];
+                    return (
+                      <Bar key={y} dataKey={y} name={`Year ${y}`} fill={color} radius={[4, 4, 0, 0]} maxBarSize={40}>
+                        {showLabels && (
+                          <LabelList dataKey={y} position="top" formatter={(val: any) => val > 0 ? formatAxisValue(Number(val)).replace('$', '') : ''} style={{ fontSize: 10, fill: color, fontWeight: 800 }} />
+                        )}
+                      </Bar>
+                    );
+                  })}
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Detail Breakdown Modal */}
-      <CustomerDetailModal 
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        custData={custData}
-        activeYears={activeYears}
-        selGroups={selGroups}
-        ALL_GROUPS={ALL_GROUPS}
-      />
     </>
   );
 }

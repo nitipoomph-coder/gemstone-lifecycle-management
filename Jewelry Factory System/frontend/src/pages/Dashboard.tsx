@@ -199,7 +199,7 @@ export default function Dashboard() {
                   onMouseEnter={e => { e.currentTarget.style.borderColor='var(--color-brand-400)'; }}
                   onMouseLeave={e => { e.currentTarget.style.borderColor='var(--color-border-light)'; }}
                 >
-                  <option value="all">All Years (ทั้งหมด)</option>
+                  <option value="all">All Years</option>
                   {yearsList.map(yr => (
                     <option key={yr} value={yr.toString()}>{yr}</option>
                   ))}
@@ -353,7 +353,7 @@ export default function Dashboard() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                 {sfCard({
                   icon: <Gem size={18} style={{ color: 'oklch(0.65 0.2 280)' }}/>,
-                  title: 'Stone (พลอย)',
+                  title: 'Stone',
                   subtitle: 'Gemstone preparation status',
                   pending: sf.stone.pending,
                   pendingQty: sf.stone.pendingQty,
@@ -362,11 +362,11 @@ export default function Dashboard() {
                   bgAccent: 'oklch(0.65 0.2 280 / 0.1)',
                   borderAccent: 'oklch(0.65 0.2 280 / 0.25)',
                   navPath: '/procurement/purchase',
-                  navLabel: 'จัดซื้อพลอย',
+                  navLabel: 'Purchase Stone',
                 })}
                 {sfCard({
                   icon: <Wrench size={18} style={{ color: 'oklch(0.7 0.15 55)' }}/>,
-                  title: 'Finding (อะไหล่)',
+                  title: 'Finding',
                   subtitle: 'Finding preparation status',
                   pending: sf.finding.pending,
                   pendingQty: sf.finding.pendingQty,
@@ -375,7 +375,7 @@ export default function Dashboard() {
                   bgAccent: 'oklch(0.7 0.15 55 / 0.1)',
                   borderAccent: 'oklch(0.7 0.15 55 / 0.25)',
                   navPath: '/spare-parts/order',
-                  navLabel: 'สต็อกอะไหล่',
+                  navLabel: 'Spare Parts',
                 })}
               </div>
             );

@@ -245,12 +245,6 @@ export default function Topbar({ breadcrumb, hideSearch }: TopbarProps) {
             }}
           />
         </button>
-        <button
-          className="flex h-9 w-9 items-center justify-center rounded-lg text-[var(--color-text-secondary)] transition-colors duration-150 hover:bg-[var(--color-surface-0)] hover:text-[var(--color-text-primary)]"
-          title="Settings"
-        >
-          <Settings size={18} />
-        </button>
 
         <div className="relative z-[100]" ref={themeMenuRef}>
           <button

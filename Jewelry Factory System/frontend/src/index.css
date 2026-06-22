@@ -885,3 +885,159 @@ h6 {
   filter: brightness(1.2);
   transform: translateY(-2px);
 }
+
+/* ========================================================================= */
+/* CLL JEWELRY GEMSTONE FACET STYLES & PARCHMENT LOGIN                       */
+/* ========================================================================= */
+
+.cll-vault-bg {
+  background: linear-gradient(135deg, #1d1812 0%, #15120e 50%, #0a0806 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.cll-vault-bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: 
+    linear-gradient(rgba(201,168,117,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(201,168,117,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  background-position: center center;
+  pointer-events: none;
+}
+
+.gemstone-svg-container {
+  filter: drop-shadow(0 0 15px rgba(201,168,117,0.15));
+}
+
+.facet-wrap {
+  transform-origin: center;
+  animation: float 6s ease-in-out infinite;
+}
+
+.glint {
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  animation: sweep 4s infinite cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes sweep {
+  0% { stroke-dashoffset: 100; opacity: 0; }
+  10% { opacity: 1; }
+  50% { stroke-dashoffset: -100; opacity: 0; }
+  100% { stroke-dashoffset: -100; opacity: 0; }
+}
+
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+  100% { transform: translateY(0px); }
+}
+
+/* Parchment Form Variables & Overrides */
+.parchment-form {
+  --ink:        #15120e;
+  --ink-soft:   #1d1812;
+  --gold:       #c9a875;
+  --gold-soft:  #e3cfa3;
+  --bronze:     #8a5f37;
+  --parchment:  #f3eee3;
+  --graphite:   #322c24;
+  --mist:       #948c7e;
+  --line:       rgba(201,168,117,0.28);
+  
+  background-color: var(--parchment);
+  color: var(--ink);
+}
+
+.parchment-form .floating-container {
+  position: relative;
+  width: 100%;
+}
+
+.parchment-form .floating-fieldset {
+  position: absolute;
+  inset: -5px 0 0;
+  margin: 0;
+  padding: 0 8px;
+  pointer-events: none;
+  border: 1px solid rgba(50, 44, 36, 0.2);
+  border-radius: 4px;
+  transition: border-color 0.2s, border-width 0.2s;
+}
+
+.parchment-form .floating-legend {
+  float: unset;
+  width: auto;
+  overflow: hidden;
+  display: block;
+  padding: 0;
+  height: 11px;
+  font-size: 0.75rem;
+  visibility: hidden;
+  max-width: 0.01px;
+  transition: max-width 50ms cubic-bezier(0, 0, 0.2, 1) 0ms;
+  white-space: nowrap;
+}
+
+.parchment-form .floating-legend span {
+  padding-left: 5px;
+  padding-right: 5px;
+  display: inline-block;
+  opacity: 0;
+  visibility: visible;
+}
+
+.parchment-form .floating-label {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform: translate(14px, 16px) scale(1);
+  transform-origin: top left;
+  transition: color 0.2s cubic-bezier(0, 0, 0.2, 1) 0ms, transform 0.2s cubic-bezier(0, 0, 0.2, 1) 0ms;
+  color: var(--mist);
+  font-size: 1rem;
+  font-family: 'Inter', sans-serif;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.parchment-form .login-input {
+  width: 100%;
+  padding: 16.5px 14px;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--graphite);
+  font-size: 1rem;
+  font-family: 'Inter', sans-serif;
+  box-sizing: border-box;
+}
+
+.parchment-form .login-input:-webkit-autofill,
+.parchment-form .login-input:-webkit-autofill:hover, 
+.parchment-form .login-input:-webkit-autofill:focus, 
+.parchment-form .login-input:-webkit-autofill:active{
+    -webkit-box-shadow: 0 0 0 30px var(--parchment) inset !important;
+    -webkit-text-fill-color: var(--graphite) !important;
+}
+
+.parchment-form .login-input:focus ~ .floating-fieldset,
+.parchment-form .login-input:not(:placeholder-shown) ~ .floating-fieldset {
+  border-color: var(--bronze);
+  border-width: 2px;
+}
+
+.parchment-form .login-input:focus ~ .floating-fieldset .floating-legend,
+.parchment-form .login-input:not(:placeholder-shown) ~ .floating-fieldset .floating-legend {
+  max-width: 1000px;
+  transition: max-width 100ms cubic-bezier(0, 0, 0.2, 1) 50ms;
+}
+
+.parchment-form .login-input:focus ~ .floating-label,
+.parchment-form .login-input:not(:placeholder-shown) ~ .floating-label {
+  transform: translate(14px, -9px) scale(0.75);
+  color: var(--bronze);
+}

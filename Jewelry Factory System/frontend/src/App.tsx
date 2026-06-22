@@ -46,7 +46,8 @@ export default function App() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/dashboard/detail" element={<DashboardDetail />} />
           <Route path="/dashboard/sales" element={<SalesDashboard />} />
-          <Route path="/dashboard/customer" element={<CustomerDashboard />} />
+          <Route path="/dashboard/customer" element={<CustomerDashboard metric="amount" />} />
+          <Route path="/dashboard/qty" element={<CustomerDashboard metric="qty" />} />
           <Route path="/dashboard/customer-report" element={<CustomerReportPage />} />
 
 

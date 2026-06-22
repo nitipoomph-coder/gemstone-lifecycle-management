@@ -1,5 +1,5 @@
-import { useState, useMemo, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Search, Filter, X, Users, CheckSquare, Square, DollarSign } from 'lucide-react';
 import Topbar from '../components/layout/Topbar';
 import { fetchCustomerSummary, fetchAvailableYears } from '../services/dashboardAPI';
@@ -8,11 +8,6 @@ import { ALL_GROUPS, getCustomerGroupId } from '../config/customerGroups';
 // ─────────────────────────────────────────────────────────────────────────────
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-const fmt = (val: number) =>
-  `$${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
-const fmtCurr = (val: number) =>
-  `$${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 const thBase: React.CSSProperties = {
   padding: '10px 10px',
@@ -36,14 +31,24 @@ const thBase: React.CSSProperties = {
 // ─────────────────────────────────────────────────────────────────────────────
 export default function CustomerReportPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const metric = searchParams.get('metric') || 'amount';
+
+  const fmt = (val: number) => {
+    if (metric === 'qty') return val.toLocaleString(undefined, { maximumFractionDigits: 0 });
+    return `$${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+  const fmtCurr = fmt;
 
   // ── DATA STATE ──
   const [custData, setCustData] = useState<any[]>([]);
   const [availableYears, setAvailableYears] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // ── FILTER STATE ──
+  // ── FILTER MODAL STATE ──
   const [isFilterOpen, setIsFilterOpen] = useState(true);
+
+  // ── FILTER STATE ──
   const [viewMode, setViewMode] = useState<'year' | 'month'>('year');
   const [baseYear, setBaseYear] = useState<string>('');
   const [compareYear, setCompareYear] = useState<string>('none');
@@ -52,7 +57,29 @@ export default function CustomerReportPage() {
   const [selCustomers, setSelCustomers] = useState<string[]>([]); // empty means all valid customers in selGroups
   const [selMonths, setSelMonths] = useState<string[]>(MONTHS); // default all 12 months
   const [searchQuery, setSearchQuery] = useState('');
-  const [customerSearch, setCustomerSearch] = useState('');
+  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
+
+
+  const renderGrowthAmt = useCallback((baseVal: number, compVal: number) => {
+    if (compVal === 0 && baseVal === 0) return <span style={{ color: 'var(--color-text-quaternary)' }}>-</span>;
+    const diff = baseVal - compVal;
+    const isUp = diff > 0;
+    const isDown = diff < 0;
+    const color = isUp ? 'var(--color-success-500)' : isDown ? 'var(--color-danger-500)' : 'var(--color-text-tertiary)';
+    const arrow = isUp ? '▲' : isDown ? '▼' : '';
+    return <span style={{ color, fontWeight: 900, fontSize: '0.72rem', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>{arrow} {fmt(Math.abs(diff))}</span>;
+  }, [fmt]);
+
+  const renderGrowthPct = useCallback((baseVal: number, compVal: number) => {
+    if (compVal === 0 && baseVal === 0) return <span style={{ color: 'var(--color-text-quaternary)' }}>-</span>;
+    if (compVal === 0) return <span style={{ color: 'var(--color-success-500)', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>+100.0%</span>;
+    const pct = ((baseVal - compVal) / compVal) * 100;
+    const isUp = pct > 0;
+    const isDown = pct < 0;
+    const color = isUp ? 'var(--color-success-500)' : isDown ? 'var(--color-danger-500)' : 'var(--color-text-tertiary)';
+    const sign = isUp ? '+' : '';
+    return <span style={{ color, fontWeight: 900, fontSize: '0.72rem', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>{sign}{pct.toFixed(1)}%</span>;
+  }, []);
 
   // ── FETCH DATA ──
   useEffect(() => {
@@ -124,13 +151,7 @@ export default function CustomerReportPage() {
     });
   };
 
-  const toggleAllMonths = () => {
-    if (selMonths.length === MONTHS.length) {
-      setSelMonths([]);
-    } else {
-      setSelMonths(MONTHS);
-    }
-  };
+
 
   // ── DATE UTILS ──
   const currentDate = useMemo(() => new Date(), []);
@@ -149,6 +170,20 @@ export default function CustomerReportPage() {
     return yrs.filter(Boolean);
   }, [baseYear, compareYear, compareYear2]);
 
+  // ── GROWTH COMPARISON STATE ──
+  const [growthComparisons, setGrowthComparisons] = useState<{a: string, b: string}[]>([]);
+  const displayYears = activeYears;
+
+  useEffect(() => {
+    if (activeYears.length > 0 && growthComparisons.length === 0) {
+      if (activeYears.length > 1) {
+        setGrowthComparisons([{ a: activeYears[0], b: activeYears[1] }]);
+      } else {
+        setGrowthComparisons([{ a: activeYears[0], b: activeYears[0] }]);
+      }
+    }
+  }, [activeYears, growthComparisons]);
+
   // ── TABLE DATA COMPUTATION ──
   const tableData = useMemo(() => {
     if (!baseYear || activeYears.length === 0) return { rows: [], colTotals: {} as Record<string, number>, activeYears: [] as string[] };
@@ -159,13 +194,19 @@ export default function CustomerReportPage() {
       if (!activeCustomers.includes(cust.id)) return;
       if (activeCustomers.includes('__NONE__')) return;
 
-      const row: any = { id: cust.id, label: cust.id };
+      const row: any = {
+        id: cust.id,
+        label: cust.id,
+        topItem: cust.topItem,
+        topItemQty: cust.topItemQty
+      };
       activeYears.forEach(yr => {
         let yrTotal = 0;
         displayMonths.forEach(m => {
           const idx = MONTHS.indexOf(m);
           const mStr = String(idx + 1);
-          const val = cust.monthly?.[yr]?.[mStr] || 0;
+          const source = metric === 'qty' ? cust.monthlyQty : cust.monthly;
+          const val = source?.[yr]?.[mStr] || 0;
           row[`${yr}_${m}`] = val;
           yrTotal += val;
         });
@@ -180,8 +221,12 @@ export default function CustomerReportPage() {
       rows = rows.filter((r: any) => r.label.toLowerCase().includes(q));
     }
 
-    // Sort by first year total descending
-    rows.sort((a, b) => (b[`${activeYears[0]}_total`] || 0) - (a[`${activeYears[0]}_total`] || 0));
+    // Sort by first year total
+    rows.sort((a, b) => {
+      const valA = a[`${activeYears[0]}_total`] || 0;
+      const valB = b[`${activeYears[0]}_total`] || 0;
+      return sortOrder === 'desc' ? valB - valA : valA - valB;
+    });
 
     // Compute column totals
     const colTotals: Record<string, number> = {};
@@ -199,7 +244,7 @@ export default function CustomerReportPage() {
     });
 
     return { rows, colTotals, activeYears };
-  }, [custData, baseYear, activeYears, activeCustomers, searchQuery, displayMonths]);
+  }, [custData, baseYear, activeYears, activeCustomers, searchQuery, displayMonths, metric, sortOrder]);
 
   // ── KPI SUMMARY ──
   const kpi = useMemo(() => {
@@ -221,8 +266,8 @@ export default function CustomerReportPage() {
     <>
       <Topbar breadcrumb={[
         { label: 'JEWELRY SMART FACTORY', path: '/' },
-        { label: 'Customer Analytics', path: '/dashboard/customer' },
-        { label: 'Full Report Matrix' }
+        { label: metric === 'qty' ? 'Quantity Analytics' : 'Sales Analytics', path: metric === 'qty' ? '/dashboard/qty' : '/dashboard/customer' },
+        { label: metric === 'qty' ? 'Full Quantity Matrix' : 'Full Report Matrix' }
       ]} />
 
       <div className="content-scrollbar flex-1 overflow-y-auto" style={{ background: 'var(--color-surface-1)' }}>
@@ -237,31 +282,23 @@ export default function CustomerReportPage() {
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
               <button
-                onClick={() => navigate('/dashboard/customer')}
+                onClick={() => navigate(metric === 'qty' ? '/dashboard/qty' : '/dashboard/customer')}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 5,
                   padding: '6px 12px', borderRadius: 7, fontSize: '0.72rem', fontWeight: 700,
                   color: 'var(--color-text-tertiary)', background: 'transparent',
                   border: '1px solid var(--color-border-light)', cursor: 'pointer', transition: 'all 0.15s'
                 }}
-                className="hover:text-brand-500 hover:border-brand-300"
+                className="hover:text-brand-500 hover:border-brand-300 active:scale-95"
               >
                 <ArrowLeft size={13} /> Back
               </button>
               <div style={{ width: 1, height: 20, background: 'var(--color-border-light)' }} />
-              <div>
-                <h1 style={{ fontSize: '1.05rem', fontWeight: 900, color: 'var(--color-text-primary)', fontFamily: 'var(--font-display)', letterSpacing: '-0.01em', textTransform: 'uppercase', lineHeight: 1 }}>
-                  Full Report Matrix
-                </h1>
-                <p style={{ fontSize: '0.65rem', fontWeight: 600, color: 'var(--color-text-quaternary)', marginTop: 3, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  {activeYears.join(' · ')}
-                </p>
-              </div>
             </div>
 
             {/* Right controls */}
             <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', background: 'var(--color-surface-1)', borderRadius: 8, padding: 4, border: '1px solid var(--color-border-light)' }}>
+              <div style={{ display: 'flex', background: 'var(--color-surface-2)', padding: 4, borderRadius: 8, boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.05)' }}>
                 <button
                   onClick={() => setViewMode('year')}
                   style={{
@@ -270,6 +307,7 @@ export default function CustomerReportPage() {
                     color: viewMode === 'year' ? 'var(--color-text-primary)' : 'var(--color-text-tertiary)',
                     boxShadow: viewMode === 'year' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
                   }}
+                  className="active:scale-95"
                 >
                   Group by Year
                 </button>
@@ -281,10 +319,12 @@ export default function CustomerReportPage() {
                     color: viewMode === 'month' ? 'var(--color-text-primary)' : 'var(--color-text-tertiary)',
                     boxShadow: viewMode === 'month' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
                   }}
+                  className="active:scale-95"
                 >
                   Group by Month
                 </button>
               </div>
+
               <div style={{ position: 'relative' }}>
                 <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-tertiary)' }} />
                 <input
@@ -304,7 +344,7 @@ export default function CustomerReportPage() {
                   border: 'none', cursor: 'pointer', transition: 'all 0.15s',
                   boxShadow: '0 2px 8px color-mix(in srgb, var(--color-brand-500) 40%, transparent)'
                 }}
-                className="hover:brightness-110"
+                className="hover:brightness-110 active:scale-95"
               >
                 <Filter size={13} />
                 Filters
@@ -315,7 +355,7 @@ export default function CustomerReportPage() {
           {/* ── KPI STRIP ─────────────────────────────────────────────────────── */}
           {!loading && (
             <div style={{ padding: '16px 28px', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-              {activeYears.map((yr, yIdx) => (
+              {displayYears.map((yr, yIdx) => (
                 <div key={yr} style={{ background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)', borderRadius: 10, padding: '12px 18px', flex: '1 1 min-content', minWidth: 200 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--color-text-tertiary)', marginBottom: 4 }}>
                     <DollarSign size={14} />
@@ -342,9 +382,36 @@ export default function CustomerReportPage() {
           {/* ── TABLE AREA ────────────────────────────────────────────────────── */}
           <div className="content-scrollbar" style={{ flex: 1, padding: '0 28px 32px', display: 'flex', flexDirection: 'column' }}>
             {loading ? (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '100px 20px', color: 'var(--color-text-secondary)', fontSize: '0.85rem', fontWeight: 700 }}>
-                Loading report data…
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16, width: '100%', maxWidth: '100%', marginTop: 24 }}>
+                {/* Skeleton KPI Strip */}
+                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
+                  {[1, 2, 3].map(i => (
+                    <div key={`kpi_skel_${i}`} className="animate-pulse" style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border-light)', borderRadius: 10, padding: '12px 18px', flex: '1 1 min-content', minWidth: 200, height: 76 }} />
+                  ))}
+                </div>
+                {/* Skeleton Table */}
+                <div className="animate-pulse" style={{ border: '1px solid var(--color-border-strong)', borderRadius: 12, background: 'var(--color-surface-0)', width: '100%', overflow: 'hidden' }}>
+                  <div style={{ height: 48, borderBottom: '1px solid var(--color-border-strong)', background: 'var(--color-surface-2)', display: 'flex' }}>
+                    <div style={{ width: 160, height: '100%', borderRight: '1px solid var(--color-border-strong)', background: 'var(--color-surface-1)' }}></div>
+                    <div style={{ flex: 1 }}></div>
+                  </div>
+                  {[...Array(8)].map((_, i) => (
+                    <div key={`row_skel_${i}`} style={{ height: 40, borderBottom: '1px solid var(--color-border-light)', display: 'flex' }}>
+                      <div style={{ width: 160, height: '100%', borderRight: '1px solid var(--color-border-strong)' }}>
+                        <div style={{ height: 16, width: '60%', background: 'var(--color-surface-2)', margin: '12px 16px', borderRadius: 4 }}></div>
+                      </div>
+                      <div style={{ flex: 1, display: 'flex', alignItems: 'center', padding: '0 20px', gap: 20 }}>
+                        <div style={{ height: 16, width: '8%', background: 'var(--color-surface-2)', borderRadius: 4 }}></div>
+                        <div style={{ height: 16, width: '6%', background: 'var(--color-surface-2)', borderRadius: 4 }}></div>
+                        <div style={{ height: 16, width: '10%', background: 'var(--color-surface-2)', borderRadius: 4 }}></div>
+                        <div style={{ height: 16, width: '7%', background: 'var(--color-surface-2)', borderRadius: 4 }}></div>
+                        <div style={{ height: 16, width: '9%', background: 'var(--color-surface-2)', borderRadius: 4 }}></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
+
             ) : !baseYear ? (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '100px 20px', gap: 8 }}>
                 <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.85rem', fontWeight: 700 }}>No base year selected. Please apply filters.</p>
@@ -358,33 +425,78 @@ export default function CustomerReportPage() {
                         {/* Year group header */}
                         <tr>
                           <th rowSpan={2} style={{ ...thBase, minWidth: 160, textAlign: 'left', padding: '12px 16px', zIndex: 12, left: 0, position: 'sticky', top: 0, borderBottom: '1px solid var(--color-border-strong)', verticalAlign: 'middle' }}>
-                            Customer ID
+                            <div style={{ display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between' }}>
+                              <span>Customer ID</span>
+                              <select
+                                value={sortOrder}
+                                onChange={(e) => setSortOrder(e.target.value as 'desc' | 'asc')}
+                                style={{
+                                  alignSelf: 'flex-start',
+                                  marginTop: 8,
+                                  fontSize: '0.65rem',
+                                  padding: '2px 4px',
+                                  borderRadius: 4,
+                                  background: 'var(--color-surface-2)',
+                                  border: '1px solid var(--color-border-strong)',
+                                  color: 'var(--color-text-secondary)',
+                                  outline: 'none',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                <option value="desc">Highest to Lowest</option>
+                                <option value="asc">Lowest to Highest</option>
+                              </select>
+                            </div>
                           </th>
-                          {activeYears.map((yr, yIdx) => {
+                          {displayYears.map((yr, yIdx) => {
                             const yc = yearColors[yIdx] || yearColors[0];
                             return (
-                              <th key={yr} colSpan={displayMonths.length + 1} style={{
-                                ...thBase,
-                                background: yc.bg,
-                                color: yc.totalText,
-                                textAlign: 'center',
-                                fontSize: '0.8rem',
-                                fontWeight: 900,
-                                letterSpacing: '0.05em',
-                                position: 'sticky',
-                                top: 0,
-                                zIndex: 10,
-                                borderBottom: 'none',
-                                borderRight: yIdx < activeYears.length - 1 ? '2px solid var(--color-border-strong)' : 'none'
-                              }}>
-                                {yr}
-                              </th>
+                              <React.Fragment key={yr}>
+                                <th colSpan={displayMonths.length + 1} style={{
+                                  ...thBase,
+                                  background: yc.bg,
+                                  color: yc.totalText,
+                                  textAlign: 'center',
+                                  fontSize: '0.8rem',
+                                  fontWeight: 900,
+                                  letterSpacing: '0.05em',
+                                  position: 'sticky',
+                                  top: 0,
+                                  zIndex: 10,
+                                  borderBottom: 'none',
+                                  borderRight: '2px solid var(--color-border-strong)'
+                                }}>
+                                  {yr}
+                                </th>
+
+                              </React.Fragment>
                             );
                           })}
+                          {displayYears.length > 1 && growthComparisons.map((comp, idx) => (
+                            <th key={`growth_hdr_top_${idx}`} colSpan={2} style={{
+                              ...thBase,
+                              background: 'var(--color-surface-2)',
+                              color: 'var(--color-brand-600)',
+                              textAlign: 'center',
+                              fontSize: '0.8rem',
+                              fontWeight: 900,
+                              letterSpacing: '0.05em',
+                              position: 'sticky',
+                              top: 0,
+                              zIndex: 10,
+                              borderBottom: 'none',
+                              borderRight: idx === growthComparisons.length - 1 ? '2px solid var(--color-border-strong)' : '1px solid var(--color-border-light)'
+                            }}>
+                              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                                <span>Growth</span>
+                                <span style={{ fontSize: '0.65rem', color: 'var(--color-brand-600)', fontWeight: 700, opacity: 0.8 }}>({comp.a} vs {comp.b})</span>
+                              </div>
+                            </th>
+                          ))}
                         </tr>
                         {/* Month sub-header */}
                         <tr>
-                          {activeYears.map((yr, yIdx) => {
+                          {displayYears.map((yr, yIdx) => {
                             const yc = yearColors[yIdx] || yearColors[0];
                             return displayMonths.map((m) => {
                               const isCurrent = yr === currentYearStr && MONTHS.indexOf(m) === currentMonthIdx;
@@ -414,24 +526,56 @@ export default function CustomerReportPage() {
                                 top: 34,
                                 zIndex: 10,
                                 borderBottom: '1px solid var(--color-border-strong)',
-                                borderRight: yIdx < activeYears.length - 1 ? '2px solid var(--color-border-strong)' : 'none',
+                                borderRight: '2px solid var(--color-border-strong)',
                                 fontSize: '0.7rem'
                               }}>
                                 Total
                               </th>
                             );
                           })}
+                          {displayYears.length > 1 && growthComparisons.map((_, idx) => (
+                            <React.Fragment key={`growth_hdr_sub_${idx}`}>
+                              <th style={{
+                                ...thBase,
+                                minWidth: 90,
+                                background: 'var(--color-surface-2)',
+                                color: 'var(--color-text-primary)',
+                                position: 'sticky',
+                                top: 34,
+                                zIndex: 10,
+                                borderBottom: '1px solid var(--color-border-strong)',
+                                borderRight: '1px solid var(--color-border-light)',
+                                fontSize: '0.7rem'
+                              }}>
+                                Growth
+                              </th>
+                              <th style={{
+                                ...thBase,
+                                minWidth: 80,
+                                background: 'var(--color-surface-2)',
+                                color: 'var(--color-text-primary)',
+                                position: 'sticky',
+                                top: 34,
+                                zIndex: 10,
+                                borderBottom: '1px solid var(--color-border-strong)',
+                                borderRight: idx === growthComparisons.length - 1 ? '2px solid var(--color-border-strong)' : '1px solid var(--color-border-light)',
+                                fontSize: '0.7rem'
+                              }}>
+                                %
+                              </th>
+                            </React.Fragment>
+                          ))}
                         </tr>
                       </thead>
                       <tbody>
                         {tableData.rows.length === 0 ? (
-                          <tr><td colSpan={1 + activeYears.length * (displayMonths.length + 1)} style={{ padding: '40px', textAlign: 'center', color: 'var(--color-text-secondary)', fontSize: '0.85rem', fontWeight: 700 }}>No customers match the current filter.</td></tr>
+                          <tr><td colSpan={1 + displayYears.length * (displayMonths.length + 1) + (displayYears.length > 1 ? growthComparisons.length * 2 : 0)} style={{ padding: '40px', textAlign: 'center', color: 'var(--color-text-secondary)', fontSize: '0.85rem', fontWeight: 700 }}>No customers match the current filter.</td></tr>
                         ) : tableData.rows.map((row: any, idx: number) => (
                           <tr key={row.id} style={{ borderBottom: '1px solid var(--color-border-light)', background: idx % 2 === 0 ? 'var(--color-surface-0)' : 'var(--color-surface-1)' }} className="hover:bg-brand-50">
                             <td style={{ padding: '10px 16px', borderRight: '1px solid var(--color-border-light)', fontWeight: 800, color: 'var(--color-text-primary)', whiteSpace: 'nowrap', fontSize: '0.78rem', position: 'sticky', left: 0, background: idx % 2 === 0 ? 'var(--color-surface-0)' : 'var(--color-surface-1)', zIndex: 2 }}>
                               {row.label}
                             </td>
-                            {activeYears.map((yr, yIdx) => {
+                            {displayYears.map((yr, yIdx) => {
                               const yc = yearColors[yIdx] || yearColors[0];
                               return displayMonths.map(m => {
                                 const val = row[`${yr}_${m}`] || 0;
@@ -444,13 +588,23 @@ export default function CustomerReportPage() {
                                   </td>
                                 );
                               }).concat(
-                                <td key={`${yr}_total`} style={{ padding: '8px 12px', textAlign: 'right', background: yc.totalBg, whiteSpace: 'nowrap', borderRight: yIdx < activeYears.length - 1 ? '2px solid var(--color-border-strong)' : 'none' }}>
+                                <td key={`${yr}_total`} style={{ padding: '8px 12px', textAlign: 'right', background: 'inherit', whiteSpace: 'nowrap', borderRight: '2px solid var(--color-border-strong)' }}>
                                   <span style={{ fontSize: '0.85rem', fontWeight: 900, color: yc.totalText }}>
                                     {fmt(row[`${yr}_total`] || 0)}
                                   </span>
                                 </td>
                               );
                             })}
+                            {displayYears.length > 1 && growthComparisons.map((comp, idx) => (
+                              <React.Fragment key={`growth_row_${idx}`}>
+                                <td style={{ padding: '8px 10px', textAlign: 'right', background: 'inherit', borderRight: '1px solid var(--color-border-light)' }}>
+                                  {renderGrowthAmt(row[`${comp.a}_total`] || 0, row[`${comp.b}_total`] || 0)}
+                                </td>
+                                <td style={{ padding: '8px 10px', textAlign: 'right', background: 'inherit', borderRight: idx === growthComparisons.length - 1 ? '2px solid var(--color-border-strong)' : '1px solid var(--color-border-light)' }}>
+                                  {renderGrowthPct(row[`${comp.a}_total`] || 0, row[`${comp.b}_total`] || 0)}
+                                </td>
+                              </React.Fragment>
+                            ))}
                           </tr>
                         ))}
                       </tbody>
@@ -460,7 +614,7 @@ export default function CustomerReportPage() {
                             <td style={{ padding: '12px 16px', fontWeight: 900, color: 'var(--color-text-primary)', borderRight: '1px solid var(--color-border-strong)', fontSize: '0.78rem', position: 'sticky', left: 0, background: 'var(--color-surface-2)', zIndex: 12 }}>
                               GRAND TOTAL
                             </td>
-                            {activeYears.map((yr, yIdx) => {
+                            {displayYears.map((yr, yIdx) => {
                               const yc = yearColors[yIdx] || yearColors[0];
                               return displayMonths.map(m => {
                                 const isCurrent = yr === currentYearStr && MONTHS.indexOf(m) === currentMonthIdx;
@@ -472,13 +626,23 @@ export default function CustomerReportPage() {
                                   </td>
                                 );
                               }).concat(
-                                <td key={`${yr}_total`} style={{ padding: '10px 12px', textAlign: 'right', background: 'color-mix(in srgb, var(--color-brand-500) 15%, var(--color-surface-2))', whiteSpace: 'nowrap', borderRight: yIdx < activeYears.length - 1 ? '2px solid var(--color-border-strong)' : 'none' }}>
+                                <td key={`${yr}_total`} style={{ padding: '10px 12px', textAlign: 'right', background: 'color-mix(in srgb, var(--color-brand-500) 15%, var(--color-surface-2))', whiteSpace: 'nowrap', borderRight: '2px solid var(--color-border-strong)' }}>
                                   <span style={{ fontSize: '0.9rem', fontWeight: 900, color: yc.totalText }}>
                                     {fmt(tableData.colTotals[`${yr}_total`] || 0)}
                                   </span>
                                 </td>
                               );
                             })}
+                            {displayYears.length > 1 && growthComparisons.map((comp, idx) => (
+                              <React.Fragment key={`growth_foot_${idx}`}>
+                                <td style={{ padding: '10px 12px', textAlign: 'right', background: 'color-mix(in srgb, var(--color-brand-500) 15%, var(--color-surface-2))', whiteSpace: 'nowrap', borderRight: '1px solid var(--color-border-light)' }}>
+                                  {renderGrowthAmt(tableData.colTotals[`${comp.a}_total`] || 0, tableData.colTotals[`${comp.b}_total`] || 0)}
+                                </td>
+                                <td style={{ padding: '10px 12px', textAlign: 'right', background: 'color-mix(in srgb, var(--color-brand-500) 15%, var(--color-surface-2))', whiteSpace: 'nowrap', borderRight: idx === growthComparisons.length - 1 ? '2px solid var(--color-border-strong)' : '1px solid var(--color-border-light)' }}>
+                                  {renderGrowthPct(tableData.colTotals[`${comp.a}_total`] || 0, tableData.colTotals[`${comp.b}_total`] || 0)}
+                                </td>
+                              </React.Fragment>
+                            ))}
                           </tr>
                         </tfoot>
                       )}
@@ -489,11 +653,32 @@ export default function CustomerReportPage() {
                         {/* Month group header */}
                         <tr>
                           <th rowSpan={2} style={{ ...thBase, minWidth: 160, textAlign: 'left', padding: '12px 16px', zIndex: 12, left: 0, position: 'sticky', top: 0, borderBottom: '1px solid var(--color-border-strong)', verticalAlign: 'middle' }}>
-                            Customer ID
+                            <div style={{ display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between' }}>
+                              <span>Customer ID</span>
+                              <select
+                                value={sortOrder}
+                                onChange={(e) => setSortOrder(e.target.value as 'desc' | 'asc')}
+                                style={{
+                                  alignSelf: 'flex-start',
+                                  marginTop: 8,
+                                  fontSize: '0.65rem',
+                                  padding: '2px 4px',
+                                  borderRadius: 4,
+                                  background: 'var(--color-surface-2)',
+                                  border: '1px solid var(--color-border-strong)',
+                                  color: 'var(--color-text-secondary)',
+                                  outline: 'none',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                <option value="desc">Highest to Lowest</option>
+                                <option value="asc">Lowest to Highest</option>
+                              </select>
+                            </div>
                           </th>
                           {displayMonths.map((m) => {
                             return (
-                              <th key={m} colSpan={activeYears.length} style={{
+                              <th key={m} colSpan={displayYears.length + (displayYears.length > 1 ? growthComparisons.length * 2 : 0)} style={{
                                 ...thBase,
                                 background: 'var(--color-surface-1)',
                                 color: 'var(--color-text-primary)',
@@ -511,7 +696,7 @@ export default function CustomerReportPage() {
                               </th>
                             );
                           })}
-                          <th colSpan={activeYears.length} style={{
+                          <th colSpan={displayYears.length + (displayYears.length > 1 ? growthComparisons.length * 2 : 0)} style={{
                             ...thBase,
                             background: 'var(--color-surface-2)',
                             color: 'var(--color-brand-600)',
@@ -525,89 +710,150 @@ export default function CustomerReportPage() {
                             borderBottom: 'none',
                             borderRight: 'none'
                           }}>
-                            Grand Total
+                            {metric === 'qty' ? 'Grand Total QTY' : 'Grand Total Sales'}
                           </th>
                         </tr>
                         {/* Year sub-header */}
                         <tr>
                           {displayMonths.map((m) => {
-                            return activeYears.map((yr, yIdx) => {
-                              const isCurrent = yr === currentYearStr && MONTHS.indexOf(m) === currentMonthIdx;
-                              const isLastYear = yIdx === activeYears.length - 1;
-                              const yc = yearColors[yIdx] || yearColors[0];
-                              return (
-                                <th key={`${m}_${yr}`} style={{
+                            return (
+                              <React.Fragment key={m}>
+                                {displayYears.map((yr, yIdx) => {
+                                  const isCurrent = yr === currentYearStr && MONTHS.indexOf(m) === currentMonthIdx;
+                                  const yc = yearColors[yIdx] || yearColors[0];
+                                  return (
+                                    <th key={`${m}_${yr}`} style={{
+                                      ...thBase,
+                                      minWidth: 100,
+                                      background: isCurrent ? 'color-mix(in srgb, var(--color-brand-500) 20%, var(--color-surface-1))' : yc.bg,
+                                      color: isCurrent ? 'var(--color-brand-600)' : yc.text,
+                                      position: 'sticky',
+                                      top: 34,
+                                      zIndex: 10,
+                                      borderBottom: '1px solid var(--color-border-strong)',
+                                      borderRight: yIdx === displayYears.length - 1 && !(displayYears.length > 1) ? '2px solid var(--color-border-strong)' : '1px solid var(--color-border-light)',
+                                      fontSize: '0.68rem'
+                                    }}>
+                                      {yr}
+                                    </th>
+                                  );
+                                })}
+                                {displayYears.length > 1 && growthComparisons.map((comp, idx) => (
+                                  <React.Fragment key={`growth_m_hdr_${idx}`}>
+                                    <th style={{ ...thBase, minWidth: 100, background: 'var(--color-surface-2)', color: 'var(--color-text-primary)', position: 'sticky', top: 34, zIndex: 10, borderBottom: '1px solid var(--color-border-strong)', borderRight: '1px solid var(--color-border-light)', fontSize: '0.65rem' }}>
+                                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                                        <span>Growth</span>
+                                        <span style={{ fontSize: '0.55rem', color: 'var(--color-text-tertiary)', fontWeight: 700 }}>({comp.a} vs {comp.b})</span>
+                                      </div>
+                                    </th>
+                                    <th style={{ ...thBase, minWidth: 70, background: 'var(--color-surface-2)', color: 'var(--color-text-primary)', position: 'sticky', top: 34, zIndex: 10, borderBottom: '1px solid var(--color-border-strong)', borderRight: idx === growthComparisons.length - 1 ? '2px solid var(--color-border-strong)' : '1px solid var(--color-border-light)', fontSize: '0.65rem' }}>
+                                      %
+                                    </th>
+                                  </React.Fragment>
+                                ))}
+                              </React.Fragment>
+                            );
+                          })}
+                          {displayYears.map((yr, yIdx) => {
+                            const yc = yearColors[yIdx] || yearColors[0];
+                            return (
+                              <React.Fragment key={`total_${yr}`}>
+                                <th style={{
                                   ...thBase,
-                                  minWidth: 100,
-                                  background: isCurrent ? 'color-mix(in srgb, var(--color-brand-500) 20%, var(--color-surface-1))' : yc.bg,
-                                  color: isCurrent ? 'var(--color-brand-600)' : yc.text,
+                                  minWidth: 120,
+                                  background: yc.totalBg,
+                                  color: yc.totalText,
                                   position: 'sticky',
                                   top: 34,
                                   zIndex: 10,
                                   borderBottom: '1px solid var(--color-border-strong)',
-                                  borderRight: isLastYear ? '2px solid var(--color-border-strong)' : '1px solid var(--color-border-light)',
-                                  fontSize: '0.68rem'
+                                  borderRight: '2px solid var(--color-border-strong)',
+                                  fontSize: '0.7rem'
                                 }}>
-                                  {yr}
+                                  {yr} Total
                                 </th>
-                              );
-                            });
-                          })}
-                          {activeYears.map((yr, yIdx) => {
-                            const isLastYear = yIdx === activeYears.length - 1;
-                            const yc = yearColors[yIdx] || yearColors[0];
-                            return (
-                              <th key={`total_${yr}`} style={{
-                                ...thBase,
-                                minWidth: 120,
-                                background: yc.totalBg,
-                                color: yc.totalText,
-                                position: 'sticky',
-                                top: 34,
-                                zIndex: 10,
-                                borderBottom: '1px solid var(--color-border-strong)',
-                                borderRight: isLastYear ? 'none' : '1px solid var(--color-border-light)',
-                                fontSize: '0.7rem'
-                              }}>
-                                {yr} Total
-                              </th>
+                              </React.Fragment>
                             );
                           })}
+                          {displayYears.length > 1 && growthComparisons.map((comp, idx) => (
+                            <React.Fragment key={`growth_m_tot_hdr_${idx}`}>
+                              <th style={{ ...thBase, minWidth: 100, background: 'color-mix(in srgb, var(--color-brand-500) 10%, var(--color-surface-2))', color: 'var(--color-brand-600)', position: 'sticky', top: 34, zIndex: 10, borderBottom: '1px solid var(--color-border-strong)', borderRight: '1px solid var(--color-border-light)', fontSize: '0.65rem' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                                  <span>Growth</span>
+                                  <span style={{ fontSize: '0.55rem', color: 'var(--color-text-tertiary)', fontWeight: 700 }}>({comp.a} vs {comp.b})</span>
+                                </div>
+                              </th>
+                              <th style={{ ...thBase, minWidth: 80, background: 'color-mix(in srgb, var(--color-brand-500) 10%, var(--color-surface-2))', color: 'var(--color-brand-600)', position: 'sticky', top: 34, zIndex: 10, borderBottom: '1px solid var(--color-border-strong)', borderRight: idx === growthComparisons.length - 1 ? 'none' : '1px solid var(--color-border-strong)', fontSize: '0.65rem' }}>
+                                %
+                              </th>
+                            </React.Fragment>
+                          ))}
                         </tr>
                       </thead>
                       <tbody>
                         {tableData.rows.length === 0 ? (
-                          <tr><td colSpan={1 + (displayMonths.length + 1) * activeYears.length} style={{ padding: '40px', textAlign: 'center', color: 'var(--color-text-secondary)', fontSize: '0.85rem', fontWeight: 700 }}>No customers match the current filter.</td></tr>
+                          <tr><td colSpan={1 + (displayMonths.length + 1) * (displayYears.length + (displayYears.length > 1 ? growthComparisons.length * 2 : 0))} style={{ padding: '40px', textAlign: 'center', color: 'var(--color-text-secondary)', fontSize: '0.85rem', fontWeight: 700 }}>No customers match the current filter.</td></tr>
                         ) : tableData.rows.map((row: any, idx: number) => (
                           <tr key={row.id} style={{ borderBottom: '1px solid var(--color-border-light)', background: idx % 2 === 0 ? 'var(--color-surface-0)' : 'var(--color-surface-1)' }} className="hover:bg-brand-50">
                             <td style={{ padding: '10px 16px', borderRight: '1px solid var(--color-border-light)', fontWeight: 800, color: 'var(--color-text-primary)', whiteSpace: 'nowrap', fontSize: '0.78rem', position: 'sticky', left: 0, background: idx % 2 === 0 ? 'var(--color-surface-0)' : 'var(--color-surface-1)', zIndex: 2 }}>
-                              {row.label}
+                              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                <span>{row.label}</span>
+                                {metric === 'qty' && row.topItem && (
+                                  <span style={{ fontSize: '0.65rem', color: 'var(--color-brand-500)', marginTop: 2, fontWeight: 700, letterSpacing: '0.02em' }}>
+                                    Top: {row.topItem} ({fmt(row.topItemQty)} pcs)
+                                  </span>
+                                )}
+                              </div>
                             </td>
                             {displayMonths.map((m) => {
-                              return activeYears.map((yr, yIdx) => {
-                                const val = row[`${yr}_${m}`] || 0;
-                                const isCurrent = yr === currentYearStr && MONTHS.indexOf(m) === currentMonthIdx;
-                                const isLastYear = yIdx === activeYears.length - 1;
-                                return (
-                                  <td key={`${m}_${yr}`} style={{ padding: '8px 10px', textAlign: 'right', borderRight: isLastYear ? '2px solid var(--color-border-strong)' : '1px solid var(--color-border-light)', whiteSpace: 'nowrap', background: isCurrent ? 'color-mix(in srgb, var(--color-brand-500) 12%, transparent)' : 'inherit' }}>
-                                    <div style={{ fontSize: '0.78rem', fontWeight: 800, color: val > 0 ? 'var(--color-text-primary)' : 'var(--color-text-tertiary)' }}>
-                                      {fmt(val)}
-                                    </div>
-                                  </td>
-                                );
-                              });
-                            })}
-                            {activeYears.map((yr, yIdx) => {
-                              const yc = yearColors[yIdx] || yearColors[0];
-                              const isLastYear = yIdx === activeYears.length - 1;
                               return (
-                                <td key={`total_${yr}`} style={{ padding: '8px 12px', textAlign: 'right', background: yc.totalBg, whiteSpace: 'nowrap', borderRight: isLastYear ? 'none' : '1px solid var(--color-border-light)' }}>
-                                  <span style={{ fontSize: '0.85rem', fontWeight: 900, color: yc.totalText }}>
-                                    {fmt(row[`${yr}_total`] || 0)}
-                                  </span>
-                                </td>
+                                <React.Fragment key={m}>
+                                  {displayYears.map((yr, yIdx) => {
+                                    const val = row[`${yr}_${m}`] || 0;
+                                    const isCurrent = yr === currentYearStr && MONTHS.indexOf(m) === currentMonthIdx;
+                                    return (
+                                      <td key={`${m}_${yr}`} style={{ padding: '8px 10px', textAlign: 'right', borderRight: yIdx === displayYears.length - 1 && !(displayYears.length > 1) ? '2px solid var(--color-border-strong)' : '1px solid var(--color-border-light)', whiteSpace: 'nowrap', background: isCurrent ? 'color-mix(in srgb, var(--color-brand-500) 12%, transparent)' : 'inherit' }}>
+                                        <div style={{ fontSize: '0.78rem', fontWeight: 800, color: val > 0 ? 'var(--color-text-primary)' : 'var(--color-text-tertiary)' }}>
+                                          {fmt(val)}
+                                        </div>
+                                      </td>
+                                    );
+                                  })}
+                                  {displayYears.length > 1 && growthComparisons.map((comp, idx) => (
+                                    <React.Fragment key={`growth_m_row_${m}_${idx}`}>
+                                      <td style={{ padding: '8px 10px', textAlign: 'right', background: 'inherit', borderRight: '1px solid var(--color-border-light)' }}>
+                                        {renderGrowthAmt(row[`${comp.a}_${m}`] || 0, row[`${comp.b}_${m}`] || 0)}
+                                      </td>
+                                      <td style={{ padding: '8px 10px', textAlign: 'right', background: 'inherit', borderRight: idx === growthComparisons.length - 1 ? '2px solid var(--color-border-strong)' : '1px solid var(--color-border-light)' }}>
+                                        {renderGrowthPct(row[`${comp.a}_${m}`] || 0, row[`${comp.b}_${m}`] || 0)}
+                                      </td>
+                                    </React.Fragment>
+                                  ))}
+                                </React.Fragment>
                               );
                             })}
+                            {displayYears.map((yr, yIdx) => {
+                              const yc = yearColors[yIdx] || yearColors[0];
+                              return (
+                                <React.Fragment key={`total_${yr}`}>
+                                  <td style={{ padding: '8px 12px', textAlign: 'right', background: 'inherit', whiteSpace: 'nowrap', borderRight: '2px solid var(--color-border-strong)' }}>
+                                    <span style={{ fontSize: '0.85rem', fontWeight: 900, color: yc.totalText }}>
+                                      {fmt(row[`${yr}_total`] || 0)}
+                                    </span>
+                                  </td>
+                                </React.Fragment>
+                              );
+                            })}
+                            {displayYears.length > 1 && growthComparisons.map((comp, idx) => (
+                              <React.Fragment key={`growth_m_row_tot_${idx}`}>
+                                <td style={{ padding: '8px 10px', textAlign: 'right', background: 'inherit', borderRight: '1px solid var(--color-border-light)' }}>
+                                  {renderGrowthAmt(row[`${comp.a}_total`] || 0, row[`${comp.b}_total`] || 0)}
+                                </td>
+                                <td style={{ padding: '8px 10px', textAlign: 'right', background: 'inherit', borderRight: idx === growthComparisons.length - 1 ? 'none' : '1px solid var(--color-border-strong)' }}>
+                                  {renderGrowthPct(row[`${comp.a}_total`] || 0, row[`${comp.b}_total`] || 0)}
+                                </td>
+                              </React.Fragment>
+                            ))}
                           </tr>
                         ))}
                       </tbody>
@@ -618,29 +864,53 @@ export default function CustomerReportPage() {
                               GRAND TOTAL
                             </td>
                             {displayMonths.map((m) => {
-                              return activeYears.map((yr, yIdx) => {
-                                const isCurrent = yr === currentYearStr && MONTHS.indexOf(m) === currentMonthIdx;
-                                const isLastYear = yIdx === activeYears.length - 1;
-                                return (
-                                  <td key={`${m}_${yr}`} style={{ padding: '10px 10px', textAlign: 'right', borderRight: isLastYear ? '2px solid var(--color-border-strong)' : '1px solid var(--color-border-light)', whiteSpace: 'nowrap', background: isCurrent ? 'color-mix(in srgb, var(--color-brand-500) 20%, var(--color-surface-2))' : 'inherit' }}>
-                                    <div style={{ fontSize: '0.8rem', fontWeight: 900, color: 'var(--color-text-primary)' }}>
-                                      {fmt(tableData.colTotals[`${yr}_${m}`] || 0)}
-                                    </div>
-                                  </td>
-                                );
-                              });
-                            })}
-                            {activeYears.map((yr, yIdx) => {
-                              const isLastYear = yIdx === activeYears.length - 1;
-                              const yc = yearColors[yIdx] || yearColors[0];
                               return (
-                                <td key={`total_${yr}`} style={{ padding: '10px 12px', textAlign: 'right', background: 'color-mix(in srgb, var(--color-brand-500) 15%, var(--color-surface-2))', whiteSpace: 'nowrap', borderRight: isLastYear ? 'none' : '1px solid var(--color-border-light)' }}>
-                                  <span style={{ fontSize: '0.9rem', fontWeight: 900, color: yc.totalText }}>
-                                    {fmt(tableData.colTotals[`${yr}_total`] || 0)}
-                                  </span>
-                                </td>
+                                <React.Fragment key={m}>
+                                  {displayYears.map((yr, yIdx) => {
+                                    const isCurrent = yr === currentYearStr && MONTHS.indexOf(m) === currentMonthIdx;
+                                    return (
+                                      <td key={`${m}_${yr}`} style={{ padding: '10px 10px', textAlign: 'right', borderRight: yIdx === displayYears.length - 1 && !(displayYears.length > 1) ? '2px solid var(--color-border-strong)' : '1px solid var(--color-border-light)', whiteSpace: 'nowrap', background: isCurrent ? 'color-mix(in srgb, var(--color-brand-500) 20%, var(--color-surface-2))' : 'inherit' }}>
+                                        <div style={{ fontSize: '0.8rem', fontWeight: 900, color: 'var(--color-text-primary)' }}>
+                                          {fmt(tableData.colTotals[`${yr}_${m}`] || 0)}
+                                        </div>
+                                      </td>
+                                    );
+                                  })}
+                                  {displayYears.length > 1 && growthComparisons.map((comp, idx) => (
+                                    <React.Fragment key={`growth_m_foot_${m}_${idx}`}>
+                                      <td style={{ padding: '8px 10px', textAlign: 'right', background: 'var(--color-surface-2)', borderRight: '1px solid var(--color-border-light)' }}>
+                                        {renderGrowthAmt(tableData.colTotals[`${comp.a}_${m}`] || 0, tableData.colTotals[`${comp.b}_${m}`] || 0)}
+                                      </td>
+                                      <td style={{ padding: '8px 10px', textAlign: 'right', background: 'var(--color-surface-2)', borderRight: idx === growthComparisons.length - 1 ? '2px solid var(--color-border-strong)' : '1px solid var(--color-border-light)' }}>
+                                        {renderGrowthPct(tableData.colTotals[`${comp.a}_${m}`] || 0, tableData.colTotals[`${comp.b}_${m}`] || 0)}
+                                      </td>
+                                    </React.Fragment>
+                                  ))}
+                                </React.Fragment>
                               );
                             })}
+                            {displayYears.map((yr, yIdx) => {
+                              const yc = yearColors[yIdx] || yearColors[0];
+                              return (
+                                <React.Fragment key={`total_${yr}`}>
+                                  <td style={{ padding: '10px 12px', textAlign: 'right', background: 'color-mix(in srgb, var(--color-brand-500) 15%, var(--color-surface-2))', whiteSpace: 'nowrap', borderRight: '2px solid var(--color-border-strong)' }}>
+                                    <span style={{ fontSize: '0.9rem', fontWeight: 900, color: yc.totalText }}>
+                                      {fmt(tableData.colTotals[`${yr}_total`] || 0)}
+                                    </span>
+                                  </td>
+                                </React.Fragment>
+                              );
+                            })}
+                            {displayYears.length > 1 && growthComparisons.map((comp, idx) => (
+                              <React.Fragment key={`growth_m_foot_tot_${idx}`}>
+                                <td style={{ padding: '8px 10px', textAlign: 'right', background: 'color-mix(in srgb, var(--color-brand-500) 10%, var(--color-surface-2))', borderRight: '1px solid var(--color-border-light)' }}>
+                                  {renderGrowthAmt(tableData.colTotals[`${comp.a}_total`] || 0, tableData.colTotals[`${comp.b}_total`] || 0)}
+                                </td>
+                                <td style={{ padding: '8px 10px', textAlign: 'right', background: 'color-mix(in srgb, var(--color-brand-500) 10%, var(--color-surface-2))', borderRight: idx === growthComparisons.length - 1 ? 'none' : '1px solid var(--color-border-strong)' }}>
+                                  {renderGrowthPct(tableData.colTotals[`${comp.a}_total`] || 0, tableData.colTotals[`${comp.b}_total`] || 0)}
+                                </td>
+                              </React.Fragment>
+                            ))}
                           </tr>
                         </tfoot>
                       )}
@@ -691,13 +961,72 @@ export default function CustomerReportPage() {
                 </div>
               </div>
 
+              {/* Growth Comparison Selectors */}
+              <div style={{ marginTop: 0 }}>                
+                <label style={{ display: 'block', fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-quaternary)', marginBottom: 6 }}>Growth Comparison Years</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {growthComparisons.map((comp, idx) => (
+                    <div key={idx} style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                      <select 
+                        value={comp.a} 
+                        onChange={e => {
+                          const newComps = [...growthComparisons];
+                          newComps[idx].a = e.target.value;
+                          setGrowthComparisons(newComps);
+                        }} 
+                        style={{ flex: 1, padding: '8px 12px', borderRadius: 8, border: '1px solid var(--color-border-strong)', background: 'var(--color-surface-1)', color: 'var(--color-text-primary)', fontSize: '0.8rem', fontWeight: 800, outline: 'none' }}
+                      >
+                        {activeYears.map(y => <option key={y} value={y}>Year {y}</option>)}
+                      </select>
+                      <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--color-text-tertiary)' }}>VS</span>
+                      <select 
+                        value={comp.b} 
+                        onChange={e => {
+                          const newComps = [...growthComparisons];
+                          newComps[idx].b = e.target.value;
+                          setGrowthComparisons(newComps);
+                        }} 
+                        style={{ flex: 1, padding: '8px 12px', borderRadius: 8, border: '1px solid var(--color-border-strong)', background: 'var(--color-surface-1)', color: 'var(--color-text-primary)', fontSize: '0.8rem', fontWeight: 800, outline: 'none' }}
+                      >
+                        {activeYears.map(y => <option key={y} value={y}>Year {y}</option>)}
+                      </select>
+                      {growthComparisons.length > 1 && (
+                        <button 
+                          onClick={() => setGrowthComparisons(comps => comps.filter((_, i) => i !== idx))}
+                          style={{ padding: '8px', background: 'var(--color-surface-2)', border: '1px solid var(--color-border-light)', borderRadius: 8, cursor: 'pointer', color: 'var(--color-danger-500)' }}
+                        >
+                          <X size={14} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  <button 
+                    onClick={() => setGrowthComparisons(comps => [...comps, { a: activeYears[0], b: activeYears[1] || activeYears[0] }])}
+                    style={{ padding: '6px 12px', background: 'var(--color-surface-2)', border: '1px dashed var(--color-brand-300)', borderRadius: 8, cursor: 'pointer', color: 'var(--color-brand-600)', fontSize: '0.75rem', fontWeight: 800, alignSelf: 'flex-start' }}
+                  >
+                    + Add Comparison
+                  </button>
+                </div>
+              </div>
+
               {/* Month Selectors */}
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
                   <label style={{ display: 'block', fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-quaternary)' }}>Select Months ({selMonths.length})</label>
-                  <button onClick={toggleAllMonths} style={{ background: 'none', border: 'none', color: 'var(--color-brand-500)', fontSize: '0.7rem', fontWeight: 800, cursor: 'pointer' }}>
-                    {selMonths.length === MONTHS.length ? 'Clear All' : 'Select All'}
-                  </button>
+                  <div style={{ display: 'flex', gap: 12 }}>
+                    <button
+                      onClick={() => setSelMonths([])}
+                      disabled={selMonths.length === 0}
+                      style={{ background: 'none', border: 'none', color: selMonths.length === 0 ? 'var(--color-text-quaternary)' : 'var(--color-danger-500)', fontSize: '0.7rem', fontWeight: 800, cursor: selMonths.length === 0 ? 'not-allowed' : 'pointer' }}>
+                      Clear All
+                    </button>
+                    <button
+                      onClick={() => setSelMonths(MONTHS)}
+                      disabled={selMonths.length === MONTHS.length}
+                      style={{ background: 'none', border: 'none', color: selMonths.length === MONTHS.length ? 'var(--color-text-quaternary)' : 'var(--color-brand-500)', fontSize: '0.7rem', fontWeight: 800, cursor: selMonths.length === MONTHS.length ? 'not-allowed' : 'pointer' }}>
+                      Select All
+                    </button>
+                  </div>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 8 }}>
                   {MONTHS.map(m => {
@@ -746,16 +1075,7 @@ export default function CustomerReportPage() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
                   <label style={{ display: 'block', fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-quaternary)' }}>Select Customers ({selCustomers.length === 0 ? (groupCustomers.length > 0 ? 'All' : '0') : selCustomers.length} selected)</label>
                   <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                    <div style={{ position: 'relative' }}>
-                      <Search size={14} style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-tertiary)' }} />
-                      <input
-                        type="text"
-                        placeholder="Search customer..."
-                        value={customerSearch}
-                        onChange={e => setCustomerSearch(e.target.value)}
-                        style={{ padding: '4px 8px 4px 28px', fontSize: '0.75rem', borderRadius: 6, border: '1px solid var(--color-border-light)', background: 'var(--color-surface-2)', color: 'var(--color-text-primary)', outline: 'none', width: 140 }}
-                      />
-                    </div>
+
                     <button onClick={toggleAllCustomers} style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--color-brand-500)', background: 'none', border: 'none', cursor: 'pointer' }}>
                       {selCustomers.length === 0 ? 'Deselect All' : 'Select All'}
                     </button>
@@ -767,10 +1087,7 @@ export default function CustomerReportPage() {
                 }} className="content-scrollbar">
                   {groupCustomers.length === 0 ? (
                     <div style={{ padding: '20px', textAlign: 'center', color: 'var(--color-text-tertiary)', fontSize: '0.75rem', gridColumn: '1 / -1' }}>Please select at least one Customer Group above.</div>
-                  ) : groupCustomers.filter(id => id.toLowerCase().includes(customerSearch.toLowerCase())).length === 0 ? (
-                    <div style={{ padding: '20px', textAlign: 'center', color: 'var(--color-text-tertiary)', fontSize: '0.75rem', gridColumn: '1 / -1' }}>No customers found matching "{customerSearch}".</div>
                   ) : groupCustomers
-                    .filter(id => id.toLowerCase().includes(customerSearch.toLowerCase()))
                     .map(cId => {
                       const on = selCustomers.length === 0 || selCustomers.includes(cId);
                       return (

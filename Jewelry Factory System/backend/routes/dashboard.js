@@ -738,6 +738,40 @@ router.get('/customer-summary', async (req, res) => {
     `;
     const result = await request.query(query);
 
+    const topItemQuery = `
+      WITH ItemTotals AS (
+        SELECT 
+          oh.CustCode, 
+          od.ItemNo, 
+          SUM(ISNULL(od.ItemQty, 0)) as totalQty
+        FROM OrdHD oh
+        JOIN OrdDT od ON oh.OrdNo = od.OrdNo
+        WHERE YEAR(oh.OrdDate) IN (${yearParams})
+          AND SUBSTRING(oh.OrdNo, 1, 3) NOT IN ('BBP','BBK','BBS','BBL','BBT','BBD')
+        GROUP BY oh.CustCode, od.ItemNo
+      ),
+      RankedItems AS (
+        SELECT 
+          CustCode, 
+          ItemNo, 
+          totalQty,
+          ROW_NUMBER() OVER(PARTITION BY CustCode ORDER BY totalQty DESC) as rn
+        FROM ItemTotals
+      )
+      SELECT CustCode as id, ItemNo as topItem, totalQty as topItemQty
+      FROM RankedItems
+      WHERE rn = 1
+    `;
+    const topItemResult = await request.query(topItemQuery);
+
+    const topItemMap = {};
+    topItemResult.recordset.forEach(r => {
+      topItemMap[r.id] = {
+        topItem: r.topItem,
+        topItemQty: r.topItemQty
+      };
+    });
+
     // จัดกลุ่มข้อมูลตาม CustCode → แยก yearly total + monthly breakdown
     const custMap = {};
     const curYear = new Date().getFullYear();
@@ -754,7 +788,10 @@ router.get('/customer-summary', async (req, res) => {
           monthly: {},
           dataQty: {},
           monthlyQty: {},
-          currentMonthSales: 0
+          monthlyQty: {},
+          currentMonthSales: 0,
+          topItem: topItemMap[row.id]?.topItem || null,
+          topItemQty: topItemMap[row.id]?.topItemQty || 0
         };
       }
 

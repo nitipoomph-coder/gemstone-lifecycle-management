@@ -10,7 +10,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 // Custom Tooltip for Recharts
-const CustomTooltip = ({ active, payload, label }: any) => {
+const CustomTooltip = ({ active, payload, label, metric }: any) => {
   if (active && payload && payload.length) {
     return (
       <div className="glass-panel" style={{ padding: '12px 16px', borderRadius: 12, border: '1px solid var(--color-border-light)', minWidth: 200 }}>
@@ -27,7 +27,9 @@ const CustomTooltip = ({ active, payload, label }: any) => {
                   {ALL_GROUPS.find(g => g.id === entry.dataKey)?.label || (String(entry.dataKey).length === 4 ? `Year ${entry.dataKey}` : entry.name)}
                 </div>
                 <span style={{ color: entry.color }}>
-                  ${entry.value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {metric === 'qty' 
+                    ? entry.value.toLocaleString(undefined, { maximumFractionDigits: 0 })
+                    : '$' + entry.value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
             );
@@ -39,7 +41,8 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
-export default function CustomerDashboard() {
+export default function CustomerDashboard({ metric = 'amount' }: { metric?: 'amount' | 'qty' }) {
+  console.log('CustomerDashboard metric:', metric);
   const [availableYears, setAvailableYears] = useState<string[]>([]);
   const [custData, setCustData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -121,13 +124,14 @@ export default function CustomerDashboard() {
       availableYears.forEach(y => {
         MONTHS.forEach((m, mi) => {
           const mStr = (mi + 1).toString();
-          const val = cust.monthly?.[y]?.[mStr] || 0;
+          const source = metric === 'qty' ? cust.monthlyQty : cust.monthly;
+          const val = source?.[y]?.[mStr] || 0;
           raw[y][m][gId] += val;
         });
       });
     });
     return raw;
-  }, [custData, availableYears]);
+  }, [custData, availableYears, metric]);
 
   const activeYears = [...selectedYears].sort();
 
@@ -273,8 +277,9 @@ export default function CustomerDashboard() {
   };
 
   const formatAxisValue = (value: number): string => {
-    if (value >= 1000000) return (value / 1000000).toFixed(2) + 'M';
-    if (value >= 1000) return (value / 1000).toFixed(2) + 'K';
+    if (value >= 1000000) return (value / 1000000).toFixed(1) + 'M';
+    if (value >= 1000) return (value / 1000).toFixed(1) + 'K';
+    if (metric === 'qty') return value.toLocaleString(undefined, { maximumFractionDigits: 0 });
     return value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
 
@@ -331,7 +336,7 @@ export default function CustomerDashboard() {
 
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <button
-                onClick={() => navigate('/dashboard/customer-report')}
+                onClick={() => navigate('/dashboard/customer-report?metric=' + metric)}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 6,
                   padding: '8px 16px', borderRadius: 12, fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase',
@@ -540,7 +545,10 @@ export default function CustomerDashboard() {
                             )}
                           </div>
                           <span style={{ fontSize: isLatest ? '1.3rem' : '0.95rem', fontWeight: 900, color: valColor, transition: 'color 0.3s' }}>
-                            ${currVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            {metric === 'qty'
+                              ? currVal.toLocaleString(undefined, { maximumFractionDigits: 0 })
+                              : '$' + currVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                            }
                           </span>
                         </div>
                       );
@@ -566,7 +574,7 @@ export default function CustomerDashboard() {
 
                 </h2>
                 <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--color-text-tertiary)', fontWeight: 700 }}>
-                  Unit: USD · Grouped Layout {showLabels ? '· Value Labels Displayed' : '· Value Labels Hidden (select ≤ 3 groups)'}
+                  Unit: {metric === 'qty' ? 'PCS' : 'USD'} · Grouped Layout {showLabels ? '· Value Labels Displayed' : '· Value Labels Hidden (select ≤ 3 groups)'}
                 </p>
 
                 {/* Chart Mode Toggles */}
@@ -606,7 +614,10 @@ export default function CustomerDashboard() {
                   Grand Total {grandLatestYear ? `(${grandLatestYear})` : ''}
                 </div>
                 <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--color-text-primary)' }}>
-                  ${grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {metric === 'qty'
+                    ? grandTotal.toLocaleString(undefined, { maximumFractionDigits: 0 })
+                    : '$' + grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                  }
                 </div>
                 {grandYoy.length > 0 && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 2, alignItems: 'flex-end' }}>
@@ -630,7 +641,7 @@ export default function CustomerDashboard() {
                   <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--color-border-light)" opacity={0.5} />
                   <XAxis dataKey="label" tick={{ fontSize: 11, fill: 'var(--color-text-secondary)', fontWeight: 800 }} axisLine={false} tickLine={false} dy={10} />
                   <YAxis tickFormatter={(val) => formatAxisValue(val)} tick={{ fontSize: 11, fill: 'var(--color-text-quaternary)', fontWeight: 700 }} axisLine={false} tickLine={false} dx={-5} width={70} />
-                  <Tooltip content={<CustomTooltip />} cursor={{ fill: 'var(--color-surface-1)', opacity: 0.4 }} />
+                  <Tooltip content={<CustomTooltip metric={metric} />} cursor={{ fill: 'var(--color-surface-1)', opacity: 0.4 }} />
                   {monthlySeries === 'group' ? sortedSel.map((gId) => {
                     const g = ALL_GROUPS.find(x => x.id === gId)!;
                     return (

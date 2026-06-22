@@ -66,7 +66,7 @@
 
 ### Design System
 
-| Aspect        | Details                                         |
+| Design System | Details                                         |
 |---------------|--------------------------------------------------|
 | Theme Engine  | 3 themes via `ThemeContext` + CSS custom properties |
 | Themes        | `modern-dark` (default), `dark-gold`, `royal-white` |
@@ -75,6 +75,7 @@
 | Chart Colors  | `--color-chart-1` ~ `--color-chart-6` (semantic, ครบทุก theme) |
 | Table Colors  | `--color-table-header`, `--color-table-row-alt`, `--color-table-footer` |
 | Animations    | `fadeInUp`, skeleton shimmer, stagger classes    |
+| Login Page    | Redesigned split-screen layout with Luxury UI enhancements (parchment texture, floating inputs, glare-sweep buttons). Protected Registration Flow (Admin Auth). Custom generated realistic catalog photos for background slider. Forced `royal-white` theme to prevent dark-mode text invisibility on logout. |
 
 ---
 
@@ -112,15 +113,16 @@ gemstone-lifecycle-management/
     │       │   │   ├── StatCard.tsx         # Dashboard stat card component
     │       │   │   ├── CardDetailPanel.tsx  # Dashboard card drill-down panel (YoY comparison)
     │       │   │   ├── OrderTable.tsx       # Order summary table component
-    │       │   │   └── CustomerDetailModal.tsx # Customer Dashboard detail breakdown matrix
     │       │   └── navigation/
     │       │       └── NavGroup.tsx         # Collapsible nav group component
     │       │
     │       ├── pages/
+    │       │   ├── LoginPage.tsx              # หน้า Login
     │       │   ├── Dashboard.tsx              # หน้าภาพรวม (home)
     │       │   ├── DashboardDetail.tsx         # Dashboard detail drilldown
     │       │   ├── SalesDashboard.tsx          # ⭐ Sales Summary By Rep (กราฟเปรียบเทียบยอดขาย Sales)
     │       │   ├── CustomerDashboard.tsx       # ⭐ Yearly Sales By Customer (กราฟเปรียบเทียบยอดขายลูกค้า)
+    │       │   ├── CustomerReportPage.tsx      # ⭐ Customer Report (Matrix Table สรุปยอดขายรายลูกค้า)
     │       │   ├── POTrackerAdvanced.tsx       # ⭐ PO Tracker main (list view — เดิมชื่อ OrderTrackerAdvanced)
     │       │   ├── OrderDetailPage.tsx         # Order detail (by ord/po/group)
     │       │   ├── ItemDetailPage.tsx          # Item-level detail
@@ -183,6 +185,7 @@ gemstone-lifecycle-management/
 5. **📋 Documentation Rule**: ทุกครั้งที่ทำการเพิ่ม/ลบ/แก้ไขฟีเจอร์ หรือแก้ bug ต้องอัปเดตไฟล์เอกสารให้ตรงกันเสมอ:
    - `claude.md` — อัปเดต Folder Structure, Business Modules, API Endpoints, และ Section ที่เกี่ยวข้อง
    - `debug-history.md` — บันทึกปัญหาที่เกิดขึ้นและวิธีแก้ไข (เฉพาะกรณี Bug/Error เท่านั้น)
+6. **🔍 File Integrity Check Rule**: เมื่อได้รับมอบหมายให้อ่านหรือแก้ไขไฟล์ใด ๆ **ต้องตรวจสอบไฟล์นั้นทุกบรรทัดอย่างละเอียด ทั้งก่อนเริ่มงานและหลังจบงานเสมอ** เพื่อป้องกันปัญหาโค้ดขาดหาย (Missing code/JSX tags) หรือ Syntax errors จากการทำ Replace/Edit พลาด
 
 ### Frontend Rules
 
@@ -195,10 +198,14 @@ gemstone-lifecycle-management/
 7. **Icons**: ใช้ `lucide-react` เท่านั้น — import เฉพาะ icon ที่ใช้ (tree-shakable)
 8. **Menu Config**: Menu structure ทั้งหมดอยู่ใน `config/menuConfig.ts` — ห้าม hardcode menu ใน Sidebar
 9. **Font Stack**: 
-   - Headings: `font-display` → Outfit
+   - Headings: `font-display` → Outfit (or Inter for enterprise/B2B feel)
    - Body text: `font-body` → Prompt
    - Logo/Brand: `font-logo` → Cinzel
 10. **Loading Skeletons**: เมื่อมีการเพิ่ม/แก้ไข กล่องข้อมูล (Boxes/Cards) ในหน้าจอใด ๆ ต้องอัปเดตส่วนแสดงสถานะกำลังโหลด (Loading Skeleton) ให้สอดคล้องกันทั้งหน้าจอ เพื่อหลีกเลี่ยงอาการ Layout Shift โดยส่วนโหลดนี้ต้องคลุมเฉพาะพื้นที่แสดงผลของหน้านั้น ๆ (Content Outlet) ไม่ต้องโหลดส่วนเมนู (Sidebar/Topbar) ซ้ำ
+11. **UI Components & UX**: 
+    - หลีกเลี่ยงการใช้ native `<datalist>` สำหรับ Dropdown ที่ซับซ้อน ให้ใช้ Custom React Dropdown component แทน เพื่อให้สามารถกำหนด CSS, z-index, hover states และ interaction ได้เต็มที่
+    - **Accessibility & Contrast**: สีตัวอักษรบนพื้นหลังใดๆ ต้องมี Contrast ratio อย่างน้อย 4.5:1 (เช่น placeholder บนพื้นสีเข้มควรใช้สีที่สว่างพอ, หรือเพิ่ม glassmorphism card รองรับแบบฟอร์มเพื่อป้องกันพื้นหลังลายตา)
+    - **Capitalization**: ใช้มาตรฐานเดียวกันทั้งแอป เช่น Title Case ("Sales", "Password") แทนที่จะผสม ALL CAPS กับ Title Case ใน level เดียวกัน
 
 ## Frontend Architecture Rules (UI Layout Patterns)
 
@@ -536,7 +543,7 @@ API_PORT=3001
 - ปุ่ม Filter ใช้ Radio-button style (วงกลมเล็กด้านหน้า)
 - **Default Chart Grouping**: เนื่องจากบางกลุ่มมียอดขายสูงมากจนไปกดสเกลกราฟของกลุ่มอื่นให้มองไม่เห็น กราฟถูกตั้งค่าให้เลือกเฉพาะ 4 กลุ่มแรก (Top 4) ขึ้นมาเป็นค่าเริ่มต้น หากมีกลุ่มที่ 5, 6, ... หรือ General จะถูก Uncheck ซ่อนไว้ก่อน เพื่อให้กราฟ Scale สวยงาม (ผู้ใช้สามารถติ๊กเปิดดูภายหลังได้)
 
-### Interactive Charts & Matrix Modal
+### Interactive Charts & Full Report Page
 1. **Recharts Integration**: เปลี่ยนจากการใช้ CSS Chart ล้วนมาเป็น library `recharts`
    - สามารถ Toggle เป็น Bar Chart และ Line Chart ได้
    - โชว์ Label บนกราฟ หรือ Tooltip ตามการทำงานที่สมบูรณ์ขึ้น
@@ -544,9 +551,12 @@ API_PORT=3001
    - **XAxis Padding** (Line Chart): `{ left: 30, right: 30 }` ป้องกันจุดข้อมูลชิดขอบ
    - **YAxis**: width=70, dx=-5 ป้องกัน label ถูกตัด
    - **Dot Markers**: Line Chart ใช้ r=6, strokeWidth=3, activeDot r=8
-2. **CustomerDetailModal**: กล่องป๊อปอัปเมื่อกดปุ่ม "Detail Breakdown"
-   - เป็นหน้าต่างสรุปตัวเลขแบบ Matrix (รายลูกค้า × รายเดือน) พร้อมช่อง Yearly Total 
-   - แสดงผลแบบ Drop-in ใช้งานง่ายและปรับแต่ง UI/CSS แบบ Premium Glassmorphism
+2. **CustomerReportPage**: หน้าต่างสรุปตัวเลขแบบ Full-screen Matrix (รายลูกค้า × รายเดือน) ที่ถูกแยก (Separate) ออกมาจาก `CustomerDashboard.tsx` เดิมที่เป็นเพียง Modal 
+   - **หน้าที่และความจำเป็น**: ทำหน้าที่แสดงผลตารางสรุปยอดขาย (Matrix Table) แบบเจาะลึกทุกเดือนและทุกปี การแยกออกมาเป็นหน้าจอใหม่ (Page) ช่วยลดความหนาแน่นของโค้ดในหน้า Dashboard และให้พื้นที่เต็มหน้าจอสำหรับตารางข้อมูลขนาดใหญ่
+   - **ขีดจำกัด (Limitations)**: ตารางมีการเรนเดอร์ DOM Elements จำนวนมหาศาล (จำนวนลูกค้า × จำนวนปี × จำนวน 12 เดือน) หากผู้ใช้เลือกช่วงปีจำนวนมาก และไม่กรองกลุ่มลูกค้า (แสดงทั้งหมด) อาจทำให้เกิดความหน่วง (Lag) ในระหว่างการ Scroll หรือการสลับโหมด View/Growth เนื่องจาก React ต้องคำนวณและวาดคอมโพเนนต์จำนวนมากในครั้งเดียว
+   - กรองข้อมูลผ่าน Base Year, Compare Year, Customer Groups, และเลือก Customer IDs ได้
+   - **Dynamic Sorting**: รองรับการจัดเรียงข้อมูลลูกค้าในตาราง (Sort Order) จากมากไปน้อย หรือน้อยไปมาก โดยอิงจากยอดขายรวมของปีเป้าหมาย
+   - แสดง Badge อัตราการเติบโต YoY แบบ Inline ในตาราง รองรับการเลือกเทียบปี (Multiple Growth Comparisons) หลายคู่พร้อมกัน
 
 ### Growth Indicator Design
 ไอคอน Growth ใช้ `ArrowUpRight` / `ArrowDownRight` จาก `lucide-react` (size 16, strokeWidth 2.5)

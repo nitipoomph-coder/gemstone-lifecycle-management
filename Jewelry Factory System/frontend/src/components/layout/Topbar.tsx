@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Search, Bell, Settings, ChevronRight, ChevronLeft, Palette, Package, Gem, User, X } from 'lucide-react';
+import { Search, Bell, ChevronRight, ChevronLeft, Palette, Package, Gem, User, X } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useState, useRef, useEffect } from 'react';
 import { fetchSearch, type SearchResultItem } from '../../services/poTrackerAPI';

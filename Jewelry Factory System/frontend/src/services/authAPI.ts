@@ -1,6 +1,7 @@
 // src/services/authAPI.ts
 
-const API_BASE = 'http://localhost:3001/api';
+const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname.startsWith('192.168.'));
+const API_BASE = isLocal ? `http://${window.location.hostname}:3001/api` : 'https://fresh-camels-change.loca.lt/api';
 
 export const authAPI = {
   login: async (username: string, password: string) => {

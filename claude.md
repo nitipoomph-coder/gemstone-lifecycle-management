@@ -123,6 +123,7 @@ gemstone-lifecycle-management/
     │       │   ├── SalesDashboard.tsx          # ⭐ Sales Summary By Rep (กราฟเปรียบเทียบยอดขาย Sales)
     │       │   ├── CustomerDashboard.tsx       # ⭐ Yearly Sales By Customer (กราฟเปรียบเทียบยอดขายลูกค้า)
     │       │   ├── CustomerReportPage.tsx      # ⭐ Customer Report (Matrix Table สรุปยอดขายรายลูกค้า)
+    │       │   ├── TopOrdersGalleryPage.tsx    # ⭐ Top Orders Gallery (Enterprise BI layout with custom themes)
     │       │   ├── POTrackerAdvanced.tsx       # ⭐ PO Tracker main (list view — เดิมชื่อ OrderTrackerAdvanced)
     │       │   ├── OrderDetailPage.tsx         # Order detail (by ord/po/group)
     │       │   ├── ItemDetailPage.tsx          # Item-level detail
@@ -571,4 +572,17 @@ API_PORT=3001
 - OrdNo Filter: NOT IN blocklist (`BBP, BBK, BBS, BBL, BBT, BBD`)
 - กรองเฉพาะ `CustStatus = 'Y'` (Active customers)
 - Return: `{ ok, data: [{ id, name, custStatus, salesName, data: {year: total}, monthly: {year: {month: total}}, currentMonthSales }] }`
+
+---
+
+## Top Orders Gallery (TopOrdersGalleryPage.tsx)
+
+### ภาพรวม
+หน้าแสดงแกลเลอรีรูปภาพสินค้าที่ขายดีที่สุด (Top Item) ของลูกค้ารายนั้นๆ โดยออกแบบด้วยหลักการ **World-Class Enterprise BI Layout**:
+- **Clean Corporate Geometry**: ใช้กรอบ Widget แบบเหลี่ยมขอบมนน้อย (8px) แบบระบบ Dashboard สากล
+- **Canvas Framing**: กรอบภาพใช้พื้นหลังสว่างแบบ Solid White 100% เพื่อให้รูปภาพสินค้าที่มีพื้นหลังสีขาวถูกกลืนเนียนเป็นเนื้อเดียวกันเหมือนหน้านิตยสาร ไม่ดูลอยแยกชิ้นเมื่อเปลี่ยน Theme เป็นสีเข้ม
+- **Staircase Ranking Grid**: การวางเลย์เอาต์กริดที่จัดอันดับ 1 ให้ใหญ่ที่สุดและไล่ระดับรองลงมาแบบขั้นบันได
+- **Luxury Preview Modal**: เมื่อกดคลิกดูรูปภาพ จะขยายขึ้นมาเต็มจอ (Lightbox) โดยมีการเช็คหากเป็นสินค้าอันดับ 1-3 จะได้รับ **มงกุฎแห่งเกียรติยศ (The Top 3 Crown)** ส่องประกายตามลำดับสี (ทอง, เงิน, ทองแดง)
+- **Smart Data Hover**: เมื่อนำเมาส์ชี้ที่รูปขนาดย่อ จะมีป๊อปอัปข้อความเด้งแสดงรายละเอียด "ชื่อลูกค้า", "ยอดการสั่งซื้อ", และ "มูลค่ารวม" ของสินค้านั้น
+
 

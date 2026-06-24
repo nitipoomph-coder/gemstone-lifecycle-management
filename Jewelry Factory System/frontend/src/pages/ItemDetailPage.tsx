@@ -1,12 +1,12 @@
 // src/pages/ItemDetailPage.tsx
 import { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import Topbar from '../components/layout/Topbar';
-import { ChevronLeft, Printer, Image as ImageIcon, CheckCircle, FileText, Settings, Layers, Hash, Box } from 'lucide-react';
+import { Printer, Image as ImageIcon, CheckCircle, FileText, Settings, Layers, Hash, Box } from 'lucide-react';
 
 export default function ItemDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+  
   const [activeTab, setActiveTab] = useState<'stone' | 'finding' | 'cast'>('stone');
 
   const itemData: any = {
@@ -45,18 +45,7 @@ export default function ItemDetailPage() {
         {/* Action Bar */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
           <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-            <button
-              onClick={() => navigate(-1)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px',
-                background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)',
-                borderRadius: '14px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 800,
-                color: 'var(--color-text-secondary)', transition: 'all 0.2s',
-                boxShadow: '0 4px 12px -4px rgba(0,0,0,0.1)'
-              }}
-            >
-              <ChevronLeft size={16} /> BACK
-            </button>
+
             <div style={{
               padding: '10px 24px', background: 'var(--color-brand-500)',
               color: '#fff', borderRadius: '16px', fontWeight: 900,

@@ -4,13 +4,13 @@ import { Eye, EyeOff, AlertCircle, ArrowLeft, Headset } from 'lucide-react';
 import { authAPI } from '../services/authAPI';
 
 const BACKGROUND_IMAGES = [
-  '/assets/cll_actual_cross_necklace.png',
-  '/assets/cll_actual_blue_geode.png',
-  '/assets/cll_rings_on_silk_1.png',
-  '/assets/cll_green_plate_opt2.png',
-  '/assets/cll_hand_holding_charms.png',
-  '/assets/cll_green_plate_opt1.png',
-  '/assets/cll_flatlay_plate.png',
+  '/assets/cll_blue_geode.png',
+  '/assets/cll_plate.png',
+  '/assets/cll_holding_charms.png',
+  '/assets/cll_green_geode.png',
+  '/assets/cll_hand_ring.png',
+  '/assets/cll_ring_earrings.png',
+  '/assets/cll_box.png',
 ];
 
 export default function LoginPage() {
@@ -128,13 +128,15 @@ export default function LoginPage() {
     }
   };
 
-  const handleAdminAuthSubmit = (e: React.FormEvent) => {
+  const handleAdminAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsAdminLoading(true);
 
-    setTimeout(() => {
+    try {
+      const response = await authAPI.verifyAdmin(adminAuthPwd);
       setIsAdminLoading(false);
-      if (adminAuthPwd === 'admin123') {
+
+      if (response.success) {
         setShowAdminAuthModal(false);
         setAdminAuthPwd('');
         setIsRequestAccess(true);
@@ -143,7 +145,12 @@ export default function LoginPage() {
         setAdminAuthPwd('');
         setErrorMsg(lang === 'EN' ? 'Invalid Admin Password. Access Denied.' : 'รหัสผ่าน Admin ไม่ถูกต้อง');
       }
-    }, 1500); // 1.5s loading animation
+    } catch (err) {
+      setIsAdminLoading(false);
+      setShowAdminAuthModal(false);
+      setAdminAuthPwd('');
+      setErrorMsg(t[lang].errSys);
+    }
   };
 
   const handleRequestAccess = (e: React.FormEvent) => {

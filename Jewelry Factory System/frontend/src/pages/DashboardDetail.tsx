@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import Topbar from '../components/layout/Topbar';
 import { fetchDashboardData } from '../services/dashboardAPI';
-import { AlertTriangle, RefreshCw, ArrowLeft } from 'lucide-react';
+import { AlertTriangle, RefreshCw } from 'lucide-react';
 
 const shimmerStyle: React.CSSProperties = {
   background: 'linear-gradient(90deg, var(--color-surface-1) 25%, var(--color-surface-2) 50%, var(--color-surface-1) 75%)',
@@ -12,7 +12,7 @@ const shimmerStyle: React.CSSProperties = {
 };
 
 export default function DashboardDetail() {
-  const navigate = useNavigate();
+  
   const location = useLocation();
   const { category, value } = (location.state as { category?: string; value?: string | number }) || {};
   const [loading, setLoading] = useState(true);
@@ -115,12 +115,7 @@ export default function DashboardDetail() {
       <div className="content-scrollbar flex-1 overflow-y-auto bg-[var(--color-surface-0)] p-6">
         <div className="mx-auto flex flex-col gap-4 max-w-[1400px]">
 
-          <button
-            onClick={() => navigate(-1)}
-            className="self-start flex items-center gap-2 text-sm font-bold text-[var(--color-text-tertiary)] hover:text-[var(--color-brand-600)] transition-colors mb-2"
-          >
-            <ArrowLeft size={16} /> ย้อนกลับ (Back)
-          </button>
+
 
           {/* Header */}
           <div className="flex items-end justify-between border-b-[3px] border-[var(--color-brand-600)] pb-4">

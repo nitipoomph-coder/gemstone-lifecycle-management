@@ -10,10 +10,11 @@ export const authAPI = {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+
         },
         body: JSON.stringify({ username, password }),
       });
-      
+
       const data = await response.json();
       if (data.success && data.token) {
         localStorage.setItem('auth_token', data.token);
@@ -21,6 +22,21 @@ export const authAPI = {
       return data;
     } catch (error) {
       console.error('Login error:', error);
+      return { success: false, message: 'Connection to server failed' };
+    }
+  },
+  verifyAdmin: async (password: string) => {
+    try {
+      const response = await fetch(`${API_BASE}/auth/verify-admin`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ password }),
+      });
+      return await response.json();
+    } catch (error) {
+      console.error('Verify Admin error:', error);
       return { success: false, message: 'Connection to server failed' };
     }
   }

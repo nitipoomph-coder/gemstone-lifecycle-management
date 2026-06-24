@@ -10,8 +10,8 @@ router.post('/login', (req, res) => {
   }
 
   const user = username.toUpperCase();
-  const salesPwd = process.env.APP_SALES_PASSWORD || 'sales123';
-  const adminPwd = process.env.APP_ADMIN_PASSWORD || 'admin123';
+  const salesPwd = process.env.APP_SALES_PASSWORD;
+  const adminPwd = process.env.APP_ADMIN_PASSWORD;
 
   if (user === 'SALES' && password === salesPwd) {
     const token = jwt.sign({ username: 'SALES', role: 'sales' }, process.env.JWT_SECRET, { expiresIn: '12h' });
@@ -24,6 +24,21 @@ router.post('/login', (req, res) => {
   }
 
   return res.status(401).json({ success: false, message: 'Invalid username or password' });
+});
+
+router.post('/verify-admin', (req, res) => {
+  const { password } = req.body;
+  if (!password) {
+    return res.status(400).json({ success: false, message: 'Password is required' });
+  }
+
+  const adminPwd = process.env.APP_ADMIN_PASSWORD;
+  
+  if (password === adminPwd) {
+    return res.json({ success: true });
+  }
+
+  return res.status(401).json({ success: false, message: 'Invalid Admin Password' });
 });
 
 module.exports = router;

@@ -10,6 +10,7 @@ import {
   Wrench,
   LayoutList,
   TrendingUp,
+  Handshake,
 } from 'lucide-react';
 import type { NavMenuGroup } from '../../types';
 
@@ -23,6 +24,7 @@ const iconComponents: Record<string, React.ElementType> = {
   'wrench': Wrench,
   'layout-list': LayoutList,
   'trending-up': TrendingUp,
+  'handshake': Handshake,
 };
 
 interface NavGroupProps {

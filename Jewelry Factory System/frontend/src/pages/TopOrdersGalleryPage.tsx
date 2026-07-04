@@ -11,7 +11,7 @@ import {
   fetchCustomerSummary,
   fetchAvailableYears,
 } from "../services/dashboardAPI";
-import { getCustomerGroupId } from "../config/customerGroups";
+import { getCustomerGroupId, ALL_GROUPS } from "../config/customerGroups";
 import Topbar from "../components/layout/Topbar";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -156,9 +156,9 @@ export default function TopOrdersGalleryPage() {
 
   // ── Rank Colors (Enterprise BI Style) ──
   const getRankStyle = (idx: number) => {
-    if (idx === 0) return { bg: "var(--color-warning-500)", text: "#ffffff" };
-    if (idx === 1) return { bg: "var(--color-text-secondary)", text: "#ffffff" };
-    if (idx === 2) return { bg: "var(--color-warning-700)", text: "#ffffff" };
+    if (idx === 0) return { bg: "#F59E0B", text: "#FFFFFF" }; // Gold
+    if (idx === 1) return { bg: "#9CA3AF", text: "#FFFFFF" }; // Silver
+    if (idx === 2) return { bg: "#B45309", text: "#FFFFFF" }; // Bronze
     return { bg: "var(--color-surface-2)", text: "var(--color-text-primary)" };
   };
 
@@ -167,7 +167,7 @@ export default function TopOrdersGalleryPage() {
     <div className="flex h-screen flex-col overflow-hidden bg-[var(--color-surface-1)]">
         <Topbar
           breadcrumb={[
-            { label: "JEWELRY SMART FACTORY", path: "/" },
+            { label: "JEWELRY FACTORY SYSTEM", path: "/" },
             { label: "Top Orders Gallery" },
           ]}
           icon={<Award size={22} />}
@@ -251,7 +251,7 @@ export default function TopOrdersGalleryPage() {
                   }}
                   className="hover:border-brand-300 hover:text-brand-600 hover:shadow-md"
                 >
-                  <span className="text-[var(--color-text-secondary)] font-medium text-[0.8rem] uppercase tracking-wider">
+                  <span className="text-[var(--color-text-secondary)] font-medium text-[0.8rem] capitalize tracking-wider">
                     Year
                   </span>
                   {baseYear}
@@ -335,7 +335,7 @@ export default function TopOrdersGalleryPage() {
                   className="hover:border-brand-300 hover:text-brand-600 hover:shadow-md"
                 >
                   <Filter size={16} />
-                  <span className="font-medium text-[0.8rem] uppercase tracking-wider">
+                  <span className="font-medium text-[0.8rem] capitalize tracking-wider">
                     Groups
                   </span>
                   {selGroups.length > 0 && (
@@ -348,34 +348,21 @@ export default function TopOrdersGalleryPage() {
                 {showGroupMenu && (
                   <div className="absolute right-0 mt-2 w-72 rounded-2xl border border-[var(--color-border-light)] bg-[var(--color-surface-1)] p-4 shadow-2xl z-[100] animate-fade-in-up">
                     <div className="mb-3 flex items-center justify-between border-b border-[var(--color-border-light)] pb-2">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-tertiary)]">
+                      <span className="text-[10px] font-bold capitalize tracking-wider text-[var(--color-text-tertiary)]">
                         Filter by Group
                       </span>
                       {selGroups.length > 0 && (
                         <button
                           onClick={() => setSelGroups([])}
-                          className="text-[10px] font-bold uppercase text-[var(--color-danger-500)] hover:underline"
+                          className="text-[10px] font-bold capitalize text-[var(--color-danger-500)] hover:underline"
                         >
                           Clear All
                         </button>
                       )}
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      {[
-                        "BBC",
-                        "BBQ",
-                        "BBD",
-                        "BBI",
-                        "BBF",
-                        "BBP",
-                        "BBT",
-                        "BBX",
-                        "BBK",
-                        "BBR",
-                        "BBL",
-                        "BBS",
-                        "BBE",
-                      ].map((gId) => {
+                      {ALL_GROUPS.map((group) => {
+                        const gId = group.id;
                         const isActive = selGroups.includes(gId);
                         return (
                           <button
@@ -668,7 +655,7 @@ export default function TopOrdersGalleryPage() {
                             style={{
                               width: 40,
                               height: 2,
-                              background: "var(--color-brand-500)",
+                              background: "rgba(255, 255, 255, 0.5)",
                               margin: "8px 0",
                             }}
                           />
@@ -729,7 +716,7 @@ export default function TopOrdersGalleryPage() {
                           fontSize: "0.85rem",
                           color: "var(--color-brand-600)",
                           fontWeight: 800,
-                          textTransform: "uppercase",
+                          textTransform: 'capitalize',
                           letterSpacing: "0.05em",
                         }}
                       >
@@ -815,7 +802,7 @@ export default function TopOrdersGalleryPage() {
                             fontSize: "0.7rem",
                             fontWeight: 800,
                             color: "var(--color-text-secondary)",
-                            textTransform: "uppercase",
+                            textTransform: 'capitalize',
                             letterSpacing: "0.1em",
                           }}
                         >
@@ -938,10 +925,10 @@ export default function TopOrdersGalleryPage() {
                         margin: 0,
                         fontSize: "1.2rem",
                         fontWeight: 800,
-                        color: "var(--color-text-primary)",
+                        color: "#1F2937",
                         fontFamily: "var(--font-display)",
                         letterSpacing: "0.05em",
-                        textTransform: "uppercase",
+                        textTransform: 'capitalize',
                       }}
                     >
                       Product Shot
@@ -997,7 +984,7 @@ export default function TopOrdersGalleryPage() {
                       style={{
                         width: 40,
                         height: 4,
-                        background: "var(--color-text-tertiary)",
+                        background: "#9CA3AF",
                         borderRadius: 2,
                       }}
                     />
@@ -1006,10 +993,10 @@ export default function TopOrdersGalleryPage() {
                         margin: 0,
                         fontSize: "1.2rem",
                         fontWeight: 800,
-                        color: "var(--color-text-primary)",
+                        color: "#1F2937",
                         fontFamily: "var(--font-display)",
                         letterSpacing: "0.05em",
-                        textTransform: "uppercase",
+                        textTransform: 'capitalize',
                       }}
                     >
                       Computer-Aided Design

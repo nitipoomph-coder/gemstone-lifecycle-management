@@ -7,17 +7,7 @@ const express = require('express');
 const router = express.Router();
 const { getPool, sql } = require('../db');
 
-// --- Helper: Convert binary to base64 ---
-function toBase64Photo(buf) {
-  if (!buf) return null;
-  try {
-    const actualBuffer = Buffer.isBuffer(buf) ? buf : (buf.data ? Buffer.from(buf.data) : Buffer.from(buf));
-    if (!actualBuffer || actualBuffer.length === 0) return null;
-    return `data:image/jpeg;base64,${actualBuffer.toString('base64')}`;
-  } catch (err) {
-    return null;
-  }
-}
+// รูปเสิร์ฟจาก network path ผ่าน DocumentLayout (/api/photos/ps|cad/:itemNo) — ใช้ ItemNo จาก d.* โดยตรง
 
 // ─── Table Configuration Helper ───────────────────────────────────────────────
 function getSampleTableConfig(docTypeOrNo) {
@@ -145,18 +135,13 @@ router.get('/document/:docuNo', async (req, res) => {
     const detailQuery = await pool.request()
       .input('docID', sql.Int, header[config.idCol])
       .query(`
-        SELECT d.*,
-               CAST(p.ItemPhoto AS VARBINARY(MAX)) AS ItemPhoto
+        SELECT d.*
         FROM ${config.detailTable} d
-        LEFT JOIN GMItemPhoto p ON d.ItemNo = p.ItemNo
         WHERE d.${config.idCol} = @docID
         ORDER BY d.ListNo
       `);
 
-    const lines = detailQuery.recordset.map(r => ({
-      ...r,
-      ItemPhoto: toBase64Photo(r.ItemPhoto)
-    }));
+    const lines = detailQuery.recordset;
 
     res.json({ ok: true, header, lines });
   } catch (err) {

@@ -91,7 +91,7 @@ export default function SalesDashboard() {
 
   return (
     <>
-      <Topbar breadcrumb={[{ label: 'JEWELRY SMART FACTORY', path: '/' }, { label: 'SALES SUMMARY BY SALESPERSON' }]} />
+      <Topbar breadcrumb={[{ label: 'JEWELRY FACTORY SYSTEM', path: '/' }, { label: 'SALES SUMMARY BY SALESPERSON' }]} />
       <div className="content-scrollbar flex-1 overflow-y-auto" style={{ background: 'var(--color-surface-1)' }}>
         <div className="mx-auto p-6 flex flex-col gap-6" style={{ maxWidth: 1400 }}>
           
@@ -101,14 +101,14 @@ export default function SalesDashboard() {
               <h1 style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--color-text-primary)', fontFamily: 'var(--font-display)', letterSpacing: '-0.02em', lineHeight: 1 }}>
                 Yearly Sales <span style={{ color: 'var(--color-brand-500)' }}>By Sales</span>
               </h1>
-              <p style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-tertiary)', marginTop: 6, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+              <p style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-tertiary)', marginTop: 6, letterSpacing: '0.06em', textTransform: 'capitalize' }}>
                 Comparison & Growth Analysis
               </p>
             </div>
             
             {/* Year Selector */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'var(--color-surface-0)', padding: '8px 16px', borderRadius: 16, border: '1px solid var(--color-border-light)', boxShadow: '0 4px 16px -4px rgba(0,0,0,0.05)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--color-text-tertiary)', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--color-text-tertiary)', fontSize: '0.75rem', fontWeight: 800, textTransform: 'capitalize' }}>
                 <Calendar size={14} /> Compare Years:
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
@@ -259,17 +259,17 @@ export default function SalesDashboard() {
 
           {/* Details Table */}
           <div style={{ background: 'var(--color-surface-0)', borderRadius: 24, padding: 24, border: '1px solid var(--color-border-light)', boxShadow: '0 4px 20px -4px rgba(0,0,0,0.03)' }}>
-             <h3 style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--color-text-primary)', textTransform: 'uppercase', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+             <h3 style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--color-text-primary)', textTransform: 'capitalize', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <DollarSign size={16} style={{ color: 'var(--color-brand-500)' }}/> Breakdown Data
              </h3>
              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                <thead>
                  <tr>
-                   <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '0.7rem', fontWeight: 800, color: 'var(--color-text-tertiary)', textTransform: 'uppercase', borderBottom: '2px solid var(--color-border-light)' }}>Salesperson</th>
+                   <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '0.7rem', fontWeight: 800, color: 'var(--color-text-tertiary)', textTransform: 'capitalize', borderBottom: '2px solid var(--color-border-light)' }}>Salesperson</th>
                    {selectedYears.map(yr => (
-                     <th key={yr} style={{ textAlign: 'right', padding: '12px 16px', fontSize: '0.7rem', fontWeight: 800, color: 'var(--color-text-tertiary)', textTransform: 'uppercase', borderBottom: '2px solid var(--color-border-light)' }}>{yr} Sales</th>
+                     <th key={yr} style={{ textAlign: 'right', padding: '12px 16px', fontSize: '0.7rem', fontWeight: 800, color: 'var(--color-text-tertiary)', textTransform: 'capitalize', borderBottom: '2px solid var(--color-border-light)' }}>{yr} Sales</th>
                    ))}
-                   <th style={{ textAlign: 'right', padding: '12px 16px', fontSize: '0.7rem', fontWeight: 800, color: 'var(--color-text-tertiary)', textTransform: 'uppercase', borderBottom: '2px solid var(--color-border-light)' }}>Growth</th>
+                   <th style={{ textAlign: 'right', padding: '12px 16px', fontSize: '0.7rem', fontWeight: 800, color: 'var(--color-text-tertiary)', textTransform: 'capitalize', borderBottom: '2px solid var(--color-border-light)' }}>Growth</th>
                  </tr>
                </thead>
                <tbody>

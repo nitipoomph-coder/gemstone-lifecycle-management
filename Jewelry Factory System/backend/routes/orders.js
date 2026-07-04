@@ -2,21 +2,9 @@ const express = require('express');
 const router = express.Router();
 const { getPool, sql } = require('../db');
 
-// --- helper: convert photo buffer -> base64 ---
-function toBase64Photo(buf) {
-  if (!buf) return null;
-  try {
-    // ดึงก้อนข้อมูล Binary ออกมา
-    const actualBuffer = Buffer.isBuffer(buf) ? buf : (buf.data ? Buffer.from(buf.data) : Buffer.from(buf));
-
-    if (!actualBuffer || actualBuffer.length === 0) return null;
-
-    return `data:image/jpeg;base64,${actualBuffer.toString('base64')}`;
-  } catch (err) {
-    console.error('Photo conversion error:', err.message);
-    return null;
-  }
-}
+// หมายเหตุ: เลิกใช้รูปแบบ base64 (VARBINARY จาก GMItemPhoto) แล้ว — รูปทั้งหมดเสิร์ฟจาก
+// network path ผ่าน Photo Bridge (/api/photos/ps|cad/:itemNo) โดยหน้าเว็บประกอบ URL จาก ItemNo เอง
+// SP list คืน SampleItemNo (ItemNo ตัวแทน 1 ค่า/กลุ่ม) แทนก้อนรูป
 
 // --- helper: calculate pending quantities following legacy Stored Procedure ---
 function computePendingProcessQuantities(r, isAliased = false) {
@@ -165,8 +153,9 @@ router.get('/', async (req, res) => {
       request.input('FromDate', sql.DateTime, startDate);
       // 2) ToDate -> ตรงกับตัวแปร @ToDate ใน SP (กำหนดขอบเขตวันที่สิ้นสุด)
       request.input('ToDate', sql.DateTime, endDate);
-      // 3) Status -> ตรงกับตัวแปร @Status ใน SP (รองรับค่า: 'pending', 'finish', 'All' เพื่อนำไปใช้คัดกรองใน WHERE Clause ในฝั่งฐานข้อมูล)
+      // 3) Status -> SP ทั้ง 5 ตัว (_OrdDate/_DueDate/_CustDueDate/_FinDate/_All) รับพารามิเตอร์ @Status แล้ว
       //    เงื่อนไขใน SP: (@Status = 'All' OR (@Status = 'pending' AND CloseStatus <> 'Y') OR (@Status = 'finish' AND CloseStatus = 'Y'))
+      //    ⚠️ ต้อง apply สคริปต์ SP รุ่นใหม่ใน backend/sql/stored-procedures/ ลง DB ก่อน มิฉะนั้นตัวที่ยังไม่มี @Status จะ error "too many arguments"
       request.input('Status', sql.VarChar, statusFilter);
 
       const result = await request.execute(spName);
@@ -228,20 +217,19 @@ router.get('/', async (req, res) => {
             existing.CustDueDate = r.CustDueDate;
           }
           
-          // ถ้ารูปเก่าไม่มี ให้เอารูปใหม่มาใส่
-          if (!existing.ItemPhoto && r.ItemPhoto) {
-            existing.ItemPhoto = r.ItemPhoto;
+          // ItemNo ตัวแทน (SampleItemNo): ถ้าก้อนเดิมยังไม่มี ให้ยึดของแถวใหม่
+          if (!existing.SampleItemNo && r.SampleItemNo) {
+            existing.SampleItemNo = r.SampleItemNo;
           }
         }
       });
 
-      // 3. แปลงร่างกลับเป็น Array ปกติส่งให้ React
+      // 3. แปลงร่างกลับเป็น Array ปกติส่งให้ React (SampleItemNo ไหลผ่าน ...rest ไปให้ frontend ประกอบ URL รูปเอง)
       const data = Array.from(groupedMap.values()).map(r => {
-        const { OrdNos, ItemPhoto, ...rest } = r;
+        const { OrdNos, ...rest } = r;
         return {
           ...rest,
           OrdNo: Array.from(OrdNos).filter(Boolean).join('/ '),
-          ItemPhoto: toBase64Photo(ItemPhoto),
         };
       });
       // === [END ADDED] ===
@@ -265,6 +253,53 @@ router.get('/', async (req, res) => {
 });
 
 
+// === Helper to build detail filters from query params ===
+function buildDetailFilters(reqQuery, sqlReq, isSinglePo = false) {
+  const { dateFrom, dateTo, dateType, status, prefix } = reqQuery;
+  let filters = '';
+
+  // 1. Date Filter
+  if (dateFrom && dateTo && dateType && dateType !== 'All') {
+    let dateCol = 'h.OrdDate';
+    if (dateType === 'Due Date') dateCol = 'h.DueDate';
+    else if (dateType === 'Cust Due Date') dateCol = 'h.CustDueDate';
+    else if (dateType === 'Finish Date') dateCol = 'h.FinDate';
+
+    filters += ` AND ${dateCol} BETWEEN @dateFrom AND @dateTo`;
+    sqlReq.input('dateFrom', reqQuery.dateFrom); // Note: using input with implicit type is fine for simple strings/dates, or we can use sql.DateTime
+    sqlReq.input('dateTo', reqQuery.dateTo);
+  }
+
+  // 2. Prefix Filter — ให้ตรงกับ SP: _All ใช้ชุด prefix กว้างกว่า (รวม BBQ/BBK) ส่วน dateType อื่นใช้ชุดแคบ
+  if (prefix && prefix !== 'ALL') {
+    filters += ` AND SUBSTRING(h.OrdNo, 1, 3) = @prefix`;
+    sqlReq.input('prefix', prefix);
+  } else if (dateType === 'All') {
+    filters += ` AND SUBSTRING(h.OrdNo, 1, 3) IN ('BBC','BBQ','BBP','BBK','BBS','BBE','BBL','BBR','BBT')`;
+  } else {
+    filters += ` AND SUBSTRING(h.OrdNo, 1, 3) IN ('BBC','BBS','BBE','BBL','BBR','BBT','BBP')`;
+  }
+
+  // 3. Status Filter
+  const filterStatus = (status || 'ALL').toUpperCase();
+  if (filterStatus === 'PENDING') {
+    filters += ` AND h.CloseStatus <> 'Y'`;
+  } else if (filterStatus === 'FINISH') {
+    filters += ` AND h.CloseStatus = 'Y'`;
+  } else if (filterStatus === 'EXPORT') {
+    filters += ` AND h.OrdStatus = 'E'`;
+  }
+
+  // 4. Default Exclusions
+  filters += ` AND h.PONo NOT IN ('','TOP','Test','Testing','Stock','STOCK')`;
+
+  if (isSinglePo) {
+    filters += ` AND h.CustCode NOT IN ('N008','N044','N048','N066','N067','N068','N069','N070','N071','N072','N073','N074','N075')`;
+  }
+
+  return filters;
+}
+
 // === GET /api/orders/group/:cust/:addr/:kind/:mat/:duedate ===
 router.get('/group/:cust/:addr/:kind/:mat/:duedate', async (req, res) => {
   try {
@@ -275,19 +310,45 @@ router.get('/group/:cust/:addr/:kind/:mat/:duedate', async (req, res) => {
 
     console.log(`[GET /api/orders/group] Fetching for ${cust} at ${decodedAddr}`);
 
-    const result = await pool.request()
+    const sqlReq = pool.request()
       .input('cust', sql.NVarChar, cust)
       .input('addr', sql.NVarChar, decodedAddr)
       .input('kind', sql.NVarChar, decodedKind)
       .input('mat', sql.NVarChar, mat === '-' ? null : mat)
-      .input('duedate', sql.DateTime, duedate === '-' ? null : duedate)
-      .query(`
-        SELECT h.*, d.*, CAST(p.ItemPhoto AS VARBINARY(MAX)) AS ItemPhoto, c.CustName, c.SalesName AS Sales
+      .input('duedate', sql.DateTime, duedate === '-' ? null : duedate);
+
+    // ลูกค้าทั่วไป: frontend แนบ ?po= มาเป็นแกนที่ 6 (ล็อกให้ตรงแถวใน list) — N008 group ไม่ส่ง po
+    const poFilter = req.query.po ? ' AND h.PONo = @po' : '';
+    if (req.query.po) sqlReq.input('po', sql.NVarChar, decodeURIComponent(String(req.query.po)));
+
+    const extraFilters = buildDetailFilters(req.query, sqlReq, false);
+
+    const result = await sqlReq.query(`
+        SELECT 
+          h.OrdNo, h.OrdDate, h.DueDate, h.CustDueDate, h.CustQCDate,
+          h.CustCode, c.CustName, h.PONo, h.OrdMat, h.OrdStatus, h.CloseStatus, h.OrdKind,
+          h.SumOrdQty AS TotalQty, h.SumOrdAmnt AS TotalAmount, h.CurrCode,
+          h.CustMultiAddr, c.SalesName AS Sales,
+          h.ExpInvNo, h.CenInvNo, h.ExpInvDate, h.CenInvDate, h.ExpAWBNo, h.CenAWBNo,
+          d.OrdLineNo, d.ItemNo, d.ItemDesc, d.ItemMat, d.ItemSize,
+          d.ItemStone, d.ItemPlate, d.ItemCust, d.ItemRemark,
+          d.ItemQty, d.ItemPrice, d.ItemAmnt,
+          d.SilverWeight AS ItemSilverWt, d.ItemWeight AS ItemFinishWt,
+          d.FinishQty, d.FinishStatus, d.ItemStatus,
+          d.StoneQty, d.FitQty, d.WijQty, d.WstQty,
+          d.CastQty, d.FCastStatus, d.GrindQty, d.FGrindStatus,
+          d.EpoxQty, d.FEpoxStatus, d.FilQty, d.SolQty,
+          d.ControlQty, d.SetQty, d.FSetStatus,
+          d.PolishQty, d.FPolishStatus, d.QPQty, d.FQPStatus,
+          d.PlateQty, d.FPlateStatus, d.AssemQty, d.FAssemStatus,
+          d.QCQty, d.FQCStatus, d.PackQty, d.FPackStatus,
+          d.ExportQty,
+          d.Recvmark, d.Enamark, d.Crysmark, d.Assemmark,
+          d.Shelfmark, d.Packmark, d.Prodmark
         FROM OrdHD h
         LEFT JOIN GMCust c ON c.CustCode = h.CustCode
         LEFT JOIN OrdDT d ON d.OrdNo = h.OrdNo
-        LEFT JOIN GMItemPhoto p ON p.ItemNo = d.ItemNo
-        WHERE h.CustCode = @cust 
+        WHERE h.CustCode = @cust
           AND ISNULL(h.CustMultiAddr, '') = ISNULL(@addr, '') 
           AND (
             (@kind = 'Replen' AND h.OrdKind <> 'NEW') OR
@@ -296,9 +357,11 @@ router.get('/group/:cust/:addr/:kind/:mat/:duedate', async (req, res) => {
           )
           AND ISNULL(h.OrdMat, '') = ISNULL(@mat, '') 
           AND (
-            (@duedate IS NULL AND h.CustDueDate IS NULL) OR 
+            (@duedate IS NULL AND h.CustDueDate IS NULL) OR
             (CAST(h.CustDueDate AS DATE) = CAST(@duedate AS DATE))
           )
+          ${poFilter}
+          ${extraFilters}
         ORDER BY h.OrdNo, d.OrdLineNo
       `);
 
@@ -308,15 +371,17 @@ router.get('/group/:cust/:addr/:kind/:mat/:duedate', async (req, res) => {
     // Aggregate Header — คำนวณจาก OrdDT lines จริง (ตรงกับ SP ที่ใช้ SUM(OrdDT.ItemQty))
     const first = result.recordset[0];
     const uniqueOrds = new Set();
+    const uniquePOs = new Set();
     let sumQty = 0, sumAmnt = 0;
     result.recordset.forEach(r => {
       uniqueOrds.add(r.OrdNo);
+      if (r.PONo) uniquePOs.add(r.PONo.trim());
       sumQty += (r.ItemQty || 0);     // ใช้ OrdDT.ItemQty (ยอด line จริง) ไม่ใช่ OrdHD.SumOrdQty
       sumAmnt += (r.ItemAmnt || 0);   // ใช้ OrdDT.ItemAmnt (ยอด line จริง) ไม่ใช่ OrdHD.SumOrdAmnt
     });
 
     const header = {
-      PONo: 'Group PO By ShipTo',
+      PONo: Array.from(uniquePOs).filter(Boolean).join(' / '),
       OrdNos: Array.from(uniqueOrds),
       OrdNo: first.OrdNo,
       OrdDate: first.OrdDate,
@@ -338,9 +403,7 @@ router.get('/group/:cust/:addr/:kind/:mat/:duedate', async (req, res) => {
         ItemDesc: r.ItemDesc, ItemMat: r.ItemMat, ItemSize: r.ItemSize,
         Stone: r.ItemStone, Plating: r.ItemPlate, CustItem: r.ItemCust,
         OrdRemark: r.ItemRemark,
-        Qty: r.ItemQty, Price: r.ItemPrice, Amount: r.ItemAmnt,
-        ItemPhoto: toBase64Photo(r.ItemPhoto),
-        SilverWt: r.ItemSilverWt, FinishWt: r.ItemFinishWt,
+        Qty: r.ItemQty, Price: r.ItemPrice, Amount: r.ItemAmnt,        SilverWt: r.ItemSilverWt, FinishWt: r.ItemFinishWt,
         FinishQty: p.FinishQty, FinishStatus: r.FinishStatus, ItemStatus: r.ItemStatus,
         OrdDate: r.OrdDate,
         DueDate: r.DueDate,
@@ -374,26 +437,8 @@ router.get('/group/:cust/:addr/:kind/:mat/:duedate', async (req, res) => {
   }
 });
 
-// === GET /api/orders/photo/:itemNo ===========================================
-router.get('/photo/:itemNo', async (req, res) => {
-  try {
-    const pool = await getPool();
-    const itemNo = req.params.itemNo;
-    const cacheKey = `photo:${itemNo}`;
-    const cached = getCached(cacheKey);
-    if (cached !== undefined && cached !== null) return res.json({ ok: true, photo: cached });
-
-    const result = await pool.request()
-      .input('itemNo', sql.NVarChar, itemNo)
-      .query('SELECT CAST(ItemPhoto AS VARBINARY(MAX)) AS photo FROM GMItemPhoto WHERE ItemNo = @itemNo');
-    const photo = toBase64Photo(result.recordset[0]?.photo);
-    setCached(cacheKey, photo);
-    res.json({ ok: true, photo });
-  } catch (err) {
-    res.status(500).json({ ok: false, error: err.message });
-  }
-});
-
+// หมายเหตุ: เลิกใช้ endpoint GET /api/orders/photo/:itemNo (base64 จาก GMItemPhoto) แล้ว
+// รูปเสิร์ฟจาก network path ผ่าน /api/photos/ps|cad/:itemNo (Photo Bridge ใน server.js) แทน
 
 // === GET /api/orders/by-po/:poNo (MUST be BEFORE /:ordNo) ====================
 router.get('/by-po/:poNo', async (req, res) => {
@@ -402,9 +447,10 @@ router.get('/by-po/:poNo', async (req, res) => {
     const poNo = decodeURIComponent(req.params.poNo);
     console.log('[GET /api/orders/by-po/' + poNo + ']');
 
-    const result = await pool.request()
-      .input('poNo', sql.NVarChar, poNo)
-      .query(`
+    const sqlReq = pool.request().input('poNo', sql.NVarChar, poNo);
+    const extraFilters = buildDetailFilters(req.query, sqlReq, true);
+
+    const result = await sqlReq.query(`
         SELECT
           h.OrdNo, h.OrdDate, h.DueDate, h.CustQCDate, h.CustDueDate,
           h.CustCode, c.CustName, c.SalesName AS Sales,
@@ -428,13 +474,12 @@ router.get('/by-po/:poNo', async (req, res) => {
           d.Recvmark AS RecRemark, d.Enamark AS EnaRemark,
           d.Crysmark AS CryRemark, d.Assemmark AS AsmRemark,
           d.Shelfmark AS ShfRemark, d.Packmark AS PkRemark,
-          d.Prodmark AS ProdRemark,
-          CAST(p.ItemPhoto AS VARBINARY(MAX)) AS ItemPhoto
+          d.Prodmark AS ProdRemark
         FROM OrdHD h
         LEFT JOIN GMCust c ON c.CustCode = h.CustCode
         LEFT JOIN OrdDT d ON d.OrdNo = h.OrdNo
-        LEFT JOIN GMItemPhoto p ON p.ItemNo = d.ItemNo
         WHERE h.PONo = @poNo
+        ${extraFilters}
         ORDER BY h.OrdNo, d.OrdLineNo
       `);
 
@@ -469,9 +514,7 @@ router.get('/by-po/:poNo', async (req, res) => {
         ItemDesc: r.ItemDesc, ItemMat: r.ItemMat, ItemSize: r.ItemSize,
         Stone: r.Stone, Plating: r.Plating, CustItem: r.CustItem,
         OrdRemark: r.OrdRemark,
-        Qty: r.Qty, Price: r.Price, Amount: r.Amount,
-        ItemPhoto: toBase64Photo(r.ItemPhoto),
-        SilverWt: r.SilverWt, FinishWt: r.FinishWt,
+        Qty: r.Qty, Price: r.Price, Amount: r.Amount,        SilverWt: r.SilverWt, FinishWt: r.FinishWt,
         FinishQty: p.FinishQty, FinishStatus: r.FinishStatus, ItemStatus: r.ItemStatus,
         OrdDate: r.OrdDate,
         DueDate: r.DueDate,
@@ -545,12 +588,10 @@ router.get('/:ordNo', async (req, res) => {
           d.ExportQty,
           d.Recvmark, d.Enamark, d.Crysmark, d.Assemmark,
           d.Shelfmark, d.Packmark, d.Prodmark,
-          h.ExpInvNo, h.CenInvNo, h.ExpInvDate, h.CenInvDate, h.ExpAWBNo, h.CenAWBNo,
-          CAST(p.ItemPhoto AS VARBINARY(MAX)) AS ItemPhoto
+          h.ExpInvNo, h.CenInvNo, h.ExpInvDate, h.CenInvDate, h.ExpAWBNo, h.CenAWBNo
         FROM OrdHD h
         LEFT JOIN GMCust c ON c.CustCode = h.CustCode
         LEFT JOIN OrdDT d ON d.OrdNo = h.OrdNo
-        LEFT JOIN GMItemPhoto p ON p.ItemNo = d.ItemNo
         WHERE ${whereClause}
         ORDER BY h.OrdNo, d.OrdLineNo
       `);
@@ -577,13 +618,18 @@ router.get('/:ordNo', async (req, res) => {
       sumTotalAmnt += v.amnt;
     }
 
+    const uniquePOs = new Set();
+    result.recordset.forEach(r => {
+      if (r.PONo) uniquePOs.add(r.PONo.trim());
+    });
+
     const header = {
       OrdNo: ordList.length > 1 ? ordNo : first.OrdNo,
       OrdDate: first.OrdDate,
       DueDate: first.DueDate,
       CustCode: first.CustCode,
       CustName: first.CustName,
-      PONo: ordList.length > 1 ? 'Group PO By ShipTo' : first.PONo,
+      PONo: ordList.length > 1 ? Array.from(uniquePOs).filter(Boolean).join(' / ') : first.PONo,
       OrdMat: first.OrdMat,
       OrdStatus: first.OrdStatus,
       CloseStatus: first.CloseStatus,
@@ -599,9 +645,7 @@ router.get('/:ordNo', async (req, res) => {
         ItemDesc: r.ItemDesc, ItemMat: r.ItemMat, ItemSize: r.ItemSize,
         Stone: r.ItemStone, Plating: r.ItemPlate, CustItem: r.ItemCust,
         OrdRemark: r.ItemRemark,
-        Qty: r.ItemQty, Price: r.ItemPrice, Amount: r.ItemAmnt,
-        ItemPhoto: toBase64Photo(r.ItemPhoto),
-        SilverWt: r.ItemSilverWt, FinishWt: r.ItemFinishWt,
+        Qty: r.ItemQty, Price: r.ItemPrice, Amount: r.ItemAmnt,        SilverWt: r.ItemSilverWt, FinishWt: r.ItemFinishWt,
         FinishQty: p.FinishQty, FinishStatus: r.FinishStatus, ItemStatus: r.ItemStatus,
         OrdDate: r.OrdDate,
         DueDate: r.DueDate,

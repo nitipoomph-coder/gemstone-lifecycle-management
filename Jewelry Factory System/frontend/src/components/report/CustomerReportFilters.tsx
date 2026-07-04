@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, CheckSquare, Square } from 'lucide-react';
 import { ALL_GROUPS } from '../../config/customerGroups';
+import CustomSelect from '../ui/CustomSelect';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -60,13 +61,13 @@ export default function CustomerReportFilters({
       <div style={{
         background: 'var(--color-surface-0)', width: '900px', maxWidth: '95%', maxHeight: '90vh',
         borderRadius: 16, display: 'flex', flexDirection: 'column',
-        boxShadow: '0 20px 40px color-mix(in srgb, var(--color-surface-900) 40%, transparent)',
-        border: '1px solid var(--color-border-light)', animation: 'fadeInUp 0.3s ease-out'
+        boxShadow: '0 32px 64px color-mix(in srgb, var(--color-surface-900) 50%, transparent), 0 0 0 1px rgba(255,255,255,0.05)',
+        border: '1px solid var(--color-border-strong)', animation: 'fadeInUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
       }}>
         {/* Modal Header */}
         <div style={{
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          padding: '16px 24px', borderBottom: '1px solid var(--color-border-light)'
+          padding: '16px 24px', borderBottom: '1px solid var(--color-border-strong)'
         }}>
           <h3 style={{ fontSize: '1rem', fontWeight: 900, margin: 0, color: 'var(--color-text-primary)' }}>
             Report Filters
@@ -87,80 +88,72 @@ export default function CustomerReportFilters({
           {/* Year Selectors */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
             <div>
-              <label style={{ display: 'block', fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-quaternary)', marginBottom: 6 }}>
+              <label style={{ display: 'block', fontSize: '0.65rem', fontWeight: 800, textTransform: 'capitalize', color: 'var(--color-text-quaternary)', marginBottom: 6 }}>
                 Base Year
               </label>
-              <select
+              <CustomSelect
                 value={baseYear}
-                onChange={e => setBaseYear(e.target.value)}
-                style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--color-border-light)', background: 'var(--color-surface-1)', color: 'var(--color-text-primary)', fontSize: '0.8rem', fontWeight: 800, outline: 'none' }}
-              >
-                {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
-              </select>
+                onChange={v => setBaseYear(v)}
+                options={availableYears.map(y => ({ value: y, label: `Year ${y}` }))}
+              />
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-quaternary)', marginBottom: 6 }}>
+              <label style={{ display: 'block', fontSize: '0.65rem', fontWeight: 800, textTransform: 'capitalize', color: 'var(--color-text-quaternary)', marginBottom: 6 }}>
                 Compare Year 1
               </label>
-              <select
+              <CustomSelect
                 value={compareYear}
-                onChange={e => setCompareYear(e.target.value)}
-                style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--color-border-light)', background: 'var(--color-surface-1)', color: 'var(--color-text-primary)', fontSize: '0.8rem', fontWeight: 800, outline: 'none' }}
-              >
-                <option value="none">-- None --</option>
-                {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
-              </select>
+                onChange={v => setCompareYear(v)}
+                options={[{ value: 'none', label: '-- None --' }, ...availableYears.map(y => ({ value: y, label: `Year ${y}` }))]}
+              />
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-quaternary)', marginBottom: 6 }}>
+              <label style={{ display: 'block', fontSize: '0.65rem', fontWeight: 800, textTransform: 'capitalize', color: 'var(--color-text-quaternary)', marginBottom: 6 }}>
                 Compare Year 2
               </label>
-              <select
+              <CustomSelect
                 value={compareYear2}
-                onChange={e => setCompareYear2(e.target.value)}
-                style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--color-border-light)', background: 'var(--color-surface-1)', color: 'var(--color-text-primary)', fontSize: '0.8rem', fontWeight: 800, outline: 'none' }}
-              >
-                <option value="none">-- None --</option>
-                {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
-              </select>
+                onChange={v => setCompareYear2(v)}
+                options={[{ value: 'none', label: '-- None --' }, ...availableYears.map(y => ({ value: y, label: `Year ${y}` }))]}
+              />
             </div>
           </div>
 
           {/* Growth Comparison */}
           <div>
-            <label style={{ display: 'block', fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-quaternary)', marginBottom: 6 }}>
+            <label style={{ display: 'block', fontSize: '0.65rem', fontWeight: 800, textTransform: 'capitalize', color: 'var(--color-text-quaternary)', marginBottom: 6 }}>
               Growth Comparison Years
             </label>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {growthComparisons.map((comp, idx) => (
                 <div key={idx} style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                  <select
-                    value={comp.a}
-                    onChange={e => {
-                      const newComps = [...growthComparisons];
-                      newComps[idx] = { ...newComps[idx], a: e.target.value };
-                      setGrowthComparisons(newComps);
-                    }}
-                    style={{ flex: 1, padding: '8px 12px', borderRadius: 8, border: '1px solid var(--color-border-light)', background: 'var(--color-surface-1)', color: 'var(--color-text-primary)', fontSize: '0.8rem', fontWeight: 800, outline: 'none' }}
-                  >
-                    {activeYears.map(y => <option key={y} value={y}>Year {y}</option>)}
-                  </select>
+                  <div style={{ flex: 1 }}>
+                    <CustomSelect
+                      value={comp.a}
+                      onChange={v => {
+                        const newComps = [...growthComparisons];
+                        newComps[idx] = { ...newComps[idx], a: v };
+                        setGrowthComparisons(newComps);
+                      }}
+                      options={activeYears.map(y => ({ value: y, label: `Year ${y}` }))}
+                    />
+                  </div>
                   <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--color-text-tertiary)' }}>VS</span>
-                  <select
-                    value={comp.b}
-                    onChange={e => {
-                      const newComps = [...growthComparisons];
-                      newComps[idx] = { ...newComps[idx], b: e.target.value };
-                      setGrowthComparisons(newComps);
-                    }}
-                    style={{ flex: 1, padding: '8px 12px', borderRadius: 8, border: '1px solid var(--color-border-light)', background: 'var(--color-surface-1)', color: 'var(--color-text-primary)', fontSize: '0.8rem', fontWeight: 800, outline: 'none' }}
-                  >
-                    {activeYears.map(y => <option key={y} value={y}>Year {y}</option>)}
-                  </select>
+                  <div style={{ flex: 1 }}>
+                    <CustomSelect
+                      value={comp.b}
+                      onChange={v => {
+                        const newComps = [...growthComparisons];
+                        newComps[idx] = { ...newComps[idx], b: v };
+                        setGrowthComparisons(newComps);
+                      }}
+                      options={activeYears.map(y => ({ value: y, label: `Year ${y}` }))}
+                    />
+                  </div>
                   {growthComparisons.length > 1 && (
                     <button
                       onClick={() => setGrowthComparisons(comps => comps.filter((_, i) => i !== idx))}
-                      style={{ padding: '8px', background: 'var(--color-surface-2)', border: '1px solid var(--color-border-light)', borderRadius: 8, cursor: 'pointer', color: 'var(--color-danger-500)' }}
+                      style={{ padding: '8px', background: 'var(--color-surface-2)', border: '1px solid var(--color-border-strong)', borderRadius: 8, cursor: 'pointer', color: 'var(--color-danger-500)' }}
                     >
                       <X size={14} />
                     </button>
@@ -179,7 +172,7 @@ export default function CustomerReportFilters({
           {/* Month Selectors */}
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-              <label style={{ display: 'block', fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-quaternary)' }}>
+              <label style={{ display: 'block', fontSize: '0.65rem', fontWeight: 800, textTransform: 'capitalize', color: 'var(--color-text-quaternary)' }}>
                 Select Months ({selMonths.length})
               </label>
               <div style={{ display: 'flex', gap: 12 }}>
@@ -212,8 +205,12 @@ export default function CustomerReportFilters({
                       border: `1px solid ${on ? 'var(--color-brand-500)' : 'var(--color-border-strong)'}`,
                       background: on ? 'color-mix(in srgb, var(--color-brand-500) 15%, transparent)' : 'var(--color-surface-1)',
                       color: on ? 'var(--color-brand-600)' : 'var(--color-text-tertiary)',
-                      cursor: 'pointer', transition: 'all 0.15s'
+                      cursor: 'pointer', 
+                      transition: 'all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                      transform: on ? 'scale(1.05)' : 'scale(1)',
+                      boxShadow: on ? '0 4px 10px color-mix(in srgb, var(--color-brand-500) 30%, transparent)' : 'none'
                     }}
+                    className={!on ? "hover:scale-[1.02] hover:bg-[var(--color-surface-0)]" : ""}
                   >
                     {m}
                   </button>
@@ -224,7 +221,7 @@ export default function CustomerReportFilters({
 
           {/* Group Selectors */}
           <div>
-            <label style={{ display: 'block', fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-quaternary)', marginBottom: 10 }}>
+            <label style={{ display: 'block', fontSize: '0.65rem', fontWeight: 800, textTransform: 'capitalize', color: 'var(--color-text-quaternary)', marginBottom: 10 }}>
               Select Customer Groups
             </label>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -240,10 +237,19 @@ export default function CustomerReportFilters({
                       border: `1px solid ${on ? g.color : 'var(--color-border-strong)'}`,
                       background: on ? `color-mix(in srgb, ${g.color} 15%, transparent)` : 'var(--color-surface-1)',
                       color: on ? g.color : 'var(--color-text-tertiary)',
-                      cursor: 'pointer', transition: 'all 0.15s'
+                      cursor: 'pointer',
+                      transition: 'all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                      transform: on ? 'scale(1.05)' : 'scale(1)',
+                      boxShadow: on ? `0 4px 10px color-mix(in srgb, ${g.color} 30%, transparent)` : 'none'
                     }}
+                    className={!on ? "hover:scale-[1.02] hover:bg-[var(--color-surface-0)]" : ""}
                   >
-                    <span style={{ width: 8, height: 8, borderRadius: 2, background: on ? g.color : 'var(--color-border-strong)', flexShrink: 0 }} />
+                    <span style={{ 
+                      width: 8, height: 8, borderRadius: 2, 
+                      background: on ? g.color : 'var(--color-border-strong)', flexShrink: 0,
+                      transform: on ? 'scale(1.2)' : 'scale(1)',
+                      transition: 'transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)'
+                    }} />
                     {g.label}
                   </button>
                 );
@@ -254,7 +260,7 @@ export default function CustomerReportFilters({
           {/* Customer Selectors */}
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-              <label style={{ display: 'block', fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-quaternary)' }}>
+              <label style={{ display: 'block', fontSize: '0.65rem', fontWeight: 800, textTransform: 'capitalize', color: 'var(--color-text-quaternary)' }}>
                 Select Customers ({selCustomers.length === 0 ? (groupCustomers.length > 0 ? 'All' : '0') : selCustomers.filter(id => id !== '__NONE__').length} selected)
               </label>
               <button
@@ -269,7 +275,7 @@ export default function CustomerReportFilters({
               style={{
                 display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 6,
                 maxHeight: 250, overflowY: 'auto', padding: '12px',
-                background: 'var(--color-surface-1)', borderRadius: 8, border: '1px solid var(--color-border-light)'
+                background: 'var(--color-surface-1)', borderRadius: 8, border: '1px solid var(--color-border-strong)'
               }}
             >
               {groupCustomers.length === 0 ? (
@@ -283,15 +289,30 @@ export default function CustomerReportFilters({
                     key={cId}
                     onClick={() => toggleCustomer(cId)}
                     style={{
-                      display: 'flex', alignItems: 'center', gap: 8, padding: '6px', borderRadius: 6, cursor: 'pointer',
-                      background: on ? 'var(--color-surface-0)' : 'transparent'
+                      display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', borderRadius: 8, cursor: 'pointer',
+                      background: on ? 'color-mix(in srgb, var(--color-brand-500) 10%, var(--color-surface-0))' : 'transparent',
+                      border: `1px solid ${on ? 'var(--color-brand-400)' : 'transparent'}`,
+                      transition: 'all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                      transform: on ? 'scale(1.02)' : 'scale(1)',
+                      boxShadow: on ? '0 4px 8px color-mix(in srgb, var(--color-brand-500) 15%, transparent)' : 'none'
                     }}
+                    className={!on ? "hover:bg-[var(--color-surface-0)] hover:scale-[1.01]" : ""}
                   >
-                    {on
-                      ? <CheckSquare size={14} style={{ color: 'var(--color-brand-500)' }} />
-                      : <Square size={14} style={{ color: 'var(--color-border-strong)' }} />
-                    }
-                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: on ? 'var(--color-text-primary)' : 'var(--color-text-tertiary)' }}>
+                    <div style={{ 
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      transform: on ? 'scale(1.1)' : 'scale(1)', 
+                      transition: 'transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)'
+                    }}>
+                      {on
+                        ? <CheckSquare size={16} style={{ color: 'var(--color-brand-600)' }} />
+                        : <Square size={16} style={{ color: 'var(--color-border-strong)' }} />
+                      }
+                    </div>
+                    <span style={{ 
+                      fontSize: '0.75rem', fontWeight: 800, 
+                      color: on ? 'var(--color-brand-700)' : 'var(--color-text-tertiary)',
+                      transition: 'color 0.2s ease'
+                    }}>
                       {cId}
                     </span>
                   </div>
@@ -302,10 +323,11 @@ export default function CustomerReportFilters({
         </div>
 
         {/* Modal Footer */}
-        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--color-border-light)', display: 'flex', justifyContent: 'flex-end' }}>
+        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--color-border-strong)', display: 'flex', justifyContent: 'flex-end' }}>
           <button
             onClick={() => setIsFilterOpen(false)}
-            style={{ padding: '8px 20px', borderRadius: 8, fontSize: '0.8rem', fontWeight: 800, background: 'var(--color-brand-500)', color: 'var(--color-surface-0)', border: 'none', cursor: 'pointer' }}
+            style={{ padding: '10px 24px', borderRadius: 8, fontSize: '0.85rem', fontWeight: 900, background: 'var(--color-brand-500)', color: 'white', border: 'none', cursor: 'pointer', boxShadow: '0 4px 12px color-mix(in srgb, var(--color-brand-500) 40%, transparent)', transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)' }}
+            className="hover:bg-brand-400 hover:-translate-y-0.5 active:scale-95"
           >
             Apply Filters
           </button>

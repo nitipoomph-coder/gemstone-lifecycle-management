@@ -286,7 +286,7 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: 'amo
   if (loading) {
     return (
       <>
-        <Topbar breadcrumb={[{ label: 'JEWELRY SMART FACTORY', path: '/' }, { label: 'SALES SUMMARY BY CUSTOMER' }]} />
+        <Topbar breadcrumb={[{ label: 'JEWELRY FACTORY SYSTEM', path: '/' }, { label: 'SALES SUMMARY BY CUSTOMER' }]} />
         <div className="flex-1 p-6 flex flex-col gap-6 w-full h-full" style={{ background: 'var(--color-surface-1)' }}>
           {/* Header Skeleton */}
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -319,7 +319,7 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: 'amo
 
   return (
     <>
-      <Topbar breadcrumb={[{ label: 'JEWELRY SMART FACTORY', path: '/' }, { label: 'SALES SUMMARY BY CUSTOMER' }]} />
+      <Topbar breadcrumb={[{ label: 'JEWELRY FACTORY SYSTEM', path: '/' }, { label: 'SALES SUMMARY BY CUSTOMER' }]} />
       <div className="content-scrollbar flex-1 overflow-y-auto" style={{ background: 'var(--color-surface-1)' }}>
         <div className="p-6 flex flex-col gap-6 w-full">
 
@@ -329,7 +329,7 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: 'amo
               <h1 style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--color-text-primary)', fontFamily: 'var(--font-display)', letterSpacing: '-0.02em', lineHeight: 1 }}>
                 Sales Analytics <span style={{ color: 'var(--color-proc-polishing)' }}>By Customer Group</span>
               </h1>
-              <p style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-tertiary)', marginTop: 6, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+              <p style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-tertiary)', marginTop: 6, letterSpacing: '0.06em', textTransform: 'capitalize' }}>
                 Client Account Growth Analysis
               </p>
             </div>
@@ -339,7 +339,7 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: 'amo
                 onClick={() => navigate('/dashboard/customer-report?metric=' + metric)}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 6,
-                  padding: '8px 16px', borderRadius: 12, fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase',
+                  padding: '8px 16px', borderRadius: 12, fontSize: '0.75rem', fontWeight: 800, textTransform: 'capitalize',
                   color: '#fff', background: 'var(--color-proc-polishing)', border: 'none',
                   cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 4px 12px color-mix(in srgb, var(--color-proc-polishing) 40%, transparent)'
                 }}
@@ -352,7 +352,7 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: 'amo
                 onClick={() => window.location.reload()}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 6,
-                  padding: '8px 16px', borderRadius: 12, fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase',
+                  padding: '8px 16px', borderRadius: 12, fontSize: '0.75rem', fontWeight: 800, textTransform: 'capitalize',
                   color: 'var(--color-text-tertiary)', background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)',
                   cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
                 }}
@@ -391,7 +391,7 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: 'amo
 
             {/* Multi-Year Picker */}
             <div style={{ background: 'var(--color-surface-0)', borderRadius: 16, padding: '14px 20px', border: '1px solid var(--color-border-light)', display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <div style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-tertiary)', letterSpacing: '0.06em' }}>
+              <div style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'capitalize', color: 'var(--color-text-tertiary)', letterSpacing: '0.06em' }}>
                 Target Year(s)
               </div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
@@ -413,7 +413,7 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: 'amo
             {/* Month Filter (Monthly Mode Only) */}
             {mode === 'monthly' && (
               <div style={{ background: 'var(--color-surface-0)', borderRadius: 16, padding: '14px 20px', border: '1px solid var(--color-border-light)', display: 'flex', flexDirection: 'column', gap: 10, position: 'relative' }} ref={dropdownRef}>
-                <div style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-tertiary)', letterSpacing: '0.06em' }}>
+                <div style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'capitalize', color: 'var(--color-text-tertiary)', letterSpacing: '0.06em' }}>
                   Filter Months
                 </div>
                 <button
@@ -439,7 +439,7 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: 'amo
                     borderRadius: 12, padding: 16, zIndex: 50, boxShadow: '0 12px 40px rgba(0,0,0,0.15)'
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12, alignItems: 'center' }}>
-                      <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--color-text-tertiary)', textTransform: 'uppercase' }}>Select Months</span>
+                      <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--color-text-tertiary)', textTransform: 'capitalize' }}>Select Months</span>
                       <button
                         onClick={() => setSelectedMonths(MONTHS.map((_, i) => String(i + 1)))}
                         disabled={selectedMonths.length === 12}
@@ -476,7 +476,7 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: 'amo
             {/* Customer Groups */}
             <div style={{ flex: 1, background: 'var(--color-surface-0)', borderRadius: 16, padding: '14px 20px', border: '1px solid var(--color-border-light)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                <div style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-tertiary)', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'capitalize', color: 'var(--color-text-tertiary)', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: 6 }}>
                   <Users size={14} /> Customer Groups
                 </div>
                 <button onClick={() => setShowLabels(!showLabels)} style={{
@@ -516,7 +516,7 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: 'amo
                 <div key={g.id} style={{ background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)', borderRadius: 16, padding: '20px', borderTop: `4px solid ${g.color}`, boxShadow: '0 4px 16px -4px rgba(0,0,0,0.04)', transition: 'all 0.3s ease', animation: 'fadeInUp 0.4s ease-out both', animationDelay: `${idx * 0.05}s` }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
                     <span style={{ width: 10, height: 10, borderRadius: 3, background: g.color }} />
-                    <span style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)', fontWeight: 800, textTransform: 'uppercase' }}>{g.label}</span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)', fontWeight: 800, textTransform: 'capitalize' }}>{g.label}</span>
                   </div>
 
                   {/* Years Breakdown & YoY */}
@@ -569,7 +569,7 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: 'amo
             {/* Dynamic Chart Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 32 }}>
               <div>
-                <h2 style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--color-text-primary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 12 }}>
+                <h2 style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--color-text-primary)', textTransform: 'capitalize', letterSpacing: '0.05em', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 12 }}>
                   {mode === 'yearly' ? `Annual Sales Comparison` : `Monthly Sales Breakdown`}
 
                 </h2>
@@ -592,7 +592,7 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: 'amo
                   {monthlySeries === 'group' ? sortedSel.map(gId => {
                     const g = ALL_GROUPS.find(x => x.id === gId)!;
                     return (
-                      <div key={gId} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.7rem', fontWeight: 800, color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>
+                      <div key={gId} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.7rem', fontWeight: 800, color: 'var(--color-text-secondary)', textTransform: 'capitalize' }}>
                         <span style={{ width: 10, height: 10, borderRadius: 2, background: g.color }} />
                         {g.label}
                       </div>
@@ -601,7 +601,7 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: 'amo
                     const YEAR_COLORS = ['var(--color-brand-500)', 'var(--color-proc-polishing)', 'var(--color-proc-plating)', 'var(--color-proc-grinding)', 'var(--color-success-500)', 'var(--color-warning-500)'];
                     const color = YEAR_COLORS[idx % YEAR_COLORS.length];
                     return (
-                      <div key={y} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.7rem', fontWeight: 800, color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>
+                      <div key={y} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.7rem', fontWeight: 800, color: 'var(--color-text-secondary)', textTransform: 'capitalize' }}>
                         <span style={{ width: 10, height: 10, borderRadius: 2, background: color }} />
                         Year {y}
                       </div>
@@ -610,7 +610,7 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: 'amo
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '0.95rem', color: 'var(--color-text-primary)', fontWeight: 900, textTransform: 'uppercase', marginBottom: 2 }}>
+                <div style={{ fontSize: '0.95rem', color: 'var(--color-text-primary)', fontWeight: 900, textTransform: 'capitalize', marginBottom: 2 }}>
                   Grand Total {grandLatestYear ? `(${grandLatestYear})` : ''}
                 </div>
                 <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--color-text-primary)' }}>

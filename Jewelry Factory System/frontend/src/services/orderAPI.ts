@@ -17,7 +17,7 @@ export interface OrderSummary {
   TotalQty: number;
   NumSKU: number;
   Amount: number | null;
-  ItemPhoto: string | null; // รูป Base64
+  SampleItemNo: string | null; // ItemNo ตัวแทนของกลุ่ม (ใช้ประกอบ URL รูปจาก network path)
   TrackTest: string | null;
   OrdSGS: string | null;
   CustQCDate: string | null;
@@ -32,7 +32,61 @@ export interface OrderSummary {
   ShelfRemark: string | null;
   PackRemark: string | null;
   ProductionRemark: string | null;
+
+  // ─── PO2 / Meta (surfaced from SP) ───
+  EXNo: string | null;          // PO2
+
+  // ─── Production stage pending qty (ตัวเลข; ติดลบ = ค้าง) ───
+  StonePenQty: number | null;
+  FitPenQty: number | null;     // Finding
+  WijPenQty: number | null;     // Wax
+  WstPenQty: number | null;     // Wax Set
+  CastPenQty: number | null;
+  ControlPenQty: number | null;
+  GrindPenQty: number | null;
+  PolishPenQty: number | null;
+  PlatePenQty: number | null;   // Plating
+  QCPenQty: number | null;
+  UnFinishQty: number | null;
+  FinishQty: number | null;
+  ExportQty: number | null;     // Shipped
+  BalQty: number | null;        // Balance
+  ExpPct: number | null;        // % Shipped
+
+  // ─── Track / QC / Pack (strings) ───
+  BookDate: string | null;      // Book Inspect
+  BookShip: string | null;
+  QC1_Qty: string | null;
+  QC1_Date: string | null;
+  QC1_Fail: string | null;
+  QC2_Qty: string | null;
+  QC2_Date: string | null;
+  QC2_Fail: string | null;
+  QC3_Qty: string | null;
+  QC3_Date: string | null;
+  PackCard: string | null;      // 1. Card/Box
+  TickOrd: string | null;       // 2. Order Ticket/Label
+  TickRec: string | null;       // 3. Receive Ticket/Label
+  TrackSam: string | null;      // 4. Sample
+  TrackCT: string | null;       // 5. Cust CT
+  TrackMF: string | null;       // 6. MF
+  PackScanDo: string | null;    // 7. Day to Do Pack Scan
+  PackScanSen: string | null;   // 8. Pack Scan Send Cust
+  PackScanAppv: string | null;  // 9. Pack Scan Approved on
+  PackScanMF: string | null;    // 10. Pack Scan Photo on MF
+  PolyOrd: string | null;       // 4. Order Polybag
+  PolyRec: string | null;       // 5. Receive Polybag
+  TagRcyRec: string | null;     // 6. Receive Recycled Tag U413
+  ProdRiskIssue: string | null; // Production Risky Issue
+  PQCPlanShip: string | null;   // PQC Plan Ship
 }
+
+// number|null helper สำหรับ pending-qty (คงค่า 0 ไว้, กัน NaN)
+const num = (v: number | string | null | undefined): number | null => {
+  if (v == null) return null;
+  const x = Number(v);
+  return isNaN(x) ? null : x;
+};
 
 export const fetchOrders = async (params: { status?: 'pending' | 'finish' | 'all', dateType?: string, dateFrom?: string, dateTo?: string }): Promise<{ ok: boolean; data: OrderSummary[]; error?: string }> => {
   try {
@@ -72,7 +126,7 @@ export const fetchOrders = async (params: { status?: 'pending' | 'finish' | 'all
       TotalQty: Number(item.SumQty || item.sumQty || item.TotalQty || item.totalQty || 0),
       NumSKU: Number(item.SumItem || item.sumItem || item.NumSKU || 0),
       Amount: Number(item.SumAmnt || item.sumAmnt || item.Amount || item.amount || 0),
-      ItemPhoto: item.ItemPhoto || item.itemPhoto || null,
+      SampleItemNo: item.SampleItemNo || item.sampleItemNo || null,
       TrackTest: item.TrackTest || '-',
       OrdSGS: item.OrdSGS || '-',
       CustQCDate: item.CustQCDate || null,
@@ -87,6 +141,53 @@ export const fetchOrders = async (params: { status?: 'pending' | 'finish' | 'all
       ShelfRemark: item.ShelfRemark || item.shelfRemark || null,
       PackRemark: item.PackRemark || item.packRemark || null,
       ProductionRemark: item.ProductionRemark || item.productionRemark || null,
+
+      // ─── PO2 / Meta ───
+      EXNo: item.EXNo || item.exNo || null,
+
+      // ─── Production stage pending qty ───
+      StonePenQty: num(item.StonePenQty),
+      FitPenQty: num(item.FitPenQty),
+      WijPenQty: num(item.WijPenQty),
+      WstPenQty: num(item.WstPenQty),
+      CastPenQty: num(item.CastPenQty),
+      ControlPenQty: num(item.ControlPenQty),
+      GrindPenQty: num(item.GrindPenQty),
+      PolishPenQty: num(item.PolishPenQty),
+      PlatePenQty: num(item.PlatePenQty),
+      QCPenQty: num(item.QCPenQty),
+      UnFinishQty: num(item.UnFinishQty),
+      FinishQty: num(item.FinishQty),
+      ExportQty: num(item.ExportQty),
+      BalQty: num(item.BalQty),
+      ExpPct: num(item.ExpPct),
+
+      // ─── Track / QC / Pack ───
+      BookDate: item.BookDate || null,
+      BookShip: item.BookShip || null,
+      QC1_Qty: item.QC1_Qty || null,
+      QC1_Date: item.QC1_Date || null,
+      QC1_Fail: item.QC1_Fail || null,
+      QC2_Qty: item.QC2_Qty || null,
+      QC2_Date: item.QC2_Date || null,
+      QC2_Fail: item.QC2_Fail || null,
+      QC3_Qty: item.QC3_Qty || null,
+      QC3_Date: item.QC3_Date || null,
+      PackCard: item.PackCard || null,
+      TickOrd: item.TickOrd || null,
+      TickRec: item.TickRec || null,
+      TrackSam: item.TrackSam || null,
+      TrackCT: item.TrackCT || null,
+      TrackMF: item.TrackMF || null,
+      PackScanDo: item.PackScanDo || null,
+      PackScanSen: item.PackScanSen || null,
+      PackScanAppv: item.PackScanAppv || null,
+      PackScanMF: item.PackScanMF || null,
+      PolyOrd: item.PolyOrd || null,
+      PolyRec: item.PolyRec || null,
+      TagRcyRec: item.TagRcyRec || null,
+      ProdRiskIssue: item.ProdRiskIssue || null,
+      PQCPlanShip: item.PQCPlanShip || null,
     }));
 
     return { ok: true, data: mappedData };

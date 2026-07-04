@@ -9,6 +9,7 @@ import POTrackerAdvanced from './pages/POTrackerAdvanced';
 import OrderDetailPage from './pages/OrderDetailPage';
 import ItemDetailPage from './pages/ItemDetailPage';
 import PlaceholderPage from './pages/PlaceholderPage';
+import VendorPerformanceDashboardPage from './pages/subcontract/VendorPerformanceDashboardPage';
 import SalesDashboard from './pages/SalesDashboard';
 import CustomerDashboard from './pages/CustomerDashboard';
 import CustomerReportPage from './pages/CustomerReportPage';
@@ -89,6 +90,12 @@ export default function App() {
             <Route path="/spare-parts/summary-stock" element={<PlaceholderPage />} />
             <Route path="/spare-parts/check-item" element={<PlaceholderPage />} />
             <Route path="/spare-parts/check-status" element={<PlaceholderPage />} />
+
+            {/* 6. งานเหมา (Subcontract Management) — Vendor Performance Dashboard has a static layout-only
+                preview (no backend yet); the other two stay on the generic Placeholder for now */}
+            <Route path="/subcontract/vendor-performance" element={<VendorPerformanceDashboardPage />} />
+            <Route path="/subcontract/vendor-price-history" element={<PlaceholderPage />} />
+            <Route path="/subcontract/aging-report" element={<PlaceholderPage />} />
 
             {/* PO Tracker */}
             <Route path="/po-tracker" element={<POTrackerAdvanced />} />

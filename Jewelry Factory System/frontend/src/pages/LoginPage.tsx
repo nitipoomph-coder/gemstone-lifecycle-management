@@ -9,7 +9,7 @@ const BACKGROUND_IMAGES = [
   '/assets/cll_holding_charms.png',
   '/assets/cll_green_geode.png',
   '/assets/cll_hand_ring.png',
-  '/assets/cll_ring_earrings.png',
+  '/assets/cll_ring_earring.png',
   '/assets/cll_box.png',
 ];
 
@@ -202,13 +202,6 @@ export default function LoginPage() {
             transitionTimingFunction: 'ease-in-out, linear'
           }}></div>
         ))}
-
-        {/* Anime Glint/Glare Effect */}
-        <div className="glare-sweep"></div>
-        {/* Star Sparkles */}
-        <div className="anime-sparkle" style={{ top: '45%', left: '40%', animationDelay: '0s' }}></div>
-        <div className="anime-sparkle" style={{ top: '65%', left: '60%', animationDelay: '1.2s' }}></div>
-        <div className="anime-sparkle" style={{ top: '35%', left: '55%', animationDelay: '2.4s' }}></div>
       </div>
 
       {/* RIGHT/LEFT: Interactive Panels Area (Parchment) */}
@@ -844,62 +837,6 @@ export default function LoginPage() {
         @keyframes dot-bounce {
           0%, 80%, 100% { transform: scale(0); opacity: 0.3; }
           40% { transform: scale(1); opacity: 1; }
-        }
-        .glare-sweep {
-          position: absolute;
-          top: 0;
-          left: -100%;
-          width: 50%;
-          height: 100%;
-          background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0) 100%);
-          transform: skewX(-25deg);
-          animation: sweep-glare 5s infinite cubic-bezier(0.4, 0, 0.2, 1);
-          pointer-events: none;
-        }
-
-        @keyframes sweep-glare {
-          0% { left: -100%; }
-          30% { left: 200%; }
-          100% { left: 200%; }
-        }
-
-        .anime-sparkle {
-          position: absolute;
-          width: 2px;
-          height: 2px;
-          background: #fff;
-          border-radius: 50%;
-          box-shadow: 0 0 10px 2px rgba(255,255,255,0.8);
-          opacity: 0;
-          animation: anime-sparkle-anim 3s infinite ease-in-out;
-          pointer-events: none;
-        }
-
-        .anime-sparkle::before, .anime-sparkle::after {
-          content: '';
-          position: absolute;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          background: #fff;
-          border-radius: 50%;
-        }
-
-        .anime-sparkle::before {
-          width: 30px;
-          height: 1px;
-          box-shadow: 0 0 5px rgba(255,255,255,0.8);
-        }
-
-        .anime-sparkle::after {
-          width: 1px;
-          height: 30px;
-          box-shadow: 0 0 5px rgba(255,255,255,0.8);
-        }
-
-        @keyframes anime-sparkle-anim {
-          0%, 100% { opacity: 0; transform: scale(0) rotate(0deg); }
-          50% { opacity: 1; transform: scale(1) rotate(45deg); }
         }
 
         @media (max-width: 800px) {

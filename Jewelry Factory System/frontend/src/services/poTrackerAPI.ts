@@ -28,7 +28,6 @@ export interface OrderSummary {
   QCStatus: string | null;
   LineCount: number;
   SumItem: number;           // No. of SKU
-  ItemPhoto?: string;        // base64
 
   // ── dates ─────────────────────────────────────────────────
   CustQCDate: string | null;   // QC Date
@@ -70,7 +69,6 @@ export interface OrderLine {
   Qty: number;
   Price: number;
   Amount: number;
-  ItemPhoto?: string;
   FinishQty: number | null;
   FinishStatus: string | null;
   ItemStatus: string | null;
@@ -133,8 +131,9 @@ export async function fetchOrders(params?: {
 }
 
 // ─── fetchOrderDetail (by OrdNo) ──────────────────────────────────────────────
-export async function fetchOrderDetail(ordNo: string): Promise<OrderDetail> {
-  const res = await fetchWithAuth(`${BASE_URL}/orders/${encodeURIComponent(ordNo)}`, {
+export async function fetchOrderDetail(ordNo: string, qsParams?: URLSearchParams): Promise<OrderDetail> {
+  const queryStr = qsParams ? `?${qsParams.toString()}` : '';
+  const res = await fetchWithAuth(`${BASE_URL}/orders/${encodeURIComponent(ordNo)}${queryStr}`, {
     headers: { 'bypass-tunnel-reminder': 'true' }
   });
   if (!res.ok) throw new Error(`API error: ${res.status}`);
@@ -156,8 +155,9 @@ export interface OrderDetailByPo {
   ordCount: number;
 }
 
-export async function fetchOrderByPo(poNo: string): Promise<OrderDetailByPo> {
-  const res = await fetchWithAuth(`${BASE_URL}/orders/by-po/${encodeURIComponent(poNo)}`, {
+export async function fetchOrderByPo(poNo: string, qsParams?: URLSearchParams): Promise<OrderDetailByPo> {
+  const queryStr = qsParams ? `?${qsParams.toString()}` : '';
+  const res = await fetchWithAuth(`${BASE_URL}/orders/by-po/${encodeURIComponent(poNo)}${queryStr}`, {
     headers: { 'bypass-tunnel-reminder': 'true' }
   });
   if (!res.ok) throw new Error(`API error ${res.status} — PO "${poNo}" not found`);
@@ -165,9 +165,10 @@ export async function fetchOrderByPo(poNo: string): Promise<OrderDetailByPo> {
 }
 
 // ─── fetchOrderByGroup ────────────────────────────────────────────────────────
-export async function fetchOrderByGroup(cust: string, addr: string, kind: string, mat: string, duedate: string): Promise<OrderDetailByPo> {
+export async function fetchOrderByGroup(cust: string, addr: string, kind: string, mat: string, duedate: string, qsParams?: URLSearchParams): Promise<OrderDetailByPo> {
   const path = [cust, encodeURIComponent(addr), encodeURIComponent(kind), encodeURIComponent(mat), encodeURIComponent(duedate)].join('/');
-  const res = await fetchWithAuth(`${BASE_URL}/orders/group/${path}`, {
+  const queryStr = qsParams ? `?${qsParams.toString()}` : '';
+  const res = await fetchWithAuth(`${BASE_URL}/orders/group/${path}${queryStr}`, {
     headers: { 'bypass-tunnel-reminder': 'true' }
   });
   if (!res.ok) throw new Error(`API error ${res.status} — Group data not found`);
@@ -181,7 +182,7 @@ export interface SearchResultItem {
   title: string;
   sub: string;
   path: string;
-  photo?: string | null;
+  itemNo?: string | null;
 }
 
 export async function fetchSearch(query: string, type?: string): Promise<SearchResultItem[]> {

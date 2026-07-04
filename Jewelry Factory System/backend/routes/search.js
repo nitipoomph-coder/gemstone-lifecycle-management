@@ -2,19 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { getPool, sql } = require('../db');
 
-function toBase64Photo(buf) {
-  if (!buf) return null;
-  try {
-    let b;
-    if (Buffer.isBuffer(buf)) b = buf;
-    else if (buf?.data) b = Buffer.from(buf.data);
-    else b = Buffer.from(buf);
-    if (b.length === 0) return null;
-    return `data:image/jpeg;base64,${b.toString('base64')}`;
-  } catch (err) {
-    return null;
-  }
-}
+// รูปเสิร์ฟจาก network path (/api/photos/ps|cad/:itemNo) — search คืน itemNo ให้ frontend ประกอบ URL เอง
 
 router.get('/', async (req, res) => {
   try {
@@ -53,12 +41,11 @@ router.get('/', async (req, res) => {
             f.OrdNo AS title, 
             'Order No: ' + f.OrdNo + ' / PO: ' + ISNULL(f.PONo, '-') + ' / Cust: ' + ISNULL(f.CustCode, '') AS sub, 
             '/order-tracker?search=' + f.OrdNo AS path,
-            CAST(p.ItemPhoto AS VARBINARY(MAX)) AS ItemPhoto
+            d.ItemNo AS itemNo
           FROM FilteredOrders f
           LEFT JOIN OrdDT d ON d.OrdNo = f.OrdNo AND d.OrdLineNo = '1'
-          LEFT JOIN GMItemPhoto p ON p.ItemNo = d.ItemNo
         `);
-      results.push(...orderResult.recordset.map(r => ({ ...r, photo: toBase64Photo(r.ItemPhoto), ItemPhoto: undefined })));
+      results.push(...orderResult.recordset);
     }
 
     // Search Items (OrdDT)
@@ -78,11 +65,10 @@ router.get('/', async (req, res) => {
             f.ItemNo AS title, 
             'Item Desc: ' + ISNULL(f.ItemDesc, '') + ' / Mat: ' + ISNULL(f.ItemMat, '') AS sub, 
             '/order-tracker?search=' + f.ItemNo AS path,
-            CAST(p.ItemPhoto AS VARBINARY(MAX)) AS ItemPhoto
+            f.ItemNo AS itemNo
           FROM FilteredItems f
-          LEFT JOIN GMItemPhoto p ON p.ItemNo = f.ItemNo
         `);
-      results.push(...itemResult.recordset.map(r => ({ ...r, photo: toBase64Photo(r.ItemPhoto), ItemPhoto: undefined })));
+      results.push(...itemResult.recordset);
     }
 
     // Search Customers (GMCust)
@@ -100,7 +86,7 @@ router.get('/', async (req, res) => {
           FROM GMCust
           WHERE CustCode LIKE @qPrefix OR CustName LIKE @q
         `);
-      results.push(...custResult.recordset.map(r => ({ ...r, photo: null, ItemPhoto: undefined })));
+      results.push(...custResult.recordset.map(r => ({ ...r, itemNo: null })));
     }
 
     res.json({ ok: true, data: results });

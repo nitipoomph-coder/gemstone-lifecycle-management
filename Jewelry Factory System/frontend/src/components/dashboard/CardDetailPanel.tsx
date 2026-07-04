@@ -533,7 +533,7 @@ export default function CardDetailPanel({ cardType, selectedYear, onClose }: { c
                 : `${meta.title} — Year Comparison`
               }
             </h3>
-            <p style={{ fontSize:'0.68rem', fontWeight:700, color:'var(--color-text-tertiary)', margin:'2px 0 0', textTransform:'uppercase', letterSpacing:'0.06em' }}>
+            <p style={{ fontSize:'0.68rem', fontWeight:700, color:'var(--color-text-tertiary)', margin:'2px 0 0', textTransform: 'capitalize', letterSpacing:'0.06em' }}>
               {cardType === 'today' 
                 ? '7 working days moving average comparison (excluding Sundays/Holidays)' 
                 : cardType === 'wip'
@@ -632,7 +632,7 @@ export default function CardDetailPanel({ cardType, selectedYear, onClose }: { c
 
               return summaryCards.map((s, i) => (
                 <div key={i} style={{ padding:'16px 20px', borderRadius:16, background:'var(--color-surface-1)', border:'1px solid var(--color-border-light)', display:'flex', flexDirection:'column', justifyContent:'center' }}>
-                  <div style={{ fontSize:'0.6rem', fontWeight:800, color:'var(--color-text-tertiary)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:6 }}>{s.label}</div>
+                  <div style={{ fontSize:'0.6rem', fontWeight:800, color:'var(--color-text-tertiary)', textTransform: 'capitalize', letterSpacing:'0.08em', marginBottom:6 }}>{s.label}</div>
                   <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:8 }}>
                     <div style={{ fontSize:'1.4rem', fontWeight:900, color: s.color, fontFamily:'var(--font-display)', letterSpacing:'-0.02em' }}>
                       {s.value.toLocaleString()}
@@ -649,7 +649,7 @@ export default function CardDetailPanel({ cardType, selectedYear, onClose }: { c
           {/* ─── SVG Line Chart (Stock Style) ─── */}
           <div style={{ borderRadius:20, border:'1px solid var(--color-border-light)', overflow:'hidden', background:'var(--color-surface-0)' }}>
             <div style={{ padding:'14px 20px', borderBottom:'1px solid var(--color-border-light)', display:'flex', alignItems:'center', justifyContent:'space-between', gap: 16 }}>
-              <span style={{ fontSize:'0.65rem', fontWeight:800, color:'var(--color-text-tertiary)', textTransform:'uppercase', letterSpacing:'0.08em' }}>
+              <span style={{ fontSize:'0.65rem', fontWeight:800, color:'var(--color-text-tertiary)', textTransform: 'capitalize', letterSpacing:'0.08em' }}>
                 {cardType === 'today' ? 'Daily Actual vs Moving Average' : 'Monthly Trend comparison'}
               </span>
               
@@ -683,7 +683,7 @@ export default function CardDetailPanel({ cardType, selectedYear, onClose }: { c
                       transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
                     }} />
                   </div>
-                  <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--color-text-secondary)', textTransform: 'capitalize', letterSpacing: '0.04em' }}>
                     แสดงตัวเลข (Show Labels)
                   </span>
                 </label>
@@ -738,7 +738,7 @@ export default function CardDetailPanel({ cardType, selectedYear, onClose }: { c
             <div style={{ borderRadius:20, border:'1px solid var(--color-border-light)', overflow:'hidden' }}>
               <div style={{ padding:'14px 20px', borderBottom:'1px solid var(--color-border-light)', display:'flex', alignItems:'center', gap:8 }}>
                 <Users size={14} style={{ color:'var(--color-text-tertiary)' }}/>
-                <span style={{ fontSize:'0.65rem', fontWeight:800, color:'var(--color-text-tertiary)', textTransform:'uppercase', letterSpacing:'0.08em' }}>
+                <span style={{ fontSize:'0.65rem', fontWeight:800, color:'var(--color-text-tertiary)', textTransform: 'capitalize', letterSpacing:'0.08em' }}>
                   {cardType === 'today' ? 'Daily Working Days History' : 'Customer Breakdown (Top 10)'}
                 </span>
               </div>
@@ -752,7 +752,7 @@ export default function CardDetailPanel({ cardType, selectedYear, onClose }: { c
                         ? ['Customer', 'Customer Name', `WIP Orders (${year1})`, `WIP Orders (${year2})`, `WIP Pieces (${year1})`, `WIP Pieces (${year2})`, 'Change']
                         : ['Customer', 'Customer Name', `${year1} Orders`, `${year2} Orders`, `${year1} Qty`, `${year2} Qty`, 'Change']
                       ).map(h => (
-                        <th key={h} style={{ padding:'10px 16px', textAlign: h.includes('Orders')||h.includes('Qty')||h.includes('Actual')||h.includes('Average')||h==='Change'||h==='Performance'?'right':'left', fontSize:'0.6rem', fontWeight:800, color:'var(--color-text-tertiary)', textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'1px solid var(--color-border-light)', whiteSpace:'nowrap' }}>{h}</th>
+                        <th key={h} style={{ padding:'10px 16px', textAlign: h.includes('Orders')||h.includes('Qty')||h.includes('Actual')||h.includes('Average')||h==='Change'||h==='Performance'?'right':'left', fontSize:'0.6rem', fontWeight:800, color:'var(--color-text-tertiary)', textTransform: 'capitalize', letterSpacing:'0.06em', borderBottom:'1px solid var(--color-border-light)', whiteSpace:'nowrap' }}>{h}</th>
                       ))}
                     </tr>
                   </thead>

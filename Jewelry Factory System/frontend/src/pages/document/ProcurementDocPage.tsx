@@ -42,7 +42,7 @@ export default function ProcurementDocPage() {
   const itemLabel = formConfig?.titleTh || docType;
 
   const breadcrumb: BreadcrumbItem[] = [
-    { label: 'JEWELRY SMART FACTORY', path: '/' },
+    { label: 'JEWELRY FACTORY SYSTEM', path: '/' },
     { label: groupLabel, path: '/procurement/purchase' },
     { label: `${itemLabel} (${docType})` },
   ];
@@ -326,7 +326,7 @@ export default function ProcurementDocPage() {
                   </td>
                   <td style={{ border: '1px solid #000000', padding: '4px 6px', lineHeight: '1.2' }}>
                     <div style={{ fontWeight: 'bold' }}>{line.shape}</div>
-                    <div style={{ fontSize: '8.5px', color: '#333333', textTransform: 'uppercase' }}>{line.shapeName || '—'}</div>
+                    <div style={{ fontSize: '8.5px', color: '#333333', textTransform: 'capitalize' }}>{line.shapeName || '—'}</div>
                   </td>
                   <td style={{ border: '1px solid #000000', textAlign: 'center', padding: '4px 2px', fontWeight: 'bold' }}>{line.size || '—'}</td>
                   <td style={{ border: '1px solid #000000', padding: '4px 6px', lineHeight: '1.2' }}>

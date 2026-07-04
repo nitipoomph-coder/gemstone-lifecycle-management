@@ -97,7 +97,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         {/* User avatar only */}
         <div className="py-3 w-full flex justify-center" style={{ borderTop: '1px solid var(--color-sidebar-divider)' }}>
           <div
-            className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold shadow-sm uppercase"
+            className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold shadow-sm capitalize"
             style={{ 
               background: 'var(--color-brand-500)',
               color: 'var(--color-text-inverse)'
@@ -135,7 +135,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
           >
             JEWELRY
           </div>
-          <div className="text-[10px] font-bold text-[var(--color-text-secondary)] tracking-[0.15em] font-sans mt-0.5 uppercase" style={{ lineHeight: '1.2' }}>
+          <div className="text-[10px] font-bold text-[var(--color-text-secondary)] tracking-[0.15em] font-sans mt-0.5 capitalize" style={{ lineHeight: '1.2' }}>
             Smart Factory
           </div>
         </button>
@@ -192,7 +192,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
           <div className="truncate text-[13.5px] font-bold text-[var(--color-sidebar-text-active)] drop-shadow-sm">
             {localStorage.getItem('auth_user') || 'User'}
           </div>
-          <div className="text-[11px] font-medium text-[var(--color-sidebar-text)] opacity-80 mt-0.5 uppercase">
+          <div className="text-[11px] font-medium text-[var(--color-sidebar-text)] opacity-80 mt-0.5 capitalize">
             {role}
           </div>
         </div>

@@ -35,7 +35,7 @@ export default function SampleDocPage() {
   const itemLabel = formConfig?.titleTh || docType;
 
   const breadcrumb: BreadcrumbItem[] = [
-    { label: 'JEWELRY SMART FACTORY', path: '/' },
+    { label: 'JEWELRY FACTORY SYSTEM', path: '/' },
     { label: groupLabel },
     { label: `${itemLabel} (${docType})` },
   ];

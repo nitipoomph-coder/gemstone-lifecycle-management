@@ -1,19 +1,20 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Search, Filter, Users, DollarSign } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
+import { Search, Filter, Users, DollarSign } from 'lucide-react';
 import Topbar from '../components/layout/Topbar';
 import { fetchCustomerSummary, fetchAvailableYears } from '../services/dashboardAPI';
 import { getCustomerGroupId } from '../config/customerGroups';
 
 import CustomerReportTable from '../components/report/CustomerReportTable';
 import CustomerReportFilters from '../components/report/CustomerReportFilters';
+import { useTheme } from '../contexts/ThemeContext';
 
 // ─────────────────────────────────────────────────────────────────────────────
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 // ─────────────────────────────────────────────────────────────────────────────
 export default function CustomerReportPage() {
-  const navigate = useNavigate();
+  const { theme } = useTheme();
   const [searchParams] = useSearchParams();
   const metric = searchParams.get('metric') || 'amount';
 
@@ -27,12 +28,13 @@ export default function CustomerReportPage() {
   const [custData, setCustData] = useState<any[]>([]);
   const [availableYears, setAvailableYears] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isFiltering, setIsFiltering] = useState(false);
 
   // ── FILTER MODAL STATE ──
   const [isFilterOpen, setIsFilterOpen] = useState(true);
 
   // ── FILTER STATE ──
-  const [viewMode, setViewMode] = useState<'year' | 'month'>('year');
+  const [viewMode, setViewMode] = useState<'ytd' | 'monthly'>('ytd');
   const [baseYear, setBaseYear] = useState<string>('');
   const [compareYear, setCompareYear] = useState<string>('none');
   const [compareYear2, setCompareYear2] = useState<string>('none');
@@ -41,33 +43,63 @@ export default function CustomerReportPage() {
   const [selMonths, setSelMonths] = useState<string[]>(MONTHS);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
+  const [growthComparisons, setGrowthComparisons] = useState<{ a: string; b: string }[]>([]);
 
   // ── GROWTH HELPERS ──
   const renderGrowthAmt = useCallback((baseVal: number, compVal: number) => {
-    if (compVal === 0 && baseVal === 0) return <span style={{ color: 'var(--color-text-quaternary)' }}>-</span>;
+    if (compVal === 0 && baseVal === 0) return {
+      bgColor: 'transparent',
+      node: <div style={{ textAlign: 'right', color: 'var(--color-text-quaternary)' }}>-</div>
+    };
     const diff = baseVal - compVal;
     const isUp = diff > 0;
     const isDown = diff < 0;
-    const color = isUp ? 'var(--color-success-500)' : isDown ? 'var(--color-danger-500)' : 'var(--color-text-tertiary)';
+    const bgColor = isUp ? 'color-mix(in srgb, var(--color-success-500) 15%, transparent)' : isDown ? 'color-mix(in srgb, var(--color-danger-500) 15%, transparent)' : 'transparent';
+    const textColor = isUp ? 'var(--color-success-500)' : isDown ? 'var(--color-danger-500)' : 'var(--color-text-tertiary)';
     const arrow = isUp ? '▲' : isDown ? '▼' : '';
-    return <span style={{ color, fontWeight: 900, fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>{arrow} {fmt(Math.abs(diff))}</span>;
-  }, [fmt]);
+    const isAmt = metric === 'amount';
+    return {
+      bgColor,
+      node: (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+          <div style={{ display: 'flex', gap: 4, fontWeight: 900, color: textColor, opacity: 0.8, fontSize: '0.85rem' }}>
+            {isAmt && <span>$</span>}
+            <span>{arrow}</span>
+          </div>
+          <span style={{ color: textColor, fontWeight: 900, fontSize: '0.9rem' }}>{fmt(Math.abs(diff)).replace('$', '')}</span>
+        </div>
+      )
+    };
+  }, [fmt, metric, theme]);
 
-  const renderGrowthPct = useCallback((baseVal: number, compVal: number, isTrulyNew?: boolean) => {
-    if (compVal === 0 && baseVal === 0) return <span style={{ color: 'var(--color-text-quaternary)' }}>-</span>;
-    if (isTrulyNew && compVal === 0) return (
-      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-        <span style={{ background: 'color-mix(in srgb, var(--color-brand-500) 15%, transparent)', color: 'var(--color-brand-600)', padding: '2px 6px', borderRadius: '4px', fontWeight: 900, fontSize: '0.65rem', letterSpacing: '0.05em' }}>NEW</span>
-      </div>
-    );
-    if (compVal === 0) return <span style={{ color: 'var(--color-success-500)', fontWeight: 900, fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>+100.0%</span>;
+  const renderGrowthPct = useCallback((baseVal: number, compVal: number) => {
+    if (compVal === 0 && baseVal === 0) return {
+      bgColor: 'transparent',
+      node: <div style={{ textAlign: 'right', color: 'var(--color-text-quaternary)' }}>-</div>
+    };
+    if (compVal === 0 && baseVal > 0) return {
+      bgColor: 'var(--color-success-50)',
+      node: (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', width: '100%' }}>
+          <span style={{ background: 'var(--color-success-500)', color: 'white', padding: '2px 6px', borderRadius: '4px', fontWeight: 900, fontSize: '0.65rem', letterSpacing: '0.05em' }}>NEW</span>
+        </div>
+      )
+    };
     const pct = ((baseVal - compVal) / compVal) * 100;
     const isUp = pct > 0;
     const isDown = pct < 0;
-    const color = isUp ? 'var(--color-success-500)' : isDown ? 'var(--color-danger-500)' : 'var(--color-text-tertiary)';
+    const bgColor = isUp ? 'color-mix(in srgb, var(--color-success-500) 15%, transparent)' : isDown ? 'color-mix(in srgb, var(--color-danger-500) 15%, transparent)' : 'transparent';
+    const textColor = isUp ? 'var(--color-success-500)' : isDown ? 'var(--color-danger-500)' : 'var(--color-text-tertiary)';
     const sign = isUp ? '+' : '';
-    return <span style={{ color, fontWeight: 900, fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>{sign}{pct.toFixed(1)}%</span>;
-  }, []);
+    return {
+      bgColor,
+      node: (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', width: '100%' }}>
+          <span style={{ color: textColor, fontWeight: 900, fontSize: '0.9rem' }}>{sign}{pct.toFixed(1)}%</span>
+        </div>
+      )
+    };
+  }, [theme]);
 
   // ── FETCH DATA ──
   useEffect(() => {
@@ -89,6 +121,15 @@ export default function CustomerReportPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  // ── FILTER LOADING EFFECT ──
+  useEffect(() => {
+    if (!loading) {
+      setIsFiltering(true);
+      const t = setTimeout(() => setIsFiltering(false), 400);
+      return () => clearTimeout(t);
+    }
+  }, [baseYear, compareYear, compareYear2, selGroups, selCustomers, selMonths, searchQuery, sortOrder, growthComparisons]);
+
   // ── CUSTOMER LIST ──
   const groupCustomers = useMemo(() => {
     return custData
@@ -100,8 +141,41 @@ export default function CustomerReportPage() {
   const activeCustomers = selCustomers.length > 0 ? selCustomers.filter(id => id !== '__NONE__') : groupCustomers;
 
   const toggleGroup = (gId: string) => {
-    setSelGroups(prev => prev.includes(gId) ? prev.filter(g => g !== gId) : [...prev, gId]);
-    setSelCustomers([]);
+    setSelGroups(prevGroups => {
+      const isAdding = !prevGroups.includes(gId);
+      const newGroups = isAdding ? [...prevGroups, gId] : prevGroups.filter(g => g !== gId);
+
+      setSelCustomers(prevCusts => {
+        if (prevCusts.length === 0) return []; // "Select All" remains "Select All"
+
+        if (isAdding) {
+          const newGroupCusts = custData
+            .filter(c => getCustomerGroupId(c.id || '') === gId)
+            .map(c => c.id as string);
+
+          let newSel = [...prevCusts.filter(id => id !== '__NONE__'), ...newGroupCusts];
+          newSel = Array.from(new Set(newSel));
+
+          const allNewGroupCusts = custData
+            .filter(c => newGroups.includes(getCustomerGroupId(c.id || '')))
+            .map(c => c.id as string);
+
+          if (newSel.length >= allNewGroupCusts.length) return [];
+          return newSel;
+        } else {
+          const removedGroupCusts = new Set(
+            custData
+              .filter(c => getCustomerGroupId(c.id || '') === gId)
+              .map(c => c.id as string)
+          );
+          const newSel = prevCusts.filter(id => !removedGroupCusts.has(id) && id !== '__NONE__');
+          if (newSel.length === 0 && prevCusts.length > 0) return ['__NONE__'];
+          return newSel;
+        }
+      });
+
+      return newGroups;
+    });
   };
 
   const toggleCustomer = (cId: string) => {
@@ -134,7 +208,6 @@ export default function CustomerReportPage() {
   }, [baseYear, compareYear, compareYear2]);
 
   // ── GROWTH COMPARISONS ──
-  const [growthComparisons, setGrowthComparisons] = useState<{ a: string; b: string }[]>([]);
   const displayYears = activeYears;
 
   useEffect(() => {
@@ -217,7 +290,7 @@ export default function CustomerReportPage() {
   return (
     <>
       <Topbar breadcrumb={[
-        { label: 'JEWELRY SMART FACTORY', path: '/' },
+        { label: 'JEWELRY FACTORY SYSTEM', path: '/' },
         { label: metric === 'qty' ? 'Quantity Analytics' : 'Sales Analytics', path: metric === 'qty' ? '/dashboard/qty' : '/dashboard/customer' },
         { label: metric === 'qty' ? 'Full Quantity Matrix' : 'Full Report Matrix' }
       ]} />
@@ -229,52 +302,36 @@ export default function CustomerReportPage() {
           <div style={{
             padding: '16px 28px', background: 'var(--color-surface-0)',
             borderBottom: '1px solid var(--color-border-light)',
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap'
+            display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 16, flexWrap: 'wrap'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-              <button
-                onClick={() => navigate(metric === 'qty' ? '/dashboard/qty' : '/dashboard/customer')}
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  width: 36, height: 36, borderRadius: '50%',
-                  background: 'var(--color-surface-1)', color: 'var(--color-text-secondary)',
-                  border: '1px solid var(--color-border-light)', cursor: 'pointer', transition: 'all 0.2s',
-                  boxShadow: '0 2px 5px color-mix(in srgb, var(--color-surface-900) 12%, transparent)'
-                }}
-                className="hover:text-brand-600 hover:border-brand-300 active:scale-95"
-                title="Back"
-              >
-                <ArrowLeft size={16} />
-              </button>
-            </div>
 
             {/* Right controls */}
             <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
               {/* View Mode Toggle */}
               <div style={{ display: 'flex', background: 'var(--color-surface-2)', padding: 4, borderRadius: 8, boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.05)' }}>
                 <button
-                  onClick={() => setViewMode('year')}
+                  onClick={() => setViewMode('ytd')}
                   style={{
                     padding: '4px 12px', borderRadius: 6, fontSize: '0.75rem', fontWeight: 800, border: 'none', cursor: 'pointer', transition: 'all 0.2s',
-                    background: viewMode === 'year' ? 'var(--color-surface-0)' : 'transparent',
-                    color: viewMode === 'year' ? 'var(--color-text-primary)' : 'var(--color-text-tertiary)',
-                    boxShadow: viewMode === 'year' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                    background: viewMode === 'ytd' ? 'var(--color-surface-0)' : 'transparent',
+                    color: viewMode === 'ytd' ? 'var(--color-text-primary)' : 'var(--color-text-tertiary)',
+                    boxShadow: viewMode === 'ytd' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
                   }}
                   className="active:scale-95"
                 >
-                  Group by Year
+                  YTD View
                 </button>
                 <button
-                  onClick={() => setViewMode('month')}
+                  onClick={() => setViewMode('monthly')}
                   style={{
                     padding: '4px 12px', borderRadius: 6, fontSize: '0.75rem', fontWeight: 800, border: 'none', cursor: 'pointer', transition: 'all 0.2s',
-                    background: viewMode === 'month' ? 'var(--color-surface-0)' : 'transparent',
-                    color: viewMode === 'month' ? 'var(--color-text-primary)' : 'var(--color-text-tertiary)',
-                    boxShadow: viewMode === 'month' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                    background: viewMode === 'monthly' ? 'var(--color-surface-0)' : 'transparent',
+                    color: viewMode === 'monthly' ? 'var(--color-text-primary)' : 'var(--color-text-tertiary)',
+                    boxShadow: viewMode === 'monthly' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
                   }}
                   className="active:scale-95"
                 >
-                  Group by Month
+                  Monthly Comparison
                 </button>
               </div>
 
@@ -309,13 +366,13 @@ export default function CustomerReportPage() {
           </div>
 
           {/* ── KPI STRIP ── */}
-          {!loading && (
+          {(!loading && !isFiltering) && (
             <div style={{ padding: '16px 28px', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
               {displayYears.map((yr, yIdx) => (
                 <div key={yr} style={{ background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)', borderRadius: 10, padding: '12px 18px', flex: '1 1 min-content', minWidth: 200 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--color-text-tertiary)', marginBottom: 4 }}>
                     <DollarSign size={14} />
-                    <span style={{ fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Year {yr}</span>
+                    <span style={{ fontSize: '0.65rem', fontWeight: 800, textTransform: 'capitalize', letterSpacing: '0.04em' }}>Year {yr}</span>
                   </div>
                   <div style={{ fontSize: '1.2rem', fontWeight: 900, color: yIdx === 0 ? 'var(--color-text-primary)' : 'var(--color-text-secondary)', fontFamily: 'var(--font-display)', letterSpacing: '-0.02em' }}>
                     {fmtCurr(tableData.colTotals[`${yr}_total`] || 0)}
@@ -325,7 +382,7 @@ export default function CustomerReportPage() {
               <div style={{ background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)', borderRadius: 10, padding: '12px 18px', flex: '1 1 min-content', minWidth: 160 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--color-text-tertiary)', marginBottom: 4 }}>
                   <Users size={14} />
-                  <span style={{ fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Customers</span>
+                  <span style={{ fontSize: '0.65rem', fontWeight: 800, textTransform: 'capitalize', letterSpacing: '0.04em' }}>Customers</span>
                 </div>
                 <div style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--color-text-primary)', fontFamily: 'var(--font-display)', letterSpacing: '-0.02em' }}>
                   {kpi.count}
@@ -339,7 +396,7 @@ export default function CustomerReportPage() {
             {/* Table Area */}
             <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
               <CustomerReportTable
-                loading={loading}
+                loading={loading || isFiltering}
                 baseYear={baseYear}
                 viewMode={viewMode}
                 tableData={tableData}

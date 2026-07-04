@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Noto+Sans+Thai:wght@300;400;500;600;700;800&family=Cinzel:wght@400;600;700&family=Inter:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&family=Outfit:wght@300;400;500;600;700;800;900&family=Kanit:wght@300;400;500;600;700;800&family=Cinzel:wght@400;600;700&family=Inter:wght@400;500;600;700;800&display=swap');
 
 @import "tailwindcss";
 
@@ -110,8 +110,8 @@
 
   /* Fonts */
   --font-logo: 'Cinzel', serif;
-  --font-display: 'Outfit', sans-serif;
-  --font-body: 'Noto Sans Thai', sans-serif;
+  --font-display: 'Roboto', sans-serif;
+  --font-body: 'Roboto', sans-serif;
 }
 
 @layer base {
@@ -554,7 +554,7 @@ h6 {
     background-color: #ffffff !important;
     background: #ffffff !important;
     color: #000000 !important;
-    font-family: 'Prompt', 'Inter', -apple-system, sans-serif !important;
+    font-family: 'Kanit', 'Inter', -apple-system, sans-serif !important;
     font-size: 11px !important;
     height: auto !important;
     overflow: visible !important;

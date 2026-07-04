@@ -1,10 +1,17 @@
 // src/pages/POTrackerAdvanced.tsx
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Topbar from '../components/layout/Topbar';
-import OrderTable from '../components/dashboard/OrderTable'; // 👈 Import ตารางที่แยกไว้
+import OrderTable, { MASTER_COLS, GROUP_PRESETS, COLUMN_GROUPS } from '../components/dashboard/OrderTable';
+import CustomSelect from '../components/ui/CustomSelect';
 import { fetchOrders, type OrderSummary } from '../services/orderAPI';
-import { RefreshCw, AlertTriangle, Package, LayoutGrid, DollarSign, X } from 'lucide-react';
+import { RefreshCw, AlertTriangle, Package, LayoutGrid, DollarSign, Filter, X, Layers, Search } from 'lucide-react';
+
+const getDefaultDateRange = () => {
+  const from = new Date();
+  from.setMonth(from.getMonth() - 7);
+  return { from: from.toISOString().split('T')[0], to: new Date().toISOString().split('T')[0] };
+};
 
 export default function POTrackerAdvanced() {
   const navigate = useNavigate();
@@ -29,19 +36,16 @@ export default function POTrackerAdvanced() {
   const [filterPO, setFilterPO] = useState(() => searchParams.get('fPO') || '');
   const [filterShipTo, setFilterShipTo] = useState(() => searchParams.get('fShipTo') || '');
 
-  const [dateFrom, setDateFrom] = useState(() => {
-    const f = searchParams.get('dateFrom');
-    if (f) return f;
-    const d = new Date();
-    d.setMonth(d.getMonth() - 7);
-    return d.toISOString().split('T')[0];
-  });
-  const [dateTo, setDateTo] = useState(() => {
-    const t = searchParams.get('dateTo');
-    if (t) return t;
-    const d = new Date();
-    return d.toISOString().split('T')[0];
-  });
+  const [showFiltersPopover, setShowFiltersPopover] = useState(false);
+
+  // ⭐️ Column Picker state (lifted from OrderTable)
+  const [visibleKeys, setVisibleKeys] = useState<string[]>(GROUP_PRESETS[groupFilter] || GROUP_PRESETS.ALL);
+  const [showColumnPicker, setShowColumnPicker] = useState(false);
+  const [colSearch, setColSearch] = useState('');
+  const lastGroupRef = useRef(groupFilter);
+
+  const [dateFrom, setDateFrom] = useState(() => searchParams.get('dateFrom') || getDefaultDateRange().from);
+  const [dateTo, setDateTo] = useState(() => searchParams.get('dateTo') || getDefaultDateRange().to);
 
   // Sync state back to URL automatically
   useEffect(() => {
@@ -58,10 +62,9 @@ export default function POTrackerAdvanced() {
     if (filterPO) params.set('fPO', filterPO);
     if (filterShipTo) params.set('fShipTo', filterShipTo);
     
-    const d1 = new Date(); d1.setMonth(d1.getMonth() - 7); const defFrom = d1.toISOString().split('T')[0];
-    const d2 = new Date(); const defTo = d2.toISOString().split('T')[0];
-    if (dateFrom !== defFrom) params.set('dateFrom', dateFrom);
-    if (dateTo !== defTo) params.set('dateTo', dateTo);
+    const defaultRange = getDefaultDateRange();
+    if (dateFrom !== defaultRange.from) params.set('dateFrom', dateFrom);
+    if (dateTo !== defaultRange.to) params.set('dateTo', dateTo);
 
     navigate({ search: params.toString() }, { replace: true });
   }, [search, statusFilter, groupFilter, dateType, page, pageSize, dateFrom, dateTo, filterType, filterWeek, filterCust, filterPO, filterShipTo, navigate]);
@@ -69,21 +72,10 @@ export default function POTrackerAdvanced() {
   // Sync search state if URL changes (e.g. from Topbar global search)
   useEffect(() => {
     const s = new URLSearchParams(location.search).get('search');
-    if (s !== null) {
-      const q = s.toUpperCase();
+    if (s !== null && s !== search) {
       setSearch(s);
-
-      // Auto-group based on search keywords
-      if (q.includes('N083')) setGroupFilter('N083');
-      else if (q.includes('N051')) setGroupFilter('N051');
-      else if (q.includes('N044')) setGroupFilter('N044');
-      else if (q.includes('MLT') || q.startsWith('U')) setGroupFilter('MLT');
-      else {
-        const n008List = ['N008', 'N048', 'N066', 'N067', 'N068', 'N069', 'N070', 'N071', 'N072', 'N073', 'N074', 'N075'];
-        if (n008List.some(code => q.includes(code))) setGroupFilter('N008');
-      }
     }
-  }, [location.search]);
+  }, [location.search, search]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -109,6 +101,20 @@ export default function POTrackerAdvanced() {
   }, [statusFilter, dateType, dateFrom, dateTo]);
 
   useEffect(() => { load(); }, [load]);
+
+  // ⭐️ Smart Selection Locking: reset columns when group changes
+  useEffect(() => {
+    if (lastGroupRef.current !== groupFilter) {
+      setVisibleKeys(GROUP_PRESETS[groupFilter] || GROUP_PRESETS.ALL);
+      lastGroupRef.current = groupFilter;
+    }
+  }, [groupFilter]);
+
+  const toggleColKey = (key: string) => {
+    setVisibleKeys(prev =>
+      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+    );
+  };
 
   // --- SMART SEARCH INTELLIGENCE ---
   useEffect(() => {
@@ -249,296 +255,431 @@ export default function POTrackerAdvanced() {
     return [1, '...', page - 1, page, page + 1, '...', totalPages];
   })();
 
+  const activeChips = useMemo(() => {
+    const chips: { key: string; label: string; onClear: () => void }[] = [];
+    if (filterWeek) chips.push({ key: 'week', label: `Week: ${filterWeek}`, onClear: () => setFilterWeek('') });
+    if (filterCust) chips.push({ key: 'cust', label: `Cust: ${filterCust}`, onClear: () => setFilterCust('') });
+    if (filterPO) chips.push({ key: 'po', label: `PO: ${filterPO}`, onClear: () => setFilterPO('') });
+    if (filterType) chips.push({ key: 'type', label: `Type: ${filterType}`, onClear: () => setFilterType('') });
+    if (filterShipTo) chips.push({ key: 'shipto', label: `ShipTo: ${filterShipTo}`, onClear: () => setFilterShipTo('') });
+    if (dateType !== 'Order Date') chips.push({ key: 'datetype', label: `Date: ${dateType}`, onClear: () => setDateType('Order Date') });
+    return chips;
+  }, [filterWeek, filterCust, filterPO, filterType, filterShipTo, dateType]);
+  const activeFilterCount = activeChips.length;
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--color-surface-1)', fontFamily: 'var(--font-body)' }}>
-      <Topbar breadcrumb={[{ label: 'JEWELRY SMART FACTORY', path: '/' }, { label: 'PO TRACKER' }]} />
+      <Topbar breadcrumb={[{ label: 'JEWELRY FACTORY SYSTEM', path: '/' }, { label: 'PO TRACKER' }]} />
 
-      <div className="content-scrollbar flex-1 overflow-y-auto" style={{ padding: '24px' }}>
-        {/* ─── KPI TILES ─── */}
+      <div className="content-scrollbar flex-1 overflow-y-auto" style={{ padding: '24px', display: 'flex', flexDirection: 'column', minHeight: 0, zoom: '0.85' }}>
+        
+        {/* ─── FILTERS: compact toolbar + popover + active chips ─── */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px',
+          background: 'var(--color-surface-0)', borderRadius: '16px', border: '1px solid var(--color-border-light)',
+          padding: '14px 20px', marginBottom: activeChips.length > 0 ? '12px' : '24px',
+          boxShadow: '0 8px 32px -8px color-mix(in srgb, var(--color-surface-900) 5%, transparent)'
+        }}>
+          {/* Left: Group + Status pill toggles */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
+            {/* Group Toggle */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--color-text-tertiary)', textTransform: 'capitalize', letterSpacing: '0.05em' }}>Group</span>
+              <div style={{ display: 'flex', background: 'var(--color-surface-1)', padding: '4px', borderRadius: '12px', border: '1px solid var(--color-border-light)' }}>
+                {['N008', 'MLT', 'N083', 'N044', 'N051', 'ALL'].map(grp => (
+                  <button
+                    key={grp}
+                    onClick={() => setGroupFilter(grp)}
+                    style={{
+                      padding: '6px 14px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 800, border: 'none',
+                      background: groupFilter === grp ? 'var(--color-surface-0)' : 'transparent',
+                      color: groupFilter === grp ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
+                      boxShadow: groupFilter === grp ? '0 2px 8px color-mix(in srgb, var(--color-surface-900) 6%, transparent), 0 0 0 1px var(--color-border-light)' : 'none',
+                      cursor: 'pointer', transition: 'all 0.2s'
+                    }}
+                  >{grp === 'ALL' ? 'General' : grp}</button>
+                ))}
+              </div>
+            </div>
+
+            {/* Status Toggle — SP ทั้ง 5 dateType รับ @Status แล้ว */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--color-text-tertiary)', textTransform: 'capitalize', letterSpacing: '0.05em' }}>Status</span>
+              <div style={{ display: 'flex', background: 'var(--color-surface-1)', padding: '4px', borderRadius: '12px', border: '1px solid var(--color-border-light)' }}>
+                {['pending', 'finish', 'all'].map(st => {
+                  const isActive = statusFilter === st;
+                  return (
+                    <button
+                      key={st}
+                      onClick={() => setStatusFilter(st as 'pending' | 'finish' | 'all')}
+                      style={{
+                        padding: '6px 14px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 800, border: 'none', textTransform: 'capitalize',
+                        background: isActive ? 'var(--color-surface-0)' : 'transparent',
+                        color: isActive ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
+                        boxShadow: isActive ? '0 2px 8px color-mix(in srgb, var(--color-surface-900) 6%, transparent), 0 0 0 1px var(--color-border-light)' : 'none',
+                        cursor: 'pointer', transition: 'all 0.2s'
+                      }}
+                    >{st}</button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* Right: View Columns + Filters popover trigger + Refresh */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            {/* View Columns Picker */}
+            <div style={{ position: 'relative' }}>
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowColumnPicker(!showColumnPicker); }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: '12px',
+                  background: showColumnPicker ? 'var(--color-surface-2)' : 'var(--color-surface-1)', border: '1px solid var(--color-border-light)',
+                  color: 'var(--color-text-secondary)', fontSize: '0.8rem', fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s'
+                }}
+                className="hover:bg-surface-2"
+              >
+                <Layers size={16} />
+                View Columns
+                <div style={{ transform: showColumnPicker ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)' }} className="text-[var(--color-text-tertiary)] flex-shrink-0">
+                  <svg width="10" height="6" viewBox="0 0 12 7" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M1 1L6 6L11 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </div>
+              </button>
+
+              {showColumnPicker && (
+                <>
+                  <div
+                    onClick={() => { setShowColumnPicker(false); setColSearch(''); }}
+                    style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'transparent' }}
+                  />
+                  <div
+                    onClick={(e) => e.stopPropagation()}
+                    className="animate-fade-in-up"
+                    style={{
+                      position: 'absolute', top: 'calc(100% + 8px)', right: 0,
+                      background: 'var(--color-surface-1)', borderRadius: '12px',
+                      boxShadow: '0 10px 40px -10px color-mix(in srgb, var(--color-surface-900) 25%, transparent), 0 0 0 1px var(--color-border-light)',
+                      padding: '8px', zIndex: 101,
+                      width: '240px', display: 'flex', flexDirection: 'column', gap: '8px',
+                      transformOrigin: 'top right'
+                    }}>
+                    <div style={{ position: 'relative' }}>
+                      <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-quaternary)' }} />
+                      <input
+                        autoFocus
+                        placeholder="Find column..."
+                        value={colSearch}
+                        onChange={(e) => setColSearch(e.target.value)}
+                        style={{
+                          width: '100%', padding: '8px 10px 8px 30px', borderRadius: '8px',
+                          background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)',
+                          fontSize: '0.75rem', color: 'var(--color-text-primary)', fontWeight: 600,
+                          outline: 'none', transition: 'all 0.2s'
+                        }}
+                      />
+                    </div>
+
+                    <div className="custom-scrollbar" style={{ maxHeight: '340px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px', paddingRight: '4px' }}>
+                      {(() => {
+                        const q = colSearch.trim().toLowerCase();
+                        const matches = (key: string) => !q || (MASTER_COLS[key].label || key).toLowerCase().includes(q);
+                        const groups = COLUMN_GROUPS
+                          .map(g => ({ label: g.label, keys: g.keys.filter(matches) }))
+                          .filter(g => g.keys.length > 0);
+
+                        if (groups.length === 0) {
+                          return (
+                            <div style={{ padding: '20px', textAlign: 'center', color: 'var(--color-text-quaternary)', fontSize: '0.75rem' }}>
+                              No columns match
+                            </div>
+                          );
+                        }
+
+                        return groups.map(g => {
+                          const allOn = g.keys.every(k => visibleKeys.includes(k));
+                          return (
+                            <div key={g.label} style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 8px 2px' }}>
+                                <span style={{ fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--color-text-quaternary)' }}>{g.label}</span>
+                                <button
+                                  onClick={() => setVisibleKeys(prev => {
+                                    const s = new Set(prev);
+                                    g.keys.forEach(k => { if (allOn) s.delete(k); else s.add(k); });
+                                    return Array.from(s);
+                                  })}
+                                  style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.04em', color: 'var(--color-brand-600)' }}
+                                >{allOn ? 'CLEAR' : 'ALL'}</button>
+                              </div>
+                              {g.keys.map(key => (
+                                <button
+                                  key={key}
+                                  onClick={() => toggleColKey(key)}
+                                  style={{ border: 'none', cursor: 'pointer', textAlign: 'left', width: '100%' }}
+                                  className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm transition-colors font-bold ${visibleKeys.includes(key) ? "bg-[var(--color-brand-100)] text-[var(--color-brand-600)]" : "text-[var(--color-text-primary)] hover:bg-[var(--color-surface-0)]"}`}
+                                >
+                                  <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{MASTER_COLS[key].label || key}</span>
+                                  {visibleKeys.includes(key) && <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-brand-500)] shadow-[0_0_8px_color-mix(in_srgb,_var(--color-brand-500)_60%,_transparent)] ml-2 flex-shrink-0" />}
+                                </button>
+                              ))}
+                            </div>
+                          );
+                        });
+                      })()}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+            <div style={{ position: 'relative' }}>
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowFiltersPopover(!showFiltersPopover); }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: '12px',
+                  background: showFiltersPopover ? 'var(--color-surface-2)' : 'var(--color-surface-1)', border: '1px solid var(--color-border-light)',
+                  color: 'var(--color-text-secondary)', fontSize: '0.8rem', fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s'
+                }}
+                className="hover:bg-surface-2"
+              >
+                <Filter size={16} />
+                Filters
+                {activeFilterCount > 0 && (
+                  <span style={{ background: 'var(--color-brand-500)', color: 'white', padding: '2px 6px', borderRadius: '10px', fontSize: '0.65rem' }}>
+                    {activeFilterCount}
+                  </span>
+                )}
+              </button>
+
+              {showFiltersPopover && (
+                <>
+                  <div
+                    onClick={() => setShowFiltersPopover(false)}
+                    style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'transparent' }}
+                  />
+                  <div
+                    onClick={(e) => e.stopPropagation()}
+                    className="animate-fade-in-up"
+                    style={{
+                      position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 101,
+                      background: 'var(--color-surface-1)', borderRadius: '16px',
+                      boxShadow: '0 10px 40px -10px color-mix(in srgb, var(--color-surface-900) 25%, transparent), 0 0 0 1px var(--color-border-light)',
+                      padding: '20px', width: '640px', maxWidth: '92vw',
+                      display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'flex-end'
+                    }}
+                  >
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--color-text-tertiary)', textTransform: 'capitalize', letterSpacing: '0.05em' }}>Week</label>
+                      <input type="text" value={filterWeek} onChange={e => setFilterWeek(e.target.value)} placeholder="Filter Week..." style={{ width: '120px', padding: '10px 14px', borderRadius: '10px', border: '1px solid var(--color-border-strong)', background: 'var(--color-surface-0)', fontSize: '0.8rem', fontWeight: 600, outline: 'none' }} className="focus:border-brand-400" />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--color-text-tertiary)', textTransform: 'capitalize', letterSpacing: '0.05em' }}>Customer</label>
+                      <input type="text" value={filterCust} onChange={e => setFilterCust(e.target.value)} placeholder="Filter Cust..." style={{ width: '120px', padding: '10px 14px', borderRadius: '10px', border: '1px solid var(--color-border-strong)', background: 'var(--color-surface-0)', fontSize: '0.8rem', fontWeight: 600, outline: 'none' }} className="focus:border-brand-400" />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--color-text-tertiary)', textTransform: 'capitalize', letterSpacing: '0.05em' }}>PO / Order No</label>
+                      <input type="text" value={filterPO} onChange={e => setFilterPO(e.target.value)} placeholder="Filter PO/Ord..." style={{ width: '150px', padding: '10px 14px', borderRadius: '10px', border: '1px solid var(--color-border-strong)', background: 'var(--color-surface-0)', fontSize: '0.8rem', fontWeight: 600, outline: 'none' }} className="focus:border-brand-400" />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--color-text-tertiary)', textTransform: 'capitalize', letterSpacing: '0.05em' }}>Order Type</label>
+                      <CustomSelect
+                        value={filterType}
+                        onChange={setFilterType}
+                        options={[
+                          { value: '', label: 'All Types' },
+                          ...uniqueTypes.map(t => ({ value: t, label: t }))
+                        ]}
+                        width="140px"
+                      />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--color-text-tertiary)', textTransform: 'capitalize', letterSpacing: '0.05em' }}>Ship To</label>
+                      <input type="text" value={filterShipTo} onChange={e => setFilterShipTo(e.target.value)} placeholder="Filter ShipTo..." style={{ width: '150px', padding: '10px 14px', borderRadius: '10px', border: '1px solid var(--color-border-strong)', background: 'var(--color-surface-0)', fontSize: '0.8rem', fontWeight: 600, outline: 'none' }} className="focus:border-brand-400" />
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1, minWidth: '300px' }}>
+                      <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--color-text-tertiary)', textTransform: 'capitalize', letterSpacing: '0.05em' }}>Date Range</label>
+                      <div style={{ display: 'flex', alignItems: 'center', borderRadius: '10px', gap: '8px' }}>
+                        <CustomSelect
+                          value={dateType}
+                          onChange={setDateType}
+                          options={[
+                            { value: 'Order Date', label: 'Order Date' },
+                            { value: 'Factory Due Date', label: 'Factory Due Date' },
+                            { value: 'Cust Due Date', label: 'Cust Due Date' },
+                            { value: 'Finish Date', label: 'Finish Date' },
+                            { value: 'All', label: 'All Dates' }
+                          ]}
+                          width="140px"
+                        />
+                        <div style={{ display: 'flex', alignItems: 'center', padding: '6px 12px', gap: '8px', flex: 1, border: '1px solid var(--color-border-strong)', borderRadius: '10px', background: 'var(--color-surface-0)' }}>
+                          <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} style={{ flex: 1, background: 'transparent', border: 'none', fontSize: '0.8rem', color: 'var(--color-text-primary)', outline: 'none', fontWeight: 600 }} />
+                          <span style={{ color: 'var(--color-text-tertiary)', fontSize: '0.65rem', fontWeight: 800 }}>TO</span>
+                          <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} style={{ flex: 1, background: 'transparent', border: 'none', fontSize: '0.8rem', color: 'var(--color-text-primary)', outline: 'none', fontWeight: 600 }} />
+                        </div>
+                      </div>
+                    </div>
+
+                    {activeFilterCount > 0 && (
+                      <button
+                        onClick={() => {
+                          setFilterWeek(''); setFilterCust(''); setFilterPO(''); setFilterType(''); setFilterShipTo('');
+                          setDateType('Order Date');
+                        }}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '6px',
+                          padding: '10px 16px', borderRadius: '10px', 
+                          background: 'var(--color-surface-2)', color: 'var(--color-text-secondary)', 
+                          border: '1px solid var(--color-border-strong)', 
+                          fontSize: '0.8rem', fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s'
+                        }}
+                        className="hover:bg-danger-50 hover:text-danger-600 hover:border-danger-200"
+                      >
+                        <X size={16} />
+                        Clear Filters
+                      </button>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+
+            <button
+              onClick={load}
+              disabled={loading}
+              style={{
+                padding: '10px 18px', borderRadius: '12px', background: 'var(--color-brand-500)', color: 'white',
+                border: 'none', fontSize: '0.8rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px',
+                cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 4px 12px color-mix(in srgb, var(--color-brand-500) 40%, transparent)'
+              }}
+              className="hover:bg-brand-600 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+              {loading ? 'REFRESHING...' : 'REFRESH'}
+            </button>
+          </div>
+        </div>
+
+        {/* Active filter chips — only rendered when something is set, so the toolbar above stays the only thing visible by default */}
+        {activeChips.length > 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '24px' }}>
+            {activeChips.map(chip => (
+              <div
+                key={chip.key}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '6px', borderRadius: '20px',
+                  background: 'var(--color-surface-1)', border: '1px solid var(--color-border-light)',
+                  padding: '6px 6px 6px 12px', fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-secondary)'
+                }}
+              >
+                <span>{chip.label}</span>
+                <button
+                  onClick={chip.onClear}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', width: 18, height: 18,
+                    borderRadius: '50%', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--color-text-tertiary)'
+                  }}
+                  className="hover:bg-danger-100 hover:text-danger-600"
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ─── KPI TILES (Flat icon-circle, static display — consistent with PCC Subcontract Management) ─── */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '24px' }}>
           {[
-            { id: 'total', label: 'ACTIVE ORDERS', value: filtered.length.toLocaleString(), color: 'var(--color-brand-500)', icon: <Package size={18} /> },
-            { id: 'qty', label: 'TOTAL QTY', value: totalQty.toLocaleString(), color: 'var(--color-success-500)', icon: <LayoutGrid size={18} /> },
-            { id: 'amount', label: 'TOTAL AMOUNT', value: `$${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, color: 'var(--color-accent-500)', icon: <DollarSign size={18} /> },
-            { id: 'pending', label: 'PENDING', value: pendingCount.toLocaleString(), color: 'var(--color-brand-400)', icon: <AlertTriangle size={18} /> },
-            { id: 'late', label: 'LATE', value: delayedCount.toLocaleString(), color: 'var(--color-danger-500)', icon: <RefreshCw size={18} /> },
-          ].map((stat) => (
+            { id: 'total', label: 'ACTIVE ORDERS', value: filtered.length.toLocaleString(), color: 'var(--color-brand-500)', icon: <Package size={20} /> },
+            { id: 'qty', label: 'TOTAL QTY', value: totalQty.toLocaleString(), color: 'var(--color-brand-500)', icon: <LayoutGrid size={20} /> },
+            { id: 'amount', label: 'TOTAL AMOUNT', value: `$${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, color: 'var(--color-accent-600)', icon: <DollarSign size={20} /> },
+            { id: 'pending', label: 'PENDING', value: pendingCount.toLocaleString(), color: 'var(--color-warning-600)', icon: <AlertTriangle size={20} /> },
+            { id: 'late', label: 'LATE', value: delayedCount.toLocaleString(), color: 'var(--color-danger-600)', icon: <RefreshCw size={20} /> },
+          ].map((stat, i) => (
             <div
               key={stat.id}
-              onClick={() => navigate('/dashboard/detail')}
               className="animate-fade-in-up"
               style={{
-                background: 'var(--color-surface-0)', padding: '20px 24px', borderRadius: '20px',
-                border: '1px solid var(--color-border-light)', display: 'flex', flexDirection: 'column', gap: '12px',
-                cursor: 'pointer', boxShadow: '0 4px 20px -4px rgba(0,0,0,0.05)', transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
+                background: 'var(--color-surface-0)',
+                padding: '20px', borderRadius: '16px',
+                border: '1px solid var(--color-border-light)',
+                display: 'flex', alignItems: 'center', gap: '14px',
+                boxShadow: '0 2px 8px color-mix(in srgb, var(--color-surface-900) 4%, transparent)',
+                animationDelay: `${i * 0.05}s`
               }}
-              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 12px 30px -8px rgba(0,0,0,0.12)'; }}
-              onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 20px -4px rgba(0,0,0,0.05)'; }}
             >
-              <div style={{ width: 42, height: 42, borderRadius: 12, background: `color-mix(in oklch, ${stat.color}, transparent 90%)`, color: stat.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ width: 44, height: 44, borderRadius: '50%', flexShrink: 0, background: `color-mix(in srgb, ${stat.color} 16%, var(--color-surface-1))`, color: stat.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {stat.icon}
               </div>
               <div>
-                <div style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--color-text-tertiary)', letterSpacing: '0.05em' }}>{stat.label}</div>
-                <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--color-text-primary)', margin: '4px 0 0', fontFamily: 'var(--font-display)' }}>{stat.value}</div>
+                <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--color-text-secondary)', letterSpacing: '0.02em' }}>{stat.label}</div>
+                <div style={{ fontSize: '1.5rem', fontWeight: 800, color: stat.color, margin: '2px 0 0', fontFamily: 'var(--font-display)', letterSpacing: '-0.02em' }}>{stat.value}</div>
               </div>
             </div>
           ))}
         </div>
 
-        {/* ─── COMPACT FILTER PANEL ─── */}
-        <div style={{
-          background: 'var(--color-surface-0)', borderRadius: '24px', border: '1px solid var(--color-border-light)',
-          marginBottom: '20px', padding: '16px 24px', display: 'flex', flexDirection: 'column', gap: '16px',
-          boxShadow: '0 4px 20px -4px rgba(0,0,0,0.02)'
-        }}>
-          {/* Row 1: Button Filters & Refresh */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
-            {/* Left side: Button Filters Group */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                <div style={{ fontSize: '0.65rem', fontWeight: 900, color: 'var(--color-text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Customer Group</div>
-                <div style={{ display: 'flex', gap: '6px' }}>
-                  {['N008', 'MLT', 'N083', 'N044', 'N051', 'ALL'].map(grp => (
-                    <button
-                      key={grp}
-                      onClick={() => setGroupFilter(grp)}
-                      style={{
-                        padding: '6px 12px', borderRadius: '10px', fontSize: '0.78rem', fontWeight: 800,
-                        background: groupFilter === grp ? 'var(--color-brand-500)' : 'var(--color-surface-1)',
-                        color: groupFilter === grp ? 'var(--color-text-inverse)' : 'var(--color-text-secondary)',
-                        border: '1px solid', borderColor: groupFilter === grp ? 'var(--color-brand-600)' : 'var(--color-border-light)',
-                        transition: 'all 0.2s', cursor: 'pointer'
-                      }}
-                    >{grp === 'ALL' ? 'General' : grp}</button>
-                  ))}
-                </div>
-              </div>
-
-              <div style={{ width: '1px', height: '24px', background: 'var(--color-border-light)' }} />
-
-              <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                <div style={{ fontSize: '0.65rem', fontWeight: 900, color: 'var(--color-text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Status</div>
-                <div style={{ display: 'flex', gap: '6px' }}>
-                  {['pending', 'finish', 'all'].map(st => (
-                    <button
-                      key={st}
-                      onClick={() => setStatusFilter(st as any)}
-                      style={{
-                        padding: '6px 12px', borderRadius: '10px', fontSize: '0.78rem', fontWeight: 800,
-                        background: statusFilter === st ? 'var(--color-brand-500)' : 'var(--color-surface-1)',
-                        color: statusFilter === st ? 'var(--color-text-inverse)' : 'var(--color-text-secondary)',
-                        border: '1px solid', borderColor: statusFilter === st ? 'var(--color-brand-600)' : 'var(--color-border-light)',
-                        textTransform: 'uppercase', transition: 'all 0.2s', cursor: 'pointer'
-                      }}
-                    >{st}</button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Right side: Refresh Button */}
-            <button
-              onClick={load}
-              disabled={loading}
-              style={{
-                padding: '8px 16px', borderRadius: '12px', background: 'var(--color-brand-500)', color: 'var(--color-text-inverse)',
-                border: 'none', fontSize: '0.78rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '6px',
-                cursor: 'pointer', transition: 'all 0.2s', opacity: loading ? 0.6 : 1
-              }}
-              onMouseEnter={e => e.currentTarget.style.background = 'var(--color-brand-600)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'var(--color-brand-500)'}
-            >
-              <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-              {loading ? 'REFRESHING...' : 'REFRESH'}
-            </button>
-          </div>
-
-          {/* Row 2: Search & Advanced Filters */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', borderTop: '1px solid var(--color-border-light)', paddingTop: '16px' }}>
-            {/* Left side: Quick Column Filters */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                <input
-                  type="text"
-                  placeholder="Week"
-                  value={filterWeek}
-                  onChange={e => setFilterWeek(e.target.value)}
-                  style={{
-                    width: '75px', padding: '6px 24px 6px 10px', borderRadius: '10px',
-                    border: '1px solid var(--color-border-light)',
-                    background: 'var(--color-surface-1)',
-                    fontSize: '0.78rem', color: 'var(--color-text-primary)',
-                    fontWeight: 600, outline: 'none'
-                  }}
-                />
-                {filterWeek && (
-                  <button onClick={() => setFilterWeek('')} style={{ position: 'absolute', right: '8px', background: 'transparent', border: 'none', color: 'var(--color-text-tertiary)', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: 0 }}>
-                    <X size={12} />
-                  </button>
-                )}
-              </div>
-
-              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                <input
-                  type="text"
-                  placeholder="Cust"
-                  value={filterCust}
-                  onChange={e => setFilterCust(e.target.value)}
-                  style={{
-                    width: '85px', padding: '6px 24px 6px 10px', borderRadius: '10px',
-                    border: '1px solid var(--color-border-light)',
-                    background: 'var(--color-surface-1)',
-                    fontSize: '0.78rem', color: 'var(--color-text-primary)',
-                    fontWeight: 600, outline: 'none'
-                  }}
-                />
-                {filterCust && (
-                  <button onClick={() => setFilterCust('')} style={{ position: 'absolute', right: '8px', background: 'transparent', border: 'none', color: 'var(--color-text-tertiary)', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: 0 }}>
-                    <X size={12} />
-                  </button>
-                )}
-              </div>
-
-              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                <input
-                  type="text"
-                  placeholder="PO / Order No"
-                  value={filterPO}
-                  onChange={e => setFilterPO(e.target.value)}
-                  style={{
-                    width: '135px', padding: '6px 24px 6px 10px', borderRadius: '10px',
-                    border: '1px solid var(--color-border-light)',
-                    background: 'var(--color-surface-1)',
-                    fontSize: '0.78rem', color: 'var(--color-text-primary)',
-                    fontWeight: 600, outline: 'none'
-                  }}
-                />
-                {filterPO && (
-                  <button onClick={() => setFilterPO('')} style={{ position: 'absolute', right: '8px', background: 'transparent', border: 'none', color: 'var(--color-text-tertiary)', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: 0 }}>
-                    <X size={12} />
-                  </button>
-                )}
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                <select
-                  value={filterType}
-                  onChange={e => setFilterType(e.target.value)}
-                  style={{
-                    width: '115px', padding: '6px 10px', borderRadius: '10px',
-                    border: '1px solid var(--color-border-light)',
-                    background: 'var(--color-surface-1)',
-                    fontSize: '0.78rem', color: filterType ? 'var(--color-brand-500)' : 'var(--color-text-secondary)',
-                    fontWeight: 700, outline: 'none', cursor: 'pointer'
-                  }}
-                >
-                  <option value="">All Types</option>
-                  {uniqueTypes.map(t => <option key={t} value={t}>{t}</option>)}
-                </select>
-              </div>
-
-              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                <input
-                  type="text"
-                  placeholder="Ship To"
-                  value={filterShipTo}
-                  onChange={e => setFilterShipTo(e.target.value)}
-                  style={{
-                    width: '115px', padding: '6px 24px 6px 10px', borderRadius: '10px',
-                    border: '1px solid var(--color-border-light)',
-                    background: 'var(--color-surface-1)',
-                    fontSize: '0.78rem', color: 'var(--color-text-primary)',
-                    fontWeight: 600, outline: 'none'
-                  }}
-                />
-                {filterShipTo && (
-                  <button onClick={() => setFilterShipTo('')} style={{ position: 'absolute', right: '8px', background: 'transparent', border: 'none', color: 'var(--color-text-tertiary)', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: 0 }}>
-                    <X size={12} />
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Right side: Date Picker Range */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', alignItems: 'center', borderRadius: '12px', border: '1px solid var(--color-border-light)', background: 'var(--color-surface-1)', overflow: 'hidden' }}>
-                <select value={dateType} onChange={e => setDateType(e.target.value)} style={{ padding: '8px 10px 8px 14px', border: 'none', background: 'var(--color-surface-2)', fontSize: '0.72rem', fontWeight: 700, color: 'var(--color-text-secondary)', outline: 'none', cursor: 'pointer', borderRight: '1px solid var(--color-border-light)' }}>
-                  <option value="Order Date">Order Date</option>
-                  <option value="Factory Due Date">Factory Due Date</option>
-                  <option value="Cust Due Date">Cust Due Date</option>
-                  <option value="Finish Date">Finish Date</option>
-                  <option value="All">All Dates</option>
-                </select>
-                <div style={{ display: 'flex', alignItems: 'center', padding: '0 10px', gap: '6px' }}>
-                  <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} style={{ background: 'transparent', border: 'none', fontSize: '0.78rem', color: 'var(--color-text-primary)', outline: 'none', fontWeight: 600 }} />
-                  <span style={{ color: 'var(--color-text-tertiary)', fontSize: '0.65rem', fontWeight: 800 }}>TO</span>
-                  <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} style={{ background: 'transparent', border: 'none', fontSize: '0.78rem', color: 'var(--color-text-primary)', outline: 'none', fontWeight: 600 }} />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* ─── DATA TABLE ─── */}
-        <div style={{ background: 'var(--color-surface-0)', borderRadius: '24px', border: '1px solid var(--color-border-light)', boxShadow: '0 12px 40px -12px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
+        {/* ─── DATA TABLE — outer box owns the leftover viewport space (invisible, no chrome);
+             inner card shrinks to its actual content and only grows up to that budget when the
+             table is long enough to need it, so a short result set doesn't leave an empty box ─── */}
+        <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ background: 'var(--color-surface-0)', borderRadius: '24px', border: '1px solid var(--color-border-light)', boxShadow: '0 12px 40px -12px color-mix(in srgb, var(--color-surface-900) 8%, transparent)', overflow: 'hidden', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
           {error && <div style={{ padding: '16px', background: '#fff5f5', borderBottom: '1px solid #ffc9c9', display: 'flex', alignItems: 'center', gap: '8px' }}><AlertTriangle size={16} style={{ color: '#e03131' }} /> <span style={{ fontSize: '0.85rem', color: '#c92a2a' }}>{error}</span></div>}
 
-          {/* Top Pagination Info (New Position) */}
-          {!loading && filtered.length > 0 && (
-            <div style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '10px 24px', borderBottom: '1px solid var(--color-border-light)',
-              background: 'color-mix(in srgb, var(--color-surface-1), transparent 40%)',
-              backdropFilter: 'blur(8px)', flexWrap: 'wrap', gap: '12px'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                <span style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)', fontWeight: 600 }}>
-                  Showing <strong style={{ color: 'var(--color-text-primary)' }}>{pageStart + 1}</strong>–<strong style={{ color: 'var(--color-text-primary)' }}>{Math.min(pageStart + pageSize, filtered.length)}</strong> of <strong style={{ color: 'var(--color-brand-600)' }}>{filtered.length.toLocaleString()}</strong>
-                </span>
-                <div style={{ width: '1px', height: '16px', background: 'var(--color-border-light)' }} />
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <select value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setPage(1); }} style={{ fontSize: '0.7rem', padding: '4px 8px', borderRadius: '8px', border: '1px solid var(--color-border-light)', background: 'var(--color-surface-0)', color: 'var(--color-text-secondary)', cursor: 'pointer', fontWeight: 700, outline: 'none' }}>
-                    {[20, 50, 100].map(n => <option key={n} value={n}>{n} / page</option>)}
-                  </select>
-                </div>
-              </div>
-
-              {/* Top Pagination controls */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid var(--color-border-light)', background: page === 1 ? 'transparent' : 'var(--color-surface-0)', color: page === 1 ? 'var(--color-text-quaternary)' : 'var(--color-text-secondary)', cursor: page === 1 ? 'default' : 'pointer', fontSize: '0.7rem', fontWeight: 700 }}>Prev</button>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  {pageNumbers.map((p, i) => p === '...' ? <span key={i} style={{ color: 'var(--color-text-quaternary)', fontSize: '0.7rem' }}>...</span> : (
-                    <button key={i} onClick={() => setPage(p as number)} style={{ padding: '4px 10px', borderRadius: '6px', border: `1px solid ${page === p ? 'var(--color-brand-500)' : 'transparent'}`, background: page === p ? 'var(--color-brand-500)' : 'transparent', color: page === p ? 'var(--color-text-inverse)' : 'var(--color-text-secondary)', cursor: 'pointer', fontSize: '0.7rem', fontWeight: 900, minWidth: '32px' }}>{p}</button>
-                  ))}
-                </div>
-                <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid var(--color-border-light)', background: page === totalPages ? 'transparent' : 'var(--color-surface-0)', color: page === totalPages ? 'var(--color-text-quaternary)' : 'var(--color-text-secondary)', cursor: page === totalPages ? 'default' : 'pointer', fontSize: '0.7rem', fontWeight: 700 }}>Next</button>
-              </div>
-            </div>
-          )}
-
-          <OrderTable 
-            data={paged} 
-            loading={loading} 
-            pageOffset={pageStart} 
-            group={groupFilter} 
+          <OrderTable
+            data={paged}
+            loading={loading}
+            pageOffset={pageStart}
+            visibleKeys={visibleKeys}
           />
 
-          {/* Bottom Pagination (Controls only) */}
+          {/* Single Pagination Bar — record count, page size, and page nav together */}
           {!loading && filtered.length > 0 && (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '12px 24px', borderTop: '1px solid var(--color-border-light)', background: 'var(--color-surface-0)', gap: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid var(--color-border-light)', background: page === 1 ? 'transparent' : 'var(--color-surface-1)', color: page === 1 ? 'var(--color-text-quaternary)' : 'var(--color-text-secondary)', cursor: page === 1 ? 'default' : 'pointer', fontSize: '0.8rem', fontWeight: 700 }}>Prev</button>
-                {pageNumbers.map((p, i) => p === '...' ? <span key={i} style={{ color: 'var(--color-text-quaternary)', padding: '0 4px' }}>...</span> : (
-                  <button key={i} onClick={() => setPage(p as number)} style={{ padding: '6px 12px', borderRadius: '8px', border: `1px solid ${page === p ? 'var(--color-brand-500)' : 'var(--color-border-light)'}`, background: page === p ? 'var(--color-brand-500)' : 'transparent', color: page === p ? 'var(--color-text-inverse)' : 'var(--color-text-secondary)', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 900, minWidth: '36px' }}>{p}</button>
-                ))}
-                <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid var(--color-border-light)', background: page === totalPages ? 'transparent' : 'var(--color-surface-1)', color: page === totalPages ? 'var(--color-text-quaternary)' : 'var(--color-text-secondary)', cursor: page === totalPages ? 'default' : 'pointer', fontSize: '0.8rem', fontWeight: 700 }}>Next</button>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', padding: '16px 24px', borderTop: '1px solid var(--color-border-strong)', background: 'var(--color-surface-0)', gap: '16px', flexShrink: 0 }}>
+              <span style={{ fontSize: '0.8rem', color: 'var(--color-text-tertiary)', fontWeight: 600 }}>
+                Showing <strong style={{ color: 'var(--color-text-primary)' }}>{pageStart + 1}</strong>–<strong style={{ color: 'var(--color-text-primary)' }}>{Math.min(pageStart + pageSize, filtered.length)}</strong> of <strong style={{ color: 'var(--color-brand-600)' }}>{filtered.length.toLocaleString()}</strong>
+              </span>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} style={{ padding: '6px 16px', borderRadius: '10px', border: '1px solid var(--color-border-light)', background: page === 1 ? 'transparent' : 'var(--color-surface-1)', color: page === 1 ? 'var(--color-text-quaternary)' : 'var(--color-text-secondary)', cursor: page === 1 ? 'default' : 'pointer', fontSize: '0.8rem', fontWeight: 700, transition: 'all 0.2s' }} className="hover:bg-surface-2 active:scale-95">Prev</button>
+                  {pageNumbers.map((p, i) => p === '...' ? <span key={i} style={{ color: 'var(--color-text-quaternary)', padding: '0 8px' }}>...</span> : (
+                    <button key={i} onClick={() => setPage(p as number)} style={{ padding: '6px 14px', borderRadius: '10px', border: `1px solid ${page === p ? 'var(--color-brand-500)' : 'var(--color-border-light)'}`, background: page === p ? 'var(--color-brand-500)' : 'transparent', color: page === p ? '#fff' : 'var(--color-text-secondary)', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 900, minWidth: '38px', transition: 'all 0.2s' }} className="hover:bg-surface-1 active:scale-95">{p}</button>
+                  ))}
+                  <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} style={{ padding: '6px 16px', borderRadius: '10px', border: '1px solid var(--color-border-light)', background: page === totalPages ? 'transparent' : 'var(--color-surface-1)', color: page === totalPages ? 'var(--color-text-quaternary)' : 'var(--color-text-secondary)', cursor: page === totalPages ? 'default' : 'pointer', fontSize: '0.8rem', fontWeight: 700, transition: 'all 0.2s' }} className="hover:bg-surface-2 active:scale-95">Next</button>
+                </div>
+
+                <div style={{ width: '1px', height: '16px', background: 'var(--color-border-strong)' }} />
+
+                <select
+                  value={String(pageSize)}
+                  onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
+                  style={{
+                    padding: '6px 10px', borderRadius: '8px', border: '1px solid var(--color-border-strong)',
+                    background: 'var(--color-surface-1)', color: 'var(--color-text-secondary)',
+                    fontSize: '0.75rem', fontWeight: 700, outline: 'none', cursor: 'pointer'
+                  }}
+                  className="hover:border-brand-400"
+                >
+                  <option value="20">20 / page</option>
+                  <option value="50">50 / page</option>
+                  <option value="100">100 / page</option>
+                </select>
               </div>
             </div>
           )}
         </div>
+        </div>
       </div>
-      <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}} .animate-spin{animation:spin 1s linear infinite}`}</style>
+      <style>{`
+        @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}} 
+        .animate-spin{animation:spin 1s linear infinite}
+        @keyframes fadeInDown {
+          from { opacity: 0; transform: translateY(-10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
     </div>
   );
 }

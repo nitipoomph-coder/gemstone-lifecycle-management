@@ -35,7 +35,7 @@ export default function ItemDetailPage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--color-surface-1)' }}>
       <Topbar breadcrumb={[
-        { label: 'JEWELRY SMART FACTORY', path: '/' },
+        { label: 'JEWELRY FACTORY SYSTEM', path: '/' },
         { label: 'PO TRACKER', path: '/po-tracker' },
         { label: itemData.itemNo }
       ]} />
@@ -79,7 +79,7 @@ export default function ItemDetailPage() {
 
             {/* Left Column */}
             <div style={{ flex: '1 1 320px', padding: '32px', borderRight: '1px solid var(--color-border-light)', background: 'color-mix(in srgb, var(--color-surface-1), transparent 50%)' }}>
-              <h3 style={{ fontSize: '0.7rem', fontWeight: 900, color: 'var(--color-brand-600)', marginBottom: '24px', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '10px', letterSpacing: '0.1em' }}>
+              <h3 style={{ fontSize: '0.7rem', fontWeight: 900, color: 'var(--color-brand-600)', marginBottom: '24px', textTransform: 'capitalize', display: 'flex', alignItems: 'center', gap: '10px', letterSpacing: '0.1em' }}>
                 <Hash size={16} /> Identity Matrix
               </h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -99,11 +99,11 @@ export default function ItemDetailPage() {
               <div style={{ display: 'flex', gap: '20px', height: '220px' }}>
                 <div style={{ flex: 1, background: 'var(--color-surface-1)', borderRadius: '20px', border: '2px dashed var(--color-border-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
                   <ImageIcon size={40} style={{ color: 'var(--color-text-quaternary)', opacity: 0.3 }} />
-                  <div style={{ position: 'absolute', bottom: '12px', left: '16px', fontSize: '0.65rem', color: 'var(--color-text-tertiary)', fontWeight: 800, textTransform: 'uppercase' }}>Front View</div>
+                  <div style={{ position: 'absolute', bottom: '12px', left: '16px', fontSize: '0.65rem', color: 'var(--color-text-tertiary)', fontWeight: 800, textTransform: 'capitalize' }}>Front View</div>
                 </div>
                 <div style={{ flex: 1, background: 'var(--color-surface-1)', borderRadius: '20px', border: '2px dashed var(--color-border-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
                   <ImageIcon size={40} style={{ color: 'var(--color-text-quaternary)', opacity: 0.3 }} />
-                  <div style={{ position: 'absolute', bottom: '12px', left: '16px', fontSize: '0.65rem', color: 'var(--color-text-tertiary)', fontWeight: 800, textTransform: 'uppercase' }}>Side View</div>
+                  <div style={{ position: 'absolute', bottom: '12px', left: '16px', fontSize: '0.65rem', color: 'var(--color-text-tertiary)', fontWeight: 800, textTransform: 'capitalize' }}>Side View</div>
                 </div>
               </div>
 
@@ -130,7 +130,7 @@ export default function ItemDetailPage() {
 
             {/* Right Column */}
             <div style={{ flex: '1 1 320px', padding: '32px', borderLeft: '1px solid var(--color-border-light)', background: 'var(--color-surface-0)' }}>
-              <h3 style={{ fontSize: '0.7rem', fontWeight: 900, color: 'var(--color-accent-600)', marginBottom: '24px', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <h3 style={{ fontSize: '0.7rem', fontWeight: 900, color: 'var(--color-accent-600)', marginBottom: '24px', textTransform: 'capitalize', display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <FileText size={16} /> Production Notes
               </h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -200,7 +200,7 @@ export default function ItemDetailPage() {
 function FieldRow({ label, value, highlight, bold, warning }: any) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--color-border-light)' }}>
-      <div style={{ width: '110px', fontSize: '0.65rem', color: 'var(--color-text-tertiary)', fontWeight: 800, textTransform: 'uppercase' }}>{label}</div>
+      <div style={{ width: '110px', fontSize: '0.65rem', color: 'var(--color-text-tertiary)', fontWeight: 800, textTransform: 'capitalize' }}>{label}</div>
       <div style={{
         flex: 1, fontSize: '0.8rem',
         fontWeight: highlight || bold || warning ? 800 : 600,

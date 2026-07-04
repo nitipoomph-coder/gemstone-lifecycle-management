@@ -6,6 +6,7 @@ import {
   FilePlus, Save, Edit3, Search, Trash2, CornerUpLeft, Printer, X,
   Package, Calendar, RefreshCw, FileSpreadsheet
 } from 'lucide-react';
+import { psPhotoUrl, cadPhotoUrl } from '../../utils/photoUrl';
 
 export interface DocListItem {
   no: string;
@@ -107,7 +108,6 @@ export default function DocumentLayout({
   const header = docDetail?.header || {};
 
   const activeItemNo = lines[selectedLineIdx]?.ItemNo;
-  const dbPhoto = lines[selectedLineIdx]?.ItemPhoto;
 
   React.useEffect(() => {
     if (!isPhotoModalOpen || !activeItemNo) {
@@ -119,26 +119,19 @@ export default function DocumentLayout({
     setPsLoading(true);
     setCadLoading(true);
 
-    const psTargetUrl = `http://localhost:3001/api/photos/ps/${activeItemNo}`;
+    // รูปดึงจาก network path อย่างเดียว (relative ผ่าน Photo Bridge) — เลิกใช้ base64 fallback แล้ว
+    const psTargetUrl = psPhotoUrl(activeItemNo);
     const imgPs = new window.Image();
     imgPs.src = psTargetUrl;
     imgPs.onload = () => { setPsUrl(psTargetUrl); setPsLoading(false); };
-    imgPs.onerror = () => {
-      if (dbPhoto) {
-        const dbSrc = String(dbPhoto).startsWith('data:') ? dbPhoto : `data:image/jpeg;base64,${dbPhoto}`;
-        setPsUrl(dbSrc);
-      } else {
-        setPsUrl('');
-      }
-      setPsLoading(false);
-    };
+    imgPs.onerror = () => { setPsUrl(''); setPsLoading(false); };
 
-    const cadTargetUrl = `http://localhost:3001/api/photos/cad/${activeItemNo}`;
+    const cadTargetUrl = cadPhotoUrl(activeItemNo);
     const imgCad = new window.Image();
     imgCad.src = cadTargetUrl;
     imgCad.onload = () => { setCadUrl(cadTargetUrl); setCadLoading(false); };
     imgCad.onerror = () => { setCadUrl(''); setCadLoading(false); };
-  }, [isPhotoModalOpen, activeItemNo, dbPhoto]);
+  }, [isPhotoModalOpen, activeItemNo]);
 
   const isServerSide = !!onPageChange;
   const filteredDocs = isServerSide
@@ -373,7 +366,7 @@ export default function DocumentLayout({
                 {/* Header Section */}
                 <div className="p-6 flex flex-col border-b border-white/10 relative overflow-hidden">
 
-                  <span className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-[var(--color-brand-400)] mb-1 z-10">
+                  <span className="text-[10px] font-extrabold capitalize tracking-[0.2em] text-[var(--color-brand-400)] mb-1 z-10">
                     {formConfig?.titleTh || _docType}
                   </span>
                   <span className="text-2xl font-mono font-black text-white leading-none z-10 tracking-tight">
@@ -385,7 +378,7 @@ export default function DocumentLayout({
 
                   <div className="mt-5 inline-flex items-center gap-2 bg-[var(--color-success-500)]/10 text-[var(--color-success-500)] px-3 py-1.5 rounded-full self-start border border-[var(--color-success-500)]/20 z-10 shadow-lg shadow-[var(--color-success-500)]/5 backdrop-blur-sm">
                     <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-success-500)] shadow-[0_0_8px_var(--color-success-500)]"></div>
-                    <span className="text-[10px] font-black tracking-widest uppercase">
+                    <span className="text-[10px] font-black tracking-widest capitalize">
                       {header.status === 'C' ? 'Canceled' : header.status === 'A' ? 'Approved' : 'Normal'}
                     </span>
                   </div>
@@ -394,7 +387,7 @@ export default function DocumentLayout({
                 {/* Metrics Section */}
                 <div className="p-6 flex flex-col gap-6 flex-1">
                   <div className="flex flex-col gap-1.5">
-                    <span className="text-[10px] font-bold uppercase text-white/40 tracking-widest">มูลค่ารวม - Total Value</span>
+                    <span className="text-[10px] font-bold capitalize text-white/40 tracking-widest">มูลค่ารวม - Total Value</span>
                     <div className="flex items-baseline gap-2">
                       <span className="text-[22px] font-black text-[var(--color-accent-500)] font-mono tracking-tight drop-shadow-md">
                         {Number(getHeaderValue(header, 'totalAmount') || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -404,7 +397,7 @@ export default function DocumentLayout({
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <span className="text-[10px] font-bold uppercase text-white/40 tracking-widest">จำนวนรวม - Quantity</span>
+                    <span className="text-[10px] font-bold capitalize text-white/40 tracking-widest">จำนวนรวม - Quantity</span>
                     <div className="flex items-baseline gap-2">
                       <span className="text-[22px] font-black text-white font-mono tracking-tight">
                         {Number(getHeaderValue(header, 'totalQty') || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -414,7 +407,7 @@ export default function DocumentLayout({
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <span className="text-[10px] font-bold uppercase text-white/40 tracking-widest">น้ำหนักสุทธิ - Net Weight</span>
+                    <span className="text-[10px] font-bold capitalize text-white/40 tracking-widest">น้ำหนักสุทธิ - Net Weight</span>
                     <div className="flex items-baseline gap-2">
                       <span className="text-[22px] font-black text-white font-mono tracking-tight">
                         {totalWeight.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}
@@ -426,7 +419,7 @@ export default function DocumentLayout({
                   {/* GEM INFO BOX */}
                   {lines[selectedLineIdx] && (
                     <div className="mt-auto flex flex-col pt-6 border-t border-white/10">
-                      <span className="text-[10px] font-bold uppercase text-white/40 tracking-widest mb-3">ข้อมูลพลอย - GEM</span>
+                      <span className="text-[10px] font-bold capitalize text-white/40 tracking-widest mb-3">ข้อมูลพลอย - GEM</span>
                       <div className="bg-white/5 rounded-xl border border-white/10 p-4 flex flex-col gap-3 shadow-inner">
                         <div className="flex flex-col">
                           <span className="text-sm font-black text-white leading-tight">
@@ -452,7 +445,7 @@ export default function DocumentLayout({
 
                 {/* TIMELINE */}
                 <div className="p-6 border-t border-white/10 flex flex-col gap-3 bg-black/20">
-                  <span className="text-[10px] font-bold uppercase text-white/40 tracking-widest">Timeline</span>
+                  <span className="text-[10px] font-bold capitalize text-white/40 tracking-widest">Timeline</span>
                   <div className="flex gap-4">
                     <div className="flex flex-col items-center mt-1">
                       <div className="w-2.5 h-2.5 rounded-full bg-[var(--color-success-500)] shadow-[0_0_10px_var(--color-success-500)]"></div>
@@ -499,7 +492,7 @@ export default function DocumentLayout({
 
                       return (
                         <div key={f.name} className={`flex flex-col gap-2 relative ${f.colSpan ? `col-span-${f.colSpan}` : ''}`}>
-                    <label className="text-[12px] font-bold text-[var(--color-text-tertiary)] uppercase flex items-center gap-1 z-10 bg-[var(--color-surface-0)] px-1 absolute -top-2.5 left-2">
+                    <label className="text-[12px] font-bold text-[var(--color-text-tertiary)] capitalize flex items-center gap-1 z-10 bg-[var(--color-surface-0)] px-1 absolute -top-2.5 left-2">
                       {f.label} {(!f.readOnly || f.name === 'docNumber') && <span className="text-[var(--color-danger-500)]">*</span>}
                     </label>
                     {f.type === 'select' && f.options ? (
@@ -539,7 +532,7 @@ export default function DocumentLayout({
                     const val = getCellValue(lines[selectedLineIdx] || {}, f.name, selectedLineIdx);
                     return (
                       <div key={f.name} className={`flex flex-col gap-2 relative ${f.name === 'stoneName' ? 'col-span-2' : ''}`}>
-                        <label className="text-[11px] font-bold text-[var(--color-text-tertiary)] uppercase flex items-center gap-1 z-10 bg-[var(--color-surface-0)] px-1 absolute -top-2.5 left-2">{f.label}</label>
+                        <label className="text-[11px] font-bold text-[var(--color-text-tertiary)] capitalize flex items-center gap-1 z-10 bg-[var(--color-surface-0)] px-1 absolute -top-2.5 left-2">{f.label}</label>
                         <input
                           type="text"
                           value={val}
@@ -562,7 +555,7 @@ export default function DocumentLayout({
                 </div>
                 <div className="p-6">
                   <div className="flex flex-col gap-2 relative">
-                    <label className="text-[11px] font-bold text-[var(--color-text-tertiary)] uppercase flex items-center gap-1 z-10 bg-[var(--color-surface-0)] px-1 absolute -top-2.5 left-2">หมายเหตุ 1</label>
+                    <label className="text-[11px] font-bold text-[var(--color-text-tertiary)] capitalize flex items-center gap-1 z-10 bg-[var(--color-surface-0)] px-1 absolute -top-2.5 left-2">หมายเหตุ 1</label>
                     <textarea
                       value={(isEditing && editDraft['note'] !== undefined) ? editDraft['note'] : getHeaderValue(header, 'note')}
                       readOnly={!isEditing}
@@ -594,7 +587,7 @@ export default function DocumentLayout({
                   <thead className="bg-[var(--color-surface-1)]/50">
                     <tr>
                       {tableColumns.map((col, idx) => (
-                        <th key={col.key} className={`whitespace-nowrap border-b border-[var(--color-border-default)] px-4 py-3 text-[11px] font-black uppercase tracking-wider text-[var(--color-text-tertiary)] ${col.align === 'right' ? 'text-right' : 'text-center'} ${idx === 0 ? 'rounded-tl-lg' : ''} ${idx === tableColumns.length - 1 ? 'rounded-tr-lg' : ''}`}>
+                        <th key={col.key} className={`whitespace-nowrap border-b border-[var(--color-border-default)] px-4 py-3 text-[11px] font-black capitalize tracking-wider text-[var(--color-text-tertiary)] ${col.align === 'right' ? 'text-right' : 'text-center'} ${idx === 0 ? 'rounded-tl-lg' : ''} ${idx === tableColumns.length - 1 ? 'rounded-tr-lg' : ''}`}>
                           {col.label}
                         </th>
                       ))}
@@ -651,7 +644,7 @@ export default function DocumentLayout({
         >
           <div className="w-full flex items-center justify-between border-b border-[var(--color-border-light)] pb-2 mb-3">
             <div className="flex flex-col">
-              <span className="text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-text-tertiary)]">เปรียบเทียบรูปชิ้นงานและแบบต้นแบบ (PS vs CAD)</span>
+              <span className="text-[10px] font-extrabold capitalize tracking-wider text-[var(--color-text-tertiary)]">เปรียบเทียบรูปชิ้นงานและแบบต้นแบบ (PS vs CAD)</span>
               <span className="text-base font-black text-[var(--color-text-primary)] font-mono">{activeItemNo}</span>
             </div>
             <button
@@ -665,7 +658,7 @@ export default function DocumentLayout({
             <div className="flex flex-col border border-[var(--color-border-light)] rounded-xl bg-[var(--color-surface-1)] overflow-hidden">
               <div className="bg-[var(--color-surface-2)] px-3 py-1.5 border-b border-[var(--color-border-light)] font-bold text-[11px] text-[var(--color-text-primary)] flex justify-between items-center">
                 <span>PS (รูปถ่ายชิ้นงานจริง)</span>
-                <span className="text-[9px] font-black uppercase bg-[var(--color-success-500)]/10 text-[var(--color-success-600)] border border-[var(--color-success-500)]/20 px-2 py-0.5 rounded">REAL PHOTO</span>
+                <span className="text-[9px] font-black capitalize bg-[var(--color-success-500)]/10 text-[var(--color-success-600)] border border-[var(--color-success-500)]/20 px-2 py-0.5 rounded">REAL PHOTO</span>
               </div>
               <div className="flex-1 p-3 flex items-center justify-center overflow-hidden min-h-[250px] bg-[var(--color-surface-2)]/30">
                 {psLoading ? (
@@ -688,7 +681,7 @@ export default function DocumentLayout({
             <div className="flex flex-col border border-[var(--color-border-light)] rounded-xl bg-[var(--color-surface-1)] overflow-hidden">
               <div className="bg-[var(--color-surface-2)] px-3 py-1.5 border-b border-[var(--color-border-light)] font-bold text-[11px] text-[var(--color-text-primary)] flex justify-between items-center">
                 <span>CAD (แบบดีไซน์ 3D / แม่พิมพ์)</span>
-                <span className="text-[9px] font-black uppercase bg-[var(--color-brand-500)]/10 text-[var(--color-brand-600)] border border-[var(--color-brand-500)]/20 px-2 py-0.5 rounded">3D BLUEPRINT</span>
+                <span className="text-[9px] font-black capitalize bg-[var(--color-brand-500)]/10 text-[var(--color-brand-600)] border border-[var(--color-brand-500)]/20 px-2 py-0.5 rounded">3D BLUEPRINT</span>
               </div>
               <div className="flex-1 p-3 flex items-center justify-center overflow-hidden min-h-[250px] bg-[var(--color-surface-2)]/30">
                 {cadLoading ? (
@@ -743,7 +736,7 @@ export function MiniCard({ icon, label, value, accent }: { icon: React.ReactNode
         {icon}
       </div>
       <div className="min-w-0 flex-1">
-        <div className="text-[10px] uppercase tracking-wider text-[var(--color-text-tertiary)]">{label}</div>
+        <div className="text-[10px] capitalize tracking-wider text-[var(--color-text-tertiary)]">{label}</div>
         <div className="truncate text-[13px] font-bold text-[var(--color-text-primary)]" style={{ fontFamily: 'var(--font-display)' }}>{value || '—'}</div>
       </div>
     </div>

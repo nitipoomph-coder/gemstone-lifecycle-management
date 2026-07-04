@@ -108,7 +108,7 @@ export default function DashboardDetail() {
   return (
     <>
       <Topbar breadcrumb={[
-        { label: 'JEWELRY SMART FACTORY', path: '/' },
+        { label: 'JEWELRY FACTORY SYSTEM', path: '/' },
         { label: 'DASHBOARD', path: '/' },
         { label: category || 'DETAIL VIEW' }
       ]} />

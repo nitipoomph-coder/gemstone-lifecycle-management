@@ -34,7 +34,7 @@ export default function StatCard({ stat }: StatCardProps) {
       }}
     >
       <div className="mb-2 flex items-center justify-between">
-        <span className="text-xs font-bold uppercase tracking-widest text-[var(--color-text-secondary)]">{stat.label}</span>
+        <span className="text-xs font-bold capitalize tracking-widest text-[var(--color-text-secondary)]">{stat.label}</span>
         <IconComponent size={18} className={style.iconColor} />
       </div>
       <div className="mb-1 text-[2rem] font-bold leading-none tracking-tight" style={{ fontFamily: 'var(--font-display)' }}>

@@ -3,7 +3,7 @@ import type { NavMenuGroup } from '../types';
 
 export const menuConfig: NavMenuGroup[] = [
 
-  // ─── Entity 0:  ───
+  // ─── Entity 0: Dashboard ───
   {
     id: 'home',
     label: 'Dashboard',
@@ -24,6 +24,34 @@ export const menuConfig: NavMenuGroup[] = [
       { id: 'dash-cust', label: 'Sales by Customer', path: '/dashboard/customer' },
       { id: 'dash-qty', label: 'Quantity by Customer', path: '/dashboard/qty' },
       { id: 'dash-top-items', label: 'Top Orders by Customer', path: '/dashboard/Top-Orders' },
+    ],
+  },
+
+  // ─── Entity 6: Subcontract Management (งานเหมา) ───
+  // Placeholder for now — target design references the "PCC System: Subcontract Management"
+  // report screens (Vendor Performance Dashboard, Vendor Price History, Aging Report)
+  {
+    id: 'subcontract',
+    label: 'Subcontract Management',
+    icon: 'handshake',
+    accentColor: 'var(--color-proc-casting)',
+    roles: ['admin'],
+    items: [
+      { id: 'sub-vendor-performance', label: 'Vendor Performance Dashboard', path: '/subcontract/vendor-performance' },
+      { id: 'sub-vendor-price', label: 'Vendor Price History', path: '/subcontract/vendor-price-history' },
+      { id: 'sub-aging', label: 'Aging Report', path: '/subcontract/aging-report' },
+    ],
+  },
+
+  // ─── PO Tracker ───
+  {
+    id: 'order-tracker',
+    label: 'Production',
+    icon: 'layout-list',
+    accentColor: 'var(--color-brand-600)',
+    roles: ['admin'],
+    items: [
+      { id: 'ot-list', label: 'PO Tracker', path: '/po-tracker' },
     ],
   },
 
@@ -88,18 +116,6 @@ export const menuConfig: NavMenuGroup[] = [
     ],
   },
 
-  // ─── PO Tracker ───
-  {
-    id: 'order-tracker',
-    label: 'PO Tracker',
-    icon: 'layout-list',
-    accentColor: 'var(--color-brand-600)',
-    roles: ['admin'],
-    items: [
-      { id: 'ot-list', label: 'Pending Orders', path: '/po-tracker' },
-    ],
-  },
-
   // ─── Entity 5: Spare Parts ───
   {
     id: 'spare-parts',
@@ -121,3 +137,4 @@ export const menuConfig: NavMenuGroup[] = [
     ],
   },
 ];
+

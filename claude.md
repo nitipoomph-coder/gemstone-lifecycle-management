@@ -10,24 +10,33 @@
 
 | Module                 | รหัสเอกสาร                          | สถานะ              |
 |------------------------|--------------------------------------|--------------------|
-| ภาพรวม (Dashboard)      | —                                    | ✅ Live             |
-| Sales Dashboard        | —                                    | ✅ Live             |
-| Customer Dashboard     | —                                    | ✅ Live             |
+| Authentication         | JWT + Role-based (admin/sales)       | ✅ Live             |
+| ภาพรวม (Dashboard)      | —                                    | ✅ Live (admin only) |
+| Sales Analytics        | —                                    | ✅ Live (admin + sales) |
+| Customer Dashboard     | — (Amount + Qty modes)               | ✅ Live (admin + sales) |
+| Customer Report        | — (Matrix Table)                     | ✅ Live             |
+| Top Orders Gallery     | —                                    | ✅ Live             |
 | จัดซื้อและรับเข้า        | SPA, SRA, SRB, SIR                   | 🟡 DocumentLayout done |
 | ออเดอร์และการเบิก       | SOA, SIA, SIB, SIP, SIS             | 🟡 DocumentLayout done |
 | ห้องตัวอย่าง            | SSA, SIM                             | 🟡 DocumentLayout done |
 | ตรวจสอบและนับสต็อก      | Check Dispatch/Sample/Purchase/Stock | ⬜ Placeholder      |
-| PO Tracker             | —                                    | ✅ Live (core feature) |
+| Production            | —                                    | ✅ Live (core feature, admin only) |
 | สต็อกอะไหล่             | SP-Order, SP-Issue, SP-Receive, …    | ⬜ Placeholder      |
+| งานเหมา (Subcontract Management) | —                           | 🟡 UI Preview (1/3, ไม่มี Backend) |
 
-### Key Feature: Order Tracker
+### Key Feature: PO tracker
 
-ระบบ Order Tracker เป็นฟีเจอร์หลักที่ใช้งานจริงแล้ว ทำหน้าที่:
-- ดึงข้อมูล Order จาก Stored Procedures (`PC_Show_OrdTrack_Sum_*`)
+ระบบ PO tracker เป็นฟีเจอร์หลักที่ใช้งานจริงแล้ว ทำหน้าที่:
+- ดึงข้อมูล Order Stored Procedures (`PC_Show_OrdTrack_Sum_*`)
 - Aggregate ข้อมูลฝั่ง Node.js (กรุ๊ปด้วย 5 แกน: Cust, PO, Type, ShipTo, Material)
-- กรอง Pending/Finish ที่ฝั่ง Backend (ไม่ส่ง Status parameter ไปให้ DB เก่าเพราะ SP ไม่รองรับ)
-- แสดงรูป Item Photo (base64 conversion จาก VARBINARY)
+- กรอง Pending/Finish ผ่าน `@Status` — **SP ทั้ง 5 ตัวรองรับแล้ว** (4 ก.ค. 2026) backend จึงส่ง `@Status` ให้ทุกตัว; ⚠️ ต้อง apply สคริปต์ SP รุ่นใหม่ใน `backend/sql/` ลง DB ก่อน deploy backend มิฉะนั้นตัวที่ยังไม่มี `@Status` จะ error "too many arguments"
+- แสดงรูปสินค้าจาก **network path** (`/api/photos/ps|cad/:itemNo` — Photo Bridge) โดย SP list ส่ง `SampleItemNo` (ItemNo ตัวแทน/กลุ่ม) มาให้ frontend ประกอบ URL เอง — **เลิกใช้ base64/VARBINARY (GMItemPhoto) แล้วทั้งระบบ**
 - In-Memory Cache 5 นาที + Request Coalescing ป้องกัน concurrent queries
+
+**Design Notes (POTrackerAdvanced.tsx / OrderTable.tsx):**
+- **Filters — Toolbar + Popover + Chips (modern table-filter pattern, ไม่ใช่ sidebar)**: Group toggle และ Status toggle แสดงตลอดเวลาในแถบเดียวบรรทัดเดียว ส่วนฟิลเตอร์รอง (Week/Customer/PO/Type/ShipTo/Date Range) ซ่อนอยู่หลังปุ่ม "Filters" (มี badge บอกจำนวนที่เลือกไว้) กดแล้วเปิดเป็น popover ลอย (ใช้ pattern เดียวกับ View Columns popover ใน `OrderTable.tsx`) — เมื่อมีฟิลเตอร์ที่เลือกไว้ จะโชว์เป็น chip ที่ลบทีละตัวได้ใต้แถบ toolbar เพื่อให้เห็นว่าเลือกอะไรไว้โดยไม่ต้องเปิด popover ซ้ำ — เมื่อไม่มีฟิลเตอร์ใดเลือกไว้ พื้นที่ด้านบนจะเหลือแค่แถบ toolbar บรรทัดเดียว (โล่ง ไม่กระจุก) อ้างอิงจาก pattern ของ Linear/Notion/GitHub Issues (ไม่ใช่ sidebar แบบ BI dashboard เพราะ PO Tracker เป็นตารางข้อมูลเป็นหลัก ไม่ใช่ multi-chart report)
+- **KPI Tiles**: เป็น flat icon-circle แบบ static display **ไม่ clickable** (ไม่มี onClick/hover-scale/gradient/glassmorphism) — ดีไซน์อ้างอิงจากระบบพี่น้อง "PCC System: Subcontract Management" เพื่อความสอดคล้องในองค์กร ตัวเลขแต่ละ tile ใช้สีตามความหมาย (semantic color)
+- **Pagination — Pinned, ไม่ต้องเลื่อนจอ**: รวมเป็นแถบเดียวที่ด้านล่างตาราง (Showing X–Y of Z + page size selector + Prev/page numbers/Next ทั้งหมดอยู่แถวเดียวกัน) — `OrderTable.tsx` ไม่รับ props `totalCount`/`pageSize`/`onPageSizeChange` อีกต่อไป เพราะ Pagination UI ทั้งหมดย้ายไปอยู่ใน `POTrackerAdvanced.tsx` แล้ว และ Data Table card ใช้ flex column (`flex:1, minHeight:0`) ให้ตารางขยายเต็มพื้นที่ที่เหลือของจอเสมอ ส่วน scroll container ใน `OrderTable.tsx` เปลี่ยนจาก `maxHeight: calc(100vh - 280px)` (เลขคงที่ที่ไม่ตรงกับความสูงจริงของ Filters/KPI) เป็น `flex:1, minHeight:0` แทน — ทำให้แถบ pagination ติดอยู่ด้านล่างของจอเสมอ ไม่ต้อง scroll หน้าทั้งหน้าเพื่อกด Next
 
 ---
 
@@ -43,6 +52,10 @@
 | Tailwind CSS      | 4.x     | Utility-First CSS (via `@tailwindcss/vite`) |
 | React Router DOM  | 7.x     | Client-Side Routing                  |
 | Lucide React      | 1.x     | Icon Library                         |
+| Recharts          | 2.x     | Charting Library (Bar/Line/Pie)      |
+| ExcelJS           | 4.x     | Excel File Export                    |
+| FileSaver         | 2.x     | Client-Side File Download            |
+| React Draggable   | 4.x     | Draggable UI Elements                |
 
 ### Backend
 
@@ -51,6 +64,7 @@
 | Node.js    | —       | Runtime                          |
 | Express    | 5.x     | HTTP Framework                   |
 | mssql      | 12.x   | SQL Server Driver (Connection Pool) |
+| jsonwebtoken | 9.x  | JWT Authentication               |
 | dotenv     | 17.x   | Environment Variable Management  |
 | cors       | 2.x    | Cross-Origin Resource Sharing    |
 | nodemon    | 3.x    | Dev Auto-Restart (devDependency) |
@@ -59,10 +73,11 @@
 
 | Technology      | Details                               |
 |-----------------|---------------------------------------|
-| Microsoft SQL Server | Production: `CLLDBS` server        |
+| Microsoft SQL Server | Production: `192.168.5.40` (เดิม: `CLLDBS`) — SQL Server 2012 Enterprise |
 | Connection      | TCP/IP, Port 1433, No Encryption     |
-| Key Tables      | `OrdHD`, `OrdDT`, `GMCust`, `GMItemPhoto` |
-| Stored Procedures | `PC_Show_OrdTrack_Sum_*` (OrdDate, DueDate, CustDueDate, FinDate, All) |
+| Database        | `dbGeneration` (Order/Production), `dbInventory` (Procurement/Stock) |
+| Key Tables      | `OrdHD`, `OrdDT`, `GMCust`, `GMItemPhoto`, `OrdTrackDT`, `OrdWeekPlanHD` |
+| Stored Procedures | `PC_Show_OrdTrack_Sum_*` (OrdDate, DueDate, CustDueDate, FinDate, All) — รับ 3 params: `@FromDate`, `@ToDate`, `@Status` |
 
 ### Design System
 
@@ -71,7 +86,7 @@
 | Theme Engine  | 3 themes via `ThemeContext` + CSS custom properties |
 | Themes        | `modern-dark` (default), `dark-gold`, `royal-white` |
 | Color System  | OKLCH color space                                |
-| Fonts         | **Cinzel** (logo), **Outfit** (headings/display), **Prompt** (body) |
+| Fonts         | **Cinzel** (logo), **Outfit** (headings/display), **Kanit** (body) |
 | Chart Colors  | `--color-chart-1` ~ `--color-chart-6` (semantic, ครบทุก theme) |
 | Table Colors  | `--color-table-header`, `--color-table-row-alt`, `--color-table-footer` |
 | Animations    | `fadeInUp`, skeleton shimmer, stagger classes    |
@@ -85,6 +100,8 @@
 gemstone-lifecycle-management/
 ├── claude.md                          # ← ไฟล์นี้ (project context)
 ├── debug-history.md                   # 🔧 บันทึกปัญหาและการแก้ไข
+├── PRODUCT.md                         # 📋 Product overview document
+├── production_stages_mapping_log.md   # 📋 Production stages mapping reference
 │
 └── Jewelry Factory System/
     ├── .gitignore
@@ -100,40 +117,54 @@ gemstone-lifecycle-management/
     │   │
     │   └── src/
     │       ├── main.tsx               # React entry (ThemeProvider wraps App)
-    │       ├── App.tsx                # Route definitions (BrowserRouter)
+    │       ├── App.tsx                # Route definitions (BrowserRouter + ProtectedRoute)
     │       ├── index.css              # 🎨 Global styles, theme variables, animations
     │       │
     │       ├── components/
     │       │   ├── layout/
     │       │   │   ├── AppLayout.tsx        # Shell layout (Sidebar + Topbar + Outlet)
     │       │   │   ├── DocumentLayout.tsx   # 🏗️ Unified Document Layout (IoC/Slot Injection)
-    │       │   │   ├── Sidebar.tsx          # Left nav sidebar
+    │       │   │   ├── Sidebar.tsx          # Left nav sidebar (role-based menu filtering)
     │       │   │   └── Topbar.tsx           # Top bar (search, theme switcher, breadcrumb)
     │       │   ├── dashboard/
-    │       │   │   ├── StatCard.tsx         # Dashboard stat card component
-    │       │   │   ├── CardDetailPanel.tsx  # Dashboard card drill-down panel (YoY comparison)
-    │       │   │   ├── OrderTable.tsx       # Order summary table component
+    │       │   │   ├── StatCard.tsx              # Dashboard stat card component
+    │       │   │   ├── CardDetailPanel.tsx       # Dashboard card drill-down panel (YoY comparison)
+    │       │   │   └── OrderTable.tsx            # PO Tracker order summary table (display-only; data-entry removed 4 ก.ค. 2026)
+    │       │   ├── orderDetail/
+    │       │   │   ├── LineDetailDrawer.tsx      # Order line detail side drawer (with photo tabs)
+    │       │   │   ├── OrderLineTable.tsx        # Order lines data table
+    │       │   │   ├── PhotoGalleryModal.tsx     # Photo gallery lightbox modal
+    │       │   │   ├── format.ts                 # Number/date formatting utilities
+    │       │   │   └── shared.tsx                # Shared order detail UI components
+    │       │   ├── report/
+    │       │   │   ├── CustomerReportFilters.tsx # Customer report filter panel
+    │       │   │   └── CustomerReportTable.tsx   # Customer report matrix table
+    │       │   ├── ui/
+    │       │   │   └── CustomSelect.tsx     # ⭐ Shared custom dropdown (SSOT — ใช้แทนการ copy-paste dropdown ในหน้าต่างๆ)
     │       │   └── navigation/
     │       │       └── NavGroup.tsx         # Collapsible nav group component
     │       │
     │       ├── pages/
-    │       │   ├── LoginPage.tsx              # หน้า Login
-    │       │   ├── Dashboard.tsx              # หน้าภาพรวม (home)
+    │       │   ├── LoginPage.tsx              # หน้า Login (JWT auth + role selection)
+    │       │   ├── Dashboard.tsx              # หน้าภาพรวม (home, admin only)
     │       │   ├── DashboardDetail.tsx         # Dashboard detail drilldown
     │       │   ├── SalesDashboard.tsx          # ⭐ Sales Summary By Rep (กราฟเปรียบเทียบยอดขาย Sales)
-    │       │   ├── CustomerDashboard.tsx       # ⭐ Yearly Sales By Customer (กราฟเปรียบเทียบยอดขายลูกค้า)
+    │       │   ├── CustomerDashboard.tsx       # ⭐ Yearly Sales By Customer (metric: amount | qty)
     │       │   ├── CustomerReportPage.tsx      # ⭐ Customer Report (Matrix Table สรุปยอดขายรายลูกค้า)
     │       │   ├── TopOrdersGalleryPage.tsx    # ⭐ Top Orders Gallery (Enterprise BI layout with custom themes)
     │       │   ├── POTrackerAdvanced.tsx       # ⭐ PO Tracker main (list view — เดิมชื่อ OrderTrackerAdvanced)
     │       │   ├── OrderDetailPage.tsx         # Order detail (by ord/po/group)
     │       │   ├── ItemDetailPage.tsx          # Item-level detail
     │       │   ├── PlaceholderPage.tsx         # Placeholder for unimplemented modules
-    │       │   └── document/
-    │       │       ├── ProcurementDocPage.tsx   # 🏗️ จัดซื้อและรับเข้า (SPA, SRA, SRB, SIR)
-    │       │       ├── RequisitionDocPage.tsx   # 🏗️ ออเดอร์และการเบิก (SOA, SIA, SIB, SIP, SIS)
-    │       │       └── SampleDocPage.tsx        # 🏗️ ห้องตัวอย่าง (SSA, SIM)
+    │       │   ├── document/
+    │       │   │   ├── ProcurementDocPage.tsx   # 🏗️ จัดซื้อและรับเข้า (SPA, SRA, SRB, SIR)
+    │       │   │   ├── RequisitionDocPage.tsx   # 🏗️ ออเดอร์และการเบิก (SOA, SIA, SIB, SIP, SIS)
+    │       │   │   └── SampleDocPage.tsx        # 🏗️ ห้องตัวอย่าง (SSA, SIM)
+    │       │   └── subcontract/
+    │       │       └── VendorPerformanceDashboardPage.tsx  # 🟡 UI Preview เท่านั้น (ไม่มี Backend/SP เชื่อมจริง)
     │       │
     │       ├── services/
+    │       │   ├── authAPI.ts         # 🔐 API client for authentication (login, verify-admin)
     │       │   ├── poTrackerAPI.ts     # API client for PO Tracker endpoints
     │       │   ├── orderAPI.ts        # API client for order detail endpoints
     │       │   ├── dashboardAPI.ts    # API client for dashboard/sales/customer stats
@@ -142,9 +173,10 @@ gemstone-lifecycle-management/
     │       │   └── sampleAPI.ts       # API client for sample room endpoints
     │       │
     │       ├── config/
-    │       │   ├── menuConfig.ts      # Sidebar menu structure definition
-    │       │   ├── formConfigs.ts     # Document form field configurations (all doc types)
-    │       │   └── customerGroups.ts  # SSOT for customer group mapping (N008, MLT, etc.)
+    │       │   ├── menuConfig.ts           # Sidebar menu structure definition (role-based)
+    │       │   ├── formConfigs.ts          # Document form field configurations (all doc types)
+    │       │   ├── customerGroups.ts       # SSOT for customer group mapping (N008, MLT, etc.)
+    │       │   └── orderDetailColumns.ts   # Order detail table column definitions
     │       │
     │       ├── contexts/
     │       │   └── ThemeContext.tsx    # Theme provider (dark-gold/royal-white/modern-dark)
@@ -152,7 +184,13 @@ gemstone-lifecycle-management/
     │       ├── types/
     │       │   └── index.ts           # Shared TypeScript interfaces
     │       │
+    │       ├── utils/
+    │       │   ├── fetchWithAuth.ts          # 🔐 Fetch wrapper with JWT Bearer token injection
+    │       │   ├── exportPOTrackerExcel.ts   # 📊 Excel export for PO Tracker data
+    │       │   └── exportOrderDetailExcel.ts # 📊 Excel export for Order Detail data
+    │       │
     │       └── assets/                # Static assets (images, icons)
+    │           └── hero.png           # Login page hero image
     │
     └── backend/                       # ⭐ Express + MSSQL
         ├── server.js                  # Express app entry (+ Photo Bridge routes)
@@ -161,16 +199,24 @@ gemstone-lifecycle-management/
         ├── .env.example               # Env template
         ├── package.json
         │
-        ├── routes/
-        │   ├── orders.js              # ⭐ /api/orders — PO Tracker APIs
-        │   ├── dashboard.js           # /api/dashboard — Dashboard/Sales/Customer stats
-        │   ├── search.js              # /api/search — Global search
-        │   ├── procurement.js         # /api/procurement — Procurement document APIs
-        │   ├── requisition.js         # /api/requisition — Requisition document APIs
-        │   ├── sample.js              # /api/sample — Sample room APIs
-        │   └── lock.js                # /api/lock — Document locking
+        ├── middleware/
+        │   └── authMiddleware.js      # 🔐 JWT verification middleware (Bearer token)
         │
-        └── check_sales.js             # Utility: sales data inspection
+        ├── routes/
+        │   ├── auth.js                # 🔐 /api/auth — Login & Admin verification
+        │   ├── orders.js              # ⭐ /api/orders — PO Tracker APIs (protected)
+        │   ├── dashboard.js           # /api/dashboard — Dashboard/Sales/Customer stats (protected)
+        │   ├── search.js              # /api/search — Global search (protected)
+        │   ├── procurement.js         # /api/procurement — Procurement document APIs (protected)
+        │   ├── requisition.js         # /api/requisition — Requisition document APIs (protected)
+        │   ├── sample.js              # /api/sample — Sample room APIs (protected)
+        │   └── lock.js                # /api/lock — Document locking (protected)
+        │
+        └── sql/                        # 🗄️ SSOT ของ Stored Procedures + Indexes (กัน "หายตอน restore")
+            ├── indexes.sql             # 9 covering indexes (NONCLUSTERED, ONLINE) สำหรับ PC_Show_OrdTrack_Sum_*
+            ├── stored-procedures/      # SP เวอร์ชันปัจจุบัน (ตัดรูป base64 → ส่ง SampleItemNo)
+            ├── _baseline/              # snapshot SP/columns/indexes เดิม (rollback + อ้างอิง)
+            └── README.md               # วิธี apply + สรุปการเปลี่ยนแปลง
 ```
 
 ---
@@ -187,6 +233,12 @@ gemstone-lifecycle-management/
    - `claude.md` — อัปเดต Folder Structure, Business Modules, API Endpoints, และ Section ที่เกี่ยวข้อง
    - `debug-history.md` — บันทึกปัญหาที่เกิดขึ้นและวิธีแก้ไข (เฉพาะกรณี Bug/Error เท่านั้น)
 6. **🔍 File Integrity Check Rule**: เมื่อได้รับมอบหมายให้อ่านหรือแก้ไขไฟล์ใด ๆ **ต้องตรวจสอบไฟล์นั้นทุกบรรทัดอย่างละเอียด ทั้งก่อนเริ่มงานและหลังจบงานเสมอ** เพื่อป้องกันปัญหาโค้ดขาดหาย (Missing code/JSX tags) หรือ Syntax errors จากการทำ Replace/Edit พลาด
+7. **🧹 Safe Refactoring & De-duplication Rule**: เวลาได้รับมอบหมายให้ "เก็บงานให้สะอาด ไม่ซ้ำซ้อน" ต้องทำตามลำดับนี้เพื่อไม่ให้เกิดความเสียหายหรือขยายสโคปเกินคำขอ:
+   - **หาความซ้ำซ้อนด้วยหลักฐาน ไม่ใช่ความจำ**: ใช้ Grep ค้นชื่อ component/function/keyframe ที่จะรวมหรือลบทุกครั้ง เพื่อยืนยันว่าไม่มีที่อื่นอ้างอิงอยู่ก่อนที่จะลบ (เช่น เช็คว่า `@keyframes` ไม่ถูกเรียกใช้จริงก่อนลบ, เช็คว่า component ที่ดูซ้ำมีจุดต่างกันตรงไหนก่อนรวม)
+   - **แยกของเดิมกับของใหม่ก่อนแก้**: ถ้าเจอ pattern ที่ดูแปลก (เช่น `setState` ใน `useEffect`, การใช้ `any`) ให้เช็คด้วย `git show HEAD:<path>` ก่อนว่าเป็นโค้ดเดิมที่มีอยู่แล้วหรือเพิ่งเพิ่มเข้ามาในรอบนี้ — ถ้าเป็นของเดิมและอยู่นอกสโคปที่ผู้ใช้ขอ **ห้ามแก้โดยไม่ถามก่อน** ให้แจ้งแยกไว้เฉย ๆ เพื่อไม่ scope-creep
+   - **รวม component ซ้ำให้ดู superset ของทุกที่ที่ใช้งานจริงก่อน**: ถ้าพบ component หน้าตาเดียวกันถูก copy-paste ไว้หลายไฟล์ (เช่น dropdown), ให้อ่าน props/usage จากทุกจุดที่เรียกใช้ก่อนรวม แล้วย้ายไปไว้ที่ `src/components/ui/` เป็น Single Source of Truth — ถ้าการรวมทำให้ visual เปลี่ยนเล็กน้อย (เช่น border-radius ไม่ตรงกัน) ให้แจ้งผู้ใช้ว่าทำไปเพื่อ unify ความสอดคล้อง
+   - **ใช้ TodoWrite ติดตามทุกขั้นตอนเมื่อแก้หลายไฟล์พร้อมกัน** เพื่อไม่ให้พลาดไฟล์ใดไฟล์หนึ่ง
+   - **ตรวจซ้ำหลังแก้เสมอด้วยเครื่องมือจริง ไม่ใช่อ่านตาเปล่า**: รัน `npx tsc --noEmit -p tsconfig.app.json` และ `npx eslint <files ที่แก้>` ทุกครั้งหลังแก้ไขเพื่อยืนยันว่า build ผ่านจริง
 
 ### Frontend Rules
 
@@ -200,7 +252,7 @@ gemstone-lifecycle-management/
 8. **Menu Config**: Menu structure ทั้งหมดอยู่ใน `config/menuConfig.ts` — ห้าม hardcode menu ใน Sidebar
 9. **Font Stack**: 
    - Headings: `font-display` → Outfit (or Inter for enterprise/B2B feel)
-   - Body text: `font-body` → Prompt
+   - Body text: `font-body` → Kanit
    - Logo/Brand: `font-logo` → Cinzel
 10. **Loading Skeletons**: เมื่อมีการเพิ่ม/แก้ไข กล่องข้อมูล (Boxes/Cards) ในหน้าจอใด ๆ ต้องอัปเดตส่วนแสดงสถานะกำลังโหลด (Loading Skeleton) ให้สอดคล้องกันทั้งหน้าจอ เพื่อหลีกเลี่ยงอาการ Layout Shift โดยส่วนโหลดนี้ต้องคลุมเฉพาะพื้นที่แสดงผลของหน้านั้น ๆ (Content Outlet) ไม่ต้องโหลดส่วนเมนู (Sidebar/Topbar) ซ้ำ
 11. **UI Components & UX**: 
@@ -240,8 +292,8 @@ interface DocumentLayoutProps {
 5. **Response Format**: ทุก API ต้อง return format `{ ok: boolean, data?: any, error?: string }`
 6. **Logging**: ใช้ `console.log` + emoji prefix สำหรับ debug (`[EXEC SP]`, `[CACHE HIT]`, `❌`)
 7. **Caching**: ใช้ In-Memory Cache ที่มีอยู่ (`cache` Map + `inFlight` Map) สำหรับ heavy queries
-8. **Photo Handling**: ใช้ `toBase64Photo()` helper สำหรับแปลง VARBINARY → base64 data URI
-9. **Stored Procedures**: เรียกผ่าน `request.execute(spName)` — ระวังจำนวน parameters ต้องตรงกับ SP definition (ระบบเก่าจำกัด parameters)
+8. **Photo Handling**: เสิร์ฟรูปจาก network file share ผ่าน Photo Bridge (`/api/photos/ps|cad/:itemNo` ใน `server.js` → `res.sendFile`) — **เลิกใช้ `toBase64Photo()`/VARBINARY แล้วทั้งระบบ**, ไม่ join `GMItemPhoto` ใน query ใด ๆ
+9. **Stored Procedures**: เรียกผ่าน `request.execute(spName)` — SP ทั้ง 5 ตัวรับ 3 params เท่ากัน (`@FromDate`/`@ToDate`/`@Status`) และคืน 63 คอลัมน์เท่ากัน (4 ก.ค. 2026); ต้อง apply SP รุ่นใหม่ลง DB ก่อน deploy backend
 
 ### Database Rules
 
@@ -318,7 +370,16 @@ npm run dev
 
 ## API Endpoints
 
-### PO Tracker
+### Authentication (Public — ไม่ต้อง token)
+
+| Method | Endpoint                  | Description                        |
+|--------|---------------------------|------------------------------------|
+| POST   | `/api/auth/login`         | Login (returns JWT + role)         |
+| POST   | `/api/auth/verify-admin`  | Verify admin password (for registration flow) |
+
+> ⚠️ ทุก endpoint ด้านล่าง (ยกเว้น Auth และ Photo Bridge) ต้องส่ง `Authorization: Bearer <token>` header — ถ้าไม่ส่งจะได้ 401 Unauthorized
+
+### PO Tracker (Protected)
 
 | Method | Endpoint                                    | Description                           |
 |--------|---------------------------------------------|---------------------------------------|
@@ -326,7 +387,7 @@ npm run dev
 | GET    | `/api/orders/:ordNo`                        | รายละเอียด Order (single or grouped)  |
 | GET    | `/api/orders/by-po/:poNo`                   | รายละเอียด Order by PO Number         |
 | GET    | `/api/orders/group/:cust/:addr/:kind/:mat/:duedate` | รายละเอียด Group by 5 axes   |
-| GET    | `/api/orders/photo/:itemNo`                 | Item photo (base64)                   |
+| GET    | `/api/photos/ps/:itemNo` · `/api/photos/cad/:itemNo` | Item photo จาก network path (Photo Bridge, unauthenticated) — เลิกใช้ `/api/orders/photo/:itemNo` (base64) แล้ว |
 
 **Query Parameters for `/api/orders`:**
 
@@ -338,7 +399,7 @@ npm run dev
 | `status`   | string | `pending` | `pending` or `finish` or `All`   |
 | `noCache`  | string | —         | Set to skip cache                |
 
-### Dashboard
+### Dashboard (Protected)
 
 | Method | Endpoint                              | Description                        |
 |--------|---------------------------------------|------------------------------------|
@@ -346,9 +407,9 @@ npm run dev
 | GET    | `/api/dashboard/years`                | Available years for filter         |
 | GET    | `/api/dashboard/detail/:cardType`     | Card drill-down (YoY comparison)   |
 | GET    | `/api/dashboard/sales-summary`        | Sales by rep/year (SalesDashboard) |
-| GET    | `/api/dashboard/customer-summary`     | Sales by cust/year (CustomerDashboard) |
+| GET    | `/api/dashboard/customer-summary`     | Sales+Qty by cust/year/month (CustomerDashboard — ทั้ง amount และ qty mode ใช้ endpoint เดียวกัน) |
 
-### Documents (Unified DocumentLayout)
+### Documents — Unified DocumentLayout (Protected)
 
 | Method | Endpoint                              | Description                        |
 |--------|---------------------------------------|------------------------------------|
@@ -411,9 +472,97 @@ npm run dev
 
 ### Database Considerations
 
-- **Legacy SP Compatibility**: Stored Procedures ของระบบเก่ามีข้อจำกัดเรื่องจำนวน parameters — ห้ามเพิ่ม parameter เองโดยไม่ตรวจสอบ SP definition
-- **Aggregation**: การ group/filter data ทำที่ Node.js (ไม่ใช่ DB) เพราะ SP เก่าไม่รองรับ
+- **SP Parameter Compatibility**: SP ทั้ง 5 ตัวรองรับ 3 parameters: `@FromDate` (DateTime), `@ToDate` (DateTime), `@Status` (VarChar — 'pending'/'finish'/'All') — ห้ามเพิ่ม parameter เองโดยไม่ตรวจสอบ SP definition บน SQL Server ก่อน
+- **Aggregation**: Backend Node.js ทำ grouping เพิ่มเติม (5 แกน: Cust, PO, Kind, ShipTo, Material + CustDueDate) หลังจาก SP ส่งผลลัพธ์กลับมาแล้ว
 - **Connection Pool**: Pool จะ auto-reconnect เมื่อเกิด error — ไม่ต้อง restart server
+- **Index Dependency**: SP ทั้ง 5 ตัวต้องมี Index ครบถ้วนจึงจะทำงานได้เร็ว — ดูรายละเอียดใน section "Database: Stored Procedures & Indexes" ด้านล่าง
+
+---
+
+## Database: Stored Procedures & Indexes (Server 192.168.5.40)
+
+> **⭐ SSOT (2 ก.ค. 2026 — รอบล่าสุด)**: SP + Index definition จริงย้ายมาเก็บใน repo แล้วที่ **`backend/sql/`**
+> (`stored-procedures/*.sql`, `indexes.sql`, `_baseline/` สำหรับ rollback) — ให้ยึดไฟล์เหล่านั้นเป็นหลัก
+> การเปลี่ยนแปลงรอบนี้: (1) **ตัดรูป base64 ออกจาก SP ทั้ง 5** → ส่ง `SampleItemNo` แทน (join `GMItemPhoto` หายหมด),
+> (2) พบว่า index หายเกลี้ยงเหลือแค่ `PK_GMCust` (ตารางเป็น HEAP) จึงสร้าง **9 covering index ใหม่ (NONCLUSTERED, ONLINE)**,
+> (3) ซ่อม `_All` ที่ ALTER ไม่ได้เพราะ dead `LEFT JOIN VPC_OrdSum_Detail` (view พัง) → ลบ join ทิ้ง
+> ตารางด้านล่างเป็นบริบทเชิงโครงสร้าง (บาง index ในตารางเป็นชุดที่ "เคย" ออกแบบไว้ ไม่ตรงกับ `indexes.sql` ปัจจุบัน 100%)
+
+> **บันทึกเดิม**: หลัง Restore database `dbGeneration` จาก backup — SP และ Index หายไปทั้งหมด ต้องสร้างใหม่
+
+### Stored Procedures — ครบ 5 ตัว ✅
+
+SP ทั้ง 5 ตัวใช้โครงสร้าง CTE เดียวกัน ต่างกันแค่ **WHERE clause วันที่** ที่ใช้กรอง:
+
+| SP Name | WHERE Date Column | สถานะ |
+|---------|-------------------|--------|
+| `dbo.PC_Show_OrdTrack_Sum_OrdDate` | `OrdHD.OrdDate BETWEEN @FromDate AND @ToDate` | ✅ ALTER แล้ว (2 ก.ค. 2026) |
+| `dbo.PC_Show_OrdTrack_Sum_DueDate` | `OrdHD.DueDate BETWEEN ...` | ✅ มีจาก backup |
+| `dbo.PC_Show_OrdTrack_Sum_CustDueDate` | `OrdHD.CustDueDate BETWEEN ...` | ✅ มีจาก backup |
+| `dbo.PC_Show_OrdTrack_Sum_FinDate` | `OrdHD.FinDate BETWEEN ...` | ✅ มีจาก backup |
+| `dbo.PC_Show_OrdTrack_Sum_All` | ไม่กรองวันที่ (ดึงทั้งหมด) | ✅ มีจาก backup |
+
+**Parameters ที่รับ (ทุกตัวเหมือนกัน):**
+```sql
+@FromDate DateTime,
+@ToDate DateTime,
+@Status Varchar(20) = 'pending'  -- 'pending' / 'finish' / 'All'
+```
+
+**Backend เรียกใช้ที่:** `routes/orders.js` → `request.execute(spName)` (line ~172)
+
+**โครงสร้าง CTE ภายใน SP (ทุกตัวเหมือนกัน):**
+1. `DupOnePONo` — หา PO ที่มี OrdHD 1 record (ลูกค้า N008 group)
+2. `DupMorPONo` — หา PO ที่มี OrdHD > 1 record (ลูกค้า N008 group)
+3. `CTE_Track` — ROW_NUMBER() PARTITION BY เพื่อดึง OrdTrackDT ล่าสุด
+4. `OrdDT_Aggregate` — SUM qty ทุกขั้นตอนการผลิต (ลูกค้าทั่วไป)
+5. `CTO_OrdDT_Aggregate` — SUM qty (ลูกค้า N008 group, PO เดียว → Group by ShipTo)
+6. `CTM_OrdDT_Aggregate` — SUM qty (ลูกค้า N008 group, หลาย PO)
+7. **Final SELECT**: 3 UNION ALL (ลูกค้าทั่วไป + N008 PO เดียว + N008 หลาย PO)
+
+### Indexes — ที่จำเป็นสำหรับ SP ⚠️
+
+หลัง Restore เหลือแค่ `PK_GMCust` ตัวเดียว — ต้องสร้าง index ใหม่ทั้งหมด:
+
+#### OrdHD (ตาราง Header ออเดอร์ — ใช้หนักสุด)
+| Index Name | Key Columns | INCLUDE | ใช้เพื่อ |
+|-----------|-------------|---------|--------|
+| `PK_OrdHD` | `OrdNo` (CLUSTERED) | — | PK |
+| `IX_OrdHD_OrdDate` | `OrdDate` | OrdNo, CustCode, PONo, OrdKind, OrdMat, CustMultiAddr, CloseStatus, DueDate, CustDueDate, CustQCDate | SP: OrdDate, All |
+| `IX_OrdHD_DueDate` | `DueDate` | OrdNo, CustCode, PONo, OrdKind, OrdMat, CustMultiAddr, CloseStatus, OrdDate, CustDueDate, CustQCDate | SP: DueDate |
+| `IX_OrdHD_CustDueDate` | `CustDueDate` | OrdNo, CustCode, PONo, OrdKind, OrdMat, CustMultiAddr, CloseStatus, OrdDate, DueDate, CustQCDate | SP: CustDueDate |
+| `IX_OrdHD_CustCode_PONo` | `CustCode, PONo` | OrdNo, OrdKind, OrdMat, CustMultiAddr, OrdDate, DueDate, CustDueDate, CloseStatus | GROUP BY, JOIN, subquery |
+| `IX_OrdHD_PONo` | `PONo` | OrdNo, CustCode, OrdKind, OrdMat, CustMultiAddr, OrdDate, DueDate, CustDueDate, CloseStatus | DupOnePONo/DupMorPONo CTE |
+| `IX_OrdHD_CloseStatus` | `CloseStatus` | OrdNo, CustCode, PONo | @Status filter |
+
+#### OrdDT (ตาราง Detail ออเดอร์)
+| Index Name | Key Columns | INCLUDE | ใช้เพื่อ |
+|-----------|-------------|---------|--------|
+| `PK_OrdDT` | `OrdNo, OrdLineNo` (CLUSTERED) | — | PK |
+| `IX_OrdDT_OrdNo` | `OrdNo` | ItemNo, ItemQty, StoneQty, FitQty, WijQty, WstQty, CastQty, ControlQty, GrindQty, PolishQty, PlateQty, QCQty, FinishQty, ExportQty, ItemExchAmnt | JOIN + SUM aggregate |
+| `IX_OrdDT_ItemNo` | `ItemNo` | — | JOIN GMItemPhoto |
+
+#### GMCust (ตารางลูกค้า)
+| Index Name | Key Columns | INCLUDE | ใช้เพื่อ |
+|-----------|-------------|---------|--------|
+| `PK_GMCust` | `CustID` (CLUSTERED) | — | PK (มีอยู่แล้ว ✅) |
+| `IX_GMCust_CustCode` | `CustCode` | CustName, SalesName | CustCode lookup |
+
+#### GMItemPhoto (ตารางรูปสินค้า)
+> ❌ **ไม่ต้องสร้าง index บนตารางนี้แล้ว** — ระบบเลิก join `GMItemPhoto` (เลิกใช้ base64) เปลี่ยนไปเสิร์ฟรูปจาก network path
+
+#### OrdTrackDT (ตาราง Track ออเดอร์)
+| Index Name | Key Columns | INCLUDE | ใช้เพื่อ |
+|-----------|-------------|---------|--------|
+| `IX_OrdTrackDT_Composite` | `CustCode, PONo, OrdMat, OrdKind, CustDueDate, CustMultiAddr` | OrdSGS, TrackTest, OORDate, BookDate, QC1-3 fields, ProdRiskIssue, ... | JOIN condition |
+| `IX_OrdTrackDT_CTE` | `CustCode, OrdKind, OrdMat, CustMultiAddr, CustDueDate, OrdTrackID DESC` | — | CTE_Track PARTITION BY |
+
+#### OrdWeekPlanHD (ตาราง Week Plan)
+| Index Name | Key Columns | INCLUDE | ใช้เพื่อ |
+|-----------|-------------|---------|--------|
+| `IX_OrdWeekPlanHD_PlanDate` | `PlanDate` | PlanYear, PlanWeek | JOIN DueDate |
+
+**SQL Script สำหรับสร้าง Index:** ใช้ไฟล์จริงใน repo **`backend/sql/indexes.sql`** (9 covering index, `IF NOT EXISTS` + `ONLINE=ON`) — ไม่ใช่ artifact `create_indexes.sql` เดิมอีกต่อไป
 
 ---
 
@@ -428,6 +577,9 @@ DB_NAME=<database name>
 DB_USER=<username>
 DB_PASS=<password>
 API_PORT=3001
+JWT_SECRET=<random secret key for JWT signing>
+APP_ADMIN_PASSWORD=<admin login password>
+APP_SALES_PASSWORD=<sales login password>
 ```
 
 > ⚠️ ห้าม commit ไฟล์ `.env` จริง — ใช้ `.env.example` เป็น template
@@ -436,7 +588,7 @@ API_PORT=3001
 
 ## Important Notes
 
-1. **ระบบนี้เป็น Internal Tool** — ใช้งานภายใน LAN ของโรงงาน ไม่มี authentication (ยัง)
+1. **ระบบนี้เป็น Internal Tool** — ใช้งานภายใน LAN ของโรงงาน มีระบบ Authentication ผ่าน JWT + Role-based (admin/sales) แล้ว — sales เข้าได้เฉพาะ Sales Analytics และ Customer Dashboard, admin เข้าได้ทุกหน้า
 2. **Data จาก Production DB** — ระวังเรื่อง query performance, ใช้ cache เสมอสำหรับ heavy queries
 3. **Thai Language UI** — ข้อความในระบบเป็นภาษาไทย, ใช้ web fonts (Outfit, Prompt)
 4. **Legacy Migration** — กำลัง migrate จาก VB.net ทีละ module, หลายหน้ายังเป็น Placeholder
@@ -520,7 +672,9 @@ API_PORT=3001
 
 ### ภาพรวม
 หน้า `CustomerDashboard.tsx` แสดงกราฟเปรียบเทียบยอดขายรายลูกค้า ข้ามหลายปี
+- **2 Metric Modes**: Amount (route: `/dashboard/customer`) และ Qty (route: `/dashboard/qty`) — ใช้ component เดียวกันแต่รับ `metric` prop ต่างกัน
 - **2 โหมดการแสดงผล**: Monthly View (กราฟรายเดือนรวม) / Yearly Breakdown (กราฟรายลูกค้า)
+- **2 Series Modes**: Compare by Year / Compare by Group
 
 ### Year-Color Mapping
 สีของปีถูก Map แบบ Fixed ตาม Index ของ `availableYears` (ไม่ใช่ `selectedYears`) เพื่อป้องกันสีเลื่อนเมื่อกดเปิด-ปิดปี
@@ -531,8 +685,10 @@ API_PORT=3001
 
 | Filter             | ตัวเลือก                                                     | State Variable    |
 |--------------------|--------------------------------------------------------------|-------------------|
-| **Customer Group** | All Customers, N008, MLT, N083, N044, N051, General          | `selectedGroup`   |
-| **Sales Rep**      | All Sales, (ชื่อ placeholder — แก้ไขภายหลัง)                  | `selectedSales`   |
+| **Target Year(s)** | Multi-select จาก available years (toggle on/off)              | `selectedYears`   |
+| **Filter Months**  | Multi-select 12 เดือน (แสดงเฉพาะ monthly mode)              | `selectedMonths`  |
+| **Customer Group** | N008, MLT, N083, N044, N051, General (toggle pills)           | `selGroups`       |
+| **Show Labels**    | ON/OFF — ซ่อน/แสดง label บนกราฟ (auto-off เมื่อ >3 groups)  | `showLabels`      |
 
 - **Customer Group Mapping**: จัดการผ่าน SSOT ที่ `src/config/customerGroups.ts`
   - N008 Group: N008, N048, N066-N075
@@ -571,7 +727,7 @@ API_PORT=3001
 `GET /api/dashboard/customer-summary?years=2025,2026`
 - OrdNo Filter: NOT IN blocklist (`BBP, BBK, BBS, BBL, BBT, BBD`)
 - กรองเฉพาะ `CustStatus = 'Y'` (Active customers)
-- Return: `{ ok, data: [{ id, name, custStatus, salesName, data: {year: total}, monthly: {year: {month: total}}, currentMonthSales }] }`
+- Return: `{ ok, data: [{ id, name, custStatus, salesName, data: {year: total}, dataQty: {year: totalQty}, monthly: {year: {month: total}}, monthlyQty: {year: {month: qty}}, currentMonthSales, topItem, topItemQty }] }`
 
 ---
 
@@ -586,3 +742,34 @@ API_PORT=3001
 - **Smart Data Hover**: เมื่อนำเมาส์ชี้ที่รูปขนาดย่อ จะมีป๊อปอัปข้อความเด้งแสดงรายละเอียด "ชื่อลูกค้า", "ยอดการสั่งซื้อ", และ "มูลค่ารวม" ของสินค้านั้น
 
 
+
+## Customer Report Module (CustomerReportPage.tsx)
+
+### Features & Refinements
+- **Dual Analytical Views**: Fully integrated 'YTD View' (Year-to-Date aggregation up to selected months) and 'Monthly Comparison' for direct side-by-side performance tracking.
+- **Dynamic Checkbox Filtering**: Users can select arbitrary combinations of months. The table structure intelligently pivots depending on the active view mode while respecting selected months.
+- **Resilient Theme Design (Growth Indicators)**: 
+  - Eliminated hardcoded hex colors. Backgrounds use CSS color-mix with ar(--color-success-500) and ar(--color-danger-500) at 15% opacity to seamlessly blend with any Light/Dark theme.
+  - Left-aligned currency symbols ($) and growth direction arrows (▲/▼) using flexbox for perfect accounting-style visual alignment.
+  - Implemented smart NEW badge logic: displays instantly recognizable pill badge when previous period is 0 and current period has sales.
+- **Clean UI**: Removed redundant back buttons, optimizing header space for Search and View Toggle controls.
+
+---
+
+## Subcontract Management (งานเหมา) — Planned Module
+
+### สถานะ: 🟡 UI Preview 1/3 (ไม่มี Backend)
+Sidebar menu group `subcontract` (icon: `handshake`) มี 3 รายการ:
+- `/subcontract/vendor-performance` — Vendor Performance Dashboard — **`VendorPerformanceDashboardPage.tsx`** มี Layout ตามภาพต้นแบบแล้ว (Filters, KPI tiles, Chart cards, Detail table grouped headers + Grand Total) แต่ทุกค่าเป็น `N/A`/empty-state ทั้งหมด พร้อม banner "ยังไม่เชื่อมต่อข้อมูลจริง" ที่หัวหน้า — **ห้ามใส่เลขสมมติ/mock ไปแทนของจริงเด็ดขาด** จนกว่าจะมี Backend SP จริง
+- `/subcontract/vendor-price-history` — ยังเป็น `PlaceholderPage.tsx`
+- `/subcontract/aging-report` — ยังเป็น `PlaceholderPage.tsx`
+
+### Target Design Reference
+ผู้ใช้ส่งภาพหน้าจอจากระบบพี่น้อง **"PCC System: Subcontract Management"** มาเป็นต้นแบบดีไซน์สำหรับโมดูลนี้ในอนาคต ลักษณะสำคัญที่ต้องทำตามเมื่อพัฒนาจริง:
+- KPI tiles แบบ flat icon-circle ไม่มี gradient/glassmorphism (ดู Design Notes ของ PO Tracker — ใช้แนวทางเดียวกัน)
+- Filter sidebar/section แสดงฟิลด์กรองทั้งหมดพร้อมกัน (Date Range, Subcontract, Department, Process, Item Group) ไม่ซ่อนหลัง toggle
+- Vendor Performance Dashboard: KPI row + 3 horizontal bar charts (On-Time Delivery %, Avg Lead Time, Defect Rate) + Detail table พร้อม grouped headers และแถว Grand Total
+- Vendor Price History: Multi-series line chart (ราคาต่อ vendor ข้ามเวลา) + ตาราง Latest Price Comparison + ตาราง Price History Detail พร้อม pagination
+- Aging Report: KPI row (Aging buckets 0-3/4-7/8-14/>14 วัน) + Donut chart + Bar chart คู่กัน + Detail table
+
+**หมายเหตุ**: ยังไม่มี Backend API หรือ Stored Procedure สำหรับข้อมูล Vendor/Subcontract ในระบบ — ต้องสร้างใหม่ทั้งหมดก่อนเริ่ม build หน้าจอจริง (ห้ามสร้างข้อมูลตัวอย่าง/mock มาแสดงแทนข้อมูลจริงในระบบ production)

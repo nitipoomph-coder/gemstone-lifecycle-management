@@ -62,3 +62,29 @@ After restoring the missing braces in TopOrdersGalleryPage, the npm run build pr
 ### Prevention & Lessons Learned:
 1. **Careful Regex Placements:** Always verify the lexical scope when injecting code via string replacement. Restoring a return statement must happen at the component body level, not inside nested helper functions.
 2. **Aggressive Cleanup:** When removing components (like Back buttons), always remember to also remove their imports to prevent the strict TS compiler from halting the build.
+
+## Issue: PO Tracker SP ช้า + Index หายเกลี้ยง + `_All`/dateType อื่นพังเงียบ
+**Date:** 2026-07-02
+**Component:** `PC_Show_OrdTrack_Sum_*` (dbGeneration), `routes/orders.js`, `backend/sql/`
+
+### Symptoms:
+งานหลักคือตัดการดึงรูปแบบ base64 (VARBINARY จาก `GMItemPhoto`) ออกจากระบบ + เร่ง SP ให้เร็วขึ้น ระหว่างเช็คข้อมูลจริงก่อนแก้ พบปัญหาที่ซ่อนอยู่หลายจุด
+
+### Root Causes (สิ่งที่เจอตอนเช็คข้อมูลจริง):
+1. **Index หายเกลี้ยง เหลือแค่ `PK_GMCust`** — ตาราง `OrdHD` (176k), `OrdDT` (755k), `OrdTrackDT`, `OrdWeekPlanHD` เป็น HEAP ไม่มี index เลย → SP วิ่ง full scan + correlated subquery ต่อแถว = คอขวดตัวจริง (แม้ในเอกสารจะระบุว่าเคยสร้าง index ครบแล้วก็ตาม)
+2. **`GROUP BY` ด้วยก้อน VARBINARY(MAX)** — SP `LEFT JOIN GMItemPhoto` แล้ว `MAX(CAST(ItemPhoto AS VARBINARY(MAX)))` ในทุก aggregate CTE + outer query ยัง group by blob อีกชั้น + โอน base64 หลาย MB มา Node ทุกครั้ง
+3. **`_All` ALTER ไม่ได้** — อ้าง `LEFT JOIN VPC_OrdSum_Detail` ซึ่งเป็น view ที่ binding error (อ้างตาราง `MasterFileProduct`/`Item_Head` ที่หายหลัง restore) → `_All` เดิมรันไม่ได้อยู่แล้ว (broken เงียบ)
+4. **@Status drift** — มีเพียง SP `_OrdDate` ที่ประกาศ `@Status` ส่วน `_DueDate`/`_CustDueDate`/`_FinDate`/`_All` เป็นเวอร์ชันเก่าไม่มี param นี้ แต่ backend ส่ง `@Status` ให้ทุกตัว → dateType อื่นนอกจาก Order Date error "too many arguments" (พังเงียบ)
+
+### Fixes:
+1. **ตัดรูปออกจาก SP ทั้ง 5** → เปลี่ยน `MAX(CAST(...ItemPhoto...))` เป็น `MIN(OrdDT.ItemNo) AS SampleItemNo` + ลบ join `GMItemPhoto` + ลบ blob ออกจาก GROUP BY (ยืนยัน `GMItemPhoto` เป็น 1:1 → SumQty/SumItem/SumAmnt/row count เท่าเดิมเป๊ะ pure perf win)
+2. **สร้าง 9 covering index** (NONCLUSTERED, `ONLINE=ON`, `DATA_COMPRESSION=PAGE`) — ไม่แตะ heap/clustered เพื่อลดความเสี่ยงต่อระบบ VB.net เดิม (`backend/sql/indexes.sql`)
+3. **ลบ dead join `VPC_OrdSum_Detail`** ใน `_All` (join แบบ LEFT ไม่ select คอลัมน์ใดเลย = no-op ต่อผลลัพธ์เพราะ GROUP BY ยุบ row ซ้ำ) → `_All` กลับมาใช้ได้
+4. **backend ส่ง `@Status` เฉพาะ SP `_OrdDate`** (`if (spName.endsWith('_OrdDate'))`) → dateType อื่นกลับมาทำงาน
+5. เก็บ SP/Index/baseline เป็นไฟล์จริงใน `backend/sql/` เป็น SSOT กัน "หายตอน restore"
+
+### Prevention & Lessons Learned:
+1. **เช็คข้อมูลจริงก่อนเสมอ (dump SP + `sys.indexes` + `sys.columns` + count):** เอกสาร (claude.md) บอกว่า index ครบ แต่ของจริงเหลือตัวเดียว — อย่าเชื่อเอกสารอย่างเดียว
+2. **ก่อนตัด join ที่อยู่ใน 段 aggregate ต้องเช็ค cardinality:** ถ้า `GMItemPhoto` เป็น 1:many การลบ join จะทำให้ยอด SUM เปลี่ยน — ที่นี่เป็น 1:1 เลยปลอดภัย (ยืนยันด้วย `HAVING COUNT(*)>1`)
+3. **แก้ SP ทีละตัว + เทียบ row/sum ก่อน-หลัง:** จับ `_All` ที่พังและ @Status drift ได้เพราะรันทดสอบทีละตัว
+4. **สร้าง index แบบ `ONLINE=ON` บน Enterprise:** ตรวจก่อนว่าไม่มี LOB column (จะ block online clustered build บน SQL 2012) — ที่นี่ไม่มี LOB ในตารางเป้าหมาย

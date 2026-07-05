@@ -624,9 +624,6 @@ export default function OrderTable({
     if (!pickerOrder) return;
     setPickerOrder(null);
 
-    const GROUPED_CUST = ['N008', 'N044', 'N048', 'N066', 'N067', 'N068', 'N069', 'N070', 'N071', 'N072', 'N073', 'N074', 'N075'];
-    const isGrouped = GROUPED_CUST.includes(pickerOrder.CustCode || '');
-
     const dateFrom = searchParams.get('dateFrom') || '';
     const dateTo = searchParams.get('dateTo') || '';
     const dateType = searchParams.get('dateType') || '';
@@ -640,9 +637,9 @@ export default function OrderTable({
     query.append('view', view);
 
     // ทุกแถวยิงเข้า endpoint /group/ เดียว (กรองครบทุกแกนเหมือน SP → ยอด detail ตรงกับแถวใน list)
-    // ลูกค้าทั่วไปแนบ ?po= เป็น "แกนที่ 6" ล็อกให้เหลือเฉพาะ PO นั้น
-    // N008 group ไม่แนบ po เพราะ SP รวมหลาย PO เข้าเป็นกลุ่มเดียวโดยตั้งใจ
-    if (!isGrouped && pickerOrder.PONo) {
+    // แนบ ?po= เป็น "แกนที่ 6" เมื่อแถวผูกกับ PO จริง — ครอบคลุมลูกค้าทั่วไป + N008 หลาย PO (CTM)
+    // ยกเว้นแถว label 'Group PO By ShipTo' (N008 รวมหลาย single-PO ตาม ShipTo โดยตั้งใจ) → ไม่แนบ po
+    if (pickerOrder.PONo && pickerOrder.PONo !== 'Group PO By ShipTo') {
       query.append('po', pickerOrder.PONo);
     }
     const path = [

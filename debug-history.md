@@ -8,7 +8,7 @@
 The user experienced a "white screen" (app crash) or the app failed to compile after I attempted to remove the "View Controls" dropdowns and refactored the "Growth Comparisons" code.
 
 ### Root Cause 1: Broken JSX Structure (Unclosed Tags)
-When using regex or text replacements to remove blocks of JSX (like the `Compare 2 Years` dropdowns), I accidentally deleted the closing `</div>` tag of a wrapper element. 
+When using regex or text replacements to remove blocks of JSX (like the `Compare 2 Years` dropdowns), I accidentally deleted the closing `</div>` tag of a wrapper element.
 This caused a cascading syntax error down the entire file (`TS17015: Expected corresponding closing tag for JSX fragment`), resulting in a compilation failure and white screen.
 
 ### Root Cause 2: Unmatched State Variables
@@ -17,7 +17,7 @@ When running scripts to refactor state (`growthYearA` to `growthComparisons`), t
 ### Prevention & Lessons Learned:
 1. **Always Verify JSX Hierarchy:** When deleting or replacing UI components, meticulously trace the opening and closing tags. If deleting a component, ensure the parent wrapper is either closed properly or deleted entirely if it's no longer needed.
 2. **Use Strict Verification:** After every significant file modification, always run `npm run build` or `npx tsc --noEmit` to verify that there are no syntax or type errors before returning to the user.
-3. **Avoid Loose Replacements on Large Files:** When refactoring a variable across a massive file, use AST-based tools or careful `multi_replace_file_content` chunks rather than a single massive `.cjs` replace script that might silently fail on whitespace mismatches. 
+3. **Avoid Loose Replacements on Large Files:** When refactoring a variable across a massive file, use AST-based tools or careful `multi_replace_file_content` chunks rather than a single massive `.cjs` replace script that might silently fail on whitespace mismatches.
 4. **Subagent Testing:** If an issue is suspected, spawn a browser subagent to visually confirm the page loads without React errors in the console.
 ## Issue: Inline CSS Variables for Fonts Not Applied in Tailwind
 **Date:** 2026-06-24
@@ -88,3 +88,38 @@ After restoring the missing braces in TopOrdersGalleryPage, the npm run build pr
 2. **ก่อนตัด join ที่อยู่ใน 段 aggregate ต้องเช็ค cardinality:** ถ้า `GMItemPhoto` เป็น 1:many การลบ join จะทำให้ยอด SUM เปลี่ยน — ที่นี่เป็น 1:1 เลยปลอดภัย (ยืนยันด้วย `HAVING COUNT(*)>1`)
 3. **แก้ SP ทีละตัว + เทียบ row/sum ก่อน-หลัง:** จับ `_All` ที่พังและ @Status drift ได้เพราะรันทดสอบทีละตัว
 4. **สร้าง index แบบ `ONLINE=ON` บน Enterprise:** ตรวจก่อนว่าไม่มี LOB column (จะ block online clustered build บน SQL 2012) — ที่นี่ไม่มี LOB ในตารางเป้าหมาย
+
+## Issue: Over-engineering UI and Unimported Variables Cause React Crash & Hidden Elements
+**Date:** 2026-07-07
+**Component:** `LineDetailDrawer.tsx` and `OrderDetailPage.tsx`
+
+### Symptoms:
+1. Opening the Line Detail Drawer caused a complete app crash (White Screen).
+2. After fixing the crash, clicking the photo thumbnail inside the Drawer appeared to do nothing (the full-screen photo didn't show up).
+3. The user expressed confusion over a completely new dark-mode design that they never requested.
+
+### Root Cause:
+1. **Unimported Function:** While attempting to fix a date formatting bug, I replaced `formatColumnValue` with `formatV` but forgot to add `formatV` to the import statement at the top of `LineDetailDrawer.tsx`. This caused a `ReferenceError: formatV is not defined` when React attempted to render the component, resulting in a white screen.
+2. **z-index Conflict:** I moved the photo Lightbox logic to the parent `OrderDetailPage.tsx` and gave it a `zIndex` of 1000. However, the `LineDetailDrawer` had a `zIndex` of 9001. When the photo was clicked, the Lightbox opened successfully but rendered *behind* the Drawer, making it invisible to the user.
+3. **Misinterpreting User Intent:** The user provided a screenshot of the existing UI and asked to "design it better and make the photo viewing match the top gallery." I misinterpreted this as a request for a complete UI overhaul and hallucinated a complex dark-mode layout, completely overwriting their functional component.
+
+### Prevention & Lessons Learned:
+1. **Always Verify Imports:** Whenever replacing or adding function calls via automated text replacement, rigorously check the import block to ensure all dependencies are available. A missing import in React causes fatal runtime crashes.
+2. **Double-Check Stacking Contexts (z-index):** When implementing global overlays (like Modals or Lightboxes), always verify the `zIndex` against other elevated components like Drawers or Navbars to prevent z-index wars and hidden overlays.
+3. **Don't Over-engineer:** Stick strictly to what the user asks for. If a user asks for a specific fix (like photo zooming behavior), do not rewrite the entire component layout unless explicitly instructed to do so.
+4. **Git Checkout for Quick Recovery:** When a component is hopelessly over-engineered or broken, using `git checkout` to revert to the last working state and starting fresh is safer and faster than trying to patch the broken new code.
+
+## Issue: Missing "Group" Column in PO Tracker (FBD+PF1+PL3)
+**Date:** 2026-07-08
+**Component:** `PC_Show_OrdTrack_Sum_*` SPs and `OrdTrackDT`
+
+### Symptoms:
+The user noticed that the "Group" column (which showed values like `FBD+PF1+PL3`, `PF1+PL1`) was missing in the new PO Tracker. Initial assumption was that this string was dynamically concatenated in the Stored Procedure based on pending quantities.
+
+### Root Cause:
+After reviewing the old VB.net source code (`PC_Face_OrdTrack_Sum.vb`), we discovered that the "Group" column was actually a direct mapping to the `OrdMaker` field. The user confirmed that `OrdMaker` is physically stored in the database within the `dbo.OrdTrackDT` table.
+The new SPs (`PC_Show_OrdTrack_Sum_*`) simply omitted selecting `OrdTrackDT.OrdMaker`, which is why the column disappeared.
+
+### Prevention & Lessons Learned:
+1. **Don't assume dynamic logic for legacy fields:** What looks like a dynamically calculated string (`FBD+PF1+PL3`) might just be a hardcoded/pre-calculated value stored in a physical database column (`OrdMaker`).
+2. **Verify against the source DB:** Always check the related tables (`OrdTrackDT`) for missing columns before attempting to recreate complex grouping logic in Node.js.

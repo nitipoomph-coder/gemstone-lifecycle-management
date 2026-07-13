@@ -41,7 +41,7 @@ export default function SampleDocPage() {
   ];
 
   // ─── Load document list ─────────────────────
-  const loadDocList = async () => {
+  async function loadDocList() {
     setLoading(true);
     setError(null);
 
@@ -88,7 +88,7 @@ export default function SampleDocPage() {
   }, [selectedDocNo]);
 
   // ─── Load document detail ───────────────────
-  const handleSearchDoc = async (docNo: string) => {
+  async function handleSearchDoc(docNo: string) {
     if (!docNo.trim()) return;
     setDetailLoading(true);
     setError(null);
@@ -103,7 +103,7 @@ export default function SampleDocPage() {
     }
   };
 
-  const handleClear = () => {
+  function handleClear() {
     setSelectedDocNo('');
     setDocDetail(null);
     setError(null);

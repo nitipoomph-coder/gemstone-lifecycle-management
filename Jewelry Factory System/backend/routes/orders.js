@@ -9,7 +9,7 @@ const { getPool, sql } = require('../db');
 // --- helper: calculate pending quantities following legacy Stored Procedure ---
 function computePendingProcessQuantities(r, isAliased = false) {
   const itemQty = Number(isAliased ? r.Qty : r.ItemQty) || 0;
-  
+
   const stoneQty = Number(r.StoneQty) || 0;
   const fitQty = Number(isAliased ? r.FindingQty : r.FitQty) || 0;
   const wijQty = Number(isAliased ? r.WaxQty : r.WijQty) || 0;
@@ -147,7 +147,7 @@ router.get('/', async (req, res) => {
     const fetchPromise = (async () => {
       console.log(`[EXEC SP] ${spName} | status: ${statusFilter} (${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()})`);
       const request = pool.request();
-      
+
       // === [พารามิเตอร์ที่ใช้เรียกใช้งาน Stored Procedure (SP) ในฐานข้อมูล] ===
       // 1) FromDate -> ตรงกับตัวแปร @FromDate ใน SP (กำหนดขอบเขตวันที่เริ่มต้น)
       request.input('FromDate', sql.DateTime, startDate);
@@ -165,7 +165,7 @@ router.get('/', async (req, res) => {
       // === [ADDED: มัดรวม 5 แกนหลักด้วย Node.js] ===
       // (การคัดกรอง Pending/Finish ย้ายไปคัดกรองโดยสมบูรณ์ผ่าน @Status ในตัว Database SP แล้ว)
 
-      // 2. มัดรวมออเดอร์ที่กระจัดกระจาย โดยยึด 5 แกนหลัก + 1 วันกำหนดส่ง 
+      // 2. มัดรวมออเดอร์ที่กระจัดกระจาย โดยยึด 5 แกนหลัก + 1 วันกำหนดส่ง
       //    ซึ่งฟิลด์เหล่านี้ดึงมาจากคอลัมน์ผลลัพธ์ของ Stored Procedure (SP) ในระบบโดยตรง:
       //    - r.CustCode      : รหัสลูกค้า (ตรงกับ SELECT h.CustCode ใน SP)
       //    - r.PONo          : หมายเลขใบสั่งซื้อ (ตรงกับ SELECT h.PONo หรือ 'Group PO By ShipTo' ใน SP)
@@ -174,34 +174,35 @@ router.get('/', async (req, res) => {
       //    - r.OrdMat        : ชนิดวัสดุหลัก (ตรงกับ SELECT h.OrdMat ใน SP)
       //    - r.CustDueDate   : วันกำหนดส่งมอบของลูกค้า (ตรงกับ SELECT h.CustDueDate ใน SP)
       const groupedMap = new Map();
-      
+
       rawData.forEach(r => {
         // สร้างกุญแจ 6 เงื่อนไข (รวม CustDueDate เพื่อป้องกันไม่ให้ข้อมูลต่างกำหนดส่งถูกรวมทับกัน)
         const key = `${r.CustCode}|${r.PONo}|${r.OrdKind}|${r.CustMultiAddr}|${r.OrdMat}|${r.CustDueDate || ''}`;
-        
+
         if (!groupedMap.has(key)) {
           // ถ้ายังไม่เคยมัดรวม ให้บันทึกเป็นก้อนใหม่
-          groupedMap.set(key, { 
-            ...r, 
-            OrdNos: new Set(r.OrdNo ? r.OrdNo.split('/').map(x => x.trim()) : []) 
+          groupedMap.set(key, {
+            ...r,
+            OrdNos: new Set(r.OrdNo ? r.OrdNo.split('/').map(x => x.trim()) : [])
           });
         } else {
           // ถ้าเจอกุญแจซ้ำ ให้อัปเดตก้อนเดิม (ยุบรวม)
           const existing = groupedMap.get(key);
-          
+
           if (r.OrdNo) {
             r.OrdNo.split('/').forEach(x => existing.OrdNos.add(x.trim()));
           }
 
           // รวมจำนวน Qty ต่างๆ
           const qtyFields = [
-            'SumItem', 'SumQty', 'StonePenQty', 'FitPenQty', 'WijPenQty', 
-            'WstPenQty', 'CastPenQty', 'ControlPenQty', 'GrindPenQty', 
-            'PolishPenQty', 'PlatePenQty', 'QCPenQty', 'UnFinishQty', 
+            'SumItem', 'SumQty', 'StonePenQty', 'FitPenQty', 'WijPenQty',
+            'WstPenQty', 'CastPenQty', 'ControlPenQty', 'GrindPenQty',
+            'PolishPenQty', 'PlatePenQty', 'QCPenQty', 'UnFinishQty',
             'FinishQty', 'ExportQty', 'BalQty', 'SumAmnt'
           ];
           qtyFields.forEach(f => {
-            existing[f] = (existing[f] || 0) + (r[f] || 0);
+            // ใช้ค่าผลรวมที่ถูก pre-aggregated จาก SP โดยตรง (ป้องกันการบวกเบิ้ลกรณี SP return หลาย row ซ้ำกันเพราะ DueDate ต่าง)
+            existing[f] = r[f] || 0;
           });
 
           // คำนวณเปอร์เซ็นต์ส่งออกใหม่
@@ -216,7 +217,7 @@ router.get('/', async (req, res) => {
           if (r.CustDueDate && (!existing.CustDueDate || new Date(r.CustDueDate) < new Date(existing.CustDueDate))) {
             existing.CustDueDate = r.CustDueDate;
           }
-          
+
           // ItemNo ตัวแทน (SampleItemNo): ถ้าก้อนเดิมยังไม่มี ให้ยึดของแถวใหม่
           if (!existing.SampleItemNo && r.SampleItemNo) {
             existing.SampleItemNo = r.SampleItemNo;
@@ -281,7 +282,7 @@ function buildDetailFilters(reqQuery, sqlReq, isSinglePo = false) {
   }
 
   // 3. Status Filter
-  const filterStatus = (status || 'ALL').toUpperCase();
+  const filterStatus = (status || 'PENDING').toUpperCase();
   if (filterStatus === 'PENDING') {
     filters += ` AND h.CloseStatus <> 'Y'`;
   } else if (filterStatus === 'FINISH') {
@@ -317,14 +318,30 @@ router.get('/group/:cust/:addr/:kind/:mat/:duedate', async (req, res) => {
       .input('mat', sql.NVarChar, mat === '-' ? null : mat)
       .input('duedate', sql.DateTime, duedate === '-' ? null : duedate);
 
-    // ลูกค้าทั่วไป: frontend แนบ ?po= มาเป็นแกนที่ 6 (ล็อกให้ตรงแถวใน list) — N008 group ไม่ส่ง po
-    const poFilter = req.query.po ? ' AND h.PONo = @po' : '';
-    if (req.query.po) sqlReq.input('po', sql.NVarChar, decodeURIComponent(String(req.query.po)));
+    let poFilter = '';
+    if (req.query.po !== undefined) {
+      const decodedPo = decodeURIComponent(String(req.query.po));
+      if (decodedPo === 'Group PO By ShipTo') {
+        poFilter = `
+          AND h.PONo IN (
+            SELECT PONo
+            FROM OrdHD
+            WHERE CustCode = h.CustCode
+            GROUP BY PONo
+            HAVING COUNT(OrdNo) = 1
+          )
+        `;
+      } else {
+        poFilter = ' AND ISNULL(h.PONo, \'\') = @po';
+        sqlReq.input('po', sql.NVarChar, decodedPo);
+      }
+    }
 
     const extraFilters = buildDetailFilters(req.query, sqlReq, false);
 
     const result = await sqlReq.query(`
-        SELECT 
+        SELECT
+          h.OrdMaker,
           h.OrdNo, h.OrdDate, h.DueDate, h.CustDueDate, h.CustQCDate,
           h.CustCode, c.CustName, h.PONo, h.OrdMat, h.OrdStatus, h.CloseStatus, h.OrdKind,
           h.SumOrdQty AS TotalQty, h.SumOrdAmnt AS TotalAmount, h.CurrCode,
@@ -349,13 +366,13 @@ router.get('/group/:cust/:addr/:kind/:mat/:duedate', async (req, res) => {
         LEFT JOIN GMCust c ON c.CustCode = h.CustCode
         LEFT JOIN OrdDT d ON d.OrdNo = h.OrdNo
         WHERE h.CustCode = @cust
-          AND ISNULL(h.CustMultiAddr, '') = ISNULL(@addr, '') 
+          AND ISNULL(h.CustMultiAddr, '') = ISNULL(@addr, '')
           AND (
             (@kind = 'Replen' AND h.OrdKind <> 'NEW') OR
             (@kind = 'New' AND h.OrdKind = 'NEW') OR
             (ISNULL(h.OrdKind, '') = ISNULL(@kind, ''))
           )
-          AND ISNULL(h.OrdMat, '') = ISNULL(@mat, '') 
+          AND ISNULL(h.OrdMat, '') = ISNULL(@mat, '')
           AND (
             (@duedate IS NULL AND h.CustDueDate IS NULL) OR
             (CAST(h.CustDueDate AS DATE) = CAST(@duedate AS DATE))
@@ -381,7 +398,7 @@ router.get('/group/:cust/:addr/:kind/:mat/:duedate', async (req, res) => {
     });
 
     const header = {
-      PONo: Array.from(uniquePOs).filter(Boolean).join(' / '),
+      PONo: req.query.po ? decodeURIComponent(req.query.po) : (uniquePOs.size > 0 ? 'Group PO By ShipTo' : ''),
       OrdNos: Array.from(uniqueOrds),
       OrdNo: first.OrdNo,
       OrdDate: first.OrdDate,
@@ -411,7 +428,9 @@ router.get('/group/:cust/:addr/:kind/:mat/:duedate', async (req, res) => {
         CustDueDate: r.CustDueDate,
         Destination: r.CustMultiAddr,
         Sales: r.Sales,
+        CustCode: r.CustCode, // Added
         PONo: r.PONo,
+        PONo2: '', // Map this if available from DB
         InvoiceNo: r.ExpInvNo || r.CenInvNo || '',
         InvoiceDate: r.ExpInvDate || r.CenInvDate || '',
         AWB: r.ExpAWBNo || r.CenAWBNo || '',
@@ -427,6 +446,7 @@ router.get('/group/:cust/:addr/:kind/:mat/:duedate', async (req, res) => {
         RecRemark: r.Recvmark, EnaRemark: r.Enamark,
         CryRemark: r.Crysmark, AsmRemark: r.Assemmark,
         ShfRemark: r.Shelfmark, PkRemark: r.Packmark, ProdRemark: r.Prodmark,
+        GroupText: r.OrdMaker || '',
       };
     });
 
@@ -452,6 +472,7 @@ router.get('/by-po/:poNo', async (req, res) => {
 
     const result = await sqlReq.query(`
         SELECT
+          h.OrdMaker,
           h.OrdNo, h.OrdDate, h.DueDate, h.CustQCDate, h.CustDueDate,
           h.CustCode, c.CustName, c.SalesName AS Sales,
           h.PONo, h.OrdMat, h.OrdKind, h.OrdStatus, h.CloseStatus,
@@ -535,6 +556,7 @@ router.get('/by-po/:poNo', async (req, res) => {
         RecRemark: r.RecRemark, EnaRemark: r.EnaRemark,
         CryRemark: r.CryRemark, AsmRemark: r.AsmRemark,
         ShfRemark: r.ShfRemark, PkRemark: r.PkRemark, ProdRemark: r.ProdRemark,
+        GroupText: r.OrdMaker || '',
       };
     });
 
@@ -568,6 +590,7 @@ router.get('/:ordNo', async (req, res) => {
 
     const result = await request.query(`
         SELECT
+          h.OrdMaker,
           h.OrdNo, h.OrdDate, h.DueDate, h.CustQCDate, h.CustDueDate,
           h.CustCode, c.CustName, c.SalesName AS Sales,
           h.PONo, h.OrdMat, h.OrdKind, h.OrdStatus, h.CloseStatus,
@@ -669,6 +692,7 @@ router.get('/:ordNo', async (req, res) => {
         RecRemark: r.Recvmark, EnaRemark: r.Enamark,
         CryRemark: r.Crysmark, AsmRemark: r.Assemmark,
         ShfRemark: r.Shelfmark, PkRemark: r.Packmark, ProdRemark: r.Prodmark,
+        GroupText: r.OrdMaker || '',
       };
     });
 
@@ -700,7 +724,7 @@ router.post('/remarks', async (req, res) => {
       .input('pck', sql.NVarChar, PkRemark || '')
       .input('prod', sql.NVarChar, ProdRemark || '')
       .query(`
-        UPDATE OrdDT 
+        UPDATE OrdDT
         SET Recvmark = @rec,
             Enamark = @ena,
             Crysmark = @cry,
@@ -719,3 +743,5 @@ router.post('/remarks', async (req, res) => {
 });
 
 module.exports = router;
+// Trigger nodemon restart
+// trigger nodemon

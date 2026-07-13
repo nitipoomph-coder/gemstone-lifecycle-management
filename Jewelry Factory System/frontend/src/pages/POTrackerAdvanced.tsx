@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Topbar from '../components/layout/Topbar';
 import OrderTable, { MASTER_COLS, GROUP_PRESETS, COLUMN_GROUPS } from '../components/dashboard/OrderTable';
+import CustomViewModal from '../components/dashboard/CustomViewModal';
 import CustomSelect from '../components/ui/CustomSelect';
 import { fetchOrders, type OrderSummary } from '../services/orderAPI';
 import { RefreshCw, AlertTriangle, Package, LayoutGrid, DollarSign, Filter, X, Layers, Search } from 'lucide-react';
@@ -61,7 +62,7 @@ export default function POTrackerAdvanced() {
     if (filterCust) params.set('fCust', filterCust);
     if (filterPO) params.set('fPO', filterPO);
     if (filterShipTo) params.set('fShipTo', filterShipTo);
-    
+
     const defaultRange = getDefaultDateRange();
     if (dateFrom !== defaultRange.from) params.set('dateFrom', dateFrom);
     if (dateTo !== defaultRange.to) params.set('dateTo', dateTo);
@@ -105,16 +106,32 @@ export default function POTrackerAdvanced() {
   // ⭐️ Smart Selection Locking: reset columns when group changes
   useEffect(() => {
     if (lastGroupRef.current !== groupFilter) {
-      setVisibleKeys(GROUP_PRESETS[groupFilter] || GROUP_PRESETS.ALL);
+      if (groupFilter === 'CUSTOM') {
+        const saved = localStorage.getItem('poTrackerCustomCols');
+        if (saved) {
+          try {
+            setVisibleKeys(JSON.parse(saved));
+          } catch (e) {
+            setVisibleKeys(GROUP_PRESETS.ALL);
+          }
+        } else {
+          setVisibleKeys(GROUP_PRESETS.ALL);
+        }
+      } else {
+        setVisibleKeys(GROUP_PRESETS[groupFilter] || GROUP_PRESETS.ALL);
+      }
       lastGroupRef.current = groupFilter;
     }
   }, [groupFilter]);
 
-  const toggleColKey = (key: string) => {
-    setVisibleKeys(prev =>
-      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
-    );
-  };
+  // Save to localStorage when visibleKeys change in CUSTOM mode
+  useEffect(() => {
+    if (groupFilter === 'CUSTOM') {
+      localStorage.setItem('poTrackerCustomCols', JSON.stringify(visibleKeys));
+    }
+  }, [visibleKeys, groupFilter]);
+
+  const [showCustomViewModal, setShowCustomViewModal] = useState(false);
 
   // --- SMART SEARCH INTELLIGENCE ---
   useEffect(() => {
@@ -142,7 +159,7 @@ export default function POTrackerAdvanced() {
     let filteredList = orders;
 
     // Group Filter
-    if (groupFilter !== 'ALL') {
+    if (groupFilter !== 'ALL' && groupFilter !== 'CUSTOM') {
       if (groupFilter === 'N008') {
         const n008List = ['N008', 'N048', 'N066', 'N067', 'N068', 'N069', 'N070', 'N071', 'N072', 'N073', 'N074', 'N075'];
         filteredList = filteredList.filter(o => o.CustCode && n008List.some(code => o.CustCode!.includes(code)));
@@ -272,7 +289,7 @@ export default function POTrackerAdvanced() {
       <Topbar breadcrumb={[{ label: 'JEWELRY FACTORY SYSTEM', path: '/' }, { label: 'PO TRACKER' }]} />
 
       <div className="content-scrollbar flex-1 overflow-y-auto" style={{ padding: '24px', display: 'flex', flexDirection: 'column', minHeight: 0, zoom: '0.85' }}>
-        
+
         {/* ─── FILTERS: compact toolbar + popover + active chips ─── */}
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px',
@@ -326,112 +343,20 @@ export default function POTrackerAdvanced() {
             </div>
           </div>
 
-          {/* Right: View Columns + Filters popover trigger + Refresh */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            {/* View Columns Picker */}
-            <div style={{ position: 'relative' }}>
-              <button
-                onClick={(e) => { e.stopPropagation(); setShowColumnPicker(!showColumnPicker); }}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: '12px',
-                  background: showColumnPicker ? 'var(--color-surface-2)' : 'var(--color-surface-1)', border: '1px solid var(--color-border-light)',
-                  color: 'var(--color-text-secondary)', fontSize: '0.8rem', fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s'
-                }}
-                className="hover:bg-surface-2"
-              >
-                <Layers size={16} />
-                View Columns
-                <div style={{ transform: showColumnPicker ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)' }} className="text-[var(--color-text-tertiary)] flex-shrink-0">
-                  <svg width="10" height="6" viewBox="0 0 12 7" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M1 1L6 6L11 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </div>
-              </button>
-
-              {showColumnPicker && (
-                <>
-                  <div
-                    onClick={() => { setShowColumnPicker(false); setColSearch(''); }}
-                    style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'transparent' }}
-                  />
-                  <div
-                    onClick={(e) => e.stopPropagation()}
-                    className="animate-fade-in-up"
-                    style={{
-                      position: 'absolute', top: 'calc(100% + 8px)', right: 0,
-                      background: 'var(--color-surface-1)', borderRadius: '12px',
-                      boxShadow: '0 10px 40px -10px color-mix(in srgb, var(--color-surface-900) 25%, transparent), 0 0 0 1px var(--color-border-light)',
-                      padding: '8px', zIndex: 101,
-                      width: '240px', display: 'flex', flexDirection: 'column', gap: '8px',
-                      transformOrigin: 'top right'
-                    }}>
-                    <div style={{ position: 'relative' }}>
-                      <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-quaternary)' }} />
-                      <input
-                        autoFocus
-                        placeholder="Find column..."
-                        value={colSearch}
-                        onChange={(e) => setColSearch(e.target.value)}
-                        style={{
-                          width: '100%', padding: '8px 10px 8px 30px', borderRadius: '8px',
-                          background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)',
-                          fontSize: '0.75rem', color: 'var(--color-text-primary)', fontWeight: 600,
-                          outline: 'none', transition: 'all 0.2s'
-                        }}
-                      />
-                    </div>
-
-                    <div className="custom-scrollbar" style={{ maxHeight: '340px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px', paddingRight: '4px' }}>
-                      {(() => {
-                        const q = colSearch.trim().toLowerCase();
-                        const matches = (key: string) => !q || (MASTER_COLS[key].label || key).toLowerCase().includes(q);
-                        const groups = COLUMN_GROUPS
-                          .map(g => ({ label: g.label, keys: g.keys.filter(matches) }))
-                          .filter(g => g.keys.length > 0);
-
-                        if (groups.length === 0) {
-                          return (
-                            <div style={{ padding: '20px', textAlign: 'center', color: 'var(--color-text-quaternary)', fontSize: '0.75rem' }}>
-                              No columns match
-                            </div>
-                          );
-                        }
-
-                        return groups.map(g => {
-                          const allOn = g.keys.every(k => visibleKeys.includes(k));
-                          return (
-                            <div key={g.label} style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 8px 2px' }}>
-                                <span style={{ fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--color-text-quaternary)' }}>{g.label}</span>
-                                <button
-                                  onClick={() => setVisibleKeys(prev => {
-                                    const s = new Set(prev);
-                                    g.keys.forEach(k => { if (allOn) s.delete(k); else s.add(k); });
-                                    return Array.from(s);
-                                  })}
-                                  style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.04em', color: 'var(--color-brand-600)' }}
-                                >{allOn ? 'CLEAR' : 'ALL'}</button>
-                              </div>
-                              {g.keys.map(key => (
-                                <button
-                                  key={key}
-                                  onClick={() => toggleColKey(key)}
-                                  style={{ border: 'none', cursor: 'pointer', textAlign: 'left', width: '100%' }}
-                                  className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm transition-colors font-bold ${visibleKeys.includes(key) ? "bg-[var(--color-brand-100)] text-[var(--color-brand-600)]" : "text-[var(--color-text-primary)] hover:bg-[var(--color-surface-0)]"}`}
-                                >
-                                  <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{MASTER_COLS[key].label || key}</span>
-                                  {visibleKeys.includes(key) && <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-brand-500)] shadow-[0_0_8px_color-mix(in_srgb,_var(--color-brand-500)_60%,_transparent)] ml-2 flex-shrink-0" />}
-                                </button>
-                              ))}
-                            </div>
-                          );
-                        });
-                      })()}
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
+            <button
+              onClick={(e) => { e.stopPropagation(); setShowCustomViewModal(true); }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: '12px',
+                background: 'linear-gradient(135deg, var(--color-brand-600) 0%, var(--color-brand-500) 100%)',
+                border: 'none', color: 'white', fontSize: '0.8rem', fontWeight: 900, cursor: 'pointer', transition: 'all 0.2s',
+                boxShadow: '0 4px 12px color-mix(in srgb, var(--color-brand-500) 40%, transparent)'
+              }}
+              className="hover:scale-105 active:scale-95"
+            >
+              <Layers size={16} />
+              Custom View
+            </button>
             <div style={{ position: 'relative' }}>
               <button
                 onClick={(e) => { e.stopPropagation(); setShowFiltersPopover(!showFiltersPopover); }}
@@ -528,9 +453,9 @@ export default function POTrackerAdvanced() {
                         }}
                         style={{
                           display: 'flex', alignItems: 'center', gap: '6px',
-                          padding: '10px 16px', borderRadius: '10px', 
-                          background: 'var(--color-surface-2)', color: 'var(--color-text-secondary)', 
-                          border: '1px solid var(--color-border-strong)', 
+                          padding: '10px 16px', borderRadius: '10px',
+                          background: 'var(--color-surface-2)', color: 'var(--color-text-secondary)',
+                          border: '1px solid var(--color-border-strong)',
                           fontSize: '0.8rem', fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s'
                         }}
                         className="hover:bg-danger-50 hover:text-danger-600 hover:border-danger-200"
@@ -673,13 +598,23 @@ export default function POTrackerAdvanced() {
         </div>
       </div>
       <style>{`
-        @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}} 
+        @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
         .animate-spin{animation:spin 1s linear infinite}
         @keyframes fadeInDown {
           from { opacity: 0; transform: translateY(-10px); }
           to { opacity: 1; transform: translateY(0); }
         }
       `}</style>
+      <CustomViewModal
+        isOpen={showCustomViewModal}
+        onClose={() => setShowCustomViewModal(false)}
+        initialVisibleKeys={visibleKeys}
+        initialGroup={groupFilter}
+        onApply={(grp, keys) => {
+          setGroupFilter(grp);
+          setVisibleKeys(keys);
+        }}
+      />
     </div>
   );
 }

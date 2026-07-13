@@ -14,6 +14,8 @@ import SalesDashboard from './pages/SalesDashboard';
 import CustomerDashboard from './pages/CustomerDashboard';
 import CustomerReportPage from './pages/CustomerReportPage';
 import TopOrdersGalleryPage from './pages/TopOrdersGalleryPage';
+import SalesOrderAnalytics from './pages/SalesOrderAnalytics';
+import SalesOrderAnalyticsDetail from './pages/SalesOrderAnalyticsDetail';
 import LoginPage from './pages/LoginPage';
 
 import { useLocation } from 'react-router-dom';
@@ -52,6 +54,8 @@ export default function App() {
             <Route path="/dashboard/qty" element={<CustomerDashboard metric="qty" />} />
             <Route path="/dashboard/customer-report" element={<CustomerReportPage />} />
             <Route path="/dashboard/top-Orders" element={<TopOrdersGalleryPage />} />
+            <Route path="/dashboard/sales-order-analytics" element={<SalesOrderAnalytics />} />
+            <Route path="/dashboard/sales-order-analytics/detail" element={<SalesOrderAnalyticsDetail />} />
 
 
             {/* 1. จัดซื้อและรับเข้า — SPA, SRA, SRB, SIR */}

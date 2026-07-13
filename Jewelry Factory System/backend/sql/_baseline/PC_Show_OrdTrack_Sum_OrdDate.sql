@@ -1,9 +1,24 @@
+USE [dbGeneration]
+GO
+/****** Object:  StoredProcedure [dbo].[PC_Show_OrdTrack_Sum_OrdDate]    Script Date: 08/07/2026 07:54 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 
-CREATE PROCEDURE [dbo].[PC_Show_OrdTrack_Sum_OrdDate]
-	
+-- ========================================================================
+-- Author : <PRAWAT>
+-- Create Date : <02/02/2025>
+-- Modify Date : <01/06/2026>
+-- Description : <Show Order Tracker Summary By Order Date>
+-- ========================================================================
+
+ALTER PROCEDURE [dbo].[PC_Show_OrdTrack_Sum_OrdDate]
+
 	@FromDate DateTime,
-	@ToDate DateTime,
-	@Status Varchar(20) = 'pending'
+	@ToDate DateTime
+	--@CustCode Varchar(10)
+	--@SalesName Varchar(20)
 
 AS
 
@@ -16,8 +31,12 @@ WITH DupOnePONo AS (
     FROM OrdHD
 	WHERE OrdHD.OrdDate BETWEEN @FromDate AND @ToDate
 	AND SUBSTRING(OrdHD.OrdNo,1,3) IN ('BBC','BBS','BBE','BBL','BBR','BBT','BBP')
-	AND OrdHD.CustCode IN ('N008','N044','N048','N066','N067','N068','N069','N070','N071','N072','N073','N074','N075') 
+
+	--AND SUBSTRING(OrdHD.OrdNo,1,3) NOT IN ('BBD','BBI','BBF','LLC','LBC','LBS','LBR','LBT')
+	AND OrdHD.CustCode IN ('N008','N048','N066','N067','N068','N069','N070','N071','N072','N073','N074','N075')
 	AND OrdHD.PONo NOT IN ('','TOP','Test','Testing','Stock','STOCK')
+	AND OrdHD.CloseStatus <> 'Y'
+	--AND (OrdHD.CloseRes <> 'Close Old Order From Old System' OR OrdHD.CloseRes IS NULL)
 
     GROUP BY PONo
     HAVING COUNT(*) = 1),
@@ -27,8 +46,12 @@ DupMorPONo AS (
 	FROM OrdHD
 	WHERE OrdHD.OrdDate BETWEEN @FromDate AND @ToDate
 	AND SUBSTRING(OrdHD.OrdNo,1,3) IN ('BBC','BBS','BBE','BBL','BBR','BBT','BBP')
-	AND OrdHD.CustCode IN ('N008','N044','N048','N066','N067','N068','N069','N070','N071','N072','N073','N074','N075') 
+
+	--AND SUBSTRING(OrdHD.OrdNo,1,3) NOT IN ('BBD','BBI','BBF','LLC','LBC','LBS','LBR','LBT')
+	AND OrdHD.CustCode IN ('N008','N048','N066','N067','N068','N069','N070','N071','N072','N073','N074','N075')
 	AND OrdHD.PONo NOT IN ('','TOP','Test','Testing','Stock','STOCK')
+	AND OrdHD.CloseStatus <> 'Y'
+	--AND (OrdHD.CloseRes <> 'Close Old Order From Old System' OR OrdHD.CloseRes IS NULL)
 
 	GROUP BY PONo
 	HAVING COUNT(*) > 1),
@@ -47,6 +70,7 @@ FROM (
                 ORDER BY OrdTrackID DESC
             ) AS rn
     FROM OrdTrackDT
+	--WHERE OrdTrackDT.TrackStatus <> 'Y'
 ) X
 WHERE rn = 1),
 
@@ -54,7 +78,7 @@ WHERE rn = 1),
 OrdDT_Aggregate AS (
 	SELECT
 		T2.CustCode,
-		T2.CustDueDate, 
+		T2.CustDueDate,
 		T2.PONo,
 		T2.OrdKind,
 		T2.OrdMat,
@@ -76,7 +100,7 @@ OrdDT_Aggregate AS (
 		SUM(ISNULL(OrdDT.ExportQty,0)) AS ExportQty,
 		SUM(ISNULL(OrdDT.ExportQty,0) - ISNULL(OrdDT.ItemQty,0)) AS BalQty,
 
-		CASE 
+		CASE
 		WHEN SUM(ISNULL(OrdDT.ItemQty,0)) IS NULL OR SUM(ISNULL(OrdDT.ItemQty,0)) = 0 THEN 0
 		ELSE ROUND((SUM(ISNULL(OrdDT.ExportQty,0)) / SUM(ISNULL(OrdDT.ItemQty,0))) * 100,0)
 		END AS ExpPct,
@@ -88,13 +112,15 @@ OrdDT_Aggregate AS (
 	LEFT JOIN GMItemPhoto ON GMItemPhoto.ItemNo = OrdDT.ItemNo
 	WHERE T2.OrdDate BETWEEN @FromDate AND @ToDate
 	AND SUBSTRING(T2.OrdNo,1,3) IN ('BBC','BBS','BBE','BBL','BBR','BBT','BBP')
-	AND T2.CustCode NOT IN ('N008','N044','N048','N066','N067','N068','N069','N070','N071','N072','N073','N074','N075') 
+	AND T2.CustCode NOT IN ('N008','N048','N066','N067','N068','N069','N070','N071','N072','N073','N074','N075')
 	AND T2.PONo NOT IN ('','TOP','Test','Testing','Stock','STOCK')
-	AND (@Status = 'All' OR (@Status = 'pending' AND T2.CloseStatus <> 'Y') OR (@Status = 'finish' AND T2.CloseStatus = 'Y'))
+	AND T2.CloseStatus <> 'Y'
+	--AND (T2.CloseRes <> 'Close Old Order From Old System' OR T2.CloseRes IS NULL)
+	--GROUP BY t2.CustCode, T2.CustDueDate, T2.PONo, T2.OrdKind, T2.OrdMat),
 	GROUP BY t2.CustCode, T2.CustDueDate, T2.PONo, T2.OrdKind, T2.OrdMat, T2.CustMultiAddr),
 
 CTO_OrdDT_Aggregate AS (
-    SELECT 
+    SELECT
         T2.CustCode,
 		T2.CustDueDate,
         T2.CustMultiAddr,
@@ -117,7 +143,7 @@ CTO_OrdDT_Aggregate AS (
 		SUM(ISNULL(OrdDT.ExportQty,0)) AS ExportQty,
 		SUM(ISNULL(OrdDT.ExportQty,0) - ISNULL(OrdDT.ItemQty,0)) AS BalQty,
 
-		CASE 
+		CASE
 		WHEN SUM(ISNULL(OrdDT.ItemQty,0)) IS NULL OR SUM(ISNULL(OrdDT.ItemQty,0)) = 0 THEN 0
 		ELSE ROUND((SUM(ISNULL(OrdDT.ExportQty,0)) / SUM(ISNULL(OrdDT.ItemQty,0))) * 100,0)
 		END AS ExpPct,
@@ -128,14 +154,12 @@ CTO_OrdDT_Aggregate AS (
     INNER JOIN OrdHD T2 ON T2.OrdNo = OrdDT.OrdNo
     LEFT JOIN GMItemPhoto ON GMItemPhoto.ItemNo = OrdDT.ItemNo
     WHERE T2.PONo IN (SELECT PONo FROM DupOnePONo)
-    AND (@Status = 'All' OR (@Status = 'pending' AND T2.CloseStatus <> 'Y') OR (@Status = 'finish' AND T2.CloseStatus = 'Y'))
     GROUP BY T2.CustCode, T2.CustDueDate, T2.CustMultiAddr, T2.OrdKind, T2.OrdMat),
 
 
 CTM_OrdDT_Aggregate AS (
-    SELECT 
+    SELECT
         T2.CustCode,
-        T2.CustMultiAddr,
         T2.PONo,
         T2.OrdKind,
         T2.OrdMat,
@@ -156,7 +180,7 @@ CTM_OrdDT_Aggregate AS (
 		SUM(ISNULL(OrdDT.ExportQty,0)) AS ExportQty,
 		SUM(ISNULL(OrdDT.ExportQty,0) - ISNULL(OrdDT.ItemQty,0)) AS BalQty,
 
-		CASE 
+		CASE
 		WHEN SUM(ISNULL(OrdDT.ItemQty,0)) IS NULL OR SUM(ISNULL(OrdDT.ItemQty,0)) = 0 THEN 0
 		ELSE ROUND((SUM(ISNULL(OrdDT.ExportQty,0)) / SUM(ISNULL(OrdDT.ItemQty,0))) * 100,0)
 		END AS ExpPct,
@@ -167,33 +191,39 @@ CTM_OrdDT_Aggregate AS (
     INNER JOIN OrdHD T2 ON T2.OrdNo = OrdDT.OrdNo
     LEFT JOIN GMItemPhoto ON GMItemPhoto.ItemNo = OrdDT.ItemNo
     WHERE T2.PONo IN (SELECT PONo FROM DupMorPONo)
-    AND (@Status = 'All' OR (@Status = 'pending' AND T2.CloseStatus <> 'Y') OR (@Status = 'finish' AND T2.CloseStatus = 'Y'))
-    GROUP BY T2.CustCode, T2.PONo, T2.OrdKind, T2.OrdMat, T2.CustMultiAddr)
+    GROUP BY T2.CustCode, T2.PONo, T2.OrdKind, T2.OrdMat)
 
 
 
-SELECT  
+SELECT
 ROW_NUMBER() OVER (ORDER BY OrdWeekPlanHD.PlanYear, OrdWeekPlanHD.PlanWeek,
 OrdHD.CustCode, OrdHD.PONo, OrdHD.OrdKind, OrdHD.OrdMat) AS ListNo,
 ISNULL(OrdWeekPlanHD.PlanYear, 0) AS OrdYear,
 ISNULL(OrdWeekPlanHD.PlanWeek, 0) AS OrdWeek,
 OrdHD.CustCode, OrdHD.PONo,
 
-LTRIM(RTRIM(STUFF((SELECT DISTINCT '/ ' + T1.OrdNo 
-FROM OrdHD T1 
+(SELECT TOP 1 T2.EXNo
+FROM OrdHD T2
+WHERE OrdHD.CustCode = T2.CustCode
+AND OrdHD.PONo = T2.PONo
+AND OrdHD.OrdKind = T2.OrdKind
+AND OrdHD.OrdMat = T2.OrdMat) AS EXNo,
+
+LTRIM(RTRIM(STUFF((SELECT DISTINCT '/ ' + T1.OrdNo
+FROM OrdHD T1
 WHERE OrdHD.PONo = T1.PONo
 AND OrdHD.OrdKind = T1.OrdKind
 AND OrdHD.OrdMat = T1.OrdMat
 AND OrdHD.CustMultiAddr = T1.CustMultiAddr
-AND T1.OrdNo <> '' 
+AND T1.OrdNo <> ''
 FOR XML PATH(''), TYPE).value('.', 'NVARCHAR(MAX)'), 1, 1, ''))) AS OrdNo,
 
 CASE WHEN OrdHD.OrdKind = 'NEW' THEN 'New' ELSE 'Replen' END AS OrdKind,
 OrdHD.OrdMat, OrdHD.CustMultiAddr,
 OrdDT_Aggregate.ItemPhoto,
 
-(SELECT MIN(T2.OrdDate) 
-FROM OrdHD T2 
+(SELECT MIN(T2.OrdDate)
+FROM OrdHD T2
 WHERE OrdHD.CustCode = T2.CustCode
 AND OrdHD.PONo = T2.PONo
 AND OrdHD.OrdKind = T2.OrdKind
@@ -206,6 +236,7 @@ OrdTrackDT.OORDate,
 OrdDT_Aggregate.SumItem,
 OrdDT_Aggregate.SumQty,
 OrdTrackDT.BookDate,
+OrdTrackDT.BookShip,
 OrdTrackDT.QC1_Qty, OrdTrackDT.QC1_Date,
 OrdTrackDT.QC1_Fail,
 OrdTrackDT.QC2_Qty, OrdTrackDT.QC2_Date,
@@ -253,9 +284,13 @@ AND OrdHD.CustMultiAddr = OrdDT_Aggregate.CustMultiAddr
 
 WHERE OrdHD.OrdDate BETWEEN @FromDate AND @ToDate
 AND SUBSTRING(OrdHD.OrdNo,1,3) IN ('BBC','BBS','BBE','BBL','BBR','BBT','BBP')
-AND OrdHD.CustCode NOT IN ('N008','N044','N048','N066','N067','N068','N069','N070','N071','N072','N073','N074','N075') 
+AND OrdHD.CustCode NOT IN ('N008','N048','N066','N067','N068','N069','N070','N071','N072','N073','N074','N075')
+--AND SUBSTRING(OrdHD.OrdNo,1,3) NOT IN ('BBD','BBI','BBF','LLC','LBC','LBS','LBR','LBT')
+
 AND OrdHD.PONo NOT IN ('','TOP','Test','Testing','Stock','STOCK')
-AND (@Status = 'All' OR (@Status = 'pending' AND OrdHD.CloseStatus <> 'Y') OR (@Status = 'finish' AND OrdHD.CloseStatus = 'Y'))
+AND OrdHD.CloseStatus <> 'Y'
+--AND OrdTrackDT.TrackStatus <> 'Y'
+--AND (OrdHD.CloseRes <> 'Close Old Order From Old System' OR OrdHD.CloseRes IS NULL)
 
 GROUP BY PlanYear, PlanWeek,
 OrdHD.CustCode, OrdHD.PONo,
@@ -263,12 +298,13 @@ OrdHD.OrdKind, OrdHD.OrdMat,
 OrdHD.CustMultiAddr,
 OrdDT_Aggregate.ItemPhoto,
 OrdHD.DueDate,
-OrdTrackDT.OrdSGS, OrdHD.CustQCDate, 
+OrdTrackDT.OrdSGS, OrdHD.CustQCDate,
 OrdTrackDT.TrackTest, OrdHD.CustDueDate,
 OrdTrackDT.OORDate,
 OrdDT_Aggregate.SumItem,
 OrdDT_Aggregate.SumQty,
 OrdTrackDT.BookDate,
+OrdTrackDT.BookShip,
 OrdTrackDT.QC1_Qty, OrdTrackDT.QC1_Date,
 OrdTrackDT.QC1_Fail,
 OrdTrackDT.QC2_Qty, OrdTrackDT.QC2_Date,
@@ -301,16 +337,24 @@ OrdDT_Aggregate.SumAmnt
 
 UNION ALL
 
-SELECT  
-ROW_NUMBER() OVER (ORDER BY OrdWeekPlanHD.PlanYear, OrdWeekPlanHD.PlanWeek, 
+SELECT
+ROW_NUMBER() OVER (ORDER BY OrdWeekPlanHD.PlanYear, OrdWeekPlanHD.PlanWeek,
 OrdHD.CustCode, OrdHD.CustMultiAddr, OrdHD.OrdKind, OrdHD.OrdMat) AS ListNo,
 ISNULL(OrdWeekPlanHD.PlanYear, 0) AS OrdYear,
 ISNULL(OrdWeekPlanHD.PlanWeek, 0) AS OrdWeek,
-OrdHD.CustCode, 
+OrdHD.CustCode,
+--OrdHD.CustMultiAddr AS PONo,
 'Group PO By ShipTo' AS PONo,
 
-LTRIM(RTRIM(STUFF((SELECT DISTINCT '/ ' + T1.OrdNo 
-FROM OrdHD T1 
+(SELECT TOP 1 T2.EXNo
+FROM OrdHD T2
+WHERE OrdHD.CustCode = T2.CustCode
+AND OrdHD.CustMultiAddr = T2.CustMultiAddr
+AND OrdHD.OrdKind = T2.OrdKind
+AND OrdHD.OrdMat = T2.OrdMat) AS EXNo,
+
+LTRIM(RTRIM(STUFF((SELECT DISTINCT '/ ' + T1.OrdNo
+FROM OrdHD T1
 WHERE OrdHD.CustCode = T1.CustCode
 AND OrdHD.CustMultiAddr = T1.CustMultiAddr
 AND OrdHD.OrdKind = T1.OrdKind
@@ -322,8 +366,8 @@ CASE WHEN OrdHD.OrdKind = 'NEW' THEN 'New' ELSE 'Replen' END AS OrdKind,
 OrdHD.OrdMat, OrdHD.CustMultiAddr,
 CTO_OrdDT_Aggregate.ItemPhoto,
 
-(SELECT MIN(T2.OrdDate) 
-FROM OrdHD T2 
+(SELECT MIN(T2.OrdDate)
+FROM OrdHD T2
 WHERE OrdHD.CustCode = T2.CustCode
 AND OrdHD.CustMultiAddr = T2.CustMultiAddr
 AND OrdHD.OrdKind = T2.OrdKind
@@ -331,20 +375,21 @@ AND OrdHD.OrdMat = T2.OrdMat) AS OrdDate,
 
 OrdHD.DueDate,
 CTE_Track.OrdSGS,
-OrdHD.CustQCDate, 
-CTE_Track.TrackTest, 
+OrdHD.CustQCDate,
+CTE_Track.TrackTest,
 OrdHD.CustDueDate,
 CTE_Track.OORDate,
 CTO_OrdDT_Aggregate.SumItem,
 CTO_OrdDT_Aggregate.SumQty,
 CTE_Track.BookDate,
-CTE_Track.QC1_Qty, 
+CTE_Track.BookShip,
+CTE_Track.QC1_Qty,
 CTE_Track.QC1_Date,
 CTE_Track.QC1_Fail,
-CTE_Track.QC2_Qty, 
+CTE_Track.QC2_Qty,
 CTE_Track.QC2_Date,
 CTE_Track.QC2_Fail,
-CTE_Track.QC3_Qty, 
+CTE_Track.QC3_Qty,
 CTE_Track.QC3_Date,
 CTO_OrdDT_Aggregate.StonePenQty,
 CTO_OrdDT_Aggregate.FitPenQty,
@@ -361,21 +406,21 @@ CTO_OrdDT_Aggregate.FinishQty,
 CTO_OrdDT_Aggregate.ExportQty,
 CTO_OrdDT_Aggregate.BalQty,
 CTO_OrdDT_Aggregate.ExpPct,
-CTE_Track.ProdRiskIssue, 
+CTE_Track.ProdRiskIssue,
 CTE_Track.PQCPlanShip,
-CTE_Track.PackCard, 
+CTE_Track.PackCard,
 CTE_Track.TickOrd,
-CTE_Track.TickRec, 
+CTE_Track.TickRec,
 CTE_Track.TrackSam,
-CTE_Track.TrackCT, 
+CTE_Track.TrackCT,
 CTE_Track.TrackMF,
-CTE_Track.PackScanDo, 
+CTE_Track.PackScanDo,
 CTE_Track.PackScanSen,
-CTE_Track.PackScanAppv, 
+CTE_Track.PackScanAppv,
 CTE_Track.PackScanMF,
-CTE_Track.PolyOrd, 
+CTE_Track.PolyOrd,
 CTE_Track.PolyRec,
-CTE_Track.TagRcyRec, 
+CTE_Track.TagRcyRec,
 CTE_Track.TrackRemark,
 CTO_OrdDT_Aggregate.SumAmnt
 
@@ -393,7 +438,7 @@ AND CTO_OrdDT_Aggregate.CustMultiAddr = OrdHD.CustMultiAddr
 AND CTO_OrdDT_Aggregate.CustDueDate = OrdHD.CustDueDate
 
 WHERE OrdHD.PONo IN (SELECT PONo FROM DupOnePONo)
-AND (@Status = 'All' OR (@Status = 'pending' AND OrdHD.CloseStatus <> 'Y') OR (@Status = 'finish' AND OrdHD.CloseStatus = 'Y'))
+--AND CTE_Track.TrackStatus <> 'Y'
 
 GROUP BY PlanYear, PlanWeek,
 OrdHD.CustCode,
@@ -402,20 +447,21 @@ OrdHD.CustMultiAddr,
 CTO_OrdDT_Aggregate.ItemPhoto,
 OrdHD.DueDate,
 CTE_Track.OrdSGS,
-OrdHD.CustQCDate, 
-CTE_Track.TrackTest, 
+OrdHD.CustQCDate,
+CTE_Track.TrackTest,
 OrdHD.CustDueDate,
 CTE_Track.OORDate,
 CTO_OrdDT_Aggregate.SumItem,
 CTO_OrdDT_Aggregate.SumQty,
 CTE_Track.BookDate,
-CTE_Track.QC1_Qty, 
+CTE_Track.BookShip,
+CTE_Track.QC1_Qty,
 CTE_Track.QC1_Date,
 CTE_Track.QC1_Fail,
-CTE_Track.QC2_Qty, 
+CTE_Track.QC2_Qty,
 CTE_Track.QC2_Date,
 CTE_Track.QC2_Fail,
-CTE_Track.QC3_Qty, 
+CTE_Track.QC3_Qty,
 CTE_Track.QC3_Date,
 CTO_OrdDT_Aggregate.StonePenQty,
 CTO_OrdDT_Aggregate.FitPenQty,
@@ -432,35 +478,42 @@ CTO_OrdDT_Aggregate.FinishQty,
 CTO_OrdDT_Aggregate.ExportQty,
 CTO_OrdDT_Aggregate.BalQty,
 CTO_OrdDT_Aggregate.ExpPct,
-CTE_Track.ProdRiskIssue, 
+CTE_Track.ProdRiskIssue,
 CTE_Track.PQCPlanShip,
-CTE_Track.PackCard, 
+CTE_Track.PackCard,
 CTE_Track.TickOrd,
-CTE_Track.TickRec, 
+CTE_Track.TickRec,
 CTE_Track.TrackSam,
-CTE_Track.TrackCT, 
+CTE_Track.TrackCT,
 CTE_Track.TrackMF,
-CTE_Track.PackScanDo, 
+CTE_Track.PackScanDo,
 CTE_Track.PackScanSen,
-CTE_Track.PackScanAppv, 
+CTE_Track.PackScanAppv,
 CTE_Track.PackScanMF,
-CTE_Track.PolyOrd, 
+CTE_Track.PolyOrd,
 CTE_Track.PolyRec,
-CTE_Track.TagRcyRec, 
+CTE_Track.TagRcyRec,
 CTE_Track.TrackRemark,
 CTO_OrdDT_Aggregate.SumAmnt
 
 UNION ALL
 
-SELECT  
-ROW_NUMBER() OVER (ORDER BY OrdWeekPlanHD.PlanYear, OrdWeekPlanHD.PlanWeek, 
+SELECT
+ROW_NUMBER() OVER (ORDER BY OrdWeekPlanHD.PlanYear, OrdWeekPlanHD.PlanWeek,
 OrdHD.CustCode, OrdHD.PONo, OrdHD.OrdKind, OrdHD.OrdMat) AS ListNo,
 ISNULL(OrdWeekPlanHD.PlanYear, 0) AS OrdYear,
 ISNULL(OrdWeekPlanHD.PlanWeek, 0) AS OrdWeek,
 OrdHD.CustCode, OrdHD.PONo,
-    
-LTRIM(RTRIM(STUFF((SELECT DISTINCT '/ ' + T1.OrdNo 
-FROM OrdHD T1 
+
+(SELECT TOP 1 T2.EXNo
+FROM OrdHD T2
+WHERE OrdHD.CustCode = T2.CustCode
+AND OrdHD.PONo = T2.PONo
+AND OrdHD.OrdKind = T2.OrdKind
+AND OrdHD.OrdMat = T2.OrdMat) AS EXNo,
+
+LTRIM(RTRIM(STUFF((SELECT DISTINCT '/ ' + T1.OrdNo
+FROM OrdHD T1
 WHERE OrdHD.CustCode = T1.CustCode
 AND OrdHD.PONo = T1.PONo
 AND OrdHD.OrdKind = T1.OrdKind
@@ -472,20 +525,21 @@ CASE WHEN OrdHD.OrdKind = 'NEW' THEN 'New' ELSE 'Replen' END AS OrdKind,
 OrdHD.OrdMat, OrdHD.CustMultiAddr,
 CTM_OrdDT_Aggregate.ItemPhoto,
 
-(SELECT MIN(T2.OrdDate) 
-FROM OrdHD T2 
+(SELECT MIN(T2.OrdDate)
+FROM OrdHD T2
 WHERE OrdHD.CustCode = T2.CustCode
 AND OrdHD.PONo = T2.PONo
 AND OrdHD.OrdKind = T2.OrdKind
 AND OrdHD.OrdMat = T2.OrdMat) AS OrdDate,
 
 OrdHD.DueDate,
-OrdTrackDT.OrdSGS, OrdHD.CustQCDate, 
+OrdTrackDT.OrdSGS, OrdHD.CustQCDate,
 OrdTrackDT.TrackTest, OrdHD.CustDueDate,
 OrdTrackDT.OORDate,
 CTM_OrdDT_Aggregate.SumItem,
 CTM_OrdDT_Aggregate.SumQty,
 OrdTrackDT.BookDate,
+OrdTrackDT.BookShip,
 OrdTrackDT.QC1_Qty, OrdTrackDT.QC1_Date,
 OrdTrackDT.QC1_Fail,
 OrdTrackDT.QC2_Qty, OrdTrackDT.QC2_Date,
@@ -522,16 +576,16 @@ LEFT JOIN OrdTrackDT ON OrdTrackDT.CustCode = OrdHD.CustCode
 AND OrdTrackDT.PONo = OrdHD.PONo
 AND OrdTrackDT.OrdMat = OrdHD.OrdMat
 AND OrdTrackDT.OrdKind = OrdHD.OrdKind
-AND OrdTrackDT.CustMultiAddr = OrdHD.CustMultiAddr
+--AND OrdTrackDT.CustDueDate = OrdHD.CustDueDate
+--AND OrdTrackDT.CustMultiAddr = OrdHD.CustMultiAddr
 LEFT JOIN CTM_OrdDT_Aggregate ON OrdHD.CustCode = CTM_OrdDT_Aggregate.CustCode
 AND OrdHD.PONo = CTM_OrdDT_Aggregate.PONo
 AND OrdHD.OrdKind = CTM_OrdDT_Aggregate.OrdKind
 AND OrdHD.OrdMat = CTM_OrdDT_Aggregate.OrdMat
-AND OrdHD.CustMultiAddr = CTM_OrdDT_Aggregate.CustMultiAddr
 
 WHERE OrdHD.OrdDate BETWEEN @FromDate AND @ToDate
 AND OrdHD.PONo IN (SELECT PONo FROM DupMorPONo)
-AND (@Status = 'All' OR (@Status = 'pending' AND OrdHD.CloseStatus <> 'Y') OR (@Status = 'finish' AND OrdHD.CloseStatus = 'Y'))
+--AND OrdTrackDT.TrackStatus <> 'Y'
 
 GROUP BY PlanYear, PlanWeek,
 OrdHD.CustCode, OrdHD.PONo,
@@ -539,12 +593,13 @@ OrdHD.OrdKind, OrdHD.OrdMat,
 OrdHD.CustMultiAddr,
 CTM_OrdDT_Aggregate.ItemPhoto,
 OrdHD.DueDate,
-OrdTrackDT.OrdSGS, OrdHD.CustQCDate, 
+OrdTrackDT.OrdSGS, OrdHD.CustQCDate,
 OrdTrackDT.TrackTest, OrdHD.CustDueDate,
 OrdTrackDT.OORDate,
 CTM_OrdDT_Aggregate.SumItem,
 CTM_OrdDT_Aggregate.SumQty,
 OrdTrackDT.BookDate,
+OrdTrackDT.BookShip,
 OrdTrackDT.QC1_Qty, OrdTrackDT.QC1_Date,
 OrdTrackDT.QC1_Fail,
 OrdTrackDT.QC2_Qty, OrdTrackDT.QC2_Date,
@@ -577,5 +632,5 @@ CTM_OrdDT_Aggregate.SumAmnt
 
 ORDER BY OrdYear,OrdWeek,ListNo
 
-	
+
 END

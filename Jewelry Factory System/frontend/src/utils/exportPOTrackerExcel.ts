@@ -9,6 +9,7 @@ export interface POTrackerExportData {
   OrdNo: string;
   OrdKind: string;
   OrdMat: string;
+  OrdMaker: string;
   CustMultiAddr: string;
   OrdDate: Date | string;
   DueDate: Date | string;
@@ -71,10 +72,11 @@ export const exportPOTrackerExcel = async (
     { header: 'OrdNo', key: 'OrdNo', width: 15 },            // D
     { header: 'OrdKind', key: 'OrdKind', width: 10 },        // E
     { header: 'OrdMat', key: 'OrdMat', width: 10 },          // F
+    { header: 'Group', key: 'OrdMaker', width: 12 },         // F-2
     { header: 'CustMultiAddr', key: 'CustMultiAddr', width: 15 }, // G
     { header: 'OrdDate', key: 'OrdDate', width: 15 },        // H
     { header: 'DueDate', key: 'DueDate', width: 15 },        // I
-    { header: 'TrackTest', key: 'TrackTest', width: 10 },    // J
+    { header: 'BBQ/Top', key: 'TrackTest', width: 10 },    // J
     { header: 'OrdSGS', key: 'OrdSGS', width: 10 },          // K
     { header: 'CustQCDate', key: 'CustQCDate', width: 15 },  // L
     { header: 'CustDueDate', key: 'CustDueDate', width: 15 },// M
@@ -88,24 +90,24 @@ export const exportPOTrackerExcel = async (
     { header: 'QC2_Qty', key: 'QC2_Qty', width: 10 },        // U
     { header: 'QC2_Date', key: 'QC2_Date', width: 15 },      // V
     { header: 'QC2_Fail', key: 'QC2_Fail', width: 10 },      // W
-    { header: 'StonePenQty', key: 'StonePenQty', width: 10 },// X
-    { header: 'FitPenQty', key: 'FitPenQty', width: 10 },    // Y
-    { header: 'WijPenQty', key: 'WijPenQty', width: 10 },    // Z
-    { header: 'WstPenQty', key: 'WstPenQty', width: 10 },    // AA
-    { header: 'CastPenQty', key: 'CastPenQty', width: 10 },  // AB
-    { header: 'GrindPenQty', key: 'GrindPenQty', width: 10 },// AC
-    { header: 'ControlPenQty', key: 'ControlPenQty', width: 10 },// AD
-    { header: 'PolishPenQty', key: 'PolishPenQty', width: 10 },// AE
-    { header: 'PlatePenQty', key: 'PlatePenQty', width: 10 },// AF
+    { header: 'PST', key: 'StonePenQty', width: 10 },// X
+    { header: 'PC1', key: 'FitPenQty', width: 10 },    // Y
+    { header: 'PWA', key: 'WijPenQty', width: 10 },    // Z
+    { header: 'WaxSet', key: 'WstPenQty', width: 10 },    // AA
+    { header: 'PCA', key: 'CastPenQty', width: 10 },  // AB
+    { header: 'PF', key: 'GrindPenQty', width: 10 },// AC
+    { header: 'PC2', key: 'ControlPenQty', width: 10 },// AD
+    { header: 'PL', key: 'PolishPenQty', width: 10 },// AE
+    { header: 'PPL', key: 'PlatePenQty', width: 10 },// AF
     { header: 'QCPenQty', key: 'QCPenQty', width: 10 },      // AG
     { header: 'ExportQty', key: 'ExportQty', width: 10 },    // AH
     { header: 'BalQty', key: 'BalQty', width: 10 },          // AI
     { header: 'ExpPct', key: 'ExpPct', width: 10 },          // AJ
     { header: 'ProdRiskIssue', key: 'ProdRiskIssue', width: 15 },// AK
     { header: 'PQCPlanShip', key: 'PQCPlanShip', width: 15 },// AL
-    { header: 'PackCard', key: 'PackCard', width: 10 },      // AM
-    { header: 'TickOrd', key: 'TickOrd', width: 10 },        // AN
-    { header: 'TickRec', key: 'TickRec', width: 10 },        // AO
+    { header: '3. สั่ง/เบิก Box', key: 'PackCard', width: 15 },      // AM
+    { header: '2. สั่ง Card', key: 'TickOrd', width: 15 },        // AN
+    { header: '2. เบิก/จัด Card', key: 'TickRec', width: 15 },        // AO
     { header: 'PolyOrd', key: 'PolyOrd', width: 10 },        // AP
     { header: 'PolyRec', key: 'PolyRec', width: 10 },        // AQ
     { header: 'PackScanAppv', key: 'PackScanAppv', width: 15 },// AR
@@ -126,10 +128,10 @@ export const exportPOTrackerExcel = async (
     // Note: To match VB formatting exactly, empty qty should be shown as blank, not 0
     // The data mapping here should handle transforming 0 to null/blank if desired
     // For ExpPct, if it is passed as 0-100, we convert it to 0-1 for excel percentage format
-    
+
     worksheet.addRow({
       ...row,
-      ExpPct: row.ExpPct / 100, 
+      ExpPct: row.ExpPct / 100,
       StonePenQty: row.StonePenQty === 0 ? '' : row.StonePenQty,
       FitPenQty: row.FitPenQty === 0 ? '' : row.FitPenQty,
       WijPenQty: row.WijPenQty === 0 ? '' : row.WijPenQty,
@@ -151,7 +153,7 @@ export const exportPOTrackerExcel = async (
     if (rowNumber === 1) return;
 
     row.height = 15;
-    
+
     // Default Font and Alignment for all cells in the row
     row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
       cell.font = { name: 'Calibri', size: 10 };
@@ -174,7 +176,7 @@ export const exportPOTrackerExcel = async (
     const expPctCell = row.getCell('AJ');
     const balQtyCell = row.getCell('AI');
     const rawExpPct = (expPctCell.value as number) * 100; // Multiply by 100 to get actual percentage value
-    
+
     expPctCell.numFmt = '0%';
 
     // VB Logic: < 60 Red, > 79 Green, else Yellow
@@ -187,7 +189,7 @@ export const exportPOTrackerExcel = async (
       // Note: exceljs fill color uses ARGB format.
       // RGB 192, 0, 0 -> ARGB FFC00000
       // RGB 255, 232, 235 -> ARGB FFFFE8EB
-      
+
       balQtyCell.font = style.font;
       balQtyCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFE8EB' } };
       expPctCell.font = style.font;
@@ -213,14 +215,38 @@ export const exportPOTrackerExcel = async (
     }
   });
 
+  // 4.5 Auto-fit columns based on content length
+  worksheet.columns.forEach((column) => {
+    let maxLength = 0;
+    column.eachCell!({ includeEmpty: true }, (cell) => {
+      let cellValue = cell.value ? cell.value.toString() : '';
+
+      // If it's a date, it might toString() to a long string, but Excel formats it to dd/mm/yyyy (10 chars)
+      if (cell.type === ExcelJS.ValueType.Date) {
+        cellValue = '12/34/5678';
+      } else if (cell.type === ExcelJS.ValueType.Number && cell.numFmt === '0%') {
+        cellValue = '100%';
+      } else if (cell.numFmt && cell.numFmt.includes('#,##0.00')) {
+        cellValue = '123,456.00'; // rough estimation for currency
+      }
+
+      const columnLength = cellValue.length;
+      if (columnLength > maxLength) {
+        maxLength = columnLength;
+      }
+    });
+    // Set width with a minimum of 10 and max of 60 to avoid ridiculously wide columns, plus padding
+    column.width = Math.min(Math.max(maxLength + 2, 10), 60);
+  });
+
   // 5. Generate and Download
   const buffer = await workbook.xlsx.writeBuffer();
   const today = new Date();
-  const dateStr = today.getFullYear().toString() + 
-                 (today.getMonth() + 1).toString().padStart(2, '0') + 
+  const dateStr = today.getFullYear().toString() +
+                 (today.getMonth() + 1).toString().padStart(2, '0') +
                  today.getDate().toString().padStart(2, '0');
-  
-  // Format matching: POTracker_20260625.xlsx 
+
+  // Format matching: POTracker_20260625.xlsx
   // If specific week/ship format is passed to fileNamePrefix, it will use that.
   const finalFileName = `${fileNamePrefix}_${dateStr}.xlsx`;
 

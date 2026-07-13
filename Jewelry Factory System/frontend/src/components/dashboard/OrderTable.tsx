@@ -304,7 +304,7 @@ function SkeletonRows({ activeCols }: { activeCols: { key: string; w: number }[]
       {Array.from({ length: 12 }).map((_, i) => (
         <tr key={i} style={{ borderBottom: '1px solid var(--color-border-strong)' }}>
           {activeCols.map((c, idx) => {
-            const isPinned = ['no', 'week', 'cust', 'po', 'po2', 'newReplen'].includes(c.key);
+            const isPinned = ['no', 'week', 'cust', 'po', 'po2', 'ordno', 'newReplen'].includes(c.key);
             let leftPos = 0;
             if (isPinned) {
               const prevPinned = activeCols.slice(0, idx);
@@ -365,6 +365,11 @@ export const MASTER_COLS: Record<string, ColDef> = {
     render: (o) => o.EXNo || '',
     cellStyle: () => ({ fontWeight: 600, color: 'var(--color-text-secondary)' }),
   },
+  ordno: {
+    label: 'Order No.', w: 170, align: 'left',
+    render: (o) => o.OrdNo || '',
+    cellStyle: () => ({ fontWeight: 600, color: 'var(--color-text-secondary)', fontSize: '0.78rem' }),
+  },
   newReplen: {
     label: 'New/\nReplen', w: 100, align: 'center',
     render: (o) => {
@@ -383,11 +388,6 @@ export const MASTER_COLS: Record<string, ColDef> = {
         </div>
       );
     },
-  },
-  ordno: {
-    label: 'Order No.', w: 170, align: 'left',
-    render: (o) => o.OrdNo || '',
-    cellStyle: () => ({ fontWeight: 600, color: 'var(--color-text-secondary)', fontSize: '0.78rem' }),
   },
   metal: {
     label: 'Metal', w: 70, align: 'center',
@@ -436,7 +436,7 @@ export const MASTER_COLS: Record<string, ColDef> = {
       return isLate ? { color: 'var(--color-danger-500)', fontWeight: 800, background: 'color-mix(in srgb, var(--color-danger-500), transparent 94%)' } : {};
     }
   },
-  qa: txt('QA/BBQ/Testing', 'TrackTest', 130),
+  qa: txt('QA / BBQ / Testing', 'TrackTest', 100),
   sgs: txt('SGS', 'OrdSGS', 60),
   qcdate: {
     label: 'QC Date', w: 95, align: 'center',
@@ -465,18 +465,18 @@ export const MASTER_COLS: Record<string, ColDef> = {
   remark: {
     label: 'Remark', w: 150, align: 'left',
     render: (o) => o.TrackRemark || '',
-    cellStyle: () => ({ fontSize: '0.7rem', color: 'var(--color-text-tertiary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }),
+    cellStyle: () => ({ fontSize: '0.7rem', color: 'var(--color-text-tertiary)' }),
   },
 
   // ── Production — Stage Pending Qty ──
-  stonePen: pen('Stone', 'StonePenQty'),
-  fitPen: pen('Finding', 'FitPenQty'),
-  wijPen: pen('Wax', 'WijPenQty'),
-  castPen: pen('Cast', 'CastPenQty'),
-  controlPen: pen('Control', 'ControlPenQty'),
-  grindPen: pen('Grind', 'GrindPenQty'),
-  polishPen: pen('Polish', 'PolishPenQty'),
-  platePen: pen('Plating', 'PlatePenQty'),
+  stonePen: pen('PST', 'StonePenQty'),
+  fitPen: pen('PC1', 'FitPenQty'),
+  wijPen: pen('PWA', 'WijPenQty'),
+  castPen: pen('PCA', 'CastPenQty'),
+  controlPen: pen('PC2', 'ControlPenQty'),
+  grindPen: pen('PF', 'GrindPenQty'),
+  polishPen: pen('PL', 'PolishPenQty'),
+  platePen: pen('PPL', 'PlatePenQty'),
   exportQty: pen('Shipped', 'ExportQty', 85),
   balQty: pen('Balance', 'BalQty', 85),
   expPct: {
@@ -497,17 +497,34 @@ export const MASTER_COLS: Record<string, ColDef> = {
   qc3qty: txt('3. QC Qty', 'QC3_Qty', 85),
   qc3date: txt('3. QC Date', 'QC3_Date', 95),
 
+  // --- N044 Specific Columns ---
+  // แก้ชื่อในเครื่องหมาย ''
+  qa_n044: txt('Inspection', 'TrackTest', 100),
+  cardBox_n044: txt('BBQ/Top', 'PackCard', 120),
+  orderTicket_n044: txt('ส่ง Test', 'TickOrd', 110),
+  receiveTicket_n044: txt('1.ส่ง Ticket', 'TickRec', 130),
+  sample_n044: txt('1.จัดส่ง Ticket', 'TrackSam', 90),
+  custCT_n044: txt('2.สั่ง Card', 'TrackCT', 90),
+  mf_n044: txt('2.เบิก/จัด Card', 'TrackMF', 90),
+  packScanDo_n044: txt('3.สั่ง Box', 'PackScanDo', 160),
+  packScanSen_n044: txt('3.เบิก/จัด Box', 'PackScanSen', 160),
+  packScan_n044: txt('4.สั่ง Pouch', 'PackScanAppv', 100),
+  packScanMF_n044: txt('4.เบิก/จัด Pouch', 'PackScanMF', 170),
+  polyOrd_n044: txt('Remark', 'PolyOrd', 120),
+  polyRec_n044: txt('Pack Scan', 'PolyRec', 130),
+  tagRcyRec_n044: txt('Upload MF', 'TagRcyRec', 180),
+
   // ── Production — Pack / Tag ──
-  cardBox: txt('1. Card/Box', 'PackCard', 100),
-  orderTicket: txt('2. Order Ticket/Label', 'TickOrd', 140),
-  receiveTicket: txt('3. Receive Ticket/Label', 'TickRec', 150),
-  sample: txt('4. Sample', 'TrackSam', 90),
-  custCT: txt('5. Cust CT', 'TrackCT', 90),
-  mf: txt('6. MF', 'TrackMF', 70),
-  packScanDo: txt('7. Day to Do Pack Scan', 'PackScanDo', 160),
-  packScanSen: txt('8. Pack Scan Send Cust', 'PackScanSen', 160),
-  packScan: txt('9. Pack Scan Approved on', 'PackScanAppv', 160),
-  packScanMF: txt('10. Pack Scan Photo on MF', 'PackScanMF', 170),
+  cardBox: txt('1.Card/Box', 'PackCard', 120),
+  orderTicket: txt('2.Order Ticket/Label', 'TickOrd', 110),
+  receiveTicket: txt('3.Receive Ticket/Label', 'TickRec', 130),
+  sample: txt('4.Sample', 'TrackSam', 90),
+  custCT: txt('5.Cust CT', 'TrackCT', 90),
+  mf: txt('6.MF', 'TrackMF', 90),
+  packScanDo: txt('7.Day to Do Pack Scan', 'PackScanDo', 160),
+  packScanSen: txt('8.Pack Scan Send Cust', 'PackScanSen', 160),
+  packScan: txt('9.Pack Scan Approved On', 'PackScanAppv', 100),
+  packScanMF: txt('10.Pack Scan Photo on MF', 'PackScanMF', 170),
   polyOrd: txt('4. Order Polybag', 'PolyOrd', 120),
   polyRec: txt('5. Receive Polybag', 'PolyRec', 130),
   tagRcyRec: txt('6. Receive Recycled Tag U413', 'TagRcyRec', 180),
@@ -533,6 +550,9 @@ const USER_INPUT_KEYS = new Set<string>([
   'bookInspect', 'bookShip',
   'qc1qty', 'qc1date', 'qc1fail', 'qc2qty', 'qc2date', 'qc2fail', 'qc3qty', 'qc3date',
   'cardBox', 'orderTicket', 'receiveTicket', 'sample', 'custCT', 'mf',
+  'qa_n044', 'cardBox_n044', 'orderTicket_n044', 'receiveTicket_n044', 'sample_n044', 'custCT_n044', 'mf_n044',
+  'packScanDo_n044', 'packScanSen_n044', 'packScan_n044', 'packScanMF_n044',
+  'polyOrd_n044', 'polyRec_n044', 'tagRcyRec_n044',
   'packScanDo', 'packScanSen', 'packScan', 'packScanMF',
   'polyOrd', 'polyRec', 'tagRcyRec',
   'prodRisk', 'pqc',
@@ -545,43 +565,41 @@ const USER_INPUT_HEAD_BG = 'color-mix(in srgb, var(--color-warning-500) 16%, var
 export const GROUP_PRESETS: Record<string, string[]> = {
   // General (ปุ่ม "General" map มาที่ key ALL)
   ALL: [
-    'no', 'week', 'cust', 'po', 'newReplen', 'orddate', 'due', 'custdue', 'sku', 'qty', 'amount', 'remark',
-    'qc1qty', 'qc1date', 'qc1fail', 'receiveTicket',
+    'no', 'week', 'cust', 'po', 'newReplen', 'orddate', 'due', 'custdue', 'sku', 'qty',
+    'qc1qty', 'qc1date', 'qc1fail',
     'controlPen', 'polishPen', 'platePen', 'exportQty', 'balQty', 'expPct',
-    'prodRisk', 'pqc', 'arrow'
+    'prodRisk', 'pqc', 'receiveTicket', 'remark', 'amount', 'arrow'
   ],
   N008: [
-    'no', 'week', 'cust', 'po', 'newReplen', 'shipto', 'photo', 'orddate', 'due', 'qa', 'sgs', 'qcdate', 'custdue', 'oor', 'sku', 'qty', 'amount', 'remark',
-    'cardBox', 'orderTicket', 'receiveTicket', 'sample', 'custCT', 'packScan',
-    'controlPen', 'polishPen', 'platePen', 'expPct',
-    'prodRisk', 'pqc', 'arrow'
+    'no', 'week', 'cust', 'po', 'newReplen', 'shipto', 'photo', 'orddate', 'due', 'qa', 'sgs', 'qcdate', 'custdue', 'oor', 'sku', 'qty',
+    'controlPen', 'polishPen', 'platePen',
+    'prodRisk', 'pqc', 'cardBox', 'orderTicket', 'receiveTicket', 'packScan', 'remark', 'amount', 'arrow'
   ],
   N044: [
-    'no', 'week', 'cust', 'po', 'po2', 'newReplen', 'metal', 'shipto', 'photo', 'orddate', 'due', 'qa', 'qcdate', 'custdue', 'oor', 'sku', 'qty', 'amount', 'remark',
-    'bookInspect', 'bookShip', 'qc1date', 'qc1fail',
-    'cardBox', 'orderTicket', 'receiveTicket', 'sample', 'custCT', 'mf', 'packScanDo', 'packScanSen', 'packScan', 'packScanMF', 'polyOrd', 'polyRec', 'tagRcyRec',
-    'controlPen', 'polishPen', 'platePen', 'expPct',
-    'prodRisk', 'pqc', 'arrow'
+    'no', 'week', 'cust', 'po', 'po2', 'newReplen', 'metal', 'shipto', 'photo', 'orddate', 'due', 'qcdate', 'bookInspect', 'qa_n044', 'bookShip', 'custdue', 'oor',
+    'sku', 'qty', 'controlPen', 'polishPen', 'platePen', 'prodRisk', 'pqc',
+    'receiveTicket_n044', 'sample_n044', 'custCT_n044', 'mf_n044',
+    'packScanDo_n044', 'packScanSen_n044', 'packScan_n044', 'packScanMF_n044',
+    'polyOrd_n044', 'polyRec_n044', 'tagRcyRec_n044',
+    'cardBox_n044', 'orderTicket_n044', 'remark', 'amount', 'arrow'
   ],
   MLT: [
-    'no', 'week', 'cust', 'po', 'newReplen', 'orddate', 'due', 'custdue', 'sku', 'qty', 'amount', 'remark',
+    'no', 'week', 'cust', 'po', 'newReplen', 'orddate', 'due', 'custdue', 'sku', 'qty',
     'bookInspect', 'qc1qty', 'qc1date', 'qc1fail', 'qc2qty', 'qc2date', 'qc2fail',
     'orderTicket', 'receiveTicket', 'polyOrd', 'polyRec',
     'controlPen', 'polishPen', 'platePen',
-    'prodRisk', 'pqc', 'arrow'
+    'prodRisk', 'pqc', 'remark', 'amount', 'arrow'
   ],
   N051: [
-    'no', 'week', 'cust', 'po', 'po2', 'newReplen', 'metal', 'shipto', 'photo', 'orddate', 'due', 'qa', 'sgs', 'qcdate', 'custdue', 'oor', 'sku', 'qty', 'amount', 'remark',
-    'cardBox', 'orderTicket', 'receiveTicket', 'sample', 'custCT', 'mf', 'packScanDo', 'packScanSen', 'packScan',
-    'controlPen', 'polishPen', 'platePen',
-    'prodRisk', 'pqc', 'arrow'
+    'no', 'week', 'cust', 'po', 'po2', 'newReplen', 'metal', 'photo', 'orddate', 'custdue', 'sku', 'qty',
+    'controlPen', 'polishPen', 'platePen', 'exportQty', 'balQty', 'expPct',
+    'prodRisk', 'pqc', 'remark', 'amount', 'arrow'
   ],
   N083: [
-    'no', 'week', 'cust', 'po', 'newReplen', 'orddate', 'due', 'custdue', 'sku', 'qty', 'amount', 'remark',
+    'no', 'week', 'cust', 'po', 'newReplen', 'orddate', 'due', 'custdue', 'sku', 'qty',
     'qc1qty', 'qc1date', 'qc1fail', 'qc2qty', 'qc2date', 'qc2fail',
-    'orderTicket', 'receiveTicket', 'custCT',
-    'controlPen', 'polishPen', 'platePen', 'expPct',
-    'prodRisk', 'pqc', 'arrow'
+    'controlPen', 'polishPen', 'platePen',
+    'prodRisk', 'pqc', 'receiveTicket', 'remark', 'amount', 'arrow'
   ],
 };
 
@@ -610,10 +628,15 @@ export default function OrderTable({
   const [searchParams] = useSearchParams();
   const [pickerOrder, setPickerOrder] = useState<OrderSummary | null>(null);
 
-  const allMasterKeys = Object.keys(MASTER_COLS);
-  const activeCols = allMasterKeys
-    .filter(key => visibleKeys.includes(key) || ['no', 'week', 'cust', 'po', 'arrow'].includes(key))
-    .map(key => ({ key, ...MASTER_COLS[key] }));
+  // Use visibleKeys order (from GROUP_PRESETS) to control column sequence
+  const mandatory = ['no', 'week', 'cust', 'po', 'arrow'];
+  const orderedKeys = [
+    ...visibleKeys.filter(key => key in MASTER_COLS),
+    ...mandatory.filter(key => !visibleKeys.includes(key)),
+  ];
+  // Remove duplicates while preserving order
+  const uniqueKeys = [...new Set(orderedKeys)];
+  const activeCols = uniqueKeys.map(key => ({ key, ...MASTER_COLS[key] }));
 
   const handleRowClick = (order: OrderSummary) => {
     setPickerOrder(order);
@@ -627,7 +650,7 @@ export default function OrderTable({
     const dateFrom = searchParams.get('dateFrom') || '';
     const dateTo = searchParams.get('dateTo') || '';
     const dateType = searchParams.get('dateType') || '';
-    const status = searchParams.get('status') || '';
+    const status = searchParams.get('status') || 'Pending';
 
     const query = new URLSearchParams();
     if (dateFrom) query.append('dateFrom', dateFrom);
@@ -638,10 +661,7 @@ export default function OrderTable({
 
     // ทุกแถวยิงเข้า endpoint /group/ เดียว (กรองครบทุกแกนเหมือน SP → ยอด detail ตรงกับแถวใน list)
     // แนบ ?po= เป็น "แกนที่ 6" เมื่อแถวผูกกับ PO จริง — ครอบคลุมลูกค้าทั่วไป + N008 หลาย PO (CTM)
-    // ยกเว้นแถว label 'Group PO By ShipTo' (N008 รวมหลาย single-PO ตาม ShipTo โดยตั้งใจ) → ไม่แนบ po
-    if (pickerOrder.PONo && pickerOrder.PONo !== 'Group PO By ShipTo') {
-      query.append('po', pickerOrder.PONo);
-    }
+    query.append('po', pickerOrder.PONo || '');
     const path = [
       pickerOrder.CustCode || '-',
       encodeURIComponent(pickerOrder.ShipTo || '-'),
@@ -682,11 +702,11 @@ export default function OrderTable({
           </colgroup>
           <thead style={{ position: 'sticky', top: 0, zIndex: 30 }}>
             <tr>
-              {activeCols.map((c, i) => {
-                const isPinned = ['no', 'week', 'cust', 'po', 'po2', 'newReplen'].includes(c.key);
+              {activeCols.map((c, idx) => {
+                const isPinned = ['no', 'week', 'cust', 'po', 'po2', 'ordno', 'newReplen'].includes(c.key);
                 let leftPos = 0;
                 if (isPinned) {
-                  const prevPinned = activeCols.slice(0, i);
+                  const prevPinned = activeCols.slice(0, idx);
                   leftPos = prevPinned.reduce((sum, col) => sum + col.w, 0);
                 }
 
@@ -738,7 +758,7 @@ export default function OrderTable({
                 }}
               >
                 {activeCols.map((c, idx) => {
-                  const isPinned = ['no', 'week', 'cust', 'po', 'po2', 'newReplen'].includes(c.key);
+                  const isPinned = ['no', 'week', 'cust', 'po', 'po2', 'ordno', 'newReplen'].includes(c.key);
                   let leftPos = 0;
                   if (isPinned) {
                     const prevPinned = activeCols.slice(0, idx);
@@ -762,7 +782,9 @@ export default function OrderTable({
                         left: isPinned ? leftPos : undefined,
                         zIndex: isPinned ? 15 : 1,
                         minWidth: c.w, width: c.w, maxWidth: c.w, boxSizing: 'border-box',
-                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-word',
+                        overflow: 'hidden',
                         transition: 'all 0.2s',
                         boxShadow: isPinned && c.key === 'newReplen' ? '4px 0 12px -4px rgba(0,0,0,0.05)' : 'none',
                         ...c.cellStyle?.(o)

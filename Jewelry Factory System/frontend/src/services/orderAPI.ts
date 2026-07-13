@@ -35,6 +35,7 @@ export interface OrderSummary {
 
   // ─── PO2 / Meta (surfaced from SP) ───
   EXNo: string | null;          // PO2
+  OrdMaker: string | null;      // Group
 
   // ─── Production stage pending qty (ตัวเลข; ติดลบ = ค้าง) ───
   StonePenQty: number | null;
@@ -132,7 +133,7 @@ export const fetchOrders = async (params: { status?: 'pending' | 'finish' | 'all
       CustQCDate: item.CustQCDate || null,
       OORDate: item.OORDate || null,
       TrackRemark: item.TrackRemark || item.remark || '-',
-      
+
       // Sales Remarks (Production Data)
       ReceiveRemark: item.ReceiveRemark || item.receiveRemark || null,
       EnamelRemark: item.EnamelRemark || item.enamelRemark || null,
@@ -144,6 +145,7 @@ export const fetchOrders = async (params: { status?: 'pending' | 'finish' | 'all
 
       // ─── PO2 / Meta ───
       EXNo: item.EXNo || item.exNo || null,
+      OrdMaker: item.OrdMaker || item.ordMaker || null,
 
       // ─── Production stage pending qty ───
       StonePenQty: num(item.StonePenQty),

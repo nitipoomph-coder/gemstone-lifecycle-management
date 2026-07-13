@@ -33,7 +33,7 @@ export default function Topbar({ breadcrumb, hideSearch, rightContent, icon }: T
   const [searching, setSearching] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isScopeDropdownOpen, setIsScopeDropdownOpen] = useState(false);
-  
+
   const searchRef = useRef<HTMLDivElement>(null);
   const scopeDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -98,7 +98,7 @@ export default function Topbar({ breadcrumb, hideSearch, rightContent, icon }: T
         borderBottom: '1px solid var(--color-border-light)',
         position: 'sticky',
         top: 0,
-        zIndex: 50,
+        zIndex: 100,
         boxShadow: '0 4px 20px color-mix(in srgb, var(--color-surface-900) 3%, transparent)',
       }}
     >
@@ -170,7 +170,7 @@ export default function Topbar({ breadcrumb, hideSearch, rightContent, icon }: T
                     <path d="M1 1L6 6L11 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 </button>
-                
+
                 {isScopeDropdownOpen && (
                   <div className="absolute top-full left-0 mt-3 w-32 rounded-xl border border-[var(--color-border-light)] bg-[var(--color-surface-1)] p-1.5 z-[110] animate-fade-in-up" style={{ boxShadow: '0 10px 40px -10px color-mix(in srgb, var(--color-surface-900) 25%, transparent)' }}>
                     {SCOPES.map(sc => (

@@ -1,5 +1,6 @@
 import React from 'react';
 import { ArrowDown, ArrowUp } from 'lucide-react';
+import { useTheme } from '../../contexts/ThemeContext';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -20,9 +21,9 @@ const thBase: React.CSSProperties = {
 };
 
 const yearColors = [
-  { bg: 'var(--color-surface-1)', text: 'var(--color-text-primary)', totalBg: 'color-mix(in srgb, var(--color-brand-500) 10%, var(--color-surface-2))', totalText: 'var(--color-brand-600)' },
-  { bg: 'var(--color-surface-1)', text: 'var(--color-text-primary)', totalBg: 'color-mix(in srgb, var(--color-brand-500) 10%, var(--color-surface-2))', totalText: 'var(--color-brand-600)' },
-  { bg: 'var(--color-surface-1)', text: 'var(--color-text-primary)', totalBg: 'color-mix(in srgb, var(--color-brand-500) 10%, var(--color-surface-2))', totalText: 'var(--color-brand-600)' },
+  { bg: 'var(--color-surface-1)', text: 'var(--color-text-primary)', totalText: 'var(--color-brand-600)' },
+  { bg: 'var(--color-surface-1)', text: 'var(--color-text-primary)', totalText: 'var(--color-brand-600)' },
+  { bg: 'var(--color-surface-1)', text: 'var(--color-text-primary)', totalText: 'var(--color-brand-600)' },
 ];
 
 interface CustomerReportTableProps {
@@ -64,6 +65,9 @@ export default function CustomerReportTable({
   renderGrowthAmt,
   renderGrowthPct,
 }: CustomerReportTableProps) {
+  const { theme } = useTheme();
+  const isRoyal = theme === 'royal-white';
+  const totalBg = isRoyal ? 'color-mix(in srgb, var(--color-brand-500) 10%, var(--color-surface-2))' : 'var(--color-surface-2)';
 
   if (loading) {
     return (
@@ -214,7 +218,7 @@ export default function CustomerReportTable({
                     );
                   }).concat(
                     <th key={`${yr}_total`} style={{
-                      ...thBase, minWidth: 120, background: yc.totalBg, color: yc.totalText,
+                      ...thBase, minWidth: 120, background: totalBg, color: yc.totalText,
                       position: 'sticky', top: 34, zIndex: 10,
                       borderBottom: '1px solid var(--color-border-strong)', borderRight: '1px solid var(--color-border-strong)', fontSize: '0.7rem'
                     }}>
@@ -298,7 +302,7 @@ export default function CustomerReportTable({
                         </td>
                       );
                     }).concat(
-                      <td key={`${yr}_total`} style={{ padding: '10px 12px', textAlign: 'right', background: 'color-mix(in srgb, var(--color-brand-500) 15%, var(--color-surface-2))', whiteSpace: 'nowrap', borderRight: '1px solid var(--color-border-strong)' }}>
+                      <td key={`${yr}_total`} style={{ padding: '10px 12px', textAlign: 'right', background: isRoyal ? 'color-mix(in srgb, var(--color-brand-500) 15%, var(--color-surface-2))' : 'var(--color-surface-2)', whiteSpace: 'nowrap', borderRight: '1px solid var(--color-border-strong)' }}>
                         {renderCell(tableData.colTotals[`${yr}_total`] || 0, { fontSize: '0.95rem', fontWeight: 900, color: yc.totalText })}
                       </td>
                     );
@@ -381,7 +385,7 @@ export default function CustomerReportTable({
                 {displayYears.map((yr) => {
                   return (
                     <th key={`tot_hdr_${yr}`} style={{
-                      ...thBase, minWidth: 100, background: 'color-mix(in srgb, var(--color-brand-500) 10%, var(--color-surface-2))', color: yr === currentYearStr ? 'var(--color-brand-600)' : 'var(--color-text-primary)',
+                      ...thBase, minWidth: 100, background: totalBg, color: yr === currentYearStr ? 'var(--color-brand-600)' : 'var(--color-text-primary)',
                       position: 'sticky', top: 34, zIndex: 10, borderBottom: '1px solid var(--color-border-strong)', borderRight: '1px solid var(--color-border-strong)', fontSize: '0.68rem'
                     }}>
                       {yr}
@@ -390,13 +394,13 @@ export default function CustomerReportTable({
                 })}
                 {displayYears.length > 1 && growthComparisons.map((comp, idx) => (
                   <React.Fragment key={`growth_m_tot_hdr_${idx}`}>
-                    <th style={{ ...thBase, minWidth: 100, background: 'color-mix(in srgb, var(--color-brand-500) 10%, var(--color-surface-2))', color: 'var(--color-brand-600)', position: 'sticky', top: 34, zIndex: 10, borderBottom: '1px solid var(--color-border-strong)', borderRight: '1px solid var(--color-border-strong)', fontSize: '0.65rem' }}>
+                    <th style={{ ...thBase, minWidth: 100, background: totalBg, color: 'var(--color-brand-600)', position: 'sticky', top: 34, zIndex: 10, borderBottom: '1px solid var(--color-border-strong)', borderRight: '1px solid var(--color-border-strong)', fontSize: '0.65rem' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
                         <span>Growth</span>
                         <span style={{ fontSize: '0.55rem', color: 'var(--color-text-tertiary)', fontWeight: 700 }}>({comp.a} vs {comp.b})</span>
                       </div>
                     </th>
-                    <th style={{ ...thBase, minWidth: 80, background: 'color-mix(in srgb, var(--color-brand-500) 10%, var(--color-surface-2))', color: 'var(--color-brand-600)', position: 'sticky', top: 34, zIndex: 10, borderBottom: '1px solid var(--color-border-strong)', borderRight: '1px solid var(--color-border-strong)', fontSize: '0.65rem' }}>
+                    <th style={{ ...thBase, minWidth: 80, background: totalBg, color: 'var(--color-brand-600)', position: 'sticky', top: 34, zIndex: 10, borderBottom: '1px solid var(--color-border-strong)', borderRight: '1px solid var(--color-border-strong)', fontSize: '0.65rem' }}>
                       %
                     </th>
                   </React.Fragment>
@@ -417,7 +421,7 @@ export default function CustomerReportTable({
                   <td style={{ padding: '10px 16px', borderRight: '1px solid var(--color-border-strong)', fontWeight: 900, color: 'var(--color-text-primary)', whiteSpace: 'nowrap', fontSize: '0.85rem', position: 'sticky', left: 0, background: 'var(--color-surface-1)', zIndex: 2 }}>
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
                       <span>{row.label}</span>
-                      {metric === 'qty' && row.topItem && (
+                      {metric === 'qty' && row.topItem && displayYears.some(yr => (row[`${yr}_total`] || 0) > 0) && (
                         <span style={{ fontSize: '0.65rem', color: 'var(--color-brand-500)', marginTop: 2, fontWeight: 700, letterSpacing: '0.02em' }}>
                           Top: {row.topItem} ({fmt(row.topItemQty)} pcs)
                         </span>
@@ -512,7 +516,7 @@ export default function CustomerReportTable({
                   {displayYears.map((yr, _yIdx) => {
                     const yc = yearColors[_yIdx] || yearColors[0];
                     return (
-                      <td key={`total_${yr}`} style={{ padding: '10px 12px', textAlign: 'right', background: 'color-mix(in srgb, var(--color-brand-500) 15%, var(--color-surface-2))', whiteSpace: 'nowrap', borderRight: '1px solid var(--color-border-strong)' }}>
+                      <td key={`total_${yr}`} style={{ padding: '10px 12px', textAlign: 'right', background: isRoyal ? 'color-mix(in srgb, var(--color-brand-500) 15%, var(--color-surface-2))' : 'var(--color-surface-2)', whiteSpace: 'nowrap', borderRight: '1px solid var(--color-border-strong)' }}>
                         {renderCell(tableData.colTotals[`${yr}_total`] || 0, { fontSize: '0.95rem', fontWeight: 900, color: yc.totalText })}
                       </td>
                     );
@@ -522,10 +526,10 @@ export default function CustomerReportTable({
                     const pct = renderGrowthPct(tableData.colTotals[`${comp.a}_total`] || 0, tableData.colTotals[`${comp.b}_total`] || 0);
                     return (
                       <React.Fragment key={`growth_m_foot_tot_${gIdx}`}>
-                        <td style={{ padding: '8px 10px', textAlign: 'right', background: amt.bgColor === 'transparent' ? 'color-mix(in srgb, var(--color-brand-500) 10%, var(--color-surface-2))' : amt.bgColor, borderRight: '1px solid var(--color-border-strong)' }}>
+                        <td style={{ padding: '8px 10px', textAlign: 'right', background: amt.bgColor === 'transparent' ? (isRoyal ? 'color-mix(in srgb, var(--color-brand-500) 10%, var(--color-surface-2))' : 'var(--color-surface-2)') : amt.bgColor, borderRight: '1px solid var(--color-border-strong)' }}>
                           {amt.node}
                         </td>
-                        <td style={{ padding: '8px 10px', textAlign: 'right', background: pct.bgColor === 'transparent' ? 'color-mix(in srgb, var(--color-brand-500) 10%, var(--color-surface-2))' : pct.bgColor, borderRight: '1px solid var(--color-border-strong)' }}>
+                        <td style={{ padding: '8px 10px', textAlign: 'right', background: pct.bgColor === 'transparent' ? (isRoyal ? 'color-mix(in srgb, var(--color-brand-500) 10%, var(--color-surface-2))' : 'var(--color-surface-2)') : pct.bgColor, borderRight: '1px solid var(--color-border-strong)' }}>
                           {pct.node}
                         </td>
                       </React.Fragment>

@@ -3,7 +3,7 @@
 ## Project Overview
 
 ระบบจัดการวงจรชีวิตพลอยและเครื่องประดับ (Gemstone Lifecycle Management) สำหรับโรงงานเครื่องประดับ
-เป็นการ **Modernize** ระบบเดิมที่เขียนด้วย VB.net + SQL Server ให้เป็น Web Application แบบ Full-Stack  
+เป็นการ **Modernize** ระบบเดิมที่เขียนด้วย VB.net + SQL Server ให้เป็น Web Application แบบ Full-Stack
 ใช้งานภายในองค์กร (Intranet) เชื่อมต่อฐานข้อมูลจริง (MSSQL — `CLLDBS`) ผ่าน Stored Procedures
 
 ### Business Modules
@@ -20,7 +20,8 @@
 | ออเดอร์และการเบิก       | SOA, SIA, SIB, SIP, SIS             | 🟡 DocumentLayout done |
 | ห้องตัวอย่าง            | SSA, SIM                             | 🟡 DocumentLayout done |
 | ตรวจสอบและนับสต็อก      | Check Dispatch/Sample/Purchase/Stock | ⬜ Placeholder      |
-| Production            | —                                    | ✅ Live (core feature, admin only) |
+| Production / PO Tracker | —                                  | ✅ Live (core feature, admin only) |
+| Sales Order Analytics | —                              | ✅ Sales Analytics overview + drilldown detail table |
 | สต็อกอะไหล่             | SP-Order, SP-Issue, SP-Receive, …    | ⬜ Placeholder      |
 | งานเหมา (Subcontract Management) | —                           | 🟡 UI Preview (1/3, ไม่มี Backend) |
 
@@ -37,7 +38,10 @@
 - **Filters — Toolbar + Popover + Chips (modern table-filter pattern, ไม่ใช่ sidebar)**: Group toggle และ Status toggle แสดงตลอดเวลาในแถบเดียวบรรทัดเดียว ส่วนฟิลเตอร์รอง (Week/Customer/PO/Type/ShipTo/Date Range) ซ่อนอยู่หลังปุ่ม "Filters" (มี badge บอกจำนวนที่เลือกไว้) กดแล้วเปิดเป็น popover ลอย (ใช้ pattern เดียวกับ View Columns popover ใน `OrderTable.tsx`) — เมื่อมีฟิลเตอร์ที่เลือกไว้ จะโชว์เป็น chip ที่ลบทีละตัวได้ใต้แถบ toolbar เพื่อให้เห็นว่าเลือกอะไรไว้โดยไม่ต้องเปิด popover ซ้ำ — เมื่อไม่มีฟิลเตอร์ใดเลือกไว้ พื้นที่ด้านบนจะเหลือแค่แถบ toolbar บรรทัดเดียว (โล่ง ไม่กระจุก) อ้างอิงจาก pattern ของ Linear/Notion/GitHub Issues (ไม่ใช่ sidebar แบบ BI dashboard เพราะ PO Tracker เป็นตารางข้อมูลเป็นหลัก ไม่ใช่ multi-chart report)
 - **KPI Tiles**: เป็น flat icon-circle แบบ static display **ไม่ clickable** (ไม่มี onClick/hover-scale/gradient/glassmorphism) — ดีไซน์อ้างอิงจากระบบพี่น้อง "PCC System: Subcontract Management" เพื่อความสอดคล้องในองค์กร ตัวเลขแต่ละ tile ใช้สีตามความหมาย (semantic color)
 - **Pagination — Pinned, ไม่ต้องเลื่อนจอ**: รวมเป็นแถบเดียวที่ด้านล่างตาราง (Showing X–Y of Z + page size selector + Prev/page numbers/Next ทั้งหมดอยู่แถวเดียวกัน) — `OrderTable.tsx` ไม่รับ props `totalCount`/`pageSize`/`onPageSizeChange` อีกต่อไป เพราะ Pagination UI ทั้งหมดย้ายไปอยู่ใน `POTrackerAdvanced.tsx` แล้ว และ Data Table card ใช้ flex column (`flex:1, minHeight:0`) ให้ตารางขยายเต็มพื้นที่ที่เหลือของจอเสมอ ส่วน scroll container ใน `OrderTable.tsx` เปลี่ยนจาก `maxHeight: calc(100vh - 280px)` (เลขคงที่ที่ไม่ตรงกับความสูงจริงของ Filters/KPI) เป็น `flex:1, minHeight:0` แทน — ทำให้แถบ pagination ติดอยู่ด้านล่างของจอเสมอ ไม่ต้อง scroll หน้าทั้งหน้าเพื่อกด Next
-
+- **Line Detail Drawer & Order Line Table**:
+  - ปรับ `OrderLineTable.tsx` ไม่ให้ตัดคำ (Wrap text) ในคอลัมน์แคบๆ เช่น 'Plating' เพื่อให้อ่านง่าย
+  - ปรับพื้นหลังกล่องรูปใน `LineDetailDrawer.tsx` เป็นสีขาว (`#FFFFFF`) เพื่อให้รูปสินค้าเบลนด์เนียนเข้ากับกรอบอย่างไร้รอยต่อ และปรับทรงปุ่มปิด (Close Button) ให้เป็นวงกลมสอดคล้องกับ Lightbox
+- **Column Presets Synchronization**: ปรับปรุงค่าเริ่มต้นของกลุ่มคอลัมน์ (Sales, Production, All) ใน `orderDetailColumns.ts` ให้ตรงกับ Checkboxes ของระบบ VB.net เดิมแบบ 100% (เพิ่ม `QCDate`, `FinishQty` ใน Sales และ `OrdRemark` ใน Production)
 ---
 
 ## Tech Stack
@@ -153,6 +157,9 @@ gemstone-lifecycle-management/
     │       │   ├── CustomerReportPage.tsx      # ⭐ Customer Report (Matrix Table สรุปยอดขายรายลูกค้า)
     │       │   ├── TopOrdersGalleryPage.tsx    # ⭐ Top Orders Gallery (Enterprise BI layout with custom themes)
     │       │   ├── POTrackerAdvanced.tsx       # ⭐ PO Tracker main (list view — เดิมชื่อ OrderTrackerAdvanced)
+    │       │   ├── SalesOrderAnalytics.tsx # ✅ Sales Order Analytics overview route: /dashboard/sales-order-analytics
+    │       │   ├── SalesOrderAnalyticsDetail.tsx    # ✅ Sales order/item drilldown table route: /dashboard/sales-order-analytics/detail
+    │       │   ├── salesOrderAnalyticsModel.ts      # Shared data mapping/rules for Sales Order Analytics
     │       │   ├── OrderDetailPage.tsx         # Order detail (by ord/po/group)
     │       │   ├── ItemDetailPage.tsx          # Item-level detail
     │       │   ├── PlaceholderPage.tsx         # Placeholder for unimplemented modules
@@ -250,12 +257,12 @@ gemstone-lifecycle-management/
 6. **API Calls**: แยก API calls ไว้ใน `services/` folder — ห้ามเรียก fetch ตรงใน component
 7. **Icons**: ใช้ `lucide-react` เท่านั้น — import เฉพาะ icon ที่ใช้ (tree-shakable)
 8. **Menu Config**: Menu structure ทั้งหมดอยู่ใน `config/menuConfig.ts` — ห้าม hardcode menu ใน Sidebar
-9. **Font Stack**: 
+9. **Font Stack**:
    - Headings: `font-display` → Outfit (or Inter for enterprise/B2B feel)
    - Body text: `font-body` → Kanit
    - Logo/Brand: `font-logo` → Cinzel
 10. **Loading Skeletons**: เมื่อมีการเพิ่ม/แก้ไข กล่องข้อมูล (Boxes/Cards) ในหน้าจอใด ๆ ต้องอัปเดตส่วนแสดงสถานะกำลังโหลด (Loading Skeleton) ให้สอดคล้องกันทั้งหน้าจอ เพื่อหลีกเลี่ยงอาการ Layout Shift โดยส่วนโหลดนี้ต้องคลุมเฉพาะพื้นที่แสดงผลของหน้านั้น ๆ (Content Outlet) ไม่ต้องโหลดส่วนเมนู (Sidebar/Topbar) ซ้ำ
-11. **UI Components & UX**: 
+11. **UI Components & UX**:
     - หลีกเลี่ยงการใช้ native `<datalist>` สำหรับ Dropdown ที่ซับซ้อน ให้ใช้ Custom React Dropdown component แทน เพื่อให้สามารถกำหนด CSS, z-index, hover states และ interaction ได้เต็มที่
     - **Accessibility & Contrast**: สีตัวอักษรบนพื้นหลังใดๆ ต้องมี Contrast ratio อย่างน้อย 4.5:1 (เช่น placeholder บนพื้นสีเข้มควรใช้สีที่สว่างพอ, หรือเพิ่ม glassmorphism card รองรับแบบฟอร์มเพื่อป้องกันพื้นหลังลายตา)
     - **Capitalization**: ใช้มาตรฐานเดียวกันทั้งแอป เช่น Title Case ("Sales", "Password") แทนที่จะผสม ALL CAPS กับ Title Case ใน level เดียวกัน
@@ -592,7 +599,7 @@ APP_SALES_PASSWORD=<sales login password>
 2. **Data จาก Production DB** — ระวังเรื่อง query performance, ใช้ cache เสมอสำหรับ heavy queries
 3. **Thai Language UI** — ข้อความในระบบเป็นภาษาไทย, ใช้ web fonts (Outfit, Prompt)
 4. **Legacy Migration** — กำลัง migrate จาก VB.net ทีละ module, หลายหน้ายังเป็น Placeholder
-5. **Photo Data** — รูปสินค้าเก็บเป็น VARBINARY ใน DB, แปลงเป็น base64 ตอน serve — ระวัง payload size 
+5. **Photo Data** — รูปสินค้าเก็บเป็น VARBINARY ใน DB, แปลงเป็น base64 ตอน serve — ระวัง payload size
 6. **Active Order Filters** — เนื่องจากมีข้อมูลขยะ (Sample/Dead orders) ในระบบจำนวนมาก Dashboard จึงต้องถูกฟิลเตอร์ให้แสดงเฉพาะออเดอร์ 13 รหัสหลักที่มีความเคลื่อนไหวตั้งแต่ปี 2024 ขึ้นมาเท่านั้น (BBC, BBQ, BBD, BBI, BBF, BBP, BBT, BBX, BBK, BBR, BBL, BBS, BBE)
 
 ---
@@ -686,7 +693,7 @@ APP_SALES_PASSWORD=<sales login password>
 | Filter             | ตัวเลือก                                                     | State Variable    |
 |--------------------|--------------------------------------------------------------|-------------------|
 | **Target Year(s)** | Multi-select จาก available years (toggle on/off)              | `selectedYears`   |
-| **Filter Months**  | Multi-select 12 เดือน (แสดงเฉพาะ monthly mode)              | `selectedMonths`  |
+| **Month Selector** | เลือกเดือนเดียวใน `Monthly Detail` หรือ All Months          | `selectedMonth`   |
 | **Customer Group** | N008, MLT, N083, N044, N051, General (toggle pills)           | `selGroups`       |
 | **Show Labels**    | ON/OFF — ซ่อน/แสดง label บนกราฟ (auto-off เมื่อ >3 groups)  | `showLabels`      |
 
@@ -708,7 +715,7 @@ APP_SALES_PASSWORD=<sales login password>
    - **XAxis Padding** (Line Chart): `{ left: 30, right: 30 }` ป้องกันจุดข้อมูลชิดขอบ
    - **YAxis**: width=70, dx=-5 ป้องกัน label ถูกตัด
    - **Dot Markers**: Line Chart ใช้ r=6, strokeWidth=3, activeDot r=8
-2. **CustomerReportPage**: หน้าต่างสรุปตัวเลขแบบ Full-screen Matrix (รายลูกค้า × รายเดือน) ที่ถูกแยก (Separate) ออกมาจาก `CustomerDashboard.tsx` เดิมที่เป็นเพียง Modal 
+2. **CustomerReportPage**: หน้าต่างสรุปตัวเลขแบบ Full-screen Matrix (รายลูกค้า × รายเดือน) ที่ถูกแยก (Separate) ออกมาจาก `CustomerDashboard.tsx` เดิมที่เป็นเพียง Modal
    - **หน้าที่และความจำเป็น**: ทำหน้าที่แสดงผลตารางสรุปยอดขาย (Matrix Table) แบบเจาะลึกทุกเดือนและทุกปี การแยกออกมาเป็นหน้าจอใหม่ (Page) ช่วยลดความหนาแน่นของโค้ดในหน้า Dashboard และให้พื้นที่เต็มหน้าจอสำหรับตารางข้อมูลขนาดใหญ่
    - **ขีดจำกัด (Limitations)**: ตารางมีการเรนเดอร์ DOM Elements จำนวนมหาศาล (จำนวนลูกค้า × จำนวนปี × จำนวน 12 เดือน) หากผู้ใช้เลือกช่วงปีจำนวนมาก และไม่กรองกลุ่มลูกค้า (แสดงทั้งหมด) อาจทำให้เกิดความหน่วง (Lag) ในระหว่างการ Scroll หรือการสลับโหมด View/Growth เนื่องจาก React ต้องคำนวณและวาดคอมโพเนนต์จำนวนมากในครั้งเดียว
    - กรองข้อมูลผ่าน Base Year, Compare Year, Customer Groups, และเลือก Customer IDs ได้
@@ -748,7 +755,7 @@ APP_SALES_PASSWORD=<sales login password>
 ### Features & Refinements
 - **Dual Analytical Views**: Fully integrated 'YTD View' (Year-to-Date aggregation up to selected months) and 'Monthly Comparison' for direct side-by-side performance tracking.
 - **Dynamic Checkbox Filtering**: Users can select arbitrary combinations of months. The table structure intelligently pivots depending on the active view mode while respecting selected months.
-- **Resilient Theme Design (Growth Indicators)**: 
+- **Resilient Theme Design (Growth Indicators)**:
   - Eliminated hardcoded hex colors. Backgrounds use CSS color-mix with ar(--color-success-500) and ar(--color-danger-500) at 15% opacity to seamlessly blend with any Light/Dark theme.
   - Left-aligned currency symbols ($) and growth direction arrows (▲/▼) using flexbox for perfect accounting-style visual alignment.
   - Implemented smart NEW badge logic: displays instantly recognizable pill badge when previous period is 0 and current period has sales.
@@ -756,6 +763,45 @@ APP_SALES_PASSWORD=<sales login password>
 
 ---
 
+## Sales Order Analytics
+
+### สถานะ: ✅ Sales Analytics overview + drilldown detail table
+โมดูลนี้อยู่ใต้กลุ่ม `Sales Analytics` สำหรับดูภาพรวม Order/Item เพื่อใช้ประชุม ไม่ใช่ระบบติดตาม production แบบ live tracking:
+- `SalesOrderAnalytics.tsx` — route `/dashboard/sales-order-analytics`; หน้า overview แบบ Sales-style แสดง KPI + กราฟก่อน แล้วค่อยกดดูตาราง
+- `SalesOrderAnalyticsDetail.tsx` — route `/dashboard/sales-order-analytics/detail`; ตารางเชิงลึก รับ query จากปุ่ม/การ์ด เช่น `status`, `viewMode`, `shipMonth`, `dueDateSource`
+- `salesOrderAnalyticsModel.ts` — shared model/rules/hook สำหรับ map `OrderSummary` เป็น order/item records, คำนวณ status bucket, pending by department, status by month และ top review rows
+
+### Menu / Routing
+- Menu ใต้ `Sales Analytics`: `Sales Order Analytics`
+- Routes ใน `App.tsx`: `/dashboard/sales-order-analytics` และ `/dashboard/sales-order-analytics/detail`
+
+### Design Rules
+- หน้าแรกต้องเป็น analytics dashboard ก่อน ไม่ใช่ table-first
+- ใช้ดีไซน์ family เดียวกับ `SalesDashboard.tsx` และ `CustomerDashboard.tsx`: `Topbar`, `var(--color-surface-*)`, cards, rounded 16/24, heavy heading, Recharts
+- ห้าม hardcode สีใน UI; ใช้ CSS variables และ `color-mix` เท่านั้น
+- ปุ่ม/การ์ดเป็นทางเข้า drilldown เช่น Completed, WIP, Overdue, Rework, View Detail Table
+
+### Data Contract ปัจจุบัน
+- ใช้ข้อมูล summary จาก PO Tracker API (`/api/orders`) ผ่าน `fetchOrders()` จาก `src/services/orderAPI.ts`
+- Order view map จาก `OrderSummary` โดยตรง
+- Item view ใช้ `SampleItemNo` เป็น representative item ต่อ order/group เพราะ endpoint summary ยังไม่ได้คืน line-item เต็ม
+- Bucket: completed จาก `CloseStatus = 'Y'` หรือ `ExportQty >= TotalQty`, rework จาก QC fail/risk text, overdue จาก due date เทียบวันปัจจุบัน, ที่เหลือเป็น WIP
+
+### Chart Data Mapping
+- Reference Excel: `Centric Order Detail Year 2025-2026 Eileen.xlsx` ใช้แนวคิดจาก sheet `2025-2026`, `By Month`, `By Month (2)`, `Top Items`
+- กราฟหลัก `Yearly Qty Comparison by Item Type`: แสดง Qty เทียบปีชนกันแบบ grouped bar แยกกลุ่มสินค้า `BBS`, `BES`, `BNS`, `BRS`, `Others` เหมือน pivot ในไฟล์ Excel
+- Chart controls: `Year Compare` สำหรับเทียบปี, `Monthly Detail` สำหรับเลือกเดือน; ใช้ `Compare Years` (`selectedYears`) เลือกปีที่จะนำมาชนกัน และ `selectedMonth` เลือกเดือนในโหมด monthly
+- Year comparison และ monthly detail ใช้ `OrdDate` เป็นฐานปี/เดือนสำหรับกราฟหลัก และไม่ plot record ที่ไม่มีปี
+- Group mapping: ใช้ prefix 3 ตัวแรกของ `SampleItemNo` เป็นกลุ่มสินค้า และตัด suffix ตัวอักษรท้ายเพื่อได้ item SKU แบบเดียวกับ column `item SKU` ในไฟล์ Excel
+- KPI cards: ใช้ status bucket `Completed`, `WIP`, `Overdue`, `Rework` เพื่อเป็นปุ่ม drilldown ไม่ใช่กราฟหลัก
+- กราฟ `Item Flow by Department`: ใช้ pending qty จาก `CastPenQty`, `WijPenQty`, `WstPenQty`, `StonePenQty`, `FitPenQty`, `GrindPenQty`, `PolishPenQty`, `PlatePenQty`, `QCPenQty`
+- `Top Review List`: ใช้ status bucket + pending qty รวม เพื่อดันรายการ overdue/rework/pending สูงขึ้นมาให้ดูในการประชุม
+- ฟิลด์แสดงใน detail: `CustCode`, `CustName`, `PONo`, `OrdNo`, `OrdKind`, `DueDate`, `CustDueDate`, `TotalQty`, `FinishQty`, `ExportQty`, pending qty รายแผนก
+
+### Next Step ถ้าต้องการ SKU จริง
+ต้องเพิ่ม Backend API/SP ที่คืน line-item จริงจาก `OrdDT`/`OrdTrackDT` ก่อน แล้วค่อยเปลี่ยน item view จาก representative item เป็น SKU rows จริง
+
+---
 ## Subcontract Management (งานเหมา) — Planned Module
 
 ### สถานะ: 🟡 UI Preview 1/3 (ไม่มี Backend)

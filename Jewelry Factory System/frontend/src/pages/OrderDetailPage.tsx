@@ -1,5 +1,5 @@
 // src/pages/OrderDetailPage.tsx
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { RefreshCw, AlertTriangle, Search, Package, DollarSign, ClipboardList, FileSpreadsheet, Image, X, Layers } from 'lucide-react';
 import Topbar from '../components/layout/Topbar';
@@ -7,6 +7,7 @@ import { fetchOrderDetail, fetchOrderByPo, fetchOrderByGroup, type OrderDetail }
 import { PhotoGalleryModal } from '../components/orderDetail/PhotoGalleryModal';
 import OrderLineTable from '../components/orderDetail/OrderLineTable';
 import LineDetailDrawer from '../components/orderDetail/LineDetailDrawer';
+import CustomSelect from '../components/ui/CustomSelect';
 import { exportOrderDetailExcel } from '../utils/exportOrderDetailExcel';
 import { ORDER_DETAIL_COLUMNS, COLUMN_GROUP_PRESETS, type ColGroup, type ColumnPreset } from '../config/orderDetailColumns';
 import { fQty, fAmt } from '../components/orderDetail/format';
@@ -14,7 +15,6 @@ import { fQty, fAmt } from '../components/orderDetail/format';
 const PRESET_BUTTONS: { key: ColumnPreset; label: string; icon: React.ReactNode }[] = [
   { key: 'Sales', label: 'Sales View', icon: <DollarSign size={14} /> },
   { key: 'Production', label: 'Production View', icon: <Package size={14} /> },
-  { key: 'Remarks', label: 'Remarks', icon: <ClipboardList size={14} /> },
   { key: 'All', label: 'All Details', icon: <Layers size={14} /> },
 ];
 
@@ -69,6 +69,90 @@ function Stat({ label, value, color }: { label: string; value: React.ReactNode; 
   );
 }
 
+// ── Unified Filter (Status + Group in one bar) ──
+function UnifiedFilter({
+  status, prefix, onChange
+}: {
+  status: string, prefix: string, onChange: (s: string, p: string) => void
+}) {
+  const mainOpts = ['Pending', 'Finish', 'Export', 'ALL'];
+  const groupOpts = ['BBC', 'BBF', 'BBQ', 'BBR', 'BBE'];
+
+  const [isOpen, setIsOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    if (isOpen) document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [isOpen]);
+
+  const activeIsGroup = prefix !== 'ALL';
+
+  return (
+    <div style={{ display: 'flex', background: 'var(--color-surface-1)', padding: '4px', borderRadius: '12px', border: '1px solid var(--color-border-light)' }}>
+      {mainOpts.map(o => {
+        const active = (prefix === 'ALL' && status.toLowerCase() === o.toLowerCase());
+        return (
+          <button
+            key={o}
+            onClick={() => onChange(o, 'ALL')}
+            style={{
+              padding: '6px 14px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 800, border: 'none',
+              background: active ? 'var(--color-surface-0)' : 'transparent',
+              color: active ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
+              boxShadow: active ? '0 2px 8px color-mix(in srgb, var(--color-surface-900) 6%, transparent), 0 0 0 1px var(--color-border-light)' : 'none',
+              cursor: 'pointer', transition: 'all 0.2s', whiteSpace: 'nowrap',
+            }}
+          >{o === 'ALL' ? 'All' : o}</button>
+        );
+      })}
+
+      <div className={`relative ${isOpen ? 'z-[9999]' : 'z-[10]'}`} ref={menuRef}>
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          style={{
+            marginLeft: '4px',
+            padding: '6px 12px 6px 14px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 800, border: 'none',
+            background: activeIsGroup ? 'var(--color-surface-0)' : 'transparent',
+            color: activeIsGroup ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
+            boxShadow: activeIsGroup ? '0 2px 8px color-mix(in srgb, var(--color-surface-900) 6%, transparent), 0 0 0 1px var(--color-border-light)' : 'none',
+            cursor: 'pointer', outline: 'none', transition: 'all 0.2s',
+            display: 'flex', alignItems: 'center', gap: '6px'
+          }}
+        >
+          {activeIsGroup ? prefix : 'Groups'}
+          <div style={{ transform: isOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)", display: 'flex' }}>
+            <svg width="10" height="6" viewBox="0 0 12 7" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M1 1L6 6L11 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+        </button>
+
+        {isOpen && (
+          <div className="absolute right-0 mt-2 w-32 rounded-xl border border-[var(--color-border-light)] bg-[var(--color-surface-1)] p-1.5 shadow-xl animate-fade-in-up" style={{ zIndex: 9999 }}>
+            {groupOpts.map(o => (
+              <button
+                key={o}
+                onClick={() => { onChange('ALL', o); setIsOpen(false); }}
+                className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm transition-colors font-bold ${prefix === o ? "bg-[var(--color-brand-100)] text-[var(--color-brand-600)]" : "text-[var(--color-text-primary)] hover:bg-[var(--color-surface-0)]"}`}
+                style={{ border: 'none', cursor: 'pointer', textAlign: 'left' }}
+              >
+                {o}
+                {prefix === o && <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-brand-500)] shadow-[0_0_8px_rgba(var(--color-brand-500),0.6)] ml-2 flex-shrink-0" />}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // --- Main Page ----------------------------------------------------------------
 export default function OrderDetailPage() {
   const { poNo, ordNo, cust, addr, kind, mat, duedate } = useParams<{ poNo?: string; ordNo?: string; cust?: string; addr?: string; kind?: string; mat?: string; duedate?: string; }>();
@@ -96,11 +180,19 @@ export default function OrderDetailPage() {
   const dateFrom = searchParams.get('dateFrom');
   const dateTo = searchParams.get('dateTo');
   const statusFilter = searchParams.get('status') || 'ALL';
+  const prefixFilter = searchParams.get('prefix') || 'ALL';
 
   const updateFilter = (key: 'prefix' | 'status', value: string) => {
     const p = new URLSearchParams(searchParams);
     p.set(key, value);
     setSearchParams(p, { replace: true });
+  };
+
+  const updateCombinedFilter = (s: string, p: string) => {
+    const params = new URLSearchParams(searchParams);
+    params.set('status', s);
+    params.set('prefix', p);
+    setSearchParams(params, { replace: true });
   };
 
   const applyPreset = (preset: ColumnPreset) => {
@@ -198,7 +290,10 @@ export default function OrderDetailPage() {
             <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
           </button>
           <button
-            onClick={() => exportOrderDetailExcel(lines, h as unknown as Record<string, unknown>, pageTitle)}
+            onClick={() => exportOrderDetailExcel(lines, h as unknown as Record<string, unknown>, pageTitle, (filePath) => {
+              setToastMessage(`Exported successfully to: ${filePath}`);
+              setTimeout(() => setToastMessage(null), 5000);
+            })}
             disabled={loading || lines.length === 0}
             title="Export to Excel"
             style={{ ...ACT_BTN, ...ACT_SUCCESS, cursor: loading || lines.length === 0 ? 'not-allowed' : 'pointer', opacity: loading || lines.length === 0 ? 0.5 : 1 }}
@@ -238,16 +333,11 @@ export default function OrderDetailPage() {
             />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={LBL}>Status</span>
-            <Segmented
-              options={[
-                { value: 'Pending', label: 'Pending' },
-                { value: 'Finish', label: 'Finish' },
-                { value: 'Export', label: 'Export' },
-                { value: 'ALL', label: 'All' },
-              ]}
-              value={statusFilter}
-              onChange={(v) => updateFilter('status', v)}
+            <span style={LBL}>Filter</span>
+            <UnifiedFilter
+              status={statusFilter}
+              prefix={prefixFilter}
+              onChange={updateCombinedFilter}
             />
           </div>
           {dateFrom && dateTo && (

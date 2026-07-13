@@ -42,19 +42,10 @@ export default function LineDetailDrawer({ line, index, onClose, onSaved }: Line
   });
   const [showToast, setShowToast] = useState(false);
   const [isImageOpen, setIsImageOpen] = useState(false);
-  const [isZoomed, setIsZoomed] = useState(false);
-  const [zoomPos, setZoomPos] = useState({ x: 50, y: 50 });
 
   // รูปดึงจาก network path อย่างเดียว (ps ก่อน, onError fallback ไป cad)
   const itemNo = line.ItemNo as string | undefined;
   const photoUrl = itemNo ? psPhotoUrl(itemNo) : '';
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    const { left, top, width, height } = e.currentTarget.getBoundingClientRect();
-    const x = ((e.clientX - left) / width) * 100;
-    const y = ((e.clientY - top) / height) * 100;
-    setZoomPos({ x, y });
-  };
 
   const hasChanges =
     remarks.RecRemark !== ((line.RecRemark as string) || '') ||
@@ -141,9 +132,20 @@ export default function LineDetailDrawer({ line, index, onClose, onSaved }: Line
           <button
             onClick={onClose}
             style={{
-              width: 36, height: 36, borderRadius: '10px', border: '1px solid var(--color-border-light)',
+              width: 36, height: 36, borderRadius: '50%', border: '1px solid var(--color-border-light)',
               background: 'var(--color-surface-0)', color: 'var(--color-text-secondary)',
               display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+              transition: 'all 0.2s cubic-bezier(0.25, 1, 0.5, 1)',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'var(--color-surface-2)';
+              e.currentTarget.style.color = 'var(--color-text-primary)';
+              e.currentTarget.style.transform = 'scale(1.05)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'var(--color-surface-0)';
+              e.currentTarget.style.color = 'var(--color-text-secondary)';
+              e.currentTarget.style.transform = 'scale(1)';
             }}
           >
             <X size={18} />
@@ -157,7 +159,7 @@ export default function LineDetailDrawer({ line, index, onClose, onSaved }: Line
             onClick={() => photoUrl && setIsImageOpen(true)}
             style={{
               width: '100%', height: '180px', borderRadius: '12px', border: '1px solid var(--color-border-light)',
-              background: 'var(--color-surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: photoUrl ? '#FFFFFF' : 'var(--color-surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center',
               overflow: 'hidden', cursor: photoUrl ? 'pointer' : 'default', marginBottom: '16px',
             }}
             title={photoUrl ? 'Click to enlarge' : ''}
@@ -303,85 +305,47 @@ export default function LineDetailDrawer({ line, index, onClose, onSaved }: Line
       {/* Photo lightbox */}
       {isImageOpen && photoUrl && (
         <div
-          onClick={() => { setIsImageOpen(false); setIsZoomed(false); }}
+          onClick={() => setIsImageOpen(false)}
           style={{
-            position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(12px)',
-            zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px',
-            animation: 'fadeIn 0.2s ease-out forwards', fontFamily: 'var(--font-body, "Prompt", sans-serif)',
+            position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(8px)',
+            zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            animation: 'fadeIn 0.2s ease-out forwards',
           }}
         >
-          <div
-            onClick={(e) => e.stopPropagation()}
+          {/* Floating Close Button */}
+          <button
+            onClick={() => setIsImageOpen(false)}
             style={{
-              position: 'relative', background: 'var(--color-surface-0)', borderRadius: '20px',
-              border: '1px solid var(--color-border-light)', boxShadow: '0 30px 70px rgba(0,0,0,0.45)',
-              display: 'flex', flexDirection: 'column', overflow: 'hidden',
-              width: '780px', height: '700px',
-              maxWidth: '92vw', maxHeight: '88vh', animation: 'zoomIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards',
+              position: 'absolute', top: 32, right: 32, background: 'rgba(255, 255, 255, 0.1)',
+              border: '1px solid rgba(255, 255, 255, 0.2)', borderRadius: '50%', cursor: 'pointer',
+              padding: 12, color: '#fff', display: 'flex', transition: 'all 0.2s cubic-bezier(0.25, 1, 0.5, 1)',
+              zIndex: 10001,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
+              e.currentTarget.style.transform = 'scale(1.1)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+              e.currentTarget.style.transform = 'scale(1)';
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px', borderBottom: '1px solid var(--color-border-light)', background: 'var(--color-surface-1)' }}>
-              <span style={{ fontSize: '0.85rem', fontWeight: 900, color: 'var(--color-brand-600)', letterSpacing: '0.05em', fontFamily: 'var(--font-display, monospace)' }}>
-                :: {(line.ItemNo as string) || 'ITEM DETAIL'} ::
-              </span>
-              <button onClick={() => setIsImageOpen(false)} style={{ border: 'none', background: 'none', fontSize: '1.1rem', fontWeight: 800, color: 'var(--color-text-secondary)', cursor: 'pointer', padding: '4px 8px', lineHeight: 1, borderRadius: '6px' }}>
-                ✕
-              </button>
-            </div>
+            <X size={28} />
+          </button>
 
-            <div style={{ flex: 1, padding: '20px', background: 'var(--color-surface-0)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
-              <div style={{
-                display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', borderRadius: '20px',
-                fontSize: '0.68rem', fontWeight: 800, letterSpacing: '0.03em', marginBottom: '14px', border: '1px solid',
-                background: 'color-mix(in srgb, var(--color-success-500), transparent 90%)',
-                borderColor: 'var(--color-success-500)',
-                color: 'var(--color-success-500)',
-              }}>
-                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'currentColor' }} />
-                🌐 HIGH-RES FILE SERVER
-              </div>
-
-              <div
-                onMouseMove={handleMouseMove}
-                onMouseLeave={() => !isZoomed && setZoomPos({ x: 50, y: 50 })}
-                style={{ width: '100%', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-surface-2)', borderRadius: '12px', border: '1px solid var(--color-border-light)', overflow: 'hidden', padding: '12px', position: 'relative' }}
-              >
-                <img
-                  src={photoUrl}
-                  alt="Enlarged Item"
-                  onError={(e) => attachPhotoFallback(e, itemNo, () => setIsImageOpen(false))}
-                  onClick={() => setIsZoomed(!isZoomed)}
-                  style={{
-                    maxWidth: '100%', maxHeight: '100%', objectFit: 'contain',
-                    transform: isZoomed ? 'scale(2.5)' : 'scale(1)',
-                    transformOrigin: `${zoomPos.x}% ${zoomPos.y}%`,
-                    cursor: isZoomed ? 'zoom-out' : 'zoom-in',
-                    transition: isZoomed ? 'transform-origin 0.08s ease-out, transform 0.2s ease-out' : 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform-origin 0.3s',
-                    borderRadius: '8px', boxShadow: isZoomed ? '0 12px 36px rgba(0,0,0,0.15)' : 'none',
-                  }}
-                />
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginTop: '14px', width: '100%', justifyContent: 'center' }}>
-                <button
-                  onClick={() => setIsZoomed(!isZoomed)}
-                  style={{ padding: '8px 20px', borderRadius: '8px', border: '1px solid var(--color-border-light)', background: 'var(--color-surface-1)', color: 'var(--color-brand-600)', fontSize: '0.78rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-                >
-                  🔍 {isZoomed ? 'ZOOM OUT' : 'ZOOM IN (ขยาย 2.5 เท่า)'}
-                </button>
-              </div>
-
-              {(line.ItemDesc as string) && (
-                <div style={{ marginTop: '12px', fontSize: '0.82rem', fontWeight: 700, color: 'var(--color-text-secondary)', textAlign: 'center', letterSpacing: '0.02em', maxWidth: '500px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {line.ItemDesc as string}
-                </div>
-              )}
-
-              <div style={{ marginTop: '10px', fontSize: '0.65rem', fontWeight: 600, color: 'var(--color-text-tertiary)', textTransform: 'capitalize', letterSpacing: '0.05em' }}>
-                {isZoomed ? 'คลิกที่รูปภาพอีกครั้งเพื่อย่อขนาด หรือเลื่อนเมาส์/ทัชแพดเพื่อสำรวจรายละเอียด' : 'คลิกที่รูปภาพเพื่อซูมขยาย หรือกด ✕ เพื่อปิดกล่อง'}
-              </div>
-            </div>
-          </div>
+          {/* Full Image */}
+          <img
+            onClick={(e) => e.stopPropagation()}
+            src={psPhotoUrl(itemNo)}
+            alt={`${itemNo} Photo`}
+            loading="lazy"
+            onError={(e) => attachPhotoFallback(e, itemNo)}
+            style={{
+              maxWidth: '90vw', maxHeight: '90vh', objectFit: 'contain',
+              filter: 'drop-shadow(0 20px 40px rgba(0,0,0,0.5))',
+              animation: 'zoomIn 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+            }}
+          />
         </div>
       )}
 

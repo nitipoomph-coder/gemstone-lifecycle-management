@@ -54,7 +54,9 @@ export default function CustomerReportPage() {
     const diff = baseVal - compVal;
     const isUp = diff > 0;
     const isDown = diff < 0;
-    const bgColor = isUp ? 'color-mix(in srgb, var(--color-success-500) 15%, transparent)' : isDown ? 'color-mix(in srgb, var(--color-danger-500) 15%, transparent)' : 'transparent';
+    const bgColor = theme === 'royal-white'
+      ? (isUp ? 'color-mix(in srgb, var(--color-success-500) 15%, transparent)' : isDown ? 'color-mix(in srgb, var(--color-danger-500) 15%, transparent)' : 'transparent')
+      : 'transparent';
     const textColor = isUp ? 'var(--color-success-500)' : isDown ? 'var(--color-danger-500)' : 'var(--color-text-tertiary)';
     const arrow = isUp ? '▲' : isDown ? '▼' : '';
     const isAmt = metric === 'amount';
@@ -78,9 +80,9 @@ export default function CustomerReportPage() {
       node: <div style={{ textAlign: 'right', color: 'var(--color-text-quaternary)' }}>-</div>
     };
     if (compVal === 0 && baseVal > 0) return {
-      bgColor: 'var(--color-success-50)',
+      bgColor: theme === 'royal-white' ? 'var(--color-success-50)' : 'transparent',
       node: (
-        <div style={{ display: 'flex', justifyContent: 'flex-end', width: '100%' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
           <span style={{ background: 'var(--color-success-500)', color: 'white', padding: '2px 6px', borderRadius: '4px', fontWeight: 900, fontSize: '0.65rem', letterSpacing: '0.05em' }}>NEW</span>
         </div>
       )
@@ -88,7 +90,9 @@ export default function CustomerReportPage() {
     const pct = ((baseVal - compVal) / compVal) * 100;
     const isUp = pct > 0;
     const isDown = pct < 0;
-    const bgColor = isUp ? 'color-mix(in srgb, var(--color-success-500) 15%, transparent)' : isDown ? 'color-mix(in srgb, var(--color-danger-500) 15%, transparent)' : 'transparent';
+    const bgColor = theme === 'royal-white'
+      ? (isUp ? 'color-mix(in srgb, var(--color-success-500) 15%, transparent)' : isDown ? 'color-mix(in srgb, var(--color-danger-500) 15%, transparent)' : 'transparent')
+      : 'transparent';
     const textColor = isUp ? 'var(--color-success-500)' : isDown ? 'var(--color-danger-500)' : 'var(--color-text-tertiary)';
     const sign = isUp ? '+' : '';
     return {
@@ -101,9 +105,8 @@ export default function CustomerReportPage() {
     };
   }, [theme]);
 
-  // ── FETCH DATA ──
+  // ── FETCH AVAILABLE YEARS ──
   useEffect(() => {
-    setLoading(true);
     fetchAvailableYears()
       .then(yrs => {
         const sortedYrs = yrs.map(String).sort((a, b) => Number(a) - Number(b));
@@ -114,12 +117,19 @@ export default function CustomerReportPage() {
           setBaseYear(latest);
           setCompareYear(prev);
         }
-        return fetchCustomerSummary(sortedYrs);
       })
-      .then(cData => setCustData(cData))
-      .catch(err => console.error('Error fetching report data:', err))
-      .finally(() => setLoading(false));
+      .catch(err => console.error('Error fetching available years:', err));
   }, []);
+
+  // ── FETCH CUSTOMER SUMMARY DATA ──
+  useEffect(() => {
+    if (activeYears.length === 0) return;
+    setLoading(true);
+    fetchCustomerSummary(activeYears, selMonths)
+      .then(cData => setCustData(cData))
+      .catch(err => console.error('Error fetching customer summary data:', err))
+      .finally(() => setLoading(false));
+  }, [baseYear, compareYear, compareYear2, selMonths]);
 
   // ── FILTER LOADING EFFECT ──
   useEffect(() => {

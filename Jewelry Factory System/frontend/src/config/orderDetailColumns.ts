@@ -22,77 +22,69 @@ export interface OrderDetailColumn {
   readOnly?: boolean;
   /** Suffix appended to formatted numeric values on screen, e.g. "g" for weights. */
   unit?: string;
-}
-
-export const ORDER_DETAIL_COLUMNS: OrderDetailColumn[] = [
-  // ── core: minimal sticky identity columns, always visible in every preset ──
-  { key: '_rowNo', label: 'No.', group: 'core', width: 44, align: 'center', locked: true },
-  { key: '_photo', label: 'Photo', group: 'core', width: 64, align: 'center', locked: true },
-  { key: 'ItemNo', label: 'Item No.', group: 'core', width: 130, align: 'left', locked: true, excelType: 'text' },
-
-  // ── info: item/date/qty essentials useful in every preset, not sticky ──
-  { key: 'ItemDesc', label: 'Description', group: 'info', width: 240, align: 'left', excelType: 'text' },
-  { key: 'ItemMat', label: 'Metal', group: 'info', width: 70, align: 'center', excelType: 'text' },
-  { key: 'ItemSize', label: 'Size', group: 'info', width: 70, align: 'center', excelType: 'text' },
-  { key: 'Stone', label: 'Stone', group: 'info', width: 90, align: 'left', excelType: 'text' },
-  { key: 'Plating', label: 'Plating', group: 'info', width: 90, align: 'left', excelType: 'text' },
-  { key: 'CustItem', label: 'Cust Item', group: 'info', width: 110, align: 'left', excelType: 'text' },
-  { key: 'SilverWt', label: 'Silver Wt.', group: 'info', width: 90, align: 'right', excelType: 'int', unit: 'g' },
-  { key: 'FinishWt', label: 'Finish Wt.', group: 'info', width: 90, align: 'right', excelType: 'int', unit: 'g' },
-  { key: 'Qty', label: 'Qty', group: 'info', width: 80, align: 'right', excelType: 'int' },
+}export const ORDER_DETAIL_COLUMNS: OrderDetailColumn[] = [
+  { key: 'OrdNo', label: 'Order No.', group: 'core', width: 110, align: 'left', locked: true, excelType: 'general' },
+  { key: 'CustCode', label: 'Customer', group: 'core', width: 70, align: 'left', locked: true, excelType: 'general' },
+  { key: 'Sales', label: 'Sales', group: 'info', width: 130, align: 'left', excelType: 'general' },
+  { key: 'PONo', label: 'PO no.', group: 'info', width: 130, align: 'left', excelType: 'text' },
+  { key: 'PONo2', label: 'PO2', group: 'info', width: 130, align: 'left', excelType: 'text' },
+  { key: 'Destination', label: 'Destination', group: 'info', width: 130, align: 'left', excelType: 'text' },
   { key: 'OrdDate', label: 'Order Date', group: 'info', width: 100, align: 'center', excelType: 'date' },
   { key: 'DueDate', label: 'Factory Due', group: 'info', width: 100, align: 'center', excelType: 'date' },
-  { key: 'CustDueDate', label: 'Cust Due', group: 'info', width: 100, align: 'center', excelType: 'date' },
   { key: 'QCDate', label: 'QC Date', group: 'info', width: 100, align: 'center', excelType: 'date' },
+  { key: 'CustDueDate', label: 'Cust Due', group: 'info', width: 100, align: 'center', excelType: 'date' },
 
-  // ── sales & shipping (Sales preset) ──
-  { key: 'OrdNo', label: 'Order No.', group: 'sales', width: 110, align: 'left', excelType: 'text' },
-  { key: 'LineNo', label: 'Line', group: 'sales', width: 60, align: 'center', excelType: 'text' },
-  { key: 'PONo', label: 'PO Number', group: 'sales', width: 130, align: 'left', excelType: 'text' },
-  { key: 'Price', label: 'Price', group: 'sales', width: 90, align: 'right', excelType: 'currency' },
-  { key: 'Amount', label: 'Amount', group: 'sales', width: 110, align: 'right', excelType: 'currency' },
-  { key: 'Sales', label: 'Sales', group: 'sales', width: 90, align: 'left', excelType: 'text' },
-  { key: 'Destination', label: 'Destination', group: 'sales', width: 130, align: 'left', excelType: 'text' },
-  { key: 'InvoiceNo', label: 'Invoice No.', group: 'sales', width: 110, align: 'left', excelType: 'text' },
-  { key: 'InvoiceDate', label: 'Invoice Date', group: 'sales', width: 100, align: 'center', excelType: 'date' },
-  { key: 'AWB', label: 'AWB', group: 'sales', width: 110, align: 'left', excelType: 'text' },
+  { key: '_photo', label: 'Picture', group: 'core', width: 130, align: 'center', locked: true, excelType: 'general' },
+  { key: 'LineNo', label: 'Line', group: 'core', width: 50, align: 'center', locked: true, excelType: 'general' },
+  { key: 'ItemNo', label: 'Item no.', group: 'core', width: 110, align: 'left', locked: true, excelType: 'general' },
+  { key: 'CustItem', label: 'Cust Item', group: 'info', width: 150, align: 'left', excelType: 'text' },
+  { key: 'Stone', label: 'Stone', group: 'info', width: 90, align: 'left', excelType: 'text' },
+  { key: 'ItemDesc', label: 'Description', group: 'info', width: 200, align: 'left', excelType: 'text' },
+  { key: 'Plating', label: 'Plating', group: 'info', width: 130, align: 'left', excelType: 'text' },
+  { key: 'ItemSize', label: 'Size', group: 'info', width: 70, align: 'center', excelType: 'text' },
+  { key: 'SilverWt', label: 'Silver Wt.', group: 'info', width: 90, align: 'right', excelType: 'int', unit: 'g' },
+  { key: 'FinishWt', label: 'Finish Wt.', group: 'info', width: 90, align: 'right', excelType: 'int', unit: 'g' },
+  { key: 'SilverWtNB5', label: 'Silver Wt not below 5% ', group: 'info', width: 150, align: 'right', excelType: 'int' },
+  { key: 'FinishWtNB5', label: 'Finish Wt not below 5% ', group: 'info', width: 150, align: 'right', excelType: 'int' },
 
-  // ── production tracking pipeline (Production preset) — order matches the original PROD_STEPS sequence ──
-  { key: 'StoneQty', label: 'Stone', group: 'production', width: 76, align: 'right', excelType: 'int', negativeIsAlert: true },
-  { key: 'FindingQty', label: 'Finding', group: 'production', width: 76, align: 'right', excelType: 'int', negativeIsAlert: true },
-  { key: 'WaxQty', label: 'Wax', group: 'production', width: 76, align: 'right', excelType: 'int', negativeIsAlert: true },
-  { key: 'WaxSetQty', label: 'Wax Set', group: 'production', width: 76, align: 'right', excelType: 'int', negativeIsAlert: true },
-  { key: 'CastQty', label: 'Cast', group: 'production', width: 76, align: 'right', excelType: 'int', negativeIsAlert: true },
-  { key: 'GrindQty', label: 'Grind', group: 'production', width: 76, align: 'right', excelType: 'int', negativeIsAlert: true },
-  { key: 'EpoxQty', label: 'Epoxy', group: 'production', width: 76, align: 'right', excelType: 'int', negativeIsAlert: true },
-  { key: 'SolderQty', label: 'Solder', group: 'production', width: 76, align: 'right', excelType: 'int', negativeIsAlert: true },
-  { key: 'FilingQty', label: 'Filing', group: 'production', width: 76, align: 'right', excelType: 'int', negativeIsAlert: true },
-  { key: 'ControlQty', label: 'Control', group: 'production', width: 76, align: 'right', excelType: 'int', negativeIsAlert: true },
-  { key: 'SetQty', label: 'Setting', group: 'production', width: 76, align: 'right', excelType: 'int', negativeIsAlert: true },
-  { key: 'PolishQty', label: 'Polish', group: 'production', width: 76, align: 'right', excelType: 'int', negativeIsAlert: true },
+  { key: 'Qty', label: 'Qty', group: 'core', width: 60, align: 'right', locked: true, excelType: 'int' },
+  { key: 'Price', label: 'Units Price', group: 'info', width: 90, align: 'right', excelType: 'currency' },
+  { key: 'Amount', label: 'Total Amount', group: 'info', width: 110, align: 'right', excelType: 'currency' },
+  { key: 'BalQty', label: 'Balance', group: 'info', width: 84, align: 'right', excelType: 'int', negativeIsAlert: true },
+
+  { key: 'StoneQty', label: 'PST', group: 'production', width: 76, align: 'right', excelType: 'int', negativeIsAlert: true },
+  { key: 'FindingQty', label: 'Finding PC1', group: 'production', width: 76, align: 'right', excelType: 'int', negativeIsAlert: true },
+  { key: 'WaxQty', label: 'PWA', group: 'production', width: 76, align: 'right', excelType: 'int', negativeIsAlert: true },
+  { key: 'WaxSetQty', label: 'PAU', group: 'production', width: 76, align: 'right', excelType: 'int', negativeIsAlert: true },
+  { key: 'CastQty', label: 'PCA', group: 'production', width: 76, align: 'right', excelType: 'int', negativeIsAlert: true },
+  { key: 'GrindQty', label: 'PF1/2 Grind', group: 'production', width: 76, align: 'right', excelType: 'int', negativeIsAlert: true },
+  { key: 'EpoxQty', label: 'PEP', group: 'production', width: 76, align: 'right', excelType: 'int', negativeIsAlert: true },
+  { key: 'SolderQty', label: 'PF1/2 Solder', group: 'production', width: 76, align: 'right', excelType: 'int', negativeIsAlert: true },
+  { key: 'FilingQty', label: 'PF1/2 Filing', group: 'production', width: 76, align: 'right', excelType: 'int', negativeIsAlert: true },
+  { key: 'ControlQty', label: 'PC2', group: 'production', width: 76, align: 'right', excelType: 'int', negativeIsAlert: true },
+  { key: 'SetQty', label: 'PL1/2/3 Set', group: 'production', width: 76, align: 'right', excelType: 'int', negativeIsAlert: true },
+  { key: 'PolishQty', label: 'PL1/2/3 Polish', group: 'production', width: 76, align: 'right', excelType: 'int', negativeIsAlert: true },
   { key: 'PQCQty', label: 'PQC', group: 'production', width: 76, align: 'right', excelType: 'int', negativeIsAlert: true },
-  { key: 'PlatingQty', label: 'Plating', group: 'production', width: 76, align: 'right', excelType: 'int', negativeIsAlert: true },
-  { key: 'AssemQty', label: 'Assemble', group: 'production', width: 76, align: 'right', excelType: 'int', negativeIsAlert: true },
+  { key: 'PlatingQty', label: 'PPL', group: 'production', width: 76, align: 'right', excelType: 'int', negativeIsAlert: true },
+  { key: 'AssemQty', label: 'PAS', group: 'production', width: 76, align: 'right', excelType: 'int', negativeIsAlert: true },
+
+  { key: 'RecRemark', label: 'Receive', group: 'remark', width: 100, align: 'left', excelType: 'general' },
+  { key: 'EnaRemark', label: 'Enamel', group: 'remark', width: 100, align: 'left', excelType: 'general' },
+  { key: 'CryRemark', label: 'Crystal', group: 'remark', width: 100, align: 'left', excelType: 'general' },
+  { key: 'AsmRemark', label: 'Assembly', group: 'remark', width: 100, align: 'left', excelType: 'general' },
+  { key: 'ShfRemark', label: 'Shelf', group: 'remark', width: 100, align: 'left', excelType: 'general' },
+  { key: 'PkRemark', label: 'Pack', group: 'remark', width: 100, align: 'left', excelType: 'general' },
+
   { key: 'FQCQty', label: 'FQC', group: 'production', width: 76, align: 'right', excelType: 'int', negativeIsAlert: true },
-  { key: 'PackQty', label: 'Pack', group: 'production', width: 76, align: 'right', excelType: 'int', negativeIsAlert: true },
   { key: 'FinishQty', label: 'Finish', group: 'production', width: 76, align: 'right', excelType: 'int', negativeIsAlert: true },
   { key: 'ExportQty', label: 'Export', group: 'production', width: 76, align: 'right', excelType: 'int', negativeIsAlert: true },
-  { key: 'BalQty', label: 'Balance', group: 'production', width: 84, align: 'right', excelType: 'int', negativeIsAlert: true },
+  { key: 'GroupText', label: 'Group', group: 'remark', width: 100, align: 'left', excelType: 'general' },
+  { key: 'ProdRemark', label: 'Remark', group: 'remark', width: 100, align: 'left', excelType: 'general' },
 
-  // ── remarks: sales & production (Remarks preset) ──
-  { key: 'RecRemark', label: 'Receive', group: 'remark', width: 160, align: 'left', excelType: 'text' },
-  { key: 'EnaRemark', label: 'Enamel', group: 'remark', width: 160, align: 'left', excelType: 'text' },
-  { key: 'CryRemark', label: 'Crystal', group: 'remark', width: 160, align: 'left', excelType: 'text' },
-  { key: 'AsmRemark', label: 'Assembly', group: 'remark', width: 160, align: 'left', excelType: 'text' },
-  { key: 'ShfRemark', label: 'Shelf', group: 'remark', width: 160, align: 'left', excelType: 'text' },
-  { key: 'PkRemark', label: 'Pack', group: 'remark', width: 160, align: 'left', excelType: 'text' },
-  { key: 'ProdRemark', label: 'Prod Remark', group: 'remark', width: 160, align: 'left', excelType: 'text' },
-  { key: 'OrdRemark', label: 'Order Remark', group: 'remark', width: 180, align: 'left', excelType: 'text', readOnly: true },
-
-  // Deliberately excluded — present in the backend response but not shown in the current UI
-  // or export (legacy/internal-looking fields): GroupQty, ItemStatus, FinishStatus.
-  // To surface one later: add an entry here (e.g. group: 'info') and it will automatically
-  // flow into the table, popover, and Excel export — no other code change needed.
+  { key: 'InvoiceNo', label: 'Invoice no.', group: 'sales', width: 110, align: 'left', excelType: 'text', locked: true },
+  { key: 'AWB', label: 'AWB', group: 'sales', width: 110, align: 'left', excelType: 'text', locked: true },
+  { key: 'InvoiceDate', label: 'Invoice Date', group: 'sales', width: 100, align: 'center', excelType: 'date', locked: true },
+  { key: 'OrdRemark', label: 'Order Remark', group: 'remark', width: 180, align: 'left', excelType: 'general', readOnly: true, locked: true },
 ];
 
 export const ORDER_DETAIL_COLUMNS_BY_KEY: Record<string, OrderDetailColumn> = Object.fromEntries(
@@ -108,8 +100,27 @@ function keysOf(...groups: ColGroup[]): string[] {
 export type ColumnPreset = 'Sales' | 'Production' | 'Remarks' | 'All';
 
 export const COLUMN_GROUP_PRESETS: Record<ColumnPreset, string[]> = {
-  Sales: keysOf('core', 'info', 'sales'),
-  Production: keysOf('core', 'info', 'production'),
-  Remarks: keysOf('core', 'info', 'remark'),
+  Sales: [
+    // Customer Data
+    'OrdDate', 'DueDate', 'QCDate', 'CustDueDate',
+    'Sales', 'PONo', 'Destination', 'CustItem', 'Stone', 'ItemDesc', 'Plating', 'ItemSize', 'OrdRemark', 'Price', 'Amount',
+    // Production Data (Finish is checked)
+    'FinishQty',
+    // Shipping Data
+    'InvoiceNo', 'InvoiceDate', 'AWB',
+    // Remarks
+    'RecRemark', 'EnaRemark', 'CryRemark', 'AsmRemark', 'ShfRemark', 'PkRemark', 'GroupText', 'ProdRemark'
+  ],
+  Production: [
+    // Customer Data
+    'OrdDate', 'DueDate', 'Stone', 'ItemDesc', 'Plating', 'ItemSize', 'OrdRemark',
+    // Production Data
+    'StoneQty', 'FindingQty', 'WaxQty', 'WaxSetQty', 'CastQty', 'GrindQty', 'EpoxQty',
+    'SolderQty', 'FilingQty', 'ControlQty', 'SetQty', 'PolishQty', 'PQCQty', 'PlatingQty',
+    'AssemQty', 'FQCQty', 'FinishQty', 'ExportQty', 'BalQty',
+    // Remarks
+    'RecRemark', 'EnaRemark', 'CryRemark', 'AsmRemark', 'ShfRemark', 'PkRemark', 'GroupText', 'ProdRemark'
+  ],
+  Remarks: keysOf('core', 'info', 'remark'), // Not used in UI but kept for type
   All: ORDER_DETAIL_COLUMNS.map((c) => c.key),
 };

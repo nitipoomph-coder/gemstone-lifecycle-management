@@ -96,7 +96,7 @@ router.get('/', async (req, res) => {
       WITH Last7Days AS (
         SELECT DISTINCT TOP 7 CAST(OrdDate AS DATE) AS WorkDate
         FROM OrdHD
-        WHERE 
+        WHERE
           CAST(OrdDate AS DATE) < CAST(GETDATE() AS DATE)
           AND DATENAME(dw, OrdDate) <> 'Sunday'
           AND OrdDate IS NOT NULL
@@ -104,7 +104,7 @@ router.get('/', async (req, res) => {
           AND (@year IS NULL OR YEAR(OrdDate) = @year)
         ORDER BY WorkDate DESC
       )
-      SELECT 
+      SELECT
         ISNULL(AVG(CAST(d.OrderCount AS FLOAT)), 0) AS avgOrders
       FROM (
         SELECT COUNT(OrdNo) AS OrderCount
@@ -407,9 +407,9 @@ router.get('/years', async (req, res) => {
 
     // 2. ยิง Query ไปที่ฐานข้อมูลจริง
     const query = `
-      SELECT DISTINCT YEAR(OrdDate) AS yr 
-      FROM OrdHD 
-      WHERE OrdDate IS NOT NULL 
+      SELECT DISTINCT YEAR(OrdDate) AS yr
+      FROM OrdHD
+      WHERE OrdDate IS NOT NULL
       ORDER BY yr DESC
     `;
     const result = await request.query(query);
@@ -472,14 +472,14 @@ router.get('/detail/:cardType', async (req, res) => {
         WITH Last7Days AS (
           SELECT DISTINCT TOP 7 CAST(OrdDate AS DATE) AS WorkDate
           FROM OrdHD
-          WHERE 
+          WHERE
             CAST(OrdDate AS DATE) < CAST(GETDATE() AS DATE)
             AND DATENAME(dw, OrdDate) <> 'Sunday'
             AND OrdDate IS NOT NULL
             AND ((PONo IS NULL OR UPPER(PONo) NOT LIKE '%SAMPLE%') AND LEFT(OrdNo, 3) IN ('BBC','BBQ','BBD','BBI','BBF','BBP','BBT','BBX','BBK','BBR','BBL','BBS','BBE'))
           ORDER BY WorkDate DESC
         )
-        SELECT 
+        SELECT
           w.WorkDate,
           DATENAME(dw, w.WorkDate) AS DayName,
           COUNT(o.OrdNo) AS OrderCount,
@@ -651,7 +651,7 @@ router.get('/sales-summary', async (req, res) => {
     years.forEach((y, i) => request.input(`y${i}`, sql.Int, y));
 
     const query = `
-      SELECT 
+      SELECT
         e.SalesName AS id,
         e.SalesName AS name,
         MAX(e.EmpType) AS empType,
@@ -709,18 +709,28 @@ router.get('/customer-summary', async (req, res) => {
     const pool = await getPool();
     const years = (req.query.years || '').split(',').map(y => parseInt(y)).filter(y => !isNaN(y));
     if (years.length === 0) years.push(new Date().getFullYear());
+    const months = req.query.months ? req.query.months.split(',').map(m => parseInt(m)).filter(m => !isNaN(m)) : [];
 
     // สร้าง parameterized IN clause สำหรับปีที่ต้องการ
     const yearParams = years.map((_, i) => `@y${i}`).join(',');
     const request = pool.request();
     years.forEach((y, i) => request.input(`y${i}`, sql.Int, y));
 
+    let monthWhereClause = '';
+    let topItemMonthWhereClause = '';
+    if (months.length > 0) {
+      const monthParams = months.map((_, i) => `@m${i}`).join(',');
+      months.forEach((m, i) => request.input(`m${i}`, sql.Int, m));
+      monthWhereClause = `AND MONTH(h.OrdDate) IN (${monthParams})`;
+      topItemMonthWhereClause = `AND MONTH(oh.OrdDate) IN (${monthParams})`;
+    }
+
     // Query ตาม Logic เดิมของ FrmSalesYear_SumCust.vb:
     //   - ใช้ NOT IN blocklist แทน IN allowlist
     //   - กรองเฉพาะ CustStatus = 'Y' (Active customers)
     //   - ดึง SumOrdExchAmnt (ยอดแลกเปลี่ยนเงินตรา)
     const query = `
-      SELECT 
+      SELECT
         h.CustCode AS id,
         ISNULL(MAX(c.CustName), h.CustCode) AS name,
         MAX(c.CustStatus) AS custStatus,
@@ -732,6 +742,7 @@ router.get('/customer-summary', async (req, res) => {
       FROM OrdHD h
       LEFT JOIN GMCust c ON h.CustCode = c.CustCode
       WHERE YEAR(h.OrdDate) IN (${yearParams})
+        ${monthWhereClause}
         AND SUBSTRING(h.OrdNo, 1, 3) NOT IN ('BBP','BBK','BBS','BBL','BBT','BBD')
         AND c.CustStatus = 'Y'
       GROUP BY h.CustCode, YEAR(h.OrdDate), MONTH(h.OrdDate)
@@ -740,20 +751,21 @@ router.get('/customer-summary', async (req, res) => {
 
     const topItemQuery = `
       WITH ItemTotals AS (
-        SELECT 
-          oh.CustCode, 
-          od.ItemNo, 
+        SELECT
+          oh.CustCode,
+          od.ItemNo,
           SUM(ISNULL(od.ItemQty, 0)) as totalQty
         FROM OrdHD oh
         JOIN OrdDT od ON oh.OrdNo = od.OrdNo
         WHERE YEAR(oh.OrdDate) IN (${yearParams})
+          ${topItemMonthWhereClause}
           AND SUBSTRING(oh.OrdNo, 1, 3) NOT IN ('BBP','BBK','BBS','BBL','BBT','BBD')
         GROUP BY oh.CustCode, od.ItemNo
       ),
       RankedItems AS (
-        SELECT 
-          CustCode, 
-          ItemNo, 
+        SELECT
+          CustCode,
+          ItemNo,
           totalQty,
           ROW_NUMBER() OVER(PARTITION BY CustCode ORDER BY totalQty DESC) as rn
         FROM ItemTotals

@@ -609,7 +609,7 @@ export default function LoginPage() {
             <p style={{ color: '#8a5f37', fontSize: '0.9rem', marginBottom: '1.5rem', fontFamily: '"Inter", "Noto Sans Thai", sans-serif' }}>
               {lang === 'EN' ? 'Please enter the admin password to access registration.' : 'กรุณากรอกรหัสผ่าน Admin เพื่อเข้าสู่หน้าลงทะเบียน'}
             </p>
-            <form onSubmit={handleAdminAuthSubmit}>
+            <form onSubmit={handleAdminAuthSubmit} className="parchment-form">
               <div className="floating-container">
                 <input
                   type="password"
@@ -818,7 +818,7 @@ export default function LoginPage() {
         .stagger-7 { animation-delay: 0.4s; }
 
         /* --- End Luxury Enhancements --- */
-        
+
         /* Dot Loader */
         .dot-loader {
           display: flex;

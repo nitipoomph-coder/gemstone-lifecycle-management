@@ -1,8 +1,8 @@
 import { fetchWithAuth } from '../utils/fetchWithAuth';
+import { API_BASE_URL } from '../config/api';
 // src/services/poTrackerAPI.ts
 
-const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname.startsWith('192.168.'));
-export const BASE_URL = isLocal ? `http://${window.location.hostname}:3001/api` : 'https://fresh-camels-change.loca.lt/api';
+export const BASE_URL = API_BASE_URL;
 
 export interface OrderSummary {
   // ── existing ──────────────────────────────────────────────
@@ -121,9 +121,7 @@ export async function fetchOrders(params?: {
   if (params?.dateFrom) qs.set('dateFrom', params.dateFrom);
   if (params?.dateTo) qs.set('dateTo', params.dateTo);
 
-  const res = await fetchWithAuth(`${BASE_URL}/orders?${qs}`, {
-    headers: { 'bypass-tunnel-reminder': 'true' }
-  });
+  const res = await fetchWithAuth(`${BASE_URL}/orders?${qs}`);
   if (!res.ok) throw new Error(`API error: ${res.status}`);
   const json = await res.json();
   // backend ส่ง { ok, data, count }
@@ -133,9 +131,7 @@ export async function fetchOrders(params?: {
 // ─── fetchOrderDetail (by OrdNo) ──────────────────────────────────────────────
 export async function fetchOrderDetail(ordNo: string, qsParams?: URLSearchParams): Promise<OrderDetail> {
   const queryStr = qsParams ? `?${qsParams.toString()}` : '';
-  const res = await fetchWithAuth(`${BASE_URL}/orders/${encodeURIComponent(ordNo)}${queryStr}`, {
-    headers: { 'bypass-tunnel-reminder': 'true' }
-  });
+  const res = await fetchWithAuth(`${BASE_URL}/orders/${encodeURIComponent(ordNo)}${queryStr}`);
   if (!res.ok) throw new Error(`API error: ${res.status}`);
   return await res.json();
 }
@@ -157,9 +153,7 @@ export interface OrderDetailByPo {
 
 export async function fetchOrderByPo(poNo: string, qsParams?: URLSearchParams): Promise<OrderDetailByPo> {
   const queryStr = qsParams ? `?${qsParams.toString()}` : '';
-  const res = await fetchWithAuth(`${BASE_URL}/orders/by-po/${encodeURIComponent(poNo)}${queryStr}`, {
-    headers: { 'bypass-tunnel-reminder': 'true' }
-  });
+  const res = await fetchWithAuth(`${BASE_URL}/orders/by-po/${encodeURIComponent(poNo)}${queryStr}`);
   if (!res.ok) throw new Error(`API error ${res.status} — PO "${poNo}" not found`);
   return await res.json();
 }
@@ -168,9 +162,7 @@ export async function fetchOrderByPo(poNo: string, qsParams?: URLSearchParams): 
 export async function fetchOrderByGroup(cust: string, addr: string, kind: string, mat: string, duedate: string, qsParams?: URLSearchParams): Promise<OrderDetailByPo> {
   const path = [cust, encodeURIComponent(addr), encodeURIComponent(kind), encodeURIComponent(mat), encodeURIComponent(duedate)].join('/');
   const queryStr = qsParams ? `?${qsParams.toString()}` : '';
-  const res = await fetchWithAuth(`${BASE_URL}/orders/group/${path}${queryStr}`, {
-    headers: { 'bypass-tunnel-reminder': 'true' }
-  });
+  const res = await fetchWithAuth(`${BASE_URL}/orders/group/${path}${queryStr}`);
   if (!res.ok) throw new Error(`API error ${res.status} — Group data not found`);
   return await res.json();
 }
@@ -190,9 +182,7 @@ export async function fetchSearch(query: string, type?: string): Promise<SearchR
   qs.set('q', query);
   if (type && type !== 'all') qs.set('type', type);
 
-  const res = await fetchWithAuth(`${BASE_URL}/search?${qs.toString()}`, {
-    headers: { 'bypass-tunnel-reminder': 'true' }
-  });
+  const res = await fetchWithAuth(`${BASE_URL}/search?${qs.toString()}`);
   if (!res.ok) throw new Error(`API error: ${res.status}`);
   const json = await res.json();
   return json.data ?? [];
@@ -213,7 +203,6 @@ export async function updateOrderRemarks(payload: {
   const res = await fetchWithAuth(`${BASE_URL}/orders/remarks`, {
     method: 'POST',
     headers: { 
-      'bypass-tunnel-reminder': 'true',
       'Content-Type': 'application/json'
     },
     body: JSON.stringify(payload)

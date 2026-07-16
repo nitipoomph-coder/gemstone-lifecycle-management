@@ -12,9 +12,7 @@ export const fetchCustomerSummary = async (years: string[], months?: string[]): 
     const monthsParam = months.map(m => MONTHS.indexOf(m) + 1).join(',');
     url += `&months=${monthsParam}`;
   }
-  const res = await fetchWithAuth(url, {
-    headers: { 'bypass-tunnel-reminder': 'true' }
-  });
+  const res = await fetchWithAuth(url);
   if (!res.ok) throw new Error(`Customer summary API error: ${res.status}`);
   const json = await res.json();
   return json.data || [];

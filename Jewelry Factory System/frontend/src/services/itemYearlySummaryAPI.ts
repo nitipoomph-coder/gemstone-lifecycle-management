@@ -57,9 +57,7 @@ export interface ItemYearlySummaryResponse {
 export const fetchItemYearlySummary = async (styleNo: string, years: string[]): Promise<ItemYearlySummaryResponse> => {
   const qs = new URLSearchParams();
   if (years.length) qs.set('years', years.join(','));
-  const res = await fetchWithAuth(`${BASE_URL}/items/${encodeURIComponent(styleNo)}/yearly-summary?${qs.toString()}`, {
-    headers: { 'bypass-tunnel-reminder': 'true' }
-  });
+  const res = await fetchWithAuth(`${BASE_URL}/items/${encodeURIComponent(styleNo)}/yearly-summary?${qs.toString()}`);
   if (!res.ok) throw new Error(`Item yearly summary API error: ${res.status}`);
   return await res.json();
 };
@@ -71,9 +69,7 @@ export const fetchItemCustomerYearlySummary = async (pairs: ItemCustomerYearlySu
   if (pairs.length) qs.set('pairs', pairs.map(pair => `${pair.customerCode}|${pair.styleNo}`).join(','));
   if (years.length) qs.set('years', years.join(','));
   if (months && months.length > 0) qs.set('months', months.map(m => MONTHS.indexOf(m) + 1).join(','));
-  const res = await fetchWithAuth(`${BASE_URL}/items/yearly-summary?${qs.toString()}`, {
-    headers: { 'bypass-tunnel-reminder': 'true' }
-  });
+  const res = await fetchWithAuth(`${BASE_URL}/items/yearly-summary?${qs.toString()}`);
   if (!res.ok) throw new Error(`Item customer yearly summary API error: ${res.status}`);
   return await res.json();
 };
@@ -83,9 +79,7 @@ export const fetchItemsYearlySummary = async (styleNos: string[], years: string[
   const qs = new URLSearchParams();
   if (styleNos.length) qs.set('styles', styleNos.join(','));
   if (years.length) qs.set('years', years.join(','));
-  const res = await fetchWithAuth(`${BASE_URL}/items/yearly-summary?${qs.toString()}`, {
-    headers: { 'bypass-tunnel-reminder': 'true' }
-  });
+  const res = await fetchWithAuth(`${BASE_URL}/items/yearly-summary?${qs.toString()}`);
   if (!res.ok) throw new Error(`Items yearly summary API error: ${res.status}`);
   return await res.json();
 };

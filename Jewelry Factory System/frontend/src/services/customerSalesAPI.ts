@@ -98,9 +98,7 @@ const salesAnalyticsQuery = (params: SalesAnalyticsParams = {}) => {
 // KPI and customer group rows for Customer Sales Overview.
 export const fetchSalesCustomerGroups = async (params: SalesAnalyticsParams = {}): Promise<SalesCustomerGroupPoint[]> => {
   const qs = salesAnalyticsQuery(params);
-  const res = await fetchWithAuth(`${BASE_URL}/dashboard/sales-customer-groups?${qs.toString()}`, {
-    headers: { 'bypass-tunnel-reminder': 'true' }
-  });
+  const res = await fetchWithAuth(`${BASE_URL}/dashboard/sales-customer-groups?${qs.toString()}`);
   if (!res.ok) throw new Error(`Sales customer groups API error: ${res.status}`);
   const json = await res.json();
   return json.data || [];
@@ -108,9 +106,7 @@ export const fetchSalesCustomerGroups = async (params: SalesAnalyticsParams = {}
 
 export const fetchSalesMonthlyAnalytics = async (params: SalesAnalyticsParams = {}): Promise<SalesMonthlyPoint[]> => {
   const qs = salesAnalyticsQuery(params);
-  const res = await fetchWithAuth(`${BASE_URL}/dashboard/sales-monthly-analytics?${qs.toString()}`, {
-    headers: { 'bypass-tunnel-reminder': 'true' }
-  });
+  const res = await fetchWithAuth(`${BASE_URL}/dashboard/sales-monthly-analytics?${qs.toString()}`);
   if (!res.ok) throw new Error(`Sales monthly analytics API error: ${res.status}`);
   const json = await res.json();
   return json.data || [];
@@ -118,9 +114,7 @@ export const fetchSalesMonthlyAnalytics = async (params: SalesAnalyticsParams = 
 
 export const fetchSalesTypeAnalytics = async (params: SalesAnalyticsParams = {}): Promise<SalesTypePoint[]> => {
   const qs = salesAnalyticsQuery(params);
-  const res = await fetchWithAuth(`${BASE_URL}/dashboard/sales-type-analytics?${qs.toString()}`, {
-    headers: { 'bypass-tunnel-reminder': 'true' }
-  });
+  const res = await fetchWithAuth(`${BASE_URL}/dashboard/sales-type-analytics?${qs.toString()}`);
   if (!res.ok) throw new Error(`Sales type analytics API error: ${res.status}`);
   const json = await res.json();
   return json.data || [];
@@ -129,9 +123,7 @@ export const fetchSalesTypeAnalytics = async (params: SalesAnalyticsParams = {})
 // Order-level rows for Customer Order List drilldown.
 export const fetchSalesOrders = async (params: SalesAnalyticsParams = {}): Promise<SalesOrderRow[]> => {
   const qs = salesAnalyticsQuery(params);
-  const res = await fetchWithAuth(`${BASE_URL}/dashboard/sales-orders?${qs.toString()}`, {
-    headers: { 'bypass-tunnel-reminder': 'true' }
-  });
+  const res = await fetchWithAuth(`${BASE_URL}/dashboard/sales-orders?${qs.toString()}`);
   if (!res.ok) throw new Error(`Sales orders API error: ${res.status}`);
   const json = await res.json();
   return json.data || [];
@@ -142,9 +134,7 @@ export const fetchTopItems = async (params: SalesAnalyticsParams & { metric?: Sa
   const qs = salesAnalyticsQuery(params);
   if (params.metric) qs.set('metric', params.metric);
   if (params.limit) qs.set('limit', String(params.limit));
-  const res = await fetchWithAuth(`${BASE_URL}/dashboard/top-items?${qs.toString()}`, {
-    headers: { 'bypass-tunnel-reminder': 'true' }
-  });
+  const res = await fetchWithAuth(`${BASE_URL}/dashboard/top-items?${qs.toString()}`);
   if (!res.ok) throw new Error(`Top items API error: ${res.status}`);
   const json = await res.json();
   return json.data || [];

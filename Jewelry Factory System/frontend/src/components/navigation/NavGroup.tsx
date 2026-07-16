@@ -44,11 +44,16 @@ export default function NavGroup({ group, isOpen, onToggle, collapsed = false }:
   const items = group.items || [];
   const isItemActive = (itemPath: string) => {
     if (location.pathname === itemPath) return true;
-    if (itemPath === '/dashboard/top-orders') {
-      return location.pathname === '/dashboard/top-orders/analytics';
+    if (itemPath === '/dashboard/customer') {
+      return location.pathname === '/dashboard/customer-report' && new URLSearchParams(location.search).get('metric') !== 'qty';
     }
-    if (itemPath === '/dashboard/sales-customer-groups') {
-      return location.pathname === '/dashboard/sales-customer-detail';
+    if (itemPath === '/dashboard/qty') {
+      return location.pathname === '/dashboard/customer-report' && new URLSearchParams(location.search).get('metric') === 'qty';
+    }
+    if (itemPath === '/dashboard/top-orders') {
+      return location.pathname === '/dashboard/top-orders/analytics'
+        || location.pathname === '/dashboard/sales-customer-groups'
+        || location.pathname === '/dashboard/sales-customer-detail';
     }
     if (itemPath === '/po-tracker') {
       return location.pathname.startsWith('/po-tracker/');

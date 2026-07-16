@@ -123,3 +123,26 @@ The new SPs (`PC_Show_OrdTrack_Sum_*`) simply omitted selecting `OrdTrackDT.OrdM
 ### Prevention & Lessons Learned:
 1. **Don't assume dynamic logic for legacy fields:** What looks like a dynamically calculated string (`FBD+PF1+PL3`) might just be a hardcoded/pre-calculated value stored in a physical database column (`OrdMaker`).
 2. **Verify against the source DB:** Always check the related tables (`OrdTrackDT`) for missing columns before attempting to recreate complex grouping logic in Node.js.
+
+## Issue: Mixed Dashboard API/Route File Grew Into Multiple Domains
+**Date:** 2026-07-16
+**Component:** frontend services and backend dashboard/items routes
+
+### Symptoms:
+1. dashboardAPI.ts contained dashboard core, customer summary, customer sales analytics, top items, and item yearly summary clients.
+2. backend/routes/dashboard.js contained dashboard core, customer summary, sales analytics, top items, and detail endpoints.
+3. backend/routes/items.js contained only item yearly summary behavior, but the generic file name made ownership unclear.
+
+### Root Cause:
+New analytics endpoints were added into the nearest existing dashboard files. That was fast initially, but it made ownership unclear and increased the risk of accidental edits across unrelated domains.
+
+### Fixes:
+1. Split frontend service clients into customerSummaryAPI.ts, customerSalesAPI.ts, and itemYearlySummaryAPI.ts.
+2. Kept dashboardAPI.ts focused on dashboard core and added compatibility re-exports so existing imports can migrate gradually.
+3. Split backend routes into customerSummary.js, customerSales.js, and itemYearlySummary.js while preserving existing URL prefixes.
+4. Kept routes/items.js as a compatibility wrapper and mounted the new routers in server.js.
+
+### Prevention & Lessons Learned:
+1. Split by domain responsibility before renaming files. If one file still contains multiple domains, extract the domains first.
+2. Preserve endpoint URLs during structure refactors unless the change is explicitly planned as a breaking API migration.
+3. For draft pages like TopOrdersAnalyticsPage.tsx, keep changes limited to import boundaries until the final UX/data model is confirmed.

@@ -2,7 +2,8 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Topbar from '../components/layout/Topbar';
 import { CalendarDays, Building2, RefreshCw, Users, Search, ChevronDown } from 'lucide-react';
-import { fetchCustomerSummary, fetchAvailableYears } from '../services/dashboardAPI';
+import { fetchAvailableYears } from '../services/dashboardAPI';
+import { fetchCustomerSummary } from '../services/customerSummaryAPI';
 import { ALL_GROUPS, getCustomerGroupId } from '../config/customerGroups';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList } from 'recharts';
 

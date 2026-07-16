@@ -157,7 +157,9 @@ const authMiddleware = require('./middleware/authMiddleware');
 app.use('/api/auth', require('./routes/auth'));                // Login API
 app.use('/api/orders', authMiddleware, require('./routes/orders'));
 app.use('/api/dashboard', authMiddleware, require('./routes/dashboard'));
-app.use('/api/items', authMiddleware, require('./routes/items'));
+app.use('/api/dashboard', authMiddleware, require('./routes/customerSummary'));
+app.use('/api/dashboard', authMiddleware, require('./routes/customerSales'));
+app.use('/api/items', authMiddleware, require('./routes/itemYearlySummary'));
 app.use('/api/search', authMiddleware, require('./routes/search'));
 app.use('/api/procurement', authMiddleware, require('./routes/procurement'));
 app.use('/api/requisition', authMiddleware, require('./routes/requisition')); // Requisition routes (SOA, SIA, SIB, SIP, SIS)

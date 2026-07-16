@@ -860,3 +860,28 @@ Sidebar menu group `subcontract` (icon: `handshake`) มี 3 รายการ
 - Product Type / Item Type names must come from `GMGoodType` by joining `OrdDT.ItemType = GMGoodType.GoodTypeCode`; display `GoodTypeNameEng` fallback `GoodTypeName`. Do not infer type from item number prefixes such as `BBS`, `BES`, or `BNS`.
 - New charts may be added only after a concrete business question is confirmed, e.g. customer risk, shipment gap, repeat item demand, or month-to-month order intake.
 - If multiple years are selected, keep totals visible in KPI/table summaries first; do not create a comparison chart until the comparison logic is agreed.
+
+---
+## 2026-07-16 API/Route Domain Split Notes
+
+### Scope
+- Split mixed dashboard/customer sales/item yearly code by domain responsibility while preserving existing endpoint URLs.
+- This is a structure-only refactor for API client files and Express route files; business query behavior should remain the same.
+- TopOrdersAnalyticsPage.tsx is still a draft page, so only import boundaries were updated there. Do not perform a heavy component rewrite until the page direction is confirmed.
+
+### Frontend Service Ownership
+- src/services/dashboardAPI.ts: dashboard core only (years, dashboard cards, card detail, sales summary) plus temporary compatibility re-exports.
+- src/services/customerSummaryAPI.ts: customer summary fetch for /api/dashboard/customer-summary.
+- src/services/customerSalesAPI.ts: sales customer groups, sales monthly/type analytics, sales orders, and top items.
+- src/services/itemYearlySummaryAPI.ts: item yearly and item/customer yearly comparison endpoints under /api/items.
+
+### Backend Route Ownership
+- backend/routes/dashboard.js: dashboard core endpoints only.
+- backend/routes/customerSummary.js: /api/dashboard/customer-summary.
+- backend/routes/customerSales.js: /api/dashboard/sales-* and /api/dashboard/top-items endpoints with shared sales filters.
+- backend/routes/itemYearlySummary.js: item yearly summary endpoints.
+- backend/routes/items.js: compatibility wrapper for itemYearlySummary.
+- backend/server.js mounts the new routers under the same /api/dashboard and /api/items prefixes, so frontend URLs do not change.
+
+### Refactor Rule
+- When moving more code, split by real business responsibility first, then rename. Do not rename a large file blindly if it still contains multiple domains.

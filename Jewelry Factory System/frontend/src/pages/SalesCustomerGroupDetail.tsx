@@ -4,7 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, ChevronLeft, ChevronRight, DollarSign, Eye, Hash, Search } from 'lucide-react';
 import Topbar from '../components/layout/Topbar';
 import { CUSTOMER_GROUPS } from '../config/customerGroups';
-import { fetchSalesOrders, type SalesOrderRow } from '../services/dashboardAPI';
+import { fetchSalesOrders, type SalesOrderRow } from '../services/customerSalesAPI';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const PAGE_SIZE = 30;

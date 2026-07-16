@@ -4,13 +4,13 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowRight, CalendarDays, DollarSign, Hash, PackageSearch, RefreshCw, Users, X } from 'lucide-react';
 import Topbar from '../components/layout/Topbar';
 import { ALL_GROUPS, CUSTOMER_GROUPS, getCustomerGroupId } from '../config/customerGroups';
+import { fetchAvailableYears } from '../services/dashboardAPI';
 import {
-  fetchAvailableYears,
   fetchSalesCustomerGroups,
   fetchTopItems,
   type SalesCustomerGroupPoint,
   type TopItemRow,
-} from '../services/dashboardAPI';
+} from '../services/customerSalesAPI';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const MONTH_VALUES = MONTHS.map((_, index) => String(index + 1));

@@ -9,12 +9,10 @@ import {
   CalendarDays,
   ChevronDown,
 } from "lucide-react";
-import {
-  fetchCustomerSummary,
-  fetchAvailableYears,
-  fetchItemCustomerYearlySummary,
-} from "../services/dashboardAPI";
-import type { ItemCustomerYearlySummaryItem, ItemCustomerYearlySummaryPair } from "../services/dashboardAPI";
+import { fetchAvailableYears } from "../services/dashboardAPI";
+import { fetchCustomerSummary } from "../services/customerSummaryAPI";
+import { fetchItemCustomerYearlySummary } from "../services/itemYearlySummaryAPI";
+import type { ItemCustomerYearlySummaryItem, ItemCustomerYearlySummaryPair } from "../services/itemYearlySummaryAPI";
 import { getCustomerGroupId, ALL_GROUPS } from "../config/customerGroups";
 import Topbar from "../components/layout/Topbar";
 

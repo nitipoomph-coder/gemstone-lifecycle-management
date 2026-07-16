@@ -2,7 +2,8 @@ import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Search, Filter, Users, DollarSign } from 'lucide-react';
 import Topbar from '../components/layout/Topbar';
-import { fetchCustomerSummary, fetchAvailableYears } from '../services/dashboardAPI';
+import { fetchAvailableYears } from '../services/dashboardAPI';
+import { fetchCustomerSummary } from '../services/customerSummaryAPI';
 import { getCustomerGroupId } from '../config/customerGroups';
 
 import CustomerReportTable from '../components/report/CustomerReportTable';

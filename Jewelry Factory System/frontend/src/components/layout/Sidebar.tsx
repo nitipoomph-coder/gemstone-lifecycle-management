@@ -26,6 +26,9 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
     if (path === '/dashboard/sales-customer-groups') {
       return location.pathname === '/dashboard/sales-customer-detail';
     }
+    if (path === '/po-tracker') {
+      return location.pathname.startsWith('/po-tracker/');
+    }
     return false;
   };
 

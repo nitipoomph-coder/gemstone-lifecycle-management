@@ -50,6 +50,9 @@ export default function NavGroup({ group, isOpen, onToggle, collapsed = false }:
     if (itemPath === '/dashboard/sales-customer-groups') {
       return location.pathname === '/dashboard/sales-customer-detail';
     }
+    if (itemPath === '/po-tracker') {
+      return location.pathname.startsWith('/po-tracker/');
+    }
     return false;
   };
   const isGroupActive = group.path

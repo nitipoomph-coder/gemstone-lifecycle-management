@@ -6,8 +6,8 @@ export const menuConfig: NavMenuGroup[] = [
   // Dashboard
   {
     id: 'home',
-    label: 'Dashboard',
-    icon: 'Home',
+    label: 'Production Dashboard',
+    icon: 'home',
     path: '/',
     accentColor: 'var(--color-brand-500)',
     roles: ['admin'],
@@ -21,6 +21,7 @@ export const menuConfig: NavMenuGroup[] = [
     accentColor: 'var(--color-success-500)',
     roles: ['admin', 'sales'],
     items: [
+      { id: 'dash-sales', label: 'Sales Dashboard', path: '/dashboard/sales' },
       { id: 'dash-cust', label: 'Sales by Customer', path: '/dashboard/customer' },
       { id: 'dash-qty', label: 'Quantity by Customer', path: '/dashboard/qty' },
       { id: 'customer-report', label: 'Customer Report Matrix', path: '/dashboard/customer-report' },
@@ -53,7 +54,7 @@ export const menuConfig: NavMenuGroup[] = [
     accentColor: 'var(--color-brand-600)',
     roles: ['admin'],
     items: [
-  // PO tracker
+      { id: 'po-tracker', label: 'PO Tracker', path: '/po-tracker' },
     ],
   },
 

@@ -885,3 +885,16 @@ Sidebar menu group `subcontract` (icon: `handshake`) มี 3 รายการ
 
 ### Refactor Rule
 - When moving more code, split by real business responsibility first, then rename. Do not rename a large file blindly if it still contains multiple domains.
+
+---
+## Route Comment Standard
+
+Use short guide comments that make ownership obvious at first read.
+
+For backend route files, prefer a top overview block with:
+- Route
+- Page/Menu
+- Description
+- Filter policy or data boundary
+
+Inside route handlers, add only short section labels for important boxes/queries, for example KPI cards, Top 30 Items, drilldown rows, or comparison data. Avoid comments that explain obvious syntax.

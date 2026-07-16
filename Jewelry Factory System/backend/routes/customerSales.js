@@ -2,6 +2,25 @@ const express = require('express');
 const router = express.Router();
 const { getPool, sql } = require('../db');
 
+/*
+ * =============================================================================
+ * CUSTOMER SALES ANALYSIS ROUTES OVERVIEW
+ * =============================================================================
+ * Route                                  | Page/Menu                | Description
+ * -------------------------------------- | ------------------------ | ------------------------
+ * GET /api/dashboard/sales-customer-groups | Customer Sales Overview | KPI/group rows
+ * GET /api/dashboard/sales-monthly-analytics | Customer Sales Analysis | Month trend data
+ * GET /api/dashboard/sales-type-analytics | Customer Sales Analysis | Product type trend data
+ * GET /api/dashboard/sales-orders       | Customer Order List      | Order drilldown rows
+ * GET /api/dashboard/top-items          | Customer Sales Overview  | Top 30 Items table
+ *
+ * Filter policy:
+ * - buildSalesFilters() owns year/month/customer/type filters for all routes here.
+ * - Keep this route sales-focused: customer, item, amount, qty, shipped qty, status.
+ * - Do not add production-stage detail here; link to PO Tracker when needed.
+ * =============================================================================
+ */
+
 // Sales customer analytics helpers keep the sales pages focused on customer,
 // item, amount, qty, and shipping summary instead of production-stage detail.
 function parseCsvInts(value, fallback = []) {

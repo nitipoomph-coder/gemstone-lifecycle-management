@@ -2,6 +2,22 @@ const express = require('express');
 const router = express.Router();
 const { getPool, sql } = require('../db');
 
+/*
+ * =============================================================================
+ * CUSTOMER SUMMARY ROUTES OVERVIEW
+ * =============================================================================
+ * Route                                  | Page/Menu           | Description
+ * -------------------------------------- | ------------------- | ------------------------
+ * GET /api/dashboard/customer-summary   | Customer Dashboard  | Sales by customer/year
+ * GET /api/dashboard/customer-summary   | Top Orders          | First-load ranking source
+ *
+ * Filter policy:
+ * - years selects the dashboard period; months narrows customer totals and top item ranking.
+ * - Uses legacy NOT IN OrdNo blocklist: BBP, BBK, BBS, BBL, BBT, BBD.
+ * - Active customers only: CustStatus = 'Y'.
+ * =============================================================================
+ */
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // [CUSTOMER DASHBOARD] GET /api/dashboard/customer-summary?years=2024,2025
 // ใช้โดย: หน้า Customer Dashboard (CustomerDashboard.tsx)

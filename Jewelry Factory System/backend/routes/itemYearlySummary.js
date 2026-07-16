@@ -2,6 +2,22 @@ const express = require('express');
 const router = express.Router();
 const { getPool, sql } = require('../db');
 
+/*
+ * =============================================================================
+ * ITEM YEARLY SUMMARY ROUTES OVERVIEW
+ * =============================================================================
+ * Route                                  | Page/Menu        | Description
+ * -------------------------------------- | ---------------- | ------------------------
+ * GET /api/items/yearly-summary         | Top Orders       | Batch customer+item comparison
+ * GET /api/items/:styleNo/yearly-summary | Item Detail      | Single item yearly trend
+ *
+ * Filter policy:
+ * - years controls the comparison period; months follows the Top Orders period filter.
+ * - pairs mode is for visible Top Orders customer+item rows only.
+ * - Item values come from OrdHD + OrdDT line data.
+ * =============================================================================
+ */
+
 const ORDER_BLOCKLIST = "SUBSTRING(h.OrdNo, 1, 3) NOT IN ('BBP','BBK','BBS','BBL','BBT','BBD')";
 
 function parseYears(value) {

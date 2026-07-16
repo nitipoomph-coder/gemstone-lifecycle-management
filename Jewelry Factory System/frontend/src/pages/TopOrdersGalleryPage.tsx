@@ -209,6 +209,7 @@ export default function TopOrdersGalleryPage() {
       });
   }, []);
 
+  // Refetch Customer Summary when the period/month filter changes.
   useEffect(() => {
     if (availableYears.length === 0) return;
     let cancelled = false;
@@ -291,6 +292,7 @@ export default function TopOrdersGalleryPage() {
     return { rows: rows.slice(0, TOP_CUSTOMER_ITEM_LIMIT), totalRows };
   }, [custData, baseYear, selGroups, searchQuery, metric, selectedProductType, selectedMonthKey]);
 
+  // Load yearly comparison only for rows currently visible on screen.
   useEffect(() => {
     if (!compareEnabled || !baseYear || availableYears.length === 0) return;
     if (!compareYear || compareYear === baseYear || !availableYears.includes(compareYear)) {
@@ -298,6 +300,7 @@ export default function TopOrdersGalleryPage() {
     }
   }, [availableYears, baseYear, compareEnabled, compareYear]);
 
+  // Build customer+item pairs for the comparison API.
   const visibleItemPairs = useMemo<ItemCustomerYearlySummaryPair[]>(() => {
     const pairs = new Map<string, ItemCustomerYearlySummaryPair>();
     tableData.rows.forEach((row: any) => {

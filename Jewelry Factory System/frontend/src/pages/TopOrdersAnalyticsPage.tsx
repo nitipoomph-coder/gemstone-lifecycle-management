@@ -257,6 +257,7 @@ export default function TopOrdersAnalyticsPage() {
     }
   }, [availableYears, baseYear, compareYear]);
 
+  // Build customer+item pairs for yearly comparison cards.
   const visibleItemPairs = useMemo<ItemCustomerYearlySummaryPair[]>(() => {
     const pairs = new Map<string, ItemCustomerYearlySummaryPair>();
     tableData.rows.forEach((row: any) => {
@@ -275,6 +276,7 @@ export default function TopOrdersAnalyticsPage() {
     [visibleItemPairs],
   );
 
+  // Load comparison data for the current visible customer+item pairs.
   useEffect(() => {
     if (!visibleItemPairs.length || !baseYear || !compareYear || baseYear === compareYear) {
       setItemsYearlyByPair({});

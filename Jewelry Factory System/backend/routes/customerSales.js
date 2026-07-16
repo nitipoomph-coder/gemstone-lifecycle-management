@@ -95,6 +95,7 @@ function itemTypeNameMaxSql(typeExpr, itemExpr, engExpr, localExpr) {
   `;
 }
 
+// Applies the shared year/month/customer/type filters for sales endpoints.
 function buildSalesFilters(req, request, headerAlias = 'h', detailAlias = 'd', dateExpr = null) {
   const years = parseCsvInts(req.query.years, [new Date().getFullYear()]);
   const months = parseCsvInts(req.query.months);
@@ -127,6 +128,7 @@ function buildSalesFilters(req, request, headerAlias = 'h', detailAlias = 'd', d
   return { years, months, customers, types, whereSql: filters.join('\n        AND ') };
 }
 
+// Customer Sales Overview KPI/group rows.
 // [SALES CUSTOMER GROUPS] GET /api/dashboard/sales-customer-groups
 router.get('/sales-customer-groups', async (req, res) => {
   try {
@@ -160,6 +162,7 @@ router.get('/sales-customer-groups', async (req, res) => {
   }
 });
 
+// Monthly trend source for Customer Sales Analysis charts.
 // [SALES MONTHLY ANALYTICS] GET /api/dashboard/sales-monthly-analytics
 router.get('/sales-monthly-analytics', async (req, res) => {
   try {
@@ -197,6 +200,7 @@ router.get('/sales-monthly-analytics', async (req, res) => {
   }
 });
 
+// Product type trend source for Customer Sales Analysis charts.
 // [SALES TYPE ANALYTICS] GET /api/dashboard/sales-type-analytics
 router.get('/sales-type-analytics', async (req, res) => {
   try {
@@ -250,6 +254,7 @@ router.get('/sales-type-analytics', async (req, res) => {
   }
 });
 
+// Customer Order List drilldown rows.
 // [SALES ORDER DETAIL] GET /api/dashboard/sales-orders
 router.get('/sales-orders', async (req, res) => {
   try {
@@ -292,6 +297,7 @@ router.get('/sales-orders', async (req, res) => {
   }
 });
 
+// Top 30 Items table source for Customer Sales Overview.
 // [TOP ITEMS] GET /api/dashboard/top-items
 router.get('/top-items', async (req, res) => {
   try {

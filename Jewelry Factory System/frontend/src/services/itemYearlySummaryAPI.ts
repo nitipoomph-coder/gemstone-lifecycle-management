@@ -53,6 +53,7 @@ export interface ItemYearlySummaryResponse {
   data: YearTrendRow[];
 }
 
+// Single item trend used by item yearly detail views.
 export const fetchItemYearlySummary = async (styleNo: string, years: string[]): Promise<ItemYearlySummaryResponse> => {
   const qs = new URLSearchParams();
   if (years.length) qs.set('years', years.join(','));
@@ -63,6 +64,7 @@ export const fetchItemYearlySummary = async (styleNo: string, years: string[]): 
   return await res.json();
 };
 
+// Customer+item comparison data used by Top Orders compare mode.
 export const fetchItemCustomerYearlySummary = async (pairs: ItemCustomerYearlySummaryPair[], years: string[], months?: string[]): Promise<ItemCustomerYearlySummaryResponse> => {
   const qs = new URLSearchParams();
   const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -76,6 +78,7 @@ export const fetchItemCustomerYearlySummary = async (pairs: ItemCustomerYearlySu
   return await res.json();
 };
 
+// Batch item trend lookup for multi-item yearly summaries.
 export const fetchItemsYearlySummary = async (styleNos: string[], years: string[]): Promise<ItemsYearlySummaryResponse> => {
   const qs = new URLSearchParams();
   if (styleNos.length) qs.set('styles', styleNos.join(','));

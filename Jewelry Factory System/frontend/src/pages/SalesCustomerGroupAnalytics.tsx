@@ -161,6 +161,7 @@ export default function SalesCustomerGroupAnalytics() {
       .catch(err => setError(err instanceof Error ? err.message : 'Failed to load years'));
   }, [requestedYears]);
 
+  // Load the Customer Sales Overview KPI rows and Top 30 Items table.
   useEffect(() => {
     if (selectedYears.length === 0) return;
     setLoading(true);
@@ -177,6 +178,7 @@ export default function SalesCustomerGroupAnalytics() {
       .finally(() => setLoading(false));
   }, [selectedYears, selectedMonths, customers, metric]);
 
+  // KPI cards are totals from the customer group endpoint.
   const kpi = useMemo(() => {
     const amount = points.reduce((sum, row) => sum + Number(row.amount || 0), 0);
     const qty = points.reduce((sum, row) => sum + Number(row.qty || 0), 0);

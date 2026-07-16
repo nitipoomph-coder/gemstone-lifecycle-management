@@ -12,6 +12,7 @@ const { getPool, sql } = require('../db');
 //    → ไม่นับ BBP, BBK, BBS, BBL, BBT, BBD
 //    → กรองเฉพาะ CustStatus = 'Y' (ลูกค้า Active เท่านั้น)
 // ═══════════════════════════════════════════════════════════════════════════════
+// Customer Summary cards and Top Orders first ranking source.
 router.get('/customer-summary', async (req, res) => {
   try {
     const pool = await getPool();
@@ -24,6 +25,7 @@ router.get('/customer-summary', async (req, res) => {
     const request = pool.request();
     years.forEach((y, i) => request.input(`y${i}`, sql.Int, y));
 
+    // Month filter affects both customer totals and top-item ranking.
     let monthWhereClause = '';
     let topItemMonthWhereClause = '';
     if (months.length > 0) {

@@ -75,6 +75,7 @@ export interface TopItemRow {
   primaryCustomerName?: string;
 }
 
+// Shared filters for Customer Sales Analysis boxes and tables.
 interface SalesAnalyticsParams {
   years?: string[];
   months?: string[];
@@ -83,6 +84,7 @@ interface SalesAnalyticsParams {
   dateView?: SalesDateView;
 }
 
+// Builds the query string used by every Customer Sales Analysis endpoint.
 const salesAnalyticsQuery = (params: SalesAnalyticsParams = {}) => {
   const qs = new URLSearchParams();
   if (params.years?.length) qs.set('years', params.years.join(','));
@@ -93,6 +95,7 @@ const salesAnalyticsQuery = (params: SalesAnalyticsParams = {}) => {
   return qs;
 };
 
+// KPI and customer group rows for Customer Sales Overview.
 export const fetchSalesCustomerGroups = async (params: SalesAnalyticsParams = {}): Promise<SalesCustomerGroupPoint[]> => {
   const qs = salesAnalyticsQuery(params);
   const res = await fetchWithAuth(`${BASE_URL}/dashboard/sales-customer-groups?${qs.toString()}`, {
@@ -123,6 +126,7 @@ export const fetchSalesTypeAnalytics = async (params: SalesAnalyticsParams = {})
   return json.data || [];
 };
 
+// Order-level rows for Customer Order List drilldown.
 export const fetchSalesOrders = async (params: SalesAnalyticsParams = {}): Promise<SalesOrderRow[]> => {
   const qs = salesAnalyticsQuery(params);
   const res = await fetchWithAuth(`${BASE_URL}/dashboard/sales-orders?${qs.toString()}`, {
@@ -133,6 +137,7 @@ export const fetchSalesOrders = async (params: SalesAnalyticsParams = {}): Promi
   return json.data || [];
 };
 
+// Top 30 Items table for Customer Sales Overview.
 export const fetchTopItems = async (params: SalesAnalyticsParams & { metric?: SalesMetric; limit?: number } = {}): Promise<TopItemRow[]> => {
   const qs = salesAnalyticsQuery(params);
   if (params.metric) qs.set('metric', params.metric);

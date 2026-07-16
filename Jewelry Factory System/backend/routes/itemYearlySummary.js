@@ -136,12 +136,14 @@ function mapYearlyRows(years, recordset) {
   return rows;
 }
 
+// Batch yearly summary for Top Orders compare mode.
 router.get('/yearly-summary', async (req, res) => {
   try {
     const years = parseYears(req.query.years);
     const months = parseMonths(req.query.months);
     const pairs = parsePairs(req.query.pairs).slice(0, 300);
 
+    // Pair mode compares specific customer+item rows shown in Top Orders.
     if (pairs.length > 0) {
       const pool = await getPool();
       const request = pool.request();
@@ -261,6 +263,7 @@ router.get('/yearly-summary', async (req, res) => {
     res.status(500).json({ ok: false, error: err.message });
   }
 });
+// Single item yearly summary detail endpoint.
 router.get('/:styleNo/yearly-summary', async (req, res) => {
   try {
     const styleNo = String(req.params.styleNo || '').trim();

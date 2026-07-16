@@ -21,7 +21,7 @@
 | ห้องตัวอย่าง            | SSA, SIM                             | 🟡 DocumentLayout done |
 | ตรวจสอบและนับสต็อก      | Check Dispatch/Sample/Purchase/Stock | ⬜ Placeholder      |
 | Production / PO Tracker | —                                  | ✅ Live (core feature, admin only) |
-| Sales Order Analytics | —                              | ✅ Sales Analytics overview + drilldown detail table |
+| Customer Sales Analysis | —                              | ✅ Customer group sales overview + order list detail |
 | สต็อกอะไหล่             | SP-Order, SP-Issue, SP-Receive, …    | ⬜ Placeholder      |
 | งานเหมา (Subcontract Management) | —                           | 🟡 UI Preview (1/3, ไม่มี Backend) |
 
@@ -157,9 +157,8 @@ gemstone-lifecycle-management/
     │       │   ├── CustomerReportPage.tsx      # ⭐ Customer Report (Matrix Table สรุปยอดขายรายลูกค้า)
     │       │   ├── TopOrdersGalleryPage.tsx    # ⭐ Top Orders Gallery (Enterprise BI layout with custom themes)
     │       │   ├── POTrackerAdvanced.tsx       # ⭐ PO Tracker main (list view — เดิมชื่อ OrderTrackerAdvanced)
-    │       │   ├── SalesOrderAnalytics.tsx # ✅ Sales Order Analytics overview route: /dashboard/sales-order-analytics
-    │       │   ├── SalesOrderAnalyticsDetail.tsx    # ✅ Sales order/item drilldown table route: /dashboard/sales-order-analytics/detail
-    │       │   ├── salesOrderAnalyticsModel.ts      # Shared data mapping/rules for Sales Order Analytics
+    │       │   ├── SalesCustomerGroupAnalytics.tsx # ✅ Customer Sales Analysis overview route: /dashboard/sales-customer-groups
+    │       │   ├── SalesCustomerGroupDetail.tsx     # ✅ Customer Order List route: /dashboard/sales-customer-detail
     │       │   ├── OrderDetailPage.tsx         # Order detail (by ord/po/group)
     │       │   ├── ItemDetailPage.tsx          # Item-level detail
     │       │   ├── PlaceholderPage.tsx         # Placeholder for unimplemented modules
@@ -763,17 +762,17 @@ APP_SALES_PASSWORD=<sales login password>
 
 ---
 
-## Sales Order Analytics
+## Customer Sales Analysis (replaces deprecated Sales Order Analytics)
 
 ### สถานะ: ✅ Sales Analytics overview + drilldown detail table
 โมดูลนี้อยู่ใต้กลุ่ม `Sales Analytics` สำหรับดูภาพรวม Order/Item เพื่อใช้ประชุม ไม่ใช่ระบบติดตาม production แบบ live tracking:
-- `SalesOrderAnalytics.tsx` — route `/dashboard/sales-order-analytics`; หน้า overview แบบ Sales-style แสดง KPI + กราฟก่อน แล้วค่อยกดดูตาราง
-- `SalesOrderAnalyticsDetail.tsx` — route `/dashboard/sales-order-analytics/detail`; ตารางเชิงลึก รับ query จากปุ่ม/การ์ด เช่น `status`, `viewMode`, `shipMonth`, `dueDateSource`
-- `salesOrderAnalyticsModel.ts` — shared model/rules/hook สำหรับ map `OrderSummary` เป็น order/item records, คำนวณ status bucket, pending by department, status by month และ top review rows
+- `SalesCustomerGroupAnalytics.tsx` — route `/dashboard/sales-customer-groups`; overview แบบ table-first สำหรับ KPI summary และ Top 30 Items; no charts in v1
+- `SalesCustomerGroupDetail.tsx` — route `/dashboard/sales-customer-detail`; table-first Customer Order List สำหรับ Order No / Item No / Customer / Due / Qty / Shipped / Sales Status
+- Deprecated Sales Order Analytics files were removed; current data access is via `dashboardAPI.ts` and `/api/dashboard/sales-*` endpoints
 
 ### Menu / Routing
-- Menu ใต้ `Sales Analytics`: `Sales Order Analytics`
-- Routes ใน `App.tsx`: `/dashboard/sales-order-analytics` และ `/dashboard/sales-order-analytics/detail`
+- Menu ใต้ `Sales Analytics`: `Customer Sales Analysis`
+- Routes ใน `App.tsx`: `/dashboard/sales-customer-groups` และ `/dashboard/sales-customer-detail`
 
 ### Design Rules
 - หน้าแรกต้องเป็น analytics dashboard ก่อน ไม่ใช่ table-first
@@ -789,7 +788,7 @@ APP_SALES_PASSWORD=<sales login password>
 
 ### Chart Data Mapping
 - Reference Excel: `Centric Order Detail Year 2025-2026 Eileen.xlsx` ใช้แนวคิดจาก sheet `2025-2026`, `By Month`, `By Month (2)`, `Top Items`
-- กราฟหลัก `Yearly Qty Comparison by Item Type`: แสดง Qty เทียบปีชนกันแบบ grouped bar แยกกลุ่มสินค้า `BBS`, `BES`, `BNS`, `BRS`, `Others` เหมือน pivot ในไฟล์ Excel
+- กราฟหลัก Item Type/Sales mix ต้องใช้ `OrdDT.ItemType` join `GMGoodType` เพื่อแสดงชื่อเต็ม เช่น Ring, Earring, Necklace, Bracelet; ห้ามเดาจาก prefix item no เช่น BBS/BES/BNS
 - Chart controls: `Year Compare` สำหรับเทียบปี, `Monthly Detail` สำหรับเลือกเดือน; ใช้ `Compare Years` (`selectedYears`) เลือกปีที่จะนำมาชนกัน และ `selectedMonth` เลือกเดือนในโหมด monthly
 - Year comparison และ monthly detail ใช้ `OrdDate` เป็นฐานปี/เดือนสำหรับกราฟหลัก และไม่ plot record ที่ไม่มีปี
 - Group mapping: ใช้ prefix 3 ตัวแรกของ `SampleItemNo` เป็นกลุ่มสินค้า และตัด suffix ตัวอักษรท้ายเพื่อได้ item SKU แบบเดียวกับ column `item SKU` ในไฟล์ Excel
@@ -819,3 +818,45 @@ Sidebar menu group `subcontract` (icon: `handshake`) มี 3 รายการ
 - Aging Report: KPI row (Aging buckets 0-3/4-7/8-14/>14 วัน) + Donut chart + Bar chart คู่กัน + Detail table
 
 **หมายเหตุ**: ยังไม่มี Backend API หรือ Stored Procedure สำหรับข้อมูล Vendor/Subcontract ในระบบ — ต้องสร้างใหม่ทั้งหมดก่อนเริ่ม build หน้าจอจริง (ห้ามสร้างข้อมูลตัวอย่าง/mock มาแสดงแทนข้อมูลจริงในระบบ production)
+
+---
+## Sales Customer Analysis - Design Prompt / UI Governance
+
+### Purpose
+หน้า `Customer Sales Analysis` คือหน้าวิเคราะห์ฝั่ง Sales โดยโฟกัสลูกค้า สินค้า ยอดขาย จำนวนชิ้น และการส่งออก ไม่ใช่ Production Dashboard
+
+### Naming Rules
+- Menu name: `Customer Sales Analysis`
+- Overview page title: `Customer Sales Overview`
+- Detail page title: `Customer Order List`
+- Sales overview v1 is table-first: KPI summary, filters, and `Top 30 Items`. Do not add charts until the business question is confirmed.
+- Avoid generic/technical names such as `Sales Customer Analytics`, `Sales Order Analytics`, `Top Item Types` unless the screen is explicitly technical
+
+### Design Rules
+- Must visually follow existing `CustomerDashboard.tsx` and `CustomerReportPage.tsx` patterns: Topbar, surface variables, dense enterprise layout, readable tables
+- Do not introduce a separate visual language for this module
+- Use `var(--color-*)`, `color-mix`, existing fonts, and existing spacing rhythm
+- Keep cards/panels clean and business-focused; avoid decorative hero sections, glass effects, gradients, or oversized marketing composition
+- Overview v1 should be a no-chart working surface: filters, KPI totals, Top 30 Items, and drilldown to order rows
+- Detail should answer sales follow-up questions: which Order No / Item No / Customer / Due / Qty / Shipped / Sales Status needs attention
+- Filter area should use compact enterprise filter cards: Year uses Primary Year / Compare Year select controls, Month uses a drill dropdown with All / Q1-Q4 / month grid, and Customer Group can use chips with a reset action; avoid long unstructured chip rows
+- Item Type Distribution was removed from the Sales overview because it did not provide enough actionable value for v1. Keep the overview focused on KPI summary and Top 30 Items with order-level drilldown. All charts were removed for v1 while the analysis model is being reconsidered step by step.
+
+### Sales vs Production Boundary
+- Sales status is limited to `Open`, `Partial`, `Shipped`, `Late`
+- Do not show production-stage detail such as Casting, Polishing, Plating, QC in Sales pages
+- If deeper production state is needed, link out to PO Tracker / Order Detail instead of duplicating Production Dashboard logic
+
+### Data Rules
+- Top products and order rows must come from real `OrdHD + OrdDT` line data
+- Amount uses line amount (`ItemExchAmnt` fallback `ItemAmnt`) for Sales views
+- Qty uses line qty (`ItemQty`); shipped uses `ExportQty`
+- Customer grouping must use `frontend/src/config/customerGroups.ts` as the single source of truth
+- Top items should expose the primary customer/customer group for each item; choose the primary customer by the active metric (mount or qty)
+- `/api/dashboard/item-type-distribution` was removed with the Item Type Distribution panel; do not reintroduce it unless a clear business use case is confirmed.
+---
+### Analysis Rebuild Rules
+- Sales overview v1 must not include charts. Rebuild the analysis model step by step from table evidence first.
+- Product Type / Item Type names must come from `GMGoodType` by joining `OrdDT.ItemType = GMGoodType.GoodTypeCode`; display `GoodTypeNameEng` fallback `GoodTypeName`. Do not infer type from item number prefixes such as `BBS`, `BES`, or `BNS`.
+- New charts may be added only after a concrete business question is confirmed, e.g. customer risk, shipment gap, repeat item demand, or month-to-month order intake.
+- If multiple years are selected, keep totals visible in KPI/table summaries first; do not create a comparison chart until the comparison logic is agreed.

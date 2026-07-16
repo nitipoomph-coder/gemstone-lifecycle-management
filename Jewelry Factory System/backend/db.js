@@ -1,5 +1,6 @@
+const path = require('path');
 const sql = require('mssql');
-require('dotenv').config();
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 const config = {
   user: process.env.DB_USER,
@@ -7,7 +8,7 @@ const config = {
   server: process.env.DB_HOST,
   port: parseInt(process.env.DB_PORT) || 1433,
   database: process.env.DB_NAME,
-  requestTimeout:    300000, // 300s (5 minutes) — allow long processing for large datasets
+  requestTimeout: 300000, // 300s timeout for large datasets
   connectionTimeout: 15000,  // 15s connect timeout
   options: {
     encrypt: false,
@@ -15,10 +16,10 @@ const config = {
     enableArithAbort: true,
   },
   pool: {
-    max: 20,              // รองรับ concurrent users มากขึ้น (เดิม 10)
-    min: 2,               // keep 2 connections warm เสมอ
-    idleTimeoutMillis: 60000,  // 1 นาที
-    acquireTimeoutMillis: 30000, // รอ connection ได้สูงสุด 30s
+    max: 20, // Support concurrent users
+    min: 2, // Keep 2 connections warm
+    idleTimeoutMillis: 60000, // 60s idle timeout
+    acquireTimeoutMillis: 30000, // Wait up to 30s for a pooled connection
   },
 };
 
@@ -32,14 +33,14 @@ async function getPool() {
 
       pool.on('error', err => {
         console.error('SQL Pool Error:', err);
-        pool = null; // เคลียร์ทิ้งเพื่อให้ if (!pool) ทำงานใหม่ในรอบหน้า
+        pool = null; // Reset pool so the next request reconnects.
       });
     }
-    return pool; // <--- ย้ายออกมาไว้ข้างนอกเพื่อให้ return ทุกครั้งที่เรียก
+    return pool;
   } catch (err) {
     console.error('Database Connection Failed:', err);
     pool = null;
-    throw err; // โยน error กลับไปให้ route จัดการส่ง 500
+    throw err;
   }
 }
 module.exports = { getPool, sql };

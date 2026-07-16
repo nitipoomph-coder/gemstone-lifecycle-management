@@ -18,16 +18,27 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
   const role = (localStorage.getItem('auth_role') || 'sales').toLowerCase();
   const filteredMenu = menuConfig.filter(g => !g.roles || g.roles.includes(role));
 
+  const isMenuPathActive = (path: string) => {
+    if (location.pathname === path) return true;
+    if (path === '/dashboard/top-orders') {
+      return location.pathname === '/dashboard/top-orders/analytics';
+    }
+    if (path === '/dashboard/sales-customer-groups') {
+      return location.pathname === '/dashboard/sales-customer-detail';
+    }
+    return false;
+  };
+
   // Accordion: only one group open at a time
   const activeGroupId = filteredMenu.find(g =>
-    g.path ? g.path === location.pathname : (g.items || []).some(item => item.path === location.pathname)
+    g.path ? isMenuPathActive(g.path) : (g.items || []).some(item => isMenuPathActive(item.path))
   )?.id || 'sales-dashboard';
 
   const [openGroupId, setOpenGroupId] = useState<string>(activeGroupId);
 
   useEffect(() => {
     const found = menuConfig.find(g =>
-      g.path ? g.path === location.pathname : (g.items || []).some(item => item.path === location.pathname)
+      g.path ? isMenuPathActive(g.path) : (g.items || []).some(item => isMenuPathActive(item.path))
     );
     if (found) {
       setOpenGroupId(found.id);

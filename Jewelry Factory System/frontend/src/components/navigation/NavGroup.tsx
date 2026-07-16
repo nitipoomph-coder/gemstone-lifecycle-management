@@ -14,6 +14,9 @@ import {
 } from 'lucide-react';
 import type { NavMenuGroup } from '../../types';
 
+const NAV_ICON_SIZE = 16;
+const NAV_CHEVRON_SIZE = 14;
+
 const iconComponents: Record<string, React.ElementType> = {
   'package-check': PackageCheck,
   'clipboard-list': ClipboardList,
@@ -39,9 +42,19 @@ export default function NavGroup({ group, isOpen, onToggle, collapsed = false }:
   const location = useLocation();
 
   const items = group.items || [];
+  const isItemActive = (itemPath: string) => {
+    if (location.pathname === itemPath) return true;
+    if (itemPath === '/dashboard/top-orders') {
+      return location.pathname === '/dashboard/top-orders/analytics';
+    }
+    if (itemPath === '/dashboard/sales-customer-groups') {
+      return location.pathname === '/dashboard/sales-customer-detail';
+    }
+    return false;
+  };
   const isGroupActive = group.path
     ? location.pathname === group.path
-    : items.some(item => location.pathname === item.path);
+    : items.some(item => isItemActive(item.path));
   const IconComponent = iconComponents[group.icon] || PackageCheck;
 
   const accentColor = group.accentColor || 'var(--color-brand-500)';
@@ -66,7 +79,7 @@ export default function NavGroup({ group, isOpen, onToggle, collapsed = false }:
           title={group.label}
         >
           <IconComponent
-            size={18}
+            size={NAV_ICON_SIZE}
             className={`transition-colors duration-150 ${isGroupActive
               ? 'text-[var(--color-sidebar-accent)]'
               : 'text-[var(--color-sidebar-text)]'
@@ -102,7 +115,7 @@ export default function NavGroup({ group, isOpen, onToggle, collapsed = false }:
             />
           )}
           <IconComponent
-            size={15}
+            size={NAV_ICON_SIZE}
             className={`transition-colors duration-150 ${isGroupActive || isOpen
               ? 'text-[var(--color-sidebar-accent)]'
               : 'text-[var(--color-sidebar-text)]'
@@ -128,7 +141,7 @@ export default function NavGroup({ group, isOpen, onToggle, collapsed = false }:
 
         {items.length > 0 && (
           <ChevronRight
-            size={12}
+            size={NAV_CHEVRON_SIZE}
             className={`shrink-0 text-[var(--color-sidebar-text)] opacity-40 transition-transform duration-300 ${isOpen ? 'rotate-90' : ''
               }`}
             style={{ transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)' }}
@@ -145,7 +158,7 @@ export default function NavGroup({ group, isOpen, onToggle, collapsed = false }:
         }}
       >
         {items.map((item, idx) => {
-          const isActive = location.pathname === item.path;
+          const isActive = isItemActive(item.path);
           return (
             <button
               key={item.id}

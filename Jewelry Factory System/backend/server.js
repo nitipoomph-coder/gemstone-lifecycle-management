@@ -3,20 +3,20 @@ console.log('!!! DIAGNOSTIC: SERVER IS STARTING !!!');
 console.log('Path:', __filename);
 console.log('=========================================');
 
+const path = require('path');
 const express = require('express');
 const cors = require('cors');
-require('dotenv').config();
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 const app = express();
-const PORT = process.env.API_PORT || 3001;
+const PORT = process.env.API_PORT || process.env.PORT || 3001;
 
-// ─── Middleware ───────────────────────────────────────────────────────────────
+// Middleware
 
-// ⭐ 1. ปรับ CORS เป็นรับทุกโดเมน (ชั่วคราวเพื่อตัดปัญหา Port Frontend ไม่ตรง)
-// หากทดสอบผ่านแล้ว ค่อยเอากลับไปเป็น Array แบบเดิมก็ได้ครับ
+// Allow API access from frontend dev hosts.
 app.use(cors());
 
-// ⭐ 2. เพิ่ม Request Logger เพื่อให้ Terminal แสดงผลทุกครั้งที่มีคนเรียก API
+// Log each API request during development.
 app.use((req, res, next) => {
   console.log(`[${new Date().toLocaleTimeString('th-TH')}] ${req.method} ${req.originalUrl}`);
   next();
@@ -24,7 +24,7 @@ app.use((req, res, next) => {
 
 app.use(express.json());
 
-// ─── Health check ─────────────────────────────────────────────────────────────
+// Health check
 app.get('/api/health', async (req, res) => {
   try {
     const { getPool } = require('./db');
@@ -36,14 +36,13 @@ app.get('/api/health', async (req, res) => {
       db: result.recordset[0],
     });
   } catch (err) {
-    console.error('❌ [HealthCheck DB Error]:', err.message);
+    console.error('[HealthCheck DB Error]:', err.message);
     res.status(500).json({ ok: false, error: err.message });
   }
 });
 
-// ─── Network Photo Bridge Demo & Initialize ───────────────────────────────────
+// Network photo bridge
 const fs = require('fs');
-const path = require('path');
 
 // Register the Photo Bridge API Route
 // Register the Photo Bridge API Route (PS Photo / Cost)
@@ -152,25 +151,26 @@ app.get('/api/photos/:itemNo', (req, res) => {
   res.status(404).send('Photo not found');
 });
 
-// ─── Routes ───────────────────────────────────────────────────────────────────
+// Routes
 const authMiddleware = require('./middleware/authMiddleware');
 
 app.use('/api/auth', require('./routes/auth'));                // Login API
 app.use('/api/orders', authMiddleware, require('./routes/orders'));
 app.use('/api/dashboard', authMiddleware, require('./routes/dashboard'));
+app.use('/api/items', authMiddleware, require('./routes/items'));
 app.use('/api/search', authMiddleware, require('./routes/search'));
 app.use('/api/procurement', authMiddleware, require('./routes/procurement'));
 app.use('/api/requisition', authMiddleware, require('./routes/requisition')); // Requisition routes (SOA, SIA, SIB, SIP, SIS)
 app.use('/api/sample', authMiddleware, require('./routes/sample'));            // Sample Room routes (SSA, SIM)
 app.use('/api/lock', authMiddleware, require('./routes/lock'));                // Document locking
 
-// ─── Global Error Handler (ดักจับ Error ที่หลุดรอด) ───────────────────────────
+// Global error handler
 app.use((err, req, res, next) => {
-  console.error('❌ [Unhandled Error]:', err.stack);
+  console.error('[Unhandled Error]:', err.stack);
   res.status(500).json({ ok: false, error: 'Internal Server Error' });
 });
 
-// ─── Start ────────────────────────────────────────────────────────────────────
+// Start server
 app.listen(PORT, () => {
-  console.log(`🚀 API Server running at http://localhost:${PORT}`);
+  console.log(`API Server running at http://localhost:${PORT}`);
 });

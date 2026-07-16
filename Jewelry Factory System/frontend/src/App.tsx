@@ -14,8 +14,9 @@ import SalesDashboard from './pages/SalesDashboard';
 import CustomerDashboard from './pages/CustomerDashboard';
 import CustomerReportPage from './pages/CustomerReportPage';
 import TopOrdersGalleryPage from './pages/TopOrdersGalleryPage';
-import SalesOrderAnalytics from './pages/SalesOrderAnalytics';
-import SalesOrderAnalyticsDetail from './pages/SalesOrderAnalyticsDetail';
+import TopOrdersAnalyticsPage from './pages/TopOrdersAnalyticsPage';
+import SalesCustomerGroupAnalytics from './pages/SalesCustomerGroupAnalytics';
+import SalesCustomerGroupDetail from './pages/SalesCustomerGroupDetail';
 import LoginPage from './pages/LoginPage';
 
 import { useLocation } from 'react-router-dom';
@@ -53,9 +54,13 @@ export default function App() {
             <Route path="/dashboard/customer" element={<CustomerDashboard metric="amount" />} />
             <Route path="/dashboard/qty" element={<CustomerDashboard metric="qty" />} />
             <Route path="/dashboard/customer-report" element={<CustomerReportPage />} />
-            <Route path="/dashboard/top-Orders" element={<TopOrdersGalleryPage />} />
-            <Route path="/dashboard/sales-order-analytics" element={<SalesOrderAnalytics />} />
-            <Route path="/dashboard/sales-order-analytics/detail" element={<SalesOrderAnalyticsDetail />} />
+            <Route path="/dashboard/top-orders" element={<TopOrdersGalleryPage />} />
+            <Route path="/dashboard/top-orders/analytics" element={<TopOrdersAnalyticsPage />} />
+            <Route path="/dashboard/top-Orders" element={<Navigate to="/dashboard/top-orders" replace />} />
+            <Route path="/dashboard/top-order-lines" element={<Navigate to="/dashboard/top-orders" replace />} />
+            <Route path="/dashboard/Top-Order Lines" element={<Navigate to="/dashboard/top-orders" replace />} />
+            <Route path="/dashboard/sales-customer-groups" element={<SalesCustomerGroupAnalytics />} />
+            <Route path="/dashboard/sales-customer-detail" element={<SalesCustomerGroupDetail />} />
 
 
             {/* 1. จัดซื้อและรับเข้า — SPA, SRA, SRB, SIR */}

@@ -3,7 +3,7 @@ import type { NavMenuGroup } from '../types';
 
 export const menuConfig: NavMenuGroup[] = [
 
-  // ─── Entity 0: Dashboard ───
+  // Dashboard
   {
     id: 'home',
     label: 'Dashboard',
@@ -13,7 +13,7 @@ export const menuConfig: NavMenuGroup[] = [
     roles: ['admin'],
   },
 
-  // ─── Sales Dashboards ───
+  // Sales dashboards
   {
     id: 'sales-dashboard',
     label: 'Sales Analytics',
@@ -23,13 +23,14 @@ export const menuConfig: NavMenuGroup[] = [
     items: [
       { id: 'dash-cust', label: 'Sales by Customer', path: '/dashboard/customer' },
       { id: 'dash-qty', label: 'Quantity by Customer', path: '/dashboard/qty' },
-      { id: 'dash-top-items', label: 'Top Orders by Customer', path: '/dashboard/Top-Orders' },
-      { id: 'sales-order-analytics', label: 'Sales Order Analytics', path: '/dashboard/sales-order-analytics' },
+      { id: 'customer-report', label: 'Customer Report Matrix', path: '/dashboard/customer-report' },
+      { id: 'dash-top-orders', label: 'Top Item by Customer Gallery', path: '/dashboard/top-orders' },
+      { id: 'sales-customer-groups', label: 'Customer Sales Analysis', path: '/dashboard/sales-customer-groups' },
     ],
   },
 
-  // ─── Entity 6: Subcontract Management (งานเหมา) ───
-  // Placeholder for now — target design references the "PCC System: Subcontract Management"
+  // Subcontract management
+  // Layout previews for future subcontract reports.
   // report screens (Vendor Performance Dashboard, Vendor Price History, Aging Report)
   {
     id: 'subcontract',
@@ -44,7 +45,7 @@ export const menuConfig: NavMenuGroup[] = [
     ],
   },
 
-  // ─── PO Tracker ───
+  // PO tracker
   {
     id: 'order-tracker',
     label: 'Production',
@@ -52,11 +53,11 @@ export const menuConfig: NavMenuGroup[] = [
     accentColor: 'var(--color-brand-600)',
     roles: ['admin'],
     items: [
-      { id: 'ot-list', label: 'PO Tracker', path: '/po-tracker' },
+  // PO tracker
     ],
   },
 
-  // ─── Entity 1: Procurement & Receiving ───
+  // Procurement and receiving
   {
     id: 'procurement',
     label: 'Procurement & Receiving',
@@ -71,10 +72,10 @@ export const menuConfig: NavMenuGroup[] = [
     ],
   },
 
-  // ─── Entity 2: Orders & Issues ───
+  // Order lines and issues
   {
     id: 'orders',
-    label: 'Orders & Issues',
+    label: 'Order Lines & Issues',
     icon: 'clipboard-list',
     accentColor: 'var(--color-info-500)',
     roles: ['admin'],
@@ -87,7 +88,7 @@ export const menuConfig: NavMenuGroup[] = [
     ],
   },
 
-  // ─── Entity 3: Sample Room ───
+  // Sample room
   {
     id: 'sample',
     label: 'Sample Department',
@@ -100,7 +101,7 @@ export const menuConfig: NavMenuGroup[] = [
     ],
   },
 
-  // ─── Entity 4: Inventory Control ───
+  // Inventory control
   {
     id: 'inventory',
     label: 'Inventory Control',
@@ -117,7 +118,7 @@ export const menuConfig: NavMenuGroup[] = [
     ],
   },
 
-  // ─── Entity 5: Spare Parts ───
+  // Spare parts
   {
     id: 'spare-parts',
     label: 'Spare Parts',

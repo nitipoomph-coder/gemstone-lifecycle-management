@@ -214,6 +214,16 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: 'amo
     });
   }, [sortedSel, activeYears, selectedMonths, RAW]);
 
+  const openCustomerSalesAnalysis = () => {
+    const params = new URLSearchParams();
+    if (activeYears.length) params.set('years', activeYears.join(','));
+    if (selectedMonths.length) params.set('months', selectedMonths.join(','));
+    const salesGroups = sortedSel.filter(groupId => groupId !== 'General');
+    if (salesGroups.length) params.set('groups', salesGroups.join(','));
+    params.set('metric', metric);
+    navigate(`/dashboard/sales-customer-groups?${params.toString()}`);
+  };
+
   // Grand Total computation
   const { grandTotal, grandYoy, grandLatestYear } = useMemo(() => {
     let gTotal = 0;
@@ -335,6 +345,19 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: 'amo
             </div>
 
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <button
+                onClick={openCustomerSalesAnalysis}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  padding: '8px 16px', borderRadius: 12, fontSize: '0.75rem', fontWeight: 800, textTransform: 'capitalize',
+                  color: 'var(--color-text-primary)', background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)',
+                  cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+                }}
+                className="hover:-translate-y-0.5 active:scale-95"
+              >
+                <Users size={14} />
+                Customer Sales Analysis
+              </button>
               <button
                 onClick={() => navigate('/dashboard/customer-report?metric=' + metric)}
                 style={{

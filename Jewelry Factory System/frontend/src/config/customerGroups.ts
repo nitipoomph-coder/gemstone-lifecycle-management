@@ -24,7 +24,7 @@ export const CUSTOMER_GROUPS: CustomerGroup[] = [
     id: 'N008',
     label: 'N008 Group',
     color: 'var(--color-brand-500)',
-    prefixes: ['N008', 'N048', 'N066', 'N067', 'N068', 'N069', 'N070', 'N071', 'N072', 'N073', 'N074', 'N075'],
+    prefixes: ['N008', 'N048', 'N065', 'N066', 'N067', 'N068', 'N069', 'N070', 'N071', 'N072', 'N073', 'N074', 'N075'],
   },
   {
     id: 'MLT',

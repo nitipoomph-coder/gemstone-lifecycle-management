@@ -199,7 +199,7 @@ export default function CustomerReportFilters({
   };
 
   const removeGrowthComparison = (index: number) => {
-    setGrowthComparisons(prev => (prev.length <= 1 ? prev : prev.filter((_, compIndex) => compIndex !== index)));
+    setGrowthComparisons(prev => prev.filter((_, compIndex) => compIndex !== index));
   };
 
   return (
@@ -230,7 +230,6 @@ export default function CustomerReportFilters({
           <FilterBlock
             title={`Growth ${growthComparisons.length}/${maxGrowthComparisons}`}
             size="growth"
-            action={<AddGrowthButton onClick={addGrowthComparison} disabled={!canAddGrowth} />}
           >
             <div style={growthStackStyle}>
               {growthComparisons.map((comparison, index) => (
@@ -241,15 +240,15 @@ export default function CustomerReportFilters({
                   <button
                     type="button"
                     onClick={() => removeGrowthComparison(index)}
-                    disabled={growthComparisons.length <= 1}
                     title="Remove growth comparison"
                     aria-label="Remove growth comparison"
-                    style={growthRemoveButtonStyle(growthComparisons.length <= 1)}
+                    style={growthRemoveButtonStyle(false)}
                   >
                     <X size={13} />
                   </button>
                 </div>
               ))}
+              <AddGrowthButton onClick={addGrowthComparison} disabled={!canAddGrowth} />
             </div>
           </FilterBlock>
         )}
@@ -415,8 +414,8 @@ const filterRowStyle: React.CSSProperties = {
 };
 
 const blockSizeStyle: Record<'years' | 'growth' | 'months' | 'groups' | 'customers', React.CSSProperties> = {
-  years: { flex: '2 1 620px', minWidth: 460, maxWidth: 820 },
-  growth: { flex: '1 1 330px', minWidth: 300, maxWidth: 520 },
+  years: { flex: '1 1 560px', minWidth: 460, maxWidth: 760 },
+  growth: { flex: '1 1 360px', minWidth: 320, maxWidth: '100%' },
   months: { flex: '1 1 360px', minWidth: 340, maxWidth: 460 },
   groups: { flex: '1 1 390px', minWidth: 360, maxWidth: 520 },
   customers: { flex: '2 1 500px', minWidth: 390, maxWidth: '100%' },
@@ -531,16 +530,24 @@ const clippedOptionsStyle: React.CSSProperties = {
 
 const growthStackStyle: React.CSSProperties = {
   display: 'flex',
-  flexDirection: 'column',
-  gap: 6,
-};
-
-const growthSlotStyle: React.CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: 'minmax(76px, 1fr) auto minmax(76px, 1fr) 26px',
+  flexDirection: 'row',
+  flexWrap: 'wrap',
   alignItems: 'center',
   gap: 6,
   minWidth: 0,
+};
+
+const growthSlotStyle: React.CSSProperties = {
+  flex: '0 0 224px',
+  display: 'grid',
+  gridTemplateColumns: 'minmax(64px, 1fr) auto minmax(64px, 1fr) 26px',
+  alignItems: 'center',
+  gap: 6,
+  minWidth: 224,
+  padding: 3,
+  border: '1px solid color-mix(in srgb, var(--color-border-light) 75%, transparent)',
+  borderRadius: 6,
+  background: 'color-mix(in srgb, var(--color-surface-0) 72%, transparent)',
 };
 
 const growthRemoveButtonStyle = (disabled: boolean): React.CSSProperties => ({

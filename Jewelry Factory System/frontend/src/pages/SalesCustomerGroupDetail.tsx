@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { CSSProperties, KeyboardEvent, ReactNode } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, ChevronLeft, ChevronRight, DollarSign, Eye, Hash, Search } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, DollarSign, Hash, Search } from 'lucide-react';
 import Topbar from '../components/layout/Topbar';
 import '../components/sales/SalesDenseTable.css';
 import { CUSTOMER_GROUPS } from '../config/customerGroups';
@@ -212,17 +212,17 @@ export default function SalesCustomerGroupDetail() {
               <table className="sales-dense-table sales-dense-table--sticky-first" style={tableBase}>
                 <thead>
                   <tr>
-                    {['Order No', 'Item No', 'Ord Date', 'Cust Due', 'Customer', 'Brand', 'Type', 'Ord Qty', 'Shipped', 'Amount', 'Status', 'Market', 'Actions'].map((head, index) => <th key={head} className={index >= 7 && index <= 9 ? 'sales-dense-table__number' : undefined}>{head}</th>)}
+                    {['Order No', 'Item No', 'Ord Date', 'Cust Due', 'Customer', 'Brand', 'Type', 'Ord Qty', 'Shipped', 'Amount', 'Status', 'Market'].map((head, index) => <th key={head} className={index >= 7 && index <= 9 ? 'sales-dense-table__number' : undefined}>{head}</th>)}
                   </tr>
                 </thead>
                 <tbody>
-                  {loading && <DetailSkeletonRows columns={13} />}
-                  {!loading && pageRows.length === 0 && <tr><td colSpan={13} className="sales-dense-empty">No orders match the current filter.</td></tr>}
+                  {loading && <DetailSkeletonRows columns={12} />}
+                  {!loading && pageRows.length === 0 && <tr><td colSpan={12} className="sales-dense-empty">No orders match the current filter.</td></tr>}
                   {!loading && pageRows.map(row => {
                     const shippedPct = row.orderQty > 0 ? Math.min(100, Math.round((row.shippedQty / row.orderQty) * 100)) : 0;
                     return (
                       <tr key={`${row.orderNo}-${row.itemNo}`}>
-                        <td style={tdStrong}><button onClick={() => navigate(`/po-tracker/ord/${encodeURIComponent(row.orderNo)}`)} style={linkButton}>{row.orderNo}</button><div style={subText}>{row.poNo || '-'}</div></td>
+                        <td style={tdStrong}>{row.orderNo}<div style={subText}>{row.poNo || '-'}</div></td>
                         <td style={tdStrong}><button onClick={() => navigate(`/item-detail/${encodeURIComponent(row.itemNo)}`)} style={linkButton}>{row.itemNo}</button></td>
                         <td style={td}>{fmtDate(row.ordDate)}</td>
                         <td style={{ ...td, color: row.status === 'Late' ? 'var(--color-danger-500)' : 'var(--color-text-primary)', fontWeight: row.status === 'Late' ? 900 : 800 }}>{fmtDate(row.custDueDate)}</td>
@@ -234,7 +234,6 @@ export default function SalesCustomerGroupDetail() {
                         <td style={tdRight}>{fmtAmount(row.amount)}</td>
                         <td style={td}><StatusBadge status={row.status} /></td>
                         <td style={td}>{row.market || '-'}</td>
-                        <td style={td}><button onClick={() => navigate(`/po-tracker/ord/${encodeURIComponent(row.orderNo)}`)} title="Open order" style={iconButton}><Eye size={14} /></button></td>
                       </tr>
                     );
                   })}
@@ -319,7 +318,7 @@ const linkButton: CSSProperties = { background: 'none', border: 'none', color: '
 const shippedCell: CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8 };
 const progressTrack: CSSProperties = { width: 64, height: 6, background: 'var(--color-surface-2)', borderRadius: 999, overflow: 'hidden' };
 const progressFill: CSSProperties = { display: 'block', height: '100%' };
-const iconButton: CSSProperties = { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, borderRadius: 8, border: '1px solid var(--color-border-light)', background: 'var(--color-surface-1)', color: 'var(--color-text-secondary)', cursor: 'pointer' };
+
 const paginationBar: CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '12px 16px', borderTop: '1px solid var(--color-border-light)', flexWrap: 'wrap' };
 const paginationText: CSSProperties = { color: 'var(--color-text-tertiary)', fontSize: '0.75rem', fontWeight: 800 };
 const paginationButtons: CSSProperties = { display: 'flex', alignItems: 'center', gap: 8 };

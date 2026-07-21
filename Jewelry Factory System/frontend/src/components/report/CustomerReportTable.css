@@ -223,8 +223,14 @@
 }
 
 .customer-matrix-td--growth {
-  min-width: 86px;
-  width: 86px;
+  min-width: 118px;
+  width: 118px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.customer-matrix-th.customer-matrix-td--growth {
+  text-align: center;
 }
 
 .customer-matrix-current {

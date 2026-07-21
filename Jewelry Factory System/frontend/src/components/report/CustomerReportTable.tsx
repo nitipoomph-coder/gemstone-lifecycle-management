@@ -56,6 +56,20 @@ function saveCsv(fileName: string, rows: unknown[][]) {
   URL.revokeObjectURL(url);
 }
 
+function formatChangeAmount(fmt: (val: number) => string, diff: number) {
+  const sign = diff > 0 ? '+' : diff < 0 ? '\u2212' : '';
+  return `${sign}${fmt(Math.abs(diff))}`;
+}
+
+function formatGrowthRate(baseVal: number, compVal: number) {
+  const diff = baseVal - compVal;
+  if (compVal === 0 && baseVal === 0) return '-';
+  if (compVal === 0) return 'No base';
+  const pct = (diff / compVal) * 100;
+  const sign = pct > 0 ? '+' : pct < 0 ? '\u2212' : '';
+  return `${sign}${Math.abs(pct).toFixed(1)}%`;
+}
+
 type MatrixSkeletonStyle = React.CSSProperties & {
   '--matrix-skeleton-columns'?: number;
   '--matrix-skeleton-width'?: string;
@@ -131,8 +145,8 @@ export default function CustomerReportTable({
       });
       if (displayYears.length > 1) {
         growthComparisons.forEach((comp) => {
-          headers.push(`Growth ${comp.a} vs ${comp.b}`);
-          headers.push(`Growth % ${comp.a} vs ${comp.b}`);
+          headers.push(`Change Amount ${comp.a} vs ${comp.b}`);
+          headers.push(`Growth Rate ${comp.a} vs ${comp.b}`);
         });
       }
       exportRows.push(headers);
@@ -147,8 +161,8 @@ export default function CustomerReportTable({
           growthComparisons.forEach((comp) => {
             const baseVal = Number(row[`${comp.a}_total`] || 0);
             const compVal = Number(row[`${comp.b}_total`] || 0);
-            line.push(fmt(baseVal - compVal));
-            line.push(compVal > 0 ? `${(((baseVal - compVal) / compVal) * 100).toFixed(1)}%` : baseVal > 0 ? 'No base' : '-');
+            line.push(formatChangeAmount(fmt, baseVal - compVal));
+            line.push(formatGrowthRate(baseVal, compVal));
           });
         }
         exportRows.push(line);
@@ -159,16 +173,16 @@ export default function CustomerReportTable({
         displayYears.forEach((yr) => headers.push(`${m} ${yr}`));
         if (displayYears.length > 1) {
           growthComparisons.forEach((comp) => {
-            headers.push(`${m} Growth ${comp.a} vs ${comp.b}`);
-            headers.push(`${m} Growth % ${comp.a} vs ${comp.b}`);
+            headers.push(`${m} Change Amount ${comp.a} vs ${comp.b}`);
+            headers.push(`${m} Growth Rate ${comp.a} vs ${comp.b}`);
           });
         }
       });
       displayYears.forEach((yr) => headers.push(`Total ${yr}`));
       if (displayYears.length > 1) {
         growthComparisons.forEach((comp) => {
-          headers.push(`Total Growth ${comp.a} vs ${comp.b}`);
-          headers.push(`Total Growth % ${comp.a} vs ${comp.b}`);
+          headers.push(`Total Change Amount ${comp.a} vs ${comp.b}`);
+          headers.push(`Total Growth Rate ${comp.a} vs ${comp.b}`);
         });
       }
       exportRows.push(headers);
@@ -181,8 +195,8 @@ export default function CustomerReportTable({
             growthComparisons.forEach((comp) => {
               const baseVal = Number(row[`${comp.a}_${m}`] || 0);
               const compVal = Number(row[`${comp.b}_${m}`] || 0);
-              line.push(fmt(baseVal - compVal));
-              line.push(compVal > 0 ? `${(((baseVal - compVal) / compVal) * 100).toFixed(1)}%` : baseVal > 0 ? 'No base' : '-');
+              line.push(formatChangeAmount(fmt, baseVal - compVal));
+              line.push(formatGrowthRate(baseVal, compVal));
             });
           }
         });
@@ -191,8 +205,8 @@ export default function CustomerReportTable({
           growthComparisons.forEach((comp) => {
             const baseVal = Number(row[`${comp.a}_total`] || 0);
             const compVal = Number(row[`${comp.b}_total`] || 0);
-            line.push(fmt(baseVal - compVal));
-            line.push(compVal > 0 ? `${(((baseVal - compVal) / compVal) * 100).toFixed(1)}%` : baseVal > 0 ? 'No base' : '-');
+            line.push(formatChangeAmount(fmt, baseVal - compVal));
+            line.push(formatGrowthRate(baseVal, compVal));
           });
         }
         exportRows.push(line);
@@ -378,7 +392,7 @@ export default function CustomerReportTable({
                   ))}
                   {displayYears.length > 1 && growthComparisons.map((comp, idx) => (
                     <th key={`growth_hdr_top_${idx}`} colSpan={2} className="customer-matrix-th customer-matrix-th--top">
-                      <div className="customer-matrix-growth-label"><span>Growth</span><span>{comp.a} vs {comp.b}</span></div>
+                      <div className="customer-matrix-growth-label"><span>Change</span><span>{comp.a} vs {comp.b}</span></div>
                     </th>
                   ))}
                 </tr>
@@ -393,8 +407,8 @@ export default function CustomerReportTable({
                   ))}
                   {displayYears.length > 1 && growthComparisons.map((_, idx) => (
                     <React.Fragment key={`growth_hdr_sub_${idx}`}>
-                      <th className="customer-matrix-th customer-matrix-th--sub customer-matrix-td--growth">Growth</th>
-                      <th className="customer-matrix-th customer-matrix-th--sub customer-matrix-td--growth">%</th>
+                      <th className="customer-matrix-th customer-matrix-th--sub customer-matrix-td--growth">Change Amount</th>
+                      <th className="customer-matrix-th customer-matrix-th--sub customer-matrix-td--growth">Growth Rate</th>
                     </React.Fragment>
                   ))}
                 </tr>
@@ -469,8 +483,8 @@ export default function CustomerReportTable({
                       {displayYears.map((yr) => <th key={`${m}_${yr}`} className={`customer-matrix-th customer-matrix-th--sub customer-matrix-td--number ${isCurrentMonth(yr, m) ? 'customer-matrix-current' : ''}`}>{yr}</th>)}
                       {displayYears.length > 1 && growthComparisons.map((comp, idx) => (
                         <React.Fragment key={`growth_m_hdr_${idx}`}>
-                          <th className="customer-matrix-th customer-matrix-th--sub customer-matrix-td--growth">Growth <span className="customer-matrix-muted">{comp.a}/{comp.b}</span></th>
-                          <th className="customer-matrix-th customer-matrix-th--sub customer-matrix-td--growth">%</th>
+                          <th className="customer-matrix-th customer-matrix-th--sub customer-matrix-td--growth">Change Amount <span className="customer-matrix-muted">{comp.a}/{comp.b}</span></th>
+                          <th className="customer-matrix-th customer-matrix-th--sub customer-matrix-td--growth">Growth Rate</th>
                         </React.Fragment>
                       ))}
                     </React.Fragment>
@@ -478,8 +492,8 @@ export default function CustomerReportTable({
                   {displayYears.map((yr) => <th key={`tot_hdr_${yr}`} className={totalHeaderClassName(yr)}>{yr}</th>)}
                   {displayYears.length > 1 && growthComparisons.map((comp, idx) => (
                     <React.Fragment key={`growth_m_tot_hdr_${idx}`}>
-                      <th className="customer-matrix-th customer-matrix-th--sub customer-matrix-td--growth">Growth <span className="customer-matrix-muted">{comp.a}/{comp.b}</span></th>
-                      <th className="customer-matrix-th customer-matrix-th--sub customer-matrix-td--growth">%</th>
+                      <th className="customer-matrix-th customer-matrix-th--sub customer-matrix-td--growth">Change Amount <span className="customer-matrix-muted">{comp.a}/{comp.b}</span></th>
+                      <th className="customer-matrix-th customer-matrix-th--sub customer-matrix-td--growth">Growth Rate</th>
                     </React.Fragment>
                   ))}
                 </tr>

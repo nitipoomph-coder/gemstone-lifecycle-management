@@ -2,7 +2,7 @@ import { fetchWithAuth } from '../utils/fetchWithAuth';
 import { BASE_URL } from './poTrackerAPI';
 
 export type SalesMetric = 'amount' | 'qty';
-export type SalesDateView = 'orddate' | 'duedate' | 'custdate' | 'ordmonth' | 'shipmonth';
+export type SalesDateView = 'order' | 'ship' | 'orddate' | 'duedate' | 'custdate' | 'ordmonth' | 'shipmonth';
 
 export interface SalesCustomerGroupPoint {
   salesName?: string;

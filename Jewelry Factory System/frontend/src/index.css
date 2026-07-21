@@ -136,6 +136,17 @@
   :root:has(body.theme-modern-dark) {
     color-scheme: dark;
   }
+  button:focus:not(:focus-visible),
+  [role="button"]:focus:not(:focus-visible) {
+    outline: none;
+    box-shadow: none;
+  }
+
+  button:focus-visible,
+  [role="button"]:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--color-brand-500) 42%, transparent);
+    outline-offset: 2px;
+  }
 
   /* Floating Label Components (Material Design style) */
   .floating-container {
@@ -243,7 +254,7 @@
     color: var(--color-text-secondary);
   }
 
-  /* UI THEME: DARK GOLD (override — เปิดใช้ทีหลัง) */
+  /* UI THEME: DARK GOLD (override, enable later) */
   .theme-dark-gold {
     color-scheme: dark;
     --theme-calendar-invert: invert(0.85) sepia(1) saturate(5) hue-rotate(15deg);
@@ -337,7 +348,7 @@
     color-scheme: dark;
   }
 
-  /* UI THEME: ROYAL WHITE (override — default) */
+  /* UI THEME: ROYAL WHITE (override, default) */
   .theme-royal-white {
     color-scheme: light;
     --theme-calendar-invert: invert(0.2);
@@ -629,7 +640,7 @@ h6 {
 }
 
 /* ============================================
-   2026 SIDEBAR MODERNIZATION — Animations & Utilities
+   2026 SIDEBAR MODERNIZATION, Animations & Utilities
    ============================================ */
 
 @keyframes pulseGlow {

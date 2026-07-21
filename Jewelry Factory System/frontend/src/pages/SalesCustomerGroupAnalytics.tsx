@@ -1,17 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { CSSProperties, ReactNode } from 'react';
+import type { CSSProperties, KeyboardEvent, ReactNode } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowRight, CalendarDays, DollarSign, Hash, PackageSearch, RefreshCw, Users, X } from 'lucide-react';
+import { ArrowRight, CalendarDays, DollarSign, Eye, Hash, PackageSearch, RefreshCw, Search, Users, X } from 'lucide-react';
 import Topbar from '../components/layout/Topbar';
 import '../components/sales/SalesDenseTable.css';
 import { ALL_GROUPS, CUSTOMER_GROUPS, getCustomerGroupId } from '../config/customerGroups';
 import { fetchAvailableYears } from '../services/dashboardAPI';
-import {
-  fetchSalesCustomerGroups,
-  fetchTopItems,
-  type SalesCustomerGroupPoint,
-  type TopItemRow,
-} from '../services/customerSalesAPI';
+import { fetchSalesOrders, fetchTopItems, type SalesOrderRow, type TopItemRow } from '../services/customerSalesAPI';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const MONTH_VALUES = MONTHS.map((_, index) => String(index + 1));
@@ -22,38 +17,49 @@ const QUARTERS = [
   { label: 'Q4', months: ['10', '11', '12'] },
 ];
 const PRODUCT_TYPE_LABELS: Record<string, string> = {
-  A: 'Mobile Hanging',
-  B: 'Bangle',
-  D: 'Body Jewelry',
-  E: 'Earring',
-  F: 'Anklet',
-  H: 'Brooch',
-  N: 'Necklace',
-  O: 'Other',
-  P: 'Pendant',
-  R: 'Ring',
-  S: 'Stone',
-  T: 'Bracelet',
+  A: 'Mobile Hanging', B: 'Bangle', D: 'Body Jewelry', E: 'Earring', F: 'Anklet',
+  H: 'Brooch', N: 'Necklace', O: 'Other', P: 'Pendant', R: 'Ring', S: 'Stone', T: 'Bracelet',
 };
 
 type Metric = 'amount' | 'qty';
-type GroupSummaryRow = {
-  id: string;
-  label: string;
-  color: string;
-  customerCount: number;
+type ItemStat = { itemNo: string; qty: number; amount: number; orderCount: number };
+type CustomerTrendRow = {
+  customerCode: string;
+  customerName: string;
+  groupLabel: string;
+  groupColor: string;
   amount: number;
   qty: number;
   shippedQty: number;
+  gapQty: number;
   orderCount: number;
+  lateCount: number;
   primaryValue: number;
   compareValue: number | null;
+  topItemNo: string;
+  topItemQty: number;
+  topItemAmount: number;
+  lastOrderNo: string;
+  lastOrderDate: string | null;
+};
+
+type CustomerAccumulator = Omit<CustomerTrendRow, 'orderCount' | 'lateCount' | 'topItemNo' | 'topItemQty' | 'topItemAmount'> & {
+  orderNos: Set<string>;
+  lateOrderNos: Set<string>;
+  itemStats: Map<string, ItemStat>;
 };
 
 const fmtAmount = (value: number) => `$${value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
 const fmtQty = (value: number) => value.toLocaleString(undefined, { maximumFractionDigits: 0 });
 const fmtMetric = (value: number, metric: Metric) => metric === 'amount' ? fmtAmount(value) : fmtQty(value);
 const fmtSignedMetric = (value: number, metric: Metric) => (value > 0 ? '+' : value < 0 ? '-' : '') + fmtMetric(Math.abs(value), metric);
+const fmtPercent = (value: number | null) => value === null ? '-' : `${value > 0 ? '+' : value < 0 ? '-' : ''}${Math.abs(value).toFixed(1)}%`;
+const fmtDate = (value: string | null) => {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '-';
+  return date.toLocaleDateString('en-GB');
+};
 
 function csv(value: string | null) {
   return String(value || '').split(',').map(item => item.trim()).filter(Boolean);
@@ -92,42 +98,121 @@ function selectionSummary(selected: string[], total: number, noun: string) {
   return `${selected.length} ${noun} selected`;
 }
 
-function buildGroupSummary(points: SalesCustomerGroupPoint[], metric: Metric, primaryYear: string, compareYear: string) {
-  const map = new Map<string, GroupSummaryRow & { customerCodes: Set<string> }>();
+function yearFromOrder(row: SalesOrderRow) {
+  if (!row.ordDate) return '';
+  const date = new Date(row.ordDate);
+  if (Number.isNaN(date.getTime())) return '';
+  return String(date.getFullYear());
+}
 
-  points.forEach(row => {
-    const groupId = getCustomerGroupId(row.customerCode);
-    const group = groupConfig(groupId);
-    const current = map.get(groupId) || {
-      id: groupId,
-      label: group.label,
-      color: group.color,
-      customerCount: 0,
-      customerCodes: new Set<string>(),
+function isAfter(left: string | null, right: string | null) {
+  if (!left) return false;
+  if (!right) return true;
+  const leftDate = new Date(left).getTime();
+  const rightDate = new Date(right).getTime();
+  if (Number.isNaN(leftDate)) return false;
+  if (Number.isNaN(rightDate)) return true;
+  return leftDate > rightDate;
+}
+
+function buildCustomerTrends(rows: SalesOrderRow[], metric: Metric, primaryYear: string, compareYear: string) {
+  const map = new Map<string, CustomerAccumulator>();
+
+  rows.forEach(row => {
+    const customerCode = row.customerCode || 'UNKNOWN';
+    const group = groupConfig(getCustomerGroupId(customerCode));
+    const current = map.get(customerCode) || {
+      customerCode,
+      customerName: row.customerName || customerCode,
+      groupLabel: group.label,
+      groupColor: group.color,
       amount: 0,
       qty: 0,
       shippedQty: 0,
-      orderCount: 0,
+      gapQty: 0,
+      orderNos: new Set<string>(),
+      lateOrderNos: new Set<string>(),
       primaryValue: 0,
       compareValue: compareYear === 'none' ? null : 0,
+      itemStats: new Map<string, ItemStat>(),
+      lastOrderNo: '',
+      lastOrderDate: null,
     };
-    const amount = Number(row.amount || 0);
-    const qty = Number(row.qty || 0);
-    const metricValue = metric === 'amount' ? amount : qty;
 
-    current.customerCodes.add(row.customerCode);
+    const amount = Number(row.amount || 0);
+    const qty = Number(row.orderQty || 0);
+    const shippedQty = Number(row.shippedQty || 0);
+    const metricValue = metric === 'amount' ? amount : qty;
+    const orderYear = yearFromOrder(row);
+
     current.amount += amount;
     current.qty += qty;
-    current.shippedQty += Number(row.shippedQty || 0);
-    current.orderCount += Number(row.orderCount || 0);
-    if (String(row.year) === primaryYear) current.primaryValue += metricValue;
-    if (compareYear !== 'none' && String(row.year) === compareYear) current.compareValue = Number(current.compareValue || 0) + metricValue;
-    map.set(groupId, current);
+    current.shippedQty += shippedQty;
+    current.gapQty += Math.max(qty - shippedQty, 0);
+    if (row.orderNo) current.orderNos.add(row.orderNo);
+    if (row.status === 'Late' && row.orderNo) current.lateOrderNos.add(row.orderNo);
+    if (orderYear === primaryYear) current.primaryValue += metricValue;
+    if (compareYear !== 'none' && orderYear === compareYear) current.compareValue = Number(current.compareValue || 0) + metricValue;
+
+    if (row.itemNo) {
+      const item = current.itemStats.get(row.itemNo) || { itemNo: row.itemNo, qty: 0, amount: 0, orderCount: 0 };
+      item.qty += qty;
+      item.amount += amount;
+      item.orderCount += 1;
+      current.itemStats.set(row.itemNo, item);
+    }
+
+    if (isAfter(row.ordDate, current.lastOrderDate)) {
+      current.lastOrderDate = row.ordDate;
+      current.lastOrderNo = row.orderNo;
+    }
+
+    map.set(customerCode, current);
   });
 
-  return Array.from(map.values())
-    .map(row => ({ ...row, customerCount: row.customerCodes.size }))
-    .sort((a, b) => (metric === 'amount' ? b.amount - a.amount : b.qty - a.qty));
+  return Array.from(map.values()).map(row => {
+    const topItem = Array.from(row.itemStats.values()).sort((a, b) => {
+      const primary = metric === 'amount' ? b.amount - a.amount : b.qty - a.qty;
+      return primary || b.orderCount - a.orderCount || a.itemNo.localeCompare(b.itemNo);
+    })[0];
+
+    return {
+      customerCode: row.customerCode,
+      customerName: row.customerName,
+      groupLabel: row.groupLabel,
+      groupColor: row.groupColor,
+      amount: row.amount,
+      qty: row.qty,
+      shippedQty: row.shippedQty,
+      gapQty: row.gapQty,
+      orderCount: row.orderNos.size,
+      lateCount: row.lateOrderNos.size,
+      primaryValue: row.primaryValue,
+      compareValue: row.compareValue,
+      topItemNo: topItem?.itemNo || '-',
+      topItemQty: topItem?.qty || 0,
+      topItemAmount: topItem?.amount || 0,
+      lastOrderNo: row.lastOrderNo || '-',
+      lastOrderDate: row.lastOrderDate,
+    };
+  }).sort((a, b) => {
+    const primary = metric === 'amount' ? b.amount - a.amount : b.qty - a.qty;
+    return primary || a.customerCode.localeCompare(b.customerCode);
+  });
+}
+function growthPct(primaryValue: number, compareValue: number | null) {
+  if (compareValue === null) return null;
+  if (compareValue === 0 && primaryValue === 0) return 0;
+  if (compareValue === 0) return null;
+  return ((primaryValue - compareValue) / compareValue) * 100;
+}
+
+function recentOrderRows(rows: SalesOrderRow[]) {
+  return [...rows].sort((a, b) => {
+    const right = b.ordDate ? new Date(b.ordDate).getTime() : 0;
+    const left = a.ordDate ? new Date(a.ordDate).getTime() : 0;
+    return right - left || String(b.orderNo || '').localeCompare(String(a.orderNo || ''));
+  }).slice(0, 18);
 }
 
 export default function SalesCustomerGroupAnalytics() {
@@ -143,10 +228,12 @@ export default function SalesCustomerGroupAnalytics() {
   const [monthDropdownOpen, setMonthDropdownOpen] = useState(false);
   const [selectedGroups, setSelectedGroups] = useState<string[]>(() => initialGroupsFromParams(requestedGroups, requestedCustomers));
   const [metric, setMetric] = useState<Metric>(searchParams.get('metric') === 'qty' ? 'qty' : 'amount');
-  const [points, setPoints] = useState<SalesCustomerGroupPoint[]>([]);
+  const [orders, setOrders] = useState<SalesOrderRow[]>([]);
   const [topItems, setTopItems] = useState<TopItemRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [searchDraft, setSearchDraft] = useState('');
+  const [search, setSearch] = useState('');
 
   const customers = useMemo(() => selectedCustomerCodes(selectedGroups), [selectedGroups]);
 
@@ -163,17 +250,16 @@ export default function SalesCustomerGroupAnalytics() {
       .catch(err => setError(err instanceof Error ? err.message : 'Failed to load years'));
   }, [requestedYears]);
 
-  // Load the Customer Sales Overview KPI rows and Top 30 Items table.
   const loadCustomerTrends = useCallback(async () => {
     if (selectedYears.length === 0) return;
     setLoading(true);
     setError('');
     try {
-      const [groupData, itemData] = await Promise.all([
-        fetchSalesCustomerGroups({ years: selectedYears, months: selectedMonths, customers }),
-        fetchTopItems({ years: selectedYears, months: selectedMonths, customers, metric, limit: 30 }),
+      const [orderData, itemData] = await Promise.all([
+        fetchSalesOrders({ years: selectedYears, months: selectedMonths, customers }),
+        fetchTopItems({ years: selectedYears, months: selectedMonths, customers, metric, limit: 50 }),
       ]);
-      setPoints(groupData);
+      setOrders(orderData);
       setTopItems(itemData);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load customer trends');
@@ -187,18 +273,47 @@ export default function SalesCustomerGroupAnalytics() {
     return () => window.clearTimeout(loadTimer);
   }, [loadCustomerTrends]);
 
-  // KPI cards are totals from the customer group endpoint.
-  const kpi = useMemo(() => {
-    const amount = points.reduce((sum, row) => sum + Number(row.amount || 0), 0);
-    const qty = points.reduce((sum, row) => sum + Number(row.qty || 0), 0);
-    const shipped = points.reduce((sum, row) => sum + Number(row.shippedQty || 0), 0);
-    const orders = points.reduce((sum, row) => sum + Number(row.orderCount || 0), 0);
-    return { amount, qty, shipped, orders };
-  }, [points]);
-
   const primaryYear = selectedYears[selectedYears.length - 1] || availableYears[availableYears.length - 1] || '';
   const compareYear = selectedYears.find(year => year !== primaryYear) || 'none';
-  const groupSummary = useMemo(() => buildGroupSummary(points, metric, primaryYear, compareYear), [points, metric, primaryYear, compareYear]);
+  const customerTrends = useMemo(() => buildCustomerTrends(orders, metric, primaryYear, compareYear), [orders, metric, primaryYear, compareYear]);
+  const filteredCustomerTrends = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return customerTrends;
+    return customerTrends.filter(row => [row.customerCode, row.customerName, row.groupLabel, row.topItemNo, row.lastOrderNo].some(value => String(value || '').toLowerCase().includes(q)));
+  }, [customerTrends, search]);
+  const recentOrders = useMemo(() => recentOrderRows(orders), [orders]);
+
+  const kpi = useMemo(() => {
+    const orderNos = new Set<string>();
+    const lateOrders = new Set<string>();
+    let amount = 0;
+    let qty = 0;
+    let shipped = 0;
+    orders.forEach(row => {
+      if (row.orderNo) orderNos.add(row.orderNo);
+      if (row.status === 'Late' && row.orderNo) lateOrders.add(row.orderNo);
+      amount += Number(row.amount || 0);
+      qty += Number(row.orderQty || 0);
+      shipped += Number(row.shippedQty || 0);
+    });
+    return { amount, qty, shipped, gap: Math.max(qty - shipped, 0), orders: orderNos.size, late: lateOrders.size };
+  }, [orders]);
+
+  const applySearch = () => {
+    const nextSearch = searchDraft.toUpperCase();
+    setSearchDraft(nextSearch);
+    setSearch(nextSearch);
+  };
+
+  const clearSearch = () => {
+    setSearchDraft('');
+    setSearch('');
+  };
+
+  const handleSearchKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') applySearch();
+    if (event.key === 'Escape') setSearchDraft(search.toUpperCase());
+  };
 
   const updateYearSelection = (primary: string, compare: string) => {
     const next = [primary, compare].filter(year => year && year !== 'none');
@@ -217,38 +332,44 @@ export default function SalesCustomerGroupAnalytics() {
   const selectedMonthSummary = selectionSummary(selectedMonths, MONTHS.length, 'months');
   const selectedGroupSummary = selectedGroups.length === 0 ? 'All customer groups' : `${selectedGroups.length} customer groups selected`;
 
-  const openDetail = () => {
+  const detailParams = (customerCode?: string) => {
     const params = new URLSearchParams();
     if (selectedYears.length) params.set('years', selectedYears.join(','));
     if (selectedMonths.length) params.set('months', selectedMonths.join(','));
-    if (customers.length) params.set('customers', customers.join(','));
-    if (selectedGroups.length) params.set('groups', selectedGroups.join(','));
+    if (customerCode) params.set('customers', customerCode);
+    else if (customers.length) params.set('customers', customers.join(','));
+    if (!customerCode && selectedGroups.length) params.set('groups', selectedGroups.join(','));
     params.set('metric', metric);
-    navigate(`/dashboard/sales-customer-detail?${params.toString()}`);
+    return params;
+  };
+
+  const openDetail = (customerCode?: string) => {
+    navigate(`/dashboard/sales-customer-detail?${detailParams(customerCode).toString()}`);
   };
 
   return (
     <>
       <Topbar breadcrumb={[{ label: 'JEWELRY FACTORY SYSTEM', path: '/' }, { label: 'CUSTOMER TRENDS' }]} />
       <div className="content-scrollbar flex-1 overflow-y-auto" style={{ background: 'var(--color-surface-1)' }}>
-        <div className="p-6 flex flex-col gap-5 w-full">
+        <div className="p-6 flex flex-col gap-4 w-full">
           <div style={pageHeader}>
             <div>
               <h1 style={pageTitle}>Customer Trends</h1>
-              <p style={pageSubtitle}>Customer group trends across amount, quantity, orders, and shipped qty.</p>
+              <p style={pageSubtitle}>Customer movement built from real order lines, with item drivers and latest order evidence.</p>
             </div>
             <div style={headerActions}>
+              <SearchBox value={searchDraft} onChange={value => setSearchDraft(value.toUpperCase())} onKeyDown={handleSearchKeyDown} onApply={applySearch} onClear={clearSearch} active={Boolean(search)} />
               <SegmentButton active={metric === 'amount'} onClick={() => setMetric('amount')} icon={<DollarSign size={14} />} label="Amount" />
               <SegmentButton active={metric === 'qty'} onClick={() => setMetric('qty')} icon={<Hash size={14} />} label="Qty" />
-              <button onClick={openDetail} style={primaryButton}>Order List <ArrowRight size={14} /></button>
+              <button onClick={() => openDetail()} style={primaryButton}>Order List <ArrowRight size={14} /></button>
             </div>
           </div>
 
           <div style={kpiGrid}>
             <Kpi icon={<DollarSign size={18} />} label="Sales Amount" value={fmtAmount(kpi.amount)} />
             <Kpi icon={<Hash size={18} />} label="Ordered Qty" value={fmtQty(kpi.qty)} />
-            <Kpi icon={<PackageSearch size={18} />} label="Shipped Qty" value={fmtQty(kpi.shipped)} />
-            <Kpi icon={<Users size={18} />} label="Orders" value={fmtQty(kpi.orders)} />
+            <Kpi icon={<PackageSearch size={18} />} label="Open Gap Qty" value={fmtQty(kpi.gap)} />
+            <Kpi icon={<Users size={18} />} label="Orders / Late" value={`${fmtQty(kpi.orders)} / ${fmtQty(kpi.late)}`} />
           </div>
 
           <section style={filterShell}>
@@ -265,55 +386,63 @@ export default function SalesCustomerGroupAnalytics() {
           </section>
 
           {error && <div style={errorText}>{error}</div>}
-          {loading && <div className="sales-dense-loading-text"><RefreshCw size={14} className="animate-spin" /> Loading customer trends...</div>}
+          {loading && <div className="sales-dense-loading-text"><RefreshCw size={14} className="animate-spin" /> Loading customer, item, and order evidence...</div>}
+          <Panel title="Customer Evidence Matrix" icon={<Users size={14} />} action={<span style={panelMeta}>{loading ? 'Loading...' : `${fmtQty(filteredCustomerTrends.length)} customers`}</span>}>
+            <div className="content-scrollbar sales-dense-scroll" style={customerTableScroll}>
+              <table className="sales-dense-table sales-dense-table--sticky-first" style={{ minWidth: 1320 }}>
+                <thead>
+                  <tr>
+                    {['Customer', 'Group', 'Orders', 'Late', 'Ord Qty', 'Shipped', 'Gap', 'Amount', 'Top Item', 'Last Order', primaryYear || 'Primary', compareYear === 'none' ? 'Compare' : compareYear, 'Delta', 'Growth', 'Actions'].map((head, index) => <th key={head} className={(index >= 2 && index <= 7) || (index >= 10 && index <= 13) ? 'sales-dense-table__number' : undefined}>{head}</th>)}
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading && <TableSkeletonRows columns={15} rows={10} />}
+                  {!loading && filteredCustomerTrends.length === 0 && <EmptyRow colSpan={15} label="No customer evidence matches the current filter." />}
+                  {!loading && filteredCustomerTrends.map(row => {
+                    const delta = row.compareValue === null ? null : row.primaryValue - row.compareValue;
+                    const pct = growthPct(row.primaryValue, row.compareValue);
+                    const deltaTone = delta === null ? 'sales-dense-table__tone-muted' : delta >= 0 ? 'sales-dense-table__tone-up' : 'sales-dense-table__tone-down';
+                    return (
+                      <tr key={row.customerCode}>
+                        <td style={tdItem}><button onClick={() => openDetail(row.customerCode)} style={linkButton}>{row.customerName}</button><div style={subText}>{row.customerCode}</div></td>
+                        <td style={tdStrong}><span style={{ ...groupDot, background: row.groupColor }} />{row.groupLabel}</td>
+                        <td style={tdRight}>{fmtQty(row.orderCount)}</td>
+                        <td style={{ ...tdRight, color: row.lateCount > 0 ? 'var(--color-danger-500)' : 'var(--color-text-primary)', fontWeight: row.lateCount > 0 ? 900 : 800 }}>{fmtQty(row.lateCount)}</td>
+                        <td style={tdRight}>{fmtQty(row.qty)}</td>
+                        <td style={tdRight}>{fmtQty(row.shippedQty)}</td>
+                        <td style={tdRight}>{fmtQty(row.gapQty)}</td>
+                        <td style={tdRight}>{fmtAmount(row.amount)}</td>
+                        <td style={tdItem}><button onClick={() => navigate(`/item-detail/${encodeURIComponent(row.topItemNo)}`)} style={linkButton}>{row.topItemNo}</button><div style={subText}>{fmtMetric(metric === 'amount' ? row.topItemAmount : row.topItemQty, metric)}</div></td>
+                        <td style={tdItem}>{row.lastOrderNo}<div style={subText}>{fmtDate(row.lastOrderDate)}</div></td>
+                        <td style={tdRight}>{fmtMetric(row.primaryValue, metric)}</td>
+                        <td style={tdRight}>{row.compareValue === null ? '-' : fmtMetric(row.compareValue, metric)}</td>
+                        <td className={deltaTone} style={tdRight}>{delta === null ? '-' : fmtSignedMetric(delta, metric)}</td>
+                        <td className={pct === null ? 'sales-dense-table__tone-muted' : pct >= 0 ? 'sales-dense-table__tone-up' : 'sales-dense-table__tone-down'} style={tdRight}>{fmtPercent(pct)}</td>
+                        <td style={td}><button onClick={() => openDetail(row.customerCode)} title="Open customer order list" className="sales-dense-action"><Eye size={14} /></button></td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </Panel>
 
           <div style={twoColumnGrid}>
-            <Panel title="Customer Group Summary" icon={<Users size={14} />} action={<button onClick={openDetail} style={linkAction}>Open Order List</button>}>
-              <div className="content-scrollbar sales-dense-scroll" style={tableScroll}>
-                <table className="sales-dense-table sales-dense-table--sticky-first" style={{ minWidth: 880 }}>
-                  <thead>
-                    <tr>
-                      {['Customer Group', 'Customers', 'Orders', 'Ordered Qty', 'Shipped Qty', 'Sales Amount', primaryYear || 'Primary', compareYear === 'none' ? 'Compare' : compareYear, 'Delta'].map((head, index) => <th key={head} className={index >= 3 ? 'sales-dense-table__number' : undefined}>{head}</th>)}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {loading && <TableSkeletonRows columns={9} />}
-                    {!loading && groupSummary.length === 0 && <EmptyRow colSpan={9} label="No customer group data matches the current filter." />}
-                    {!loading && groupSummary.map(row => {
-                      const delta = row.compareValue === null ? null : row.primaryValue - row.compareValue;
-                      return (
-                        <tr key={row.id}>
-                          <td style={tdStrong}><span style={{ ...groupDot, background: row.color }} />{row.label}</td>
-                          <td style={td}>{fmtQty(row.customerCount)}</td>
-                          <td style={tdRight}>{fmtQty(row.orderCount)}</td>
-                          <td style={tdRight}>{fmtQty(row.qty)}</td>
-                          <td style={tdRight}>{fmtQty(row.shippedQty)}</td>
-                          <td style={tdRight}>{fmtAmount(row.amount)}</td>
-                          <td style={tdRight}>{fmtMetric(row.primaryValue, metric)}</td>
-                          <td style={tdRight}>{row.compareValue === null ? '-' : fmtMetric(row.compareValue, metric)}</td>
-                          <td className={`sales-dense-table__number ${delta === null ? 'sales-dense-table__tone-muted' : delta >= 0 ? 'sales-dense-table__tone-up' : 'sales-dense-table__tone-down'}`} style={tdRight}>{delta === null ? '-' : fmtSignedMetric(delta, metric)}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </Panel>
-
-            <Panel title="Item / Order Lines" icon={<PackageSearch size={14} />} action={<span style={panelMeta}>Sorted by {metric === 'amount' ? 'Sales Amount' : 'Ordered Qty'}</span>}>
+            <Panel title="Item Drivers" icon={<PackageSearch size={14} />} action={<span style={panelMeta}>Top {Math.min(topItems.length, 50)} by {metric === 'amount' ? 'amount' : 'qty'}</span>}>
               <div className="content-scrollbar sales-dense-scroll" style={tableScroll}>
                 <table className="sales-dense-table sales-dense-table--sticky-first" style={{ minWidth: 980 }}>
                   <thead>
                     <tr>
-                      {['Item No', 'Customer Group', 'Type', 'Orders', 'Ordered Qty', 'Shipped Qty', 'Sales Amount', 'Avg Price'].map((head, index) => <th key={head} className={index >= 3 ? 'sales-dense-table__number' : undefined}>{head}</th>)}
+                      {['Item No', 'Primary Customer', 'Group', 'Type', 'Orders', 'Ordered Qty', 'Shipped Qty', 'Sales Amount', 'Avg Price'].map((head, index) => <th key={head} className={index >= 4 ? 'sales-dense-table__number' : undefined}>{head}</th>)}
                     </tr>
                   </thead>
                   <tbody>
-                    {loading && <TableSkeletonRows columns={8} />}
-                    {!loading && topItems.length === 0 && <EmptyRow colSpan={8} label="No item lines match the current filter." />}
+                    {loading && <TableSkeletonRows columns={9} />}
+                    {!loading && topItems.length === 0 && <EmptyRow colSpan={9} label="No item drivers match the current filter." />}
                     {!loading && topItems.map((item, index) => (
                       <tr key={`${item.itemNo}-${index}`}>
                         <td style={tdItem}><button onClick={() => navigate(`/item-detail/${encodeURIComponent(item.itemNo)}`)} style={linkButton}>{item.itemNo}</button><div style={subText}>{item.itemDesc || '-'}</div></td>
+                        <td style={tdStrong}>{item.primaryCustomerName || item.primaryCustomerCode || '-'}</td>
                         <td style={tdStrong}>{groupLabelFromCode(item.primaryCustomerCode)}<div style={subText}>{item.primaryCustomerCode || '-'}</div></td>
                         <td style={td}>{productTypeLabel(item.itemType, item.itemTypeName)}</td>
                         <td style={tdRight}>{fmtQty(item.orderCount)}</td>
@@ -327,10 +456,52 @@ export default function SalesCustomerGroupAnalytics() {
                 </table>
               </div>
             </Panel>
+
+            <Panel title="Recent Order Evidence" icon={<Eye size={14} />} action={<button onClick={() => openDetail()} style={linkAction}>Open Full List</button>}>
+              <div className="content-scrollbar sales-dense-scroll" style={tableScroll}>
+                <table className="sales-dense-table sales-dense-table--sticky-first" style={{ minWidth: 1040 }}>
+                  <thead>
+                    <tr>
+                      {['Order No', 'Item No', 'Ord Date', 'Customer', 'Type', 'Ord Qty', 'Shipped', 'Amount', 'Status'].map((head, index) => <th key={head} className={index >= 5 && index <= 7 ? 'sales-dense-table__number' : undefined}>{head}</th>)}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {loading && <TableSkeletonRows columns={9} />}
+                    {!loading && recentOrders.length === 0 && <EmptyRow colSpan={9} label="No order lines match the current filter." />}
+                    {!loading && recentOrders.map(row => {
+                      const shippedPct = row.orderQty > 0 ? Math.min(100, Math.round((row.shippedQty / row.orderQty) * 100)) : 0;
+                      return (
+                        <tr key={`${row.orderNo}-${row.itemNo}`}>
+                          <td style={tdItem}>{row.orderNo}<div style={subText}>{row.poNo || '-'}</div></td>
+                          <td style={tdItem}><button onClick={() => navigate(`/item-detail/${encodeURIComponent(row.itemNo)}`)} style={linkButton}>{row.itemNo}</button></td>
+                          <td style={td}>{fmtDate(row.ordDate)}</td>
+                          <td style={tdStrong}>{row.customerName}<div style={subText}>{row.customerCode}</div></td>
+                          <td style={td}>{productTypeLabel(row.itemType, row.itemTypeName)}</td>
+                          <td style={tdRight}>{fmtQty(row.orderQty)}</td>
+                          <td style={tdRight}><span style={shippedCell}><span className="sales-dense-progress"><span style={{ width: `${shippedPct}%` }} /></span>{fmtQty(row.shippedQty)}</span></td>
+                          <td style={tdRight}>{fmtAmount(row.amount)}</td>
+                          <td style={td}><StatusBadge status={row.status} /></td>
+
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </Panel>
           </div>
         </div>
       </div>
     </>
+  );
+}
+function SearchBox({ value, onChange, onKeyDown, onApply, onClear, active }: { value: string; onChange: (value: string) => void; onKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void; onApply: () => void; onClear: () => void; active: boolean }) {
+  return (
+    <label style={searchBox}>
+      <Search size={14} style={searchIcon} />
+      <input value={value} onChange={event => onChange(event.target.value)} onKeyDown={onKeyDown} placeholder="Search customer, item, order..." style={searchInput} />
+      {active ? <button type="button" onClick={onClear} title="Clear search" style={searchClear}><X size={13} /></button> : <button type="button" onClick={onApply} title="Apply search" style={searchApply}>Enter</button>}
+    </label>
   );
 }
 
@@ -401,11 +572,16 @@ function FilterChip({ active, onClick, label, color }: { active: boolean; onClic
 }
 
 function Panel({ title, icon, action, children }: { title: string; icon: ReactNode; action?: ReactNode; children: ReactNode }) {
-  return <section style={panel}><div style={panelHeader}><h2 style={panelTitle}>{icon}{title}</h2>{action}</div>{children}</section>;
+  return <section className="sales-dense-panel" style={panel}><div className="sales-dense-panel__header"><h2 style={panelTitle}>{icon}{title}</h2>{action}</div>{children}</section>;
 }
 
 function EmptyRow({ colSpan, label }: { colSpan: number; label: string }) {
   return <tr><td colSpan={colSpan} className="sales-dense-empty">{label}</td></tr>;
+}
+
+function StatusBadge({ status }: { status: SalesOrderRow['status'] }) {
+  const tone = status === 'Shipped' ? 'success' : status === 'Late' ? 'danger' : status === 'Partial' ? 'warning' : 'info';
+  return <span className={`sales-dense-badge sales-dense-badge--${tone}`}>{status}</span>;
 }
 
 function TableSkeletonRows({ columns, rows = 8 }: { columns: number; rows?: number }) {
@@ -428,10 +604,15 @@ function TableSkeletonRows({ columns, rows = 8 }: { columns: number; rows?: numb
 const pageHeader: CSSProperties = { display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-end', flexWrap: 'wrap' };
 const pageTitle: CSSProperties = { margin: 0, fontSize: '1.5rem', lineHeight: 1.2, fontWeight: 900, color: 'var(--color-text-primary)', fontFamily: 'var(--font-display)', letterSpacing: 0 };
 const pageSubtitle: CSSProperties = { marginTop: 4, color: 'var(--color-text-tertiary)', fontSize: '0.75rem', fontWeight: 800 };
-const headerActions: CSSProperties = { display: 'flex', gap: 8, flexWrap: 'wrap' };
+const headerActions: CSSProperties = { display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' };
 const primaryButton: CSSProperties = { height: 36, display: 'flex', alignItems: 'center', gap: 8, padding: '8px 14px', borderRadius: 8, border: '1px solid var(--color-brand-500)', background: 'var(--color-brand-500)', color: 'var(--color-text-inverse)', fontSize: '0.75rem', fontWeight: 900, cursor: 'pointer', fontFamily: 'var(--font-body)' };
 const segmentButton: CSSProperties = { height: 36, display: 'flex', alignItems: 'center', gap: 6, padding: '8px 13px', borderRadius: 8, border: '1px solid var(--color-border-light)', background: 'var(--color-surface-0)', color: 'var(--color-text-secondary)', fontSize: '0.75rem', fontWeight: 900, cursor: 'pointer', fontFamily: 'var(--font-body)' };
 const segmentActive: CSSProperties = { borderColor: 'var(--color-brand-500)', background: 'var(--color-brand-500)', color: 'var(--color-text-inverse)' };
+const searchBox: CSSProperties = { position: 'relative', display: 'flex', alignItems: 'center', width: 'min(360px, 100%)' };
+const searchIcon: CSSProperties = { position: 'absolute', left: 10, color: 'var(--color-text-tertiary)' };
+const searchInput: CSSProperties = { width: '100%', height: 36, background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)', borderRadius: 8, padding: '8px 58px 8px 32px', color: 'var(--color-text-primary)', fontSize: '0.75rem', fontWeight: 800, outline: 'none', fontFamily: 'var(--font-body)' };
+const searchApply: CSSProperties = { position: 'absolute', right: 5, height: 26, border: '1px solid var(--color-border-light)', borderRadius: 6, background: 'var(--color-surface-1)', color: 'var(--color-text-tertiary)', fontSize: '0.64rem', fontWeight: 900, padding: '0 7px', cursor: 'pointer' };
+const searchClear: CSSProperties = { position: 'absolute', right: 5, width: 26, height: 26, display: 'grid', placeItems: 'center', border: '1px solid var(--color-border-light)', borderRadius: 6, background: 'var(--color-surface-1)', color: 'var(--color-text-tertiary)', cursor: 'pointer' };
 const kpiGrid: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 };
 const kpiTile: CSSProperties = { background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)', borderRadius: 8, padding: 16 };
 const kpiLabel: CSSProperties = { display: 'flex', alignItems: 'center', gap: 8, color: 'var(--color-text-tertiary)', fontSize: '0.7rem', fontWeight: 900, marginBottom: 8 };
@@ -456,18 +637,19 @@ const clearButton: CSSProperties = { width: 28, height: 28, display: 'grid', pla
 const disabledButton: CSSProperties = { background: 'var(--color-surface-1)', color: 'var(--color-text-quaternary)', cursor: 'not-allowed' };
 const chipButton: CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 11px', borderRadius: 8, border: '1px solid var(--color-border-light)', fontSize: '0.72rem', fontWeight: 900, cursor: 'pointer', fontFamily: 'var(--font-body)' };
 const chipDot: CSSProperties = { width: 7, height: 7, borderRadius: 999 };
-const twoColumnGrid: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(520px, 100%), 1fr))', gap: 16 };
-const panel: CSSProperties = { background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)', borderRadius: 8, padding: 16, minWidth: 0 };
-const panelHeader: CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 12 };
+const panel: CSSProperties = { minWidth: 0 };
 const panelTitle: CSSProperties = { display: 'flex', alignItems: 'center', gap: 8, margin: 0, color: 'var(--color-text-primary)', fontSize: '0.9rem', fontWeight: 900 };
 const panelMeta: CSSProperties = { color: 'var(--color-text-tertiary)', fontSize: '0.7rem', fontWeight: 900 };
 const linkAction: CSSProperties = { border: 'none', background: 'transparent', color: 'var(--color-brand-600)', fontSize: '0.72rem', fontWeight: 900, cursor: 'pointer' };
+const twoColumnGrid: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(560px, 100%), 1fr))', gap: 14 };
+const customerTableScroll: CSSProperties = { maxHeight: 500 };
 const tableScroll: CSSProperties = { maxHeight: 430 };
-const td: CSSProperties = { height: 48, padding: '6px 8px', color: 'var(--color-text-primary)', fontSize: '11px', fontWeight: 800, verticalAlign: 'middle', borderBottom: '1px solid var(--color-border-strong)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
+const td: CSSProperties = { height: 48, padding: '6px 8px', color: 'var(--color-text-primary)', fontSize: '11px', fontWeight: 800, verticalAlign: 'middle', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
 const tdStrong: CSSProperties = { ...td, fontWeight: 900 };
 const tdItem: CSSProperties = { ...tdStrong, whiteSpace: 'normal' };
 const tdRight: CSSProperties = { ...td, textAlign: 'right', fontVariantNumeric: 'tabular-nums' };
 const subText: CSSProperties = { color: 'var(--color-text-tertiary)', fontSize: '0.68rem', fontWeight: 700, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' };
 const linkButton: CSSProperties = { background: 'none', border: 'none', color: 'var(--color-brand-600)', fontWeight: 900, cursor: 'pointer', padding: 0, fontFamily: 'var(--font-body)' };
 const groupDot: CSSProperties = { display: 'inline-block', width: 8, height: 8, borderRadius: 999, marginRight: 8 };
+const shippedCell: CSSProperties = { display: 'inline-flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8 };
 const errorText: CSSProperties = { color: 'var(--color-danger-500)', fontWeight: 800, fontSize: '0.8rem' };

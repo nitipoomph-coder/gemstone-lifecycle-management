@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Topbar from '../components/layout/Topbar';
-import { CalendarDays, Building2, RefreshCw, Users, Search, ChevronDown } from 'lucide-react';
+import { CalendarDays, Building2, RefreshCw, Users, ChevronDown, DollarSign, Hash, Table2 } from 'lucide-react';
 import { fetchAvailableYears } from '../services/dashboardAPI';
 import { fetchCustomerSummary } from '../services/customerSummaryAPI';
 import { ALL_GROUPS, getCustomerGroupId } from '../config/customerGroups';
@@ -11,8 +12,26 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const YEAR_COLORS = ['var(--color-chart-6)', 'var(--color-chart-2)', 'var(--color-chart-1)', 'var(--color-chart-3)', 'var(--color-chart-4)', 'var(--color-chart-5)'];
 
+
+type Metric = 'amount' | 'qty';
+type MonthlySummaryMap = Record<string, Record<string, number>>;
+type CustomerSummaryRow = {
+  id?: string;
+  monthly?: MonthlySummaryMap;
+  monthlyQty?: MonthlySummaryMap;
+};
+type RawSummary = Record<string, Record<string, Record<string, number>>>;
+type ChartDatum = { label: string; sortKey?: string } & Record<string, string | number | undefined>;
+type TooltipPayloadEntry = { value?: number; color?: string; dataKey?: string | number; name?: string };
+type CustomTooltipProps = { active?: boolean; payload?: TooltipPayloadEntry[]; label?: string; metric: Metric };
+function defaultYearSelection(years: string[]) {
+  const latest = years[years.length - 1];
+  const prev = years[years.length - 2];
+  return prev ? [prev, latest] : latest ? [latest] : [];
+}
+
 // Custom Tooltip for Recharts
-const CustomTooltip = ({ active, payload, label, metric }: any) => {
+const CustomTooltip = ({ active, payload, label, metric }: CustomTooltipProps) => {
   if (active && payload && payload.length) {
     return (
       <div className="glass-panel" style={{ padding: '12px 16px', borderRadius: 12, border: '1px solid var(--color-border-light)', minWidth: 200 }}>
@@ -20,7 +39,7 @@ const CustomTooltip = ({ active, payload, label, metric }: any) => {
           {label}
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {payload.map((entry: any, index: number) => {
+          {payload.map((entry, index) => {
             if (entry.value === 0) return null;
             return (
               <div key={index} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', fontWeight: 800 }}>
@@ -30,8 +49,8 @@ const CustomTooltip = ({ active, payload, label, metric }: any) => {
                 </div>
                 <span style={{ color: entry.color }}>
                   {metric === 'qty'
-                    ? entry.value.toLocaleString(undefined, { maximumFractionDigits: 0 })
-                    : '$' + entry.value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    ? Number(entry.value || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })
+                    : '$' + Number(entry.value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
             );
@@ -43,10 +62,9 @@ const CustomTooltip = ({ active, payload, label, metric }: any) => {
   return null;
 };
 
-export default function CustomerDashboard({ metric = 'amount' }: { metric?: 'amount' | 'qty' }) {
-  console.log('CustomerDashboard metric:', metric);
+export default function CustomerDashboard({ metric = 'amount' }: { metric?: Metric }) {
   const [availableYears, setAvailableYears] = useState<string[]>([]);
-  const [custData, setCustData] = useState<any[]>([]);
+  const [custData, setCustData] = useState<CustomerSummaryRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   // New State mappings
@@ -58,9 +76,12 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: 'amo
   const [showMonthDropdown, setShowMonthDropdown] = useState(false);
   const [showLabels, setShowLabels] = useState(true);
 
-  // Auto-hide labels when > 3 groups selected
+  // Auto-hide labels when too many bars would crowd the chart.
   useEffect(() => {
-    setShowLabels(selGroups.length <= 3);
+    const labelTimer = window.setTimeout(() => {
+      setShowLabels(selGroups.length <= 3);
+    }, 0);
+    return () => window.clearTimeout(labelTimer);
   }, [selGroups.length]);
 
   const navigate = useNavigate();
@@ -81,9 +102,7 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: 'amo
       const stringYears = years.map(String).sort((a, b) => parseInt(a) - parseInt(b));
       setAvailableYears(stringYears);
       if (stringYears.length > 0) {
-        const latest = stringYears[stringYears.length - 1];
-        const prev = stringYears.length > 1 ? stringYears[stringYears.length - 2] : null;
-        setSelectedYears(prev ? [prev, latest] : [latest]);
+        setSelectedYears(defaultYearSelection(stringYears));
       }
     }).catch(err => console.error(err));
   }, []);
@@ -91,16 +110,19 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: 'amo
   // Fetch all data for available years
   useEffect(() => {
     if (availableYears.length === 0) return;
-    setLoading(true);
-    fetchCustomerSummary(availableYears)
-      .then(data => {
-        setCustData(data);
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error(err);
-        setLoading(false);
-      });
+    const loadTimer = window.setTimeout(() => {
+      setLoading(true);
+      fetchCustomerSummary(availableYears)
+        .then(data => {
+          setCustData(data as CustomerSummaryRow[]);
+          setLoading(false);
+        })
+        .catch(err => {
+          console.error(err);
+          setLoading(false);
+        });
+    }, 0);
+    return () => window.clearTimeout(loadTimer);
   }, [availableYears]);
 
   // Keep groups in ALL_GROUPS order for consistent colors
@@ -111,7 +133,7 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: 'amo
 
   // Convert customer data into RAW[year][month][groupId] structure
   const RAW = useMemo(() => {
-    const raw: any = {};
+    const raw: RawSummary = {};
     availableYears.forEach(y => {
       raw[y] = {};
       MONTHS.forEach((m) => {
@@ -143,7 +165,7 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: 'amo
       if (monthlySeries === 'year') {
         return sortedSel.map(gId => {
           const g = ALL_GROUPS.find(x => x.id === gId)!;
-          const r: any = { label: g.label };
+          const r: ChartDatum = { label: g.label };
           activeYears.forEach(y => {
             r[y] = selectedMonths.reduce((s, mStr) => s + (RAW[y]?.[MONTHS[parseInt(mStr) - 1]]?.[gId] || 0), 0);
           });
@@ -151,7 +173,7 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: 'amo
         });
       } else {
         return activeYears.map(y => {
-          const r: any = { label: String(y) };
+          const r: ChartDatum = { label: String(y) };
           sortedSel.forEach(g => { r[g] = selectedMonths.reduce((s, mStr) => s + (RAW[y]?.[MONTHS[parseInt(mStr) - 1]]?.[g] || 0), 0); });
           return r;
         });
@@ -162,7 +184,7 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: 'amo
         // mode monthly: X-axis = Month, Series = Years (YoY Comparison)
         return sortedMonths.map(mStr => {
           const m = MONTHS[parseInt(mStr) - 1];
-          const r: any = { label: m };
+          const r: ChartDatum = { label: m };
           activeYears.forEach(y => {
             r[y] = sortedSel.reduce((sum, g) => sum + (RAW[y]?.[m]?.[g] || 0), 0);
           });
@@ -170,12 +192,12 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: 'amo
         });
       } else {
         // mode monthly: Alternating Years for the same month (Jan 25, Jan 26, Feb 25...), Series = Groups
-        const list: any[] = [];
+        const list: ChartDatum[] = [];
         sortedMonths.forEach(mStr => {
           activeYears.forEach(y => {
             const m = MONTHS[parseInt(mStr) - 1];
             const label = activeYears.length > 1 ? `${m} ${String(y).slice(2)}` : m;
-            const r: any = { label, sortKey: `${mStr.padStart(2, '0')}-${y}` };
+            const r: ChartDatum = { label, sortKey: `${mStr.padStart(2, '0')}-${y}` };
             sortedSel.forEach(g => {
               r[g] = RAW[y]?.[m]?.[g] || 0;
             });
@@ -185,7 +207,7 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: 'amo
         return list;
       }
     }
-  }, [mode, activeYears, selectedMonths, sortedSel, RAW]);
+  }, [mode, monthlySeries, activeYears, selectedMonths, sortedSel, RAW]);
 
   // Summary Cards computation
   const summaries = useMemo(() => {
@@ -224,6 +246,30 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: 'amo
     if (salesGroups.length) params.set('groups', salesGroups.join(','));
     params.set('metric', metric);
     navigate(`/dashboard/sales-customer-groups?${params.toString()}`);
+  };
+  const openCustomerMatrix = () => {
+    const params = new URLSearchParams();
+    params.set('metric', metric);
+    params.set('view', mode === 'monthly' ? 'monthly' : 'ytd');
+    if (activeYears.length) params.set('years', activeYears.join(','));
+    if (selectedMonths.length) params.set('months', selectedMonths.join(','));
+    if (sortedSel.length) params.set('groups', sortedSel.join(','));
+    navigate(`/dashboard/customer-report?${params.toString()}`);
+  };
+
+  const switchMetric = (nextMetric: Metric) => {
+    if (nextMetric === metric) return;
+    navigate(nextMetric === 'qty' ? '/dashboard/qty' : '/dashboard/customer');
+  };
+
+  const resetSummaryView = () => {
+    setMode('yearly');
+    setMonthlySeries('year');
+    setSelectedYears(defaultYearSelection(availableYears));
+    setSelectedMonths(MONTHS.map((_, i) => String(i + 1)));
+    setSelGroups(ALL_GROUPS.slice(0, 4).map(g => g.id));
+    setShowMonthDropdown(false);
+    setShowLabels(true);
   };
 
   // Grand Total computation
@@ -316,7 +362,7 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: 'amo
           </div>
 
           {/* Cards Skeleton */}
-          <div style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fit, minmax(220px, 1fr))`, gap: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fit, minmax(220px, 1fr))`, gap: 12, order: 3 }}>
             {[1, 2, 3, 4, 5].map(i => (
               <div key={i} className="animate-pulse rounded-2xl" style={{ height: 180, background: 'var(--color-surface-2)' }} />
             ))}
@@ -335,88 +381,55 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: 'amo
       <div className="content-scrollbar flex-1 overflow-y-auto" style={{ background: 'var(--color-surface-1)' }}>
         <div className="p-6 flex flex-col gap-6 w-full">
 
-          {/* Header & View Mode */}
-          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
-            <div>
-              <h1 style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--color-text-primary)', fontFamily: 'var(--font-display)', letterSpacing: '-0.02em', lineHeight: 1 }}>
-                {metric === 'qty' ? 'Quantity Summary' : 'Sales Summary'} <span style={{ color: 'var(--color-proc-polishing)' }}>By Customer Group</span>
-              </h1>
-              <p style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-tertiary)', marginTop: 6, letterSpacing: '0.06em', textTransform: 'capitalize' }}>
-                {metric === 'qty' ? 'Client Quantity Growth Analysis' : 'Client Account Growth Analysis'}
-              </p>
+          {/* Header & Control Bar */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+              <div>
+                <h1 style={{ fontSize: '1.45rem', fontWeight: 900, color: 'var(--color-text-primary)', fontFamily: 'var(--font-display)', letterSpacing: 0, lineHeight: 1.1, margin: 0 }}>
+                  Summary <span style={{ color: 'var(--color-text-tertiary)', fontWeight: 800 }}>{metric === 'qty' ? 'Qty' : 'Sales'}</span>
+                </h1>
+                <p style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--color-text-tertiary)', marginTop: 4 }}>
+                  First view is chart focused, filtered by year, month, and customer group.
+                </p>
+              </div>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                <button onClick={openCustomerSalesAnalysis} style={compactSecondaryButton}><Users size={14} /> Customer Trends</button>
+                <button onClick={openCustomerMatrix} style={compactSecondaryButton}><Table2 size={14} /> Matrix</button>
+                <button onClick={resetSummaryView} style={compactGhostButton}><RefreshCw size={14} /> Reset</button>
+              </div>
             </div>
 
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <button
-                onClick={openCustomerSalesAnalysis}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 6,
-                  padding: '8px 16px', borderRadius: 12, fontSize: '0.75rem', fontWeight: 800, textTransform: 'capitalize',
-                  color: 'var(--color-text-primary)', background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)',
-                  cursor: 'pointer', transition: 'all 0.2s', boxShadow: 'none'
-                }}
-                className="hover:-translate-y-0.5 active:scale-95"
-              >
-                <Users size={14} />
-                Customer Trends
-              </button>
-              <button
-                onClick={() => navigate('/dashboard/customer-report?metric=' + metric)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 6,
-                  padding: '8px 16px', borderRadius: 12, fontSize: '0.75rem', fontWeight: 800, textTransform: 'capitalize',
-                  color: 'var(--color-proc-polishing)', background: 'color-mix(in srgb, var(--color-proc-polishing) 8%, var(--color-surface-0))', border: '1px solid color-mix(in srgb, var(--color-proc-polishing) 32%, var(--color-border-light))',
-                  cursor: 'pointer', transition: 'all 0.2s', boxShadow: 'none'
-                }}
-                className="hover:-translate-y-0.5 active:scale-95"
-              >
-                <Search size={14} />
-                Full Report Matrix
-              </button>
-              <button
-                onClick={() => window.location.reload()}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 6,
-                  padding: '8px 16px', borderRadius: 12, fontSize: '0.75rem', fontWeight: 800, textTransform: 'capitalize',
-                  color: 'var(--color-text-tertiary)', background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)',
-                  cursor: 'pointer', transition: 'all 0.2s', boxShadow: 'none'
-                }}
-                className="hover:border-[var(--color-border-default)] hover:text-[var(--color-text-primary)]"
-              >
-                <RefreshCw size={14} /> Reset All
-              </button>
-
-              <div style={{ display: 'flex', background: 'var(--color-surface-0)', padding: 4, borderRadius: 12, border: '1px solid var(--color-border-light)', boxShadow: 'none' }}>
-                {[
-                  { id: 'yearly', label: 'Yearly Comparison', icon: Building2 },
-                  { id: 'monthly', label: 'Monthly Breakdown', icon: CalendarDays }
-                ].map(item => (
-                  <button
-                    key={item.id}
-                    onClick={() => setMode(item.id as 'yearly' | 'monthly')}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 8,
-                      padding: '8px 20px', borderRadius: 12, fontSize: '0.8rem', fontWeight: 800,
-                      color: mode === item.id ? 'var(--color-proc-polishing)' : 'var(--color-text-tertiary)',
-                      background: mode === item.id ? 'color-mix(in srgb, var(--color-proc-polishing) 9%, transparent)' : 'transparent',
-                      border: mode === item.id ? '1px solid color-mix(in srgb, var(--color-proc-polishing) 30%, var(--color-border-light))' : '1px solid transparent',
-                      cursor: 'pointer', transition: 'all 0.2s',
-                      boxShadow: 'none'
-                    }}
-                  >
-                    <item.icon size={16} />
-                    {item.label}
-                  </button>
-                ))}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)', borderRadius: 8, padding: 8 }}>
+              <div style={controlSection}>
+                <span style={controlLabel}>Metric</span>
+                <SummarySegmentButton active={metric === 'amount'} onClick={() => switchMetric('amount')} icon={<DollarSign size={14} />} label="Sales" />
+                <SummarySegmentButton active={metric === 'qty'} onClick={() => switchMetric('qty')} icon={<Hash size={14} />} label="Qty" />
+              </div>
+              <div style={controlDivider} />
+              <div style={controlSection}>
+                <span style={controlLabel}>View</span>
+                <SummarySegmentButton active={mode === 'yearly'} onClick={() => setMode('yearly')} icon={<Building2 size={14} />} label="Yearly" />
+                <SummarySegmentButton active={mode === 'monthly'} onClick={() => setMode('monthly')} icon={<CalendarDays size={14} />} label="Monthly" />
+              </div>
+              <div style={controlDivider} />
+              <div style={controlSection}>
+                <span style={controlLabel}>Series</span>
+                <SummarySegmentButton active={monthlySeries === 'year'} onClick={() => setMonthlySeries('year')} icon={<CalendarDays size={14} />} label="By Year" />
+                <SummarySegmentButton active={monthlySeries === 'group'} onClick={() => setMonthlySeries('group')} icon={<Users size={14} />} label="By Group" />
+              </div>
+              <div style={controlDivider} />
+              <div style={controlSection}>
+                <span style={controlLabel}>Labels</span>
+                <button onClick={() => setShowLabels(!showLabels)} style={{ ...compactToggleButton, ...(showLabels ? compactToggleActive : null) }}>{showLabels ? 'ON' : 'OFF'}</button>
               </div>
             </div>
           </div>
 
           {/* Filters Area */}
-          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'stretch' }}>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'stretch', order: 1 }}>
 
             {/* Multi-Year Picker */}
-            <div style={{ background: 'var(--color-surface-0)', borderRadius: 16, padding: '14px 20px', border: '1px solid var(--color-border-light)', display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ background: 'var(--color-surface-0)', borderRadius: 8, padding: '10px 12px', border: '1px solid var(--color-border-light)', display: 'flex', flexDirection: 'column', gap: 8, minWidth: 240 }}>
               <div style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'capitalize', color: 'var(--color-text-tertiary)', letterSpacing: '0.06em' }}>
                 Target Year(s)
               </div>
@@ -436,9 +449,9 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: 'amo
               </div>
             </div>
 
-            {/* Month Filter (Monthly Mode Only) */}
-            {mode === 'monthly' && (
-              <div style={{ background: 'var(--color-surface-0)', borderRadius: 16, padding: '14px 20px', border: '1px solid var(--color-border-light)', display: 'flex', flexDirection: 'column', gap: 10, position: 'relative' }} ref={dropdownRef}>
+            {/* Month Filter */}
+            {selectedMonths.length > 0 && (
+              <div style={{ background: 'var(--color-surface-0)', borderRadius: 8, padding: '10px 12px', border: '1px solid var(--color-border-light)', display: 'flex', flexDirection: 'column', gap: 8, position: 'relative', minWidth: 220 }} ref={dropdownRef}>
                 <div style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'capitalize', color: 'var(--color-text-tertiary)', letterSpacing: '0.06em' }}>
                   Filter Months
                 </div>
@@ -450,9 +463,8 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: 'amo
                     borderRadius: 8, fontSize: '0.75rem', fontWeight: 800, color: 'var(--color-text-primary)',
                     cursor: 'pointer', transition: 'all 0.2s'
                   }}
-                  className="hover:border-blue-400 hover:bg-blue-50"
                 >
-                  <Search size={14} style={{ color: 'var(--color-text-tertiary)' }} />
+                  <CalendarDays size={14} style={{ color: 'var(--color-text-tertiary)' }} />
                   {selectedMonths.length === 12 ? 'All 12 Months' : `${selectedMonths.length} Months Selected`}
                   <ChevronDown size={14} style={{ marginLeft: 4, color: 'var(--color-text-tertiary)' }} />
                 </button>
@@ -500,18 +512,12 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: 'amo
             )}
 
             {/* Customer Groups */}
-            <div style={{ flex: 1, background: 'var(--color-surface-0)', borderRadius: 16, padding: '14px 20px', border: '1px solid var(--color-border-light)' }}>
+            <div style={{ flex: 1, background: 'var(--color-surface-0)', borderRadius: 8, padding: '10px 12px', border: '1px solid var(--color-border-light)', minWidth: 300 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
                 <div style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'capitalize', color: 'var(--color-text-tertiary)', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: 6 }}>
                   <Users size={14} /> Customer Groups
                 </div>
-                <button onClick={() => setShowLabels(!showLabels)} style={{
-                  padding: '4px 12px', borderRadius: 20, fontSize: '0.65rem', fontWeight: 800, border: 'none', cursor: 'pointer', transition: 'all 0.2s',
-                  background: showLabels ? 'color-mix(in srgb, var(--color-success-500) 8%, var(--color-surface-0))' : 'var(--color-surface-1)',
-                  color: showLabels ? 'var(--color-success-500)' : 'var(--color-text-tertiary)',
-                }}>
-                  {showLabels ? "Labels ON" : "Labels OFF"}
-                </button>
+                <span style={{ fontSize: '0.68rem', fontWeight: 900, color: 'var(--color-text-tertiary)' }}>{selGroups.length}/{ALL_GROUPS.length} selected</span>
               </div>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 {ALL_GROUPS.map(g => {
@@ -536,7 +542,7 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: 'amo
           </div>
 
           {/* Summary Cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fit, minmax(220px, 1fr))`, gap: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fit, minmax(220px, 1fr))`, gap: 12, order: 3 }}>
             {summaries.map((g, idx) => {
               return (
                 <div key={g.id} style={{ background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)', borderRadius: 16, padding: '20px', borderTop: `4px solid ${g.color}`, boxShadow: '0 4px 16px -4px rgba(0,0,0,0.04)', transition: 'all 0.3s ease', animation: 'fadeInUp 0.4s ease-out both', animationDelay: `${idx * 0.05}s` }}>
@@ -591,9 +597,9 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: 'amo
           </div>
 
           {/* Main Chart Section */}
-          <div style={{ background: 'var(--color-surface-0)', borderRadius: 24, padding: 32, border: '1px solid var(--color-border-light)', boxShadow: '0 8px 32px -8px rgba(0,0,0,0.04)', animation: 'fadeInUp 0.4s ease-out' }}>
+          <div style={{ background: 'var(--color-surface-0)', borderRadius: 8, padding: 18, border: '1px solid var(--color-border-light)', boxShadow: 'none', animation: 'fadeInUp 0.4s ease-out', order: 2 }}>
             {/* Dynamic Chart Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 32 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, marginBottom: 14, flexWrap: 'wrap' }}>
               <div>
                 <h2 style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--color-text-primary)', textTransform: 'capitalize', letterSpacing: '0.05em', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 12 }}>
                   {mode === 'yearly' ? (metric === 'qty' ? `Annual Quantity Comparison` : `Annual Sales Comparison`) : (metric === 'qty' ? `Monthly Quantity Breakdown` : `Monthly Sales Breakdown`)}
@@ -604,7 +610,7 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: 'amo
                 </p>
 
                 {/* Chart Mode Toggles */}
-                <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                <div style={{ display: 'none', gap: 8, marginTop: 12 }}>
                   <button onClick={() => setMonthlySeries('year')} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 12px', borderRadius: 16, fontSize: '0.7rem', fontWeight: 800, background: monthlySeries === 'year' ? 'color-mix(in srgb, var(--color-brand-500) 9%, var(--color-surface-0))' : 'var(--color-surface-1)', color: monthlySeries === 'year' ? 'var(--color-brand-600)' : 'var(--color-text-secondary)', border: '1px solid var(--color-border-light)', cursor: 'pointer', transition: 'all 0.2s' }}>
                     <CalendarDays size={14} /> Compare by Year
                   </button>
@@ -660,7 +666,7 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: 'amo
             </div>
 
             {/* Recharts Component */}
-            <div style={{ height: 420, padding: '20px 16px 16px' }}>
+            <div style={{ height: 430, padding: '10px 8px 8px' }}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData} margin={{ top: 20, right: 24, left: 0, bottom: 5 }}>
                   <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--color-border-light)" opacity={0.5} />
@@ -672,7 +678,7 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: 'amo
                     return (
                       <Bar key={gId} dataKey={gId} fill={g.color} radius={[4, 4, 0, 0]} maxBarSize={40}>
                         {showLabels && (
-                          <LabelList dataKey={gId} position="top" formatter={(val: any) => val > 0 ? formatAxisValue(Number(val)).replace('$', '') : ''} style={{ fontSize: 10, fill: g.color, fontWeight: 800 }} />
+                          <LabelList dataKey={gId} position="top" formatter={(val: unknown) => Number(val) > 0 ? formatAxisValue(Number(val)).replace('$', '') : ''} style={{ fontSize: 10, fill: g.color, fontWeight: 800 }} />
                         )}
                       </Bar>
                     );
@@ -681,7 +687,7 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: 'amo
                     return (
                       <Bar key={y} dataKey={y} name={`Year ${y}`} fill={color} radius={[4, 4, 0, 0]} maxBarSize={40}>
                         {showLabels && (
-                          <LabelList dataKey={y} position="top" formatter={(val: any) => val > 0 ? formatAxisValue(Number(val)).replace('$', '') : ''} style={{ fontSize: 10, fill: color, fontWeight: 800 }} />
+                          <LabelList dataKey={y} position="top" formatter={(val: unknown) => Number(val) > 0 ? formatAxisValue(Number(val)).replace('$', '') : ''} style={{ fontSize: 10, fill: color, fontWeight: 800 }} />
                         )}
                       </Bar>
                     );
@@ -696,3 +702,20 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: 'amo
     </>
   );
 }
+function SummarySegmentButton({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: ReactNode; label: string }) {
+  return (
+    <button onClick={onClick} style={{ ...compactSegmentButton, ...(active ? compactSegmentActive : null) }}>
+      {icon}{label}
+    </button>
+  );
+}
+
+const controlSection: CSSProperties = { display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' };
+const controlLabel: CSSProperties = { color: 'var(--color-text-tertiary)', fontSize: '0.66rem', fontWeight: 900, marginRight: 2 };
+const controlDivider: CSSProperties = { width: 1, alignSelf: 'stretch', background: 'var(--color-border-light)', minHeight: 26 };
+const compactSegmentButton: CSSProperties = { height: 28, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '0 9px', borderRadius: 6, border: '1px solid var(--color-border-light)', background: 'var(--color-surface-1)', color: 'var(--color-text-secondary)', fontSize: '0.7rem', fontWeight: 900, cursor: 'pointer', fontFamily: 'var(--font-body)' };
+const compactSegmentActive: CSSProperties = { borderColor: 'var(--color-brand-500)', background: 'color-mix(in srgb, var(--color-brand-500) 11%, var(--color-surface-0))', color: 'var(--color-brand-600)' };
+const compactSecondaryButton: CSSProperties = { height: 30, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0 10px', borderRadius: 6, border: '1px solid var(--color-border-light)', background: 'var(--color-surface-0)', color: 'var(--color-text-secondary)', fontSize: '0.72rem', fontWeight: 900, cursor: 'pointer', fontFamily: 'var(--font-body)' };
+const compactGhostButton: CSSProperties = { height: 30, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0 10px', borderRadius: 6, border: '1px solid var(--color-border-light)', background: 'transparent', color: 'var(--color-text-tertiary)', fontSize: '0.72rem', fontWeight: 900, cursor: 'pointer', fontFamily: 'var(--font-body)' };
+const compactToggleButton: CSSProperties = { height: 28, minWidth: 44, borderRadius: 6, border: '1px solid var(--color-border-light)', background: 'var(--color-surface-1)', color: 'var(--color-text-tertiary)', fontSize: '0.7rem', fontWeight: 900, cursor: 'pointer', fontFamily: 'var(--font-body)' };
+const compactToggleActive: CSSProperties = { borderColor: 'var(--color-success-500)', background: 'color-mix(in srgb, var(--color-success-500) 10%, var(--color-surface-0))', color: 'var(--color-success-600)' };

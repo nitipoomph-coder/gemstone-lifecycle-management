@@ -4,7 +4,7 @@ import { Users, DollarSign } from 'lucide-react';
 import Topbar from '../components/layout/Topbar';
 import { fetchAvailableYearsMeta } from '../services/dashboardAPI';
 import { fetchCustomerSummary } from '../services/customerSummaryAPI';
-import { getCustomerGroupId } from '../config/customerGroups';
+import { ALL_GROUPS, getCustomerGroupId } from '../config/customerGroups';
 
 import CustomerReportTable from '../components/report/CustomerReportTable';
 import CustomerReportFilters from '../components/report/CustomerReportFilters';
@@ -27,10 +27,38 @@ interface CustomerReportMatrixRow extends Record<string, unknown> {
   topItemQty?: number;
 }
 
+function csv(value: string | null) {
+  return String(value || '')
+    .split(',')
+    .map(item => item.trim())
+    .filter(Boolean);
+}
+
+function parseMonths(value: string | null) {
+  const months = csv(value)
+    .map(item => {
+      const numeric = Number(item);
+      if (Number.isInteger(numeric) && numeric >= 1 && numeric <= 12) return MONTHS[numeric - 1];
+      return MONTHS.find(month => month.toLowerCase() === item.toLowerCase()) || '';
+    })
+    .filter(Boolean);
+  return Array.from(new Set(months));
+}
+
+function parseGroups(value: string | null) {
+  const groupIds = new Set(ALL_GROUPS.map(group => group.id));
+  return csv(value).filter(groupId => groupIds.has(groupId));
+}
+
 export default function CustomerReportPage() {
   const { theme } = useTheme();
   const [searchParams] = useSearchParams();
   const metric = searchParams.get('metric') || 'amount';
+  const requestedYears = useMemo(() => csv(searchParams.get('years')), [searchParams]);
+  const requestedMonths = useMemo(() => parseMonths(searchParams.get('months')), [searchParams]);
+  const requestedGroups = useMemo(() => parseGroups(searchParams.get('groups')), [searchParams]);
+  const requestedCustomers = useMemo(() => csv(searchParams.get('customers')).map(customer => customer.toUpperCase()), [searchParams]);
+  const requestedViewMode = searchParams.get('view') === 'monthly' ? 'monthly' : 'ytd';
 
   const fmt = useCallback((val: number) => {
     if (metric === 'qty') return val.toLocaleString(undefined, { maximumFractionDigits: 0 });
@@ -45,14 +73,14 @@ export default function CustomerReportPage() {
   const [isFiltering, setIsFiltering] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(true);
 
-  const [viewMode, setViewMode] = useState<'ytd' | 'monthly'>('ytd');
+  const [viewMode, setViewMode] = useState<'ytd' | 'monthly'>(requestedViewMode);
   const [baseYear, setBaseYear] = useState<string>('');
   const [compareYear, setCompareYear] = useState<string>('none');
   const [compareYear2, setCompareYear2] = useState<string>('none');
   const [compareYear3, setCompareYear3] = useState<string>('none');
-  const [selGroups, setSelGroups] = useState<string[]>([]);
-  const [selCustomers, setSelCustomers] = useState<string[]>([]);
-  const [selMonths, setSelMonths] = useState<string[]>(MONTHS);
+  const [selGroups, setSelGroups] = useState<string[]>(() => requestedGroups.length ? requestedGroups : ALL_GROUPS.map(group => group.id));
+  const [selCustomers, setSelCustomers] = useState<string[]>(() => requestedCustomers);
+  const [selMonths, setSelMonths] = useState<string[]>(() => requestedMonths.length ? requestedMonths : MONTHS);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
   const [growthComparisons, setGrowthComparisons] = useState<{ a: string; b: string }[]>([]);
@@ -74,13 +102,13 @@ export default function CustomerReportPage() {
       ? (isUp ? 'color-mix(in srgb, var(--color-success-500) 15%, transparent)' : isDown ? 'color-mix(in srgb, var(--color-danger-500) 15%, transparent)' : 'transparent')
       : 'transparent';
     const textColor = isUp ? 'var(--color-success-500)' : isDown ? 'var(--color-danger-500)' : 'var(--color-text-tertiary)';
-    const sign = isUp ? '+' : isDown ? '-' : '';
+    const sign = isUp ? '+' : isDown ? '\u2212' : '';
     const signedValue = `${sign}${fmt(Math.abs(diff))}`;
     return {
       bgColor,
       node: (
         <div style={{ width: '100%', textAlign: 'right' }}>
-          <span style={{ color: textColor, fontWeight: 900, fontSize: '0.9rem' }}>{signedValue}</span>
+          <span style={{ color: textColor, fontWeight: 900, fontSize: '0.9rem', fontVariantNumeric: 'tabular-nums' }}>{signedValue}</span>
         </div>
       )
     };
@@ -101,7 +129,7 @@ export default function CustomerReportPage() {
     };
     if (compVal === 0 && baseVal > 0) return {
       bgColor: 'transparent',
-      node: <div style={{ textAlign: 'right', color: 'var(--color-text-tertiary)', fontWeight: 900 }}>No base</div>
+      node: <div style={{ textAlign: 'right', color: 'var(--color-text-tertiary)', fontWeight: 900, fontVariantNumeric: 'tabular-nums' }}>No base</div>
     };
     const pct = ((baseVal - compVal) / compVal) * 100;
     const isUp = pct > 0;
@@ -110,12 +138,12 @@ export default function CustomerReportPage() {
       ? (isUp ? 'color-mix(in srgb, var(--color-success-500) 15%, transparent)' : isDown ? 'color-mix(in srgb, var(--color-danger-500) 15%, transparent)' : 'transparent')
       : 'transparent';
     const textColor = isUp ? 'var(--color-success-500)' : isDown ? 'var(--color-danger-500)' : 'var(--color-text-tertiary)';
-    const sign = isUp ? '+' : isDown ? '-' : '';
+    const sign = isUp ? '+' : isDown ? '\u2212' : '';
     return {
       bgColor,
       node: (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', width: '100%' }}>
-          <span style={{ color: textColor, fontWeight: 900, fontSize: '0.9rem' }}>{sign}{Math.abs(pct).toFixed(1)}%</span>
+          <span style={{ color: textColor, fontWeight: 900, fontSize: '0.9rem', fontVariantNumeric: 'tabular-nums' }}>{sign}{Math.abs(pct).toFixed(1)}%</span>
         </div>
       )
     };
@@ -150,14 +178,22 @@ export default function CustomerReportPage() {
         setFirstDataYear(firstDataYear);
         setAvailableYears(sortedYrs);
         if (sortedYrs.length > 0) {
-          const latest = sortedYrs[sortedYrs.length - 1];
-          const prev = sortedYrs.length > 1 ? sortedYrs[sortedYrs.length - 2] : 'none';
+          const requested = requestedYears
+            .filter(year => sortedYrs.includes(year))
+            .sort((a, b) => Number(b) - Number(a));
+          const latest = requested[0] || sortedYrs[sortedYrs.length - 1];
+          const prev = requested[1] || (sortedYrs.length > 1 ? sortedYrs[sortedYrs.length - 2] : 'none');
+          const third = requested[2] || 'none';
+          const fourth = requested[3] || 'none';
+
           setBaseYear(latest);
-          setCompareYear(prev);
+          setCompareYear(prev !== latest ? prev : 'none');
+          setCompareYear2(third !== latest && third !== prev ? third : 'none');
+          setCompareYear3(fourth !== latest && fourth !== prev && fourth !== third ? fourth : 'none');
         }
       })
       .catch(err => console.error('Error fetching available years:', err));
-  }, []);
+  }, [requestedYears]);
 
   useEffect(() => {
     if (dataYears.length === 0) return;
@@ -247,23 +283,29 @@ export default function CustomerReportPage() {
   };
 
   useEffect(() => {
-    if (activeYears.length === 0) return;
     const syncTimer = window.setTimeout(() => {
       setGrowthComparisons(prev => {
-        const defaultPair = activeYears.length > 1
-          ? { a: activeYears[0], b: activeYears[1] }
-          : { a: activeYears[0], b: activeYears[0] };
+        if (activeYears.length < 2) return prev.length === 0 ? prev : [];
+
         const maxPairs = Math.max(1, activeYears.length - 1);
-        const sourcePairs = prev.length > 0 ? prev.slice(0, maxPairs) : [defaultPair];
-        const next = sourcePairs.map((comp, index) => {
-          const fallbackB = activeYears[index + 1] || defaultPair.b;
-          const normalizedA = activeYears.includes(comp.a) ? comp.a : activeYears[0];
-          const normalizedB = activeYears.includes(comp.b) ? comp.b : fallbackB;
-          return {
-            a: normalizedA,
-            b: activeYears.length > 1 && normalizedA === normalizedB ? fallbackB : normalizedB,
-          };
-        });
+        const seen = new Set<string>();
+        const next = prev.slice(0, maxPairs)
+          .map((comp, index) => {
+            const normalizedA = activeYears.includes(comp.a) ? comp.a : activeYears[0];
+            const normalizedB = activeYears.includes(comp.b) ? comp.b : (activeYears[index + 1] || activeYears[1]);
+            const nextB = normalizedA === normalizedB
+              ? (activeYears.find(year => year !== normalizedA) || normalizedB)
+              : normalizedB;
+            return { a: normalizedA, b: nextB };
+          })
+          .filter(comp => {
+            if (!comp.a || !comp.b || comp.a === comp.b) return false;
+            const key = `${comp.a}_${comp.b}`;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          });
+
         const same = prev.length === next.length && prev.every((comp, index) => comp.a === next[index].a && comp.b === next[index].b);
         return same ? prev : next;
       });
@@ -341,7 +383,7 @@ export default function CustomerReportPage() {
         breadcrumb={[
           { label: 'JEWELRY FACTORY SYSTEM', path: '/' },
           { label: metric === 'qty' ? 'Quantity Analytics' : 'Sales Analytics', path: metric === 'qty' ? '/dashboard/qty' : '/dashboard/customer' },
-          { label: metric === 'qty' ? 'Full Quantity Matrix' : 'Full Report Matrix' }
+          { label: metric === 'qty' ? 'Quantity Matrix' : 'Sales Matrix' }
         ]}
         hideSearch
         bottomContent={(

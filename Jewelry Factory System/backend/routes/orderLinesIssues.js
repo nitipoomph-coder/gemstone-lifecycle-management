@@ -1,7 +1,9 @@
-// ============================================
-// Requisition & Issue API Routes
-// ออเดอร์และการเบิก: SOA, SIA, SIB, SIP, SIS
-// ============================================
+// ═══════════════════════════════════════════════════════════════════════════════
+// 📌 MODULE: Order Lines & Issues (routes/orderLinesIssues.js)
+// ═══════════════════════════════════════════════════════════════════════════════
+// Handles logic for Requisitions/Orders (SOA) and Issues (SIA, SIB, SIP, SIS).
+// ═══════════════════════════════════════════════════════════════════════════════
+
 const express = require('express');
 const router = express.Router();
 const { getPool, sql } = require('../db');

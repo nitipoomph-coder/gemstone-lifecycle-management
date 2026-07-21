@@ -9,7 +9,7 @@ Target: **SQL Server 2012 Enterprise** · DB `dbGeneration` · server `192.168.5
 
 ```
 sql/
-├── indexes.sql                     # 9 covering indexes (NONCLUSTERED, ONLINE=ON) สำหรับ PC_Show_OrdTrack_Sum_*
+├── indexes.sql                     # 22 covering indexes (9 SP + 13 Web App)
 ├── stored-procedures/              # SP เวอร์ชันปัจจุบัน (ตัดรูป base64 ออกแล้ว)
 │   ├── PC_Show_OrdTrack_Sum_OrdDate.sql      # @FromDate/@ToDate/@Status · 63 cols
 │   ├── PC_Show_OrdTrack_Sum_DueDate.sql      # @FromDate/@ToDate/@Status · 63 cols
@@ -22,6 +22,44 @@ sql/
     └── _indexes_snapshot.json      # index ที่มีอยู่ ณ ตอน dump (มีแค่ PK_GMCust)
 ```
 
+## Indexes Reference (indexes.sql)
+
+### ส่วนที่ 1: ระบบเดิม (SP Indexes) — 9 ตัว (สร้างแล้ว 2026-07-02)
+
+สำหรับ `PC_Show_OrdTrack_Sum_*` stored procedures ที่เป็น HEAP หลัง restore
+
+| # | Index Name | Table | วัตถุประสงค์ |
+|---|-----------|-------|-------------|
+| 1 | `IX_OrdHD_OrdDate` | OrdHD | SP: _OrdDate, _All — กรอง date range |
+| 2 | `IX_OrdHD_DueDate` | OrdHD | SP: _DueDate — กรอง DueDate range |
+| 3 | `IX_OrdHD_CustDueDate` | OrdHD | SP: _CustDueDate — กรอง CustDueDate range |
+| 4 | `IX_OrdHD_FinishDate` | OrdHD | SP: _FinDate — กรอง FinishDate range |
+| 5 | `IX_OrdHD_Cust_PO_Kind_Mat` | OrdHD | correlated subquery MIN(OrdDate), STUFF FOR XML |
+| 6 | `IX_OrdDT_OrdNo` | OrdDT | aggregate SUM ทุกขั้นตอน + MIN(ItemNo) |
+| 7 | `IX_OrdTrackDT_Join` | OrdTrackDT | join key 6 คอลัมน์ |
+| 8 | `IX_OrdWeekPlanHD_PlanDate` | OrdWeekPlanHD | join DueDate = PlanDate |
+| 9 | `IX_GMCust_CustCode` | GMCust | lookup ชื่อลูกค้า/เซลส์ |
+
+### ส่วนที่ 2: ระบบใหม่ (Web App Indexes) — 13 ตัว (เพิ่ม 2026-07-16)
+
+สำหรับ Node.js Backend Routes ที่ query ตรง (ไม่ผ่าน SP)
+
+| # | Index Name | Table | Route ที่ใช้ | วัตถุประสงค์ |
+|---|-----------|-------|-----------|-------------|
+| 10 | `IX_OrdHD_OrdDate_Status` | OrdHD | dashboard.js | stat cards, trend, month count, YOY |
+| 11 | `IX_OrdHD_DueDate_Status` | OrdHD | dashboard.js | delay orders, overdue drill-down |
+| 12 | `IX_OrdDT_OrdNo_Process` | OrdDT | dashboard.js | process distribution, stone/finding |
+| 13 | `IX_GMEmp_SalesName` | GMEmp | dashboard.js | sales summary JOIN |
+| 14 | `IX_OrdHD_PONo` | OrdHD | search.js, orders.js | PONo prefix search, by-po lookup |
+| 15 | `IX_OrdHD_CustCode` | OrdHD | search.js, orders.js, customerSales.js | CustCode lookup (wide covering) |
+| 16 | `IX_OrdDT_ItemNo` | OrdDT | search.js, itemYearlySummary.js | ItemNo prefix search |
+| 17 | `IX_GMCust_CustName` | GMCust | search.js | CustName contains search |
+| 18 | `IX_OrdDT_OrdNo_Sales` | OrdDT | customerSummary.js, customerSales.js | SUM(ItemQty/ExportQty/Amnt) |
+| 19 | `IX_GMGoodType_Code` | GMGoodType | customerSales.js | item type name lookup |
+| 20 | `IX_OrdHD_Group` | OrdHD | orders.js | group endpoint filter (CustCode+Addr+Mat+DueDate) |
+| 21 | `IX_OrdDT_OrdNo_Detail` | OrdDT | orders.js | detail lines ครบทุก qty/status field |
+| 22 | *(covered by above)* | — | itemYearlySummary.js | ใช้ #10+#16+#18 ร่วมกัน |
+
 ## การเปลี่ยนแปลงหลัก (2026-07-02)
 
 ### 1. ตัดรูป base64 ออกจาก SP → ประสิทธิภาพ
@@ -31,13 +69,22 @@ sql/
 - Frontend เอา `SampleItemNo`/`ItemNo` ไปประกอบ URL รูปจาก network path (`/api/photos/ps|cad/:itemNo`)
 - ยืนยันแล้วว่า `GMItemPhoto` เป็น 1:1 กับ ItemNo → ผลรวม (SumQty/SumItem/SumAmnt) **ไม่เปลี่ยน** (row count เท่าเดิมเป๊ะ)
 
-### 2. สร้าง Index (จากที่หายหมดเหลือแค่ PK_GMCust)
+### 2. สร้าง Index ส่วนที่ 1 (จากที่หายหมดเหลือแค่ PK_GMCust)
 ตาราง OrdHD (176k), OrdDT (755k), OrdTrackDT, OrdWeekPlanHD เป็น HEAP ไม่มี index เลย → SP full scan
 - `indexes.sql` สร้าง 9 covering index (NONCLUSTERED, `ONLINE=ON` ไม่ล็อกตาราง, `DATA_COMPRESSION=PAGE`)
 - **ไม่** สร้าง clustered PK / ไม่แตะ heap (ลดความเสี่ยงต่อระบบ VB.net เดิมที่ใช้ DB ร่วมกัน)
 - ไม่สร้าง index บน GMItemPhoto เพราะระบบเลิก join ตารางนี้แล้ว
 
-### 3. ซ่อม `_All` ที่พังอยู่เดิม
+### 3. เพิ่ม Index ส่วนที่ 2 (2026-07-16) — สำหรับระบบเว็บใหม่
+เพิ่ม 13 covering index สำหรับ query ที่ Node.js backend routes ใช้โดยตรง (ไม่ผ่าน SP):
+- **Dashboard**: stat cards, trend, process distribution, delay orders, sales summary
+- **Search**: OrdHD (OrdNo/PONo/CustCode), OrdDT (ItemNo), GMCust (CustName)
+- **Customer Summary/Sales**: aggregate SUM บน OrdDT, GMGoodType lookup, GMEmp join
+- **Order Detail/Group/By-PO**: group endpoint composite filter, detail covering ครบ
+- **Item Yearly Summary**: ใช้ index จาก Search + Customer Sales ร่วมกัน
+
+
+### 4. ซ่อม `_All` ที่พังอยู่เดิม
 `_All` เดิม `LEFT JOIN VPC_OrdSum_Detail` ซึ่งเป็น view ที่ binding error (อ้างตาราง MasterFileProduct/Item_Head
 ที่หายหลัง restore) ทำให้ ALTER/รันไม่ได้ — view ถูก join แบบ LEFT แต่ไม่มีคอลัมน์ใดถูก SELECT (dead join, no-op
 ต่อผลลัพธ์เพราะ GROUP BY ยุบ row ซ้ำ) จึงลบทิ้ง → `_All` กลับมาใช้งานได้

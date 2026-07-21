@@ -1,3 +1,9 @@
+// ═══════════════════════════════════════════════════════════════════════════════
+// 📌 MODULE: Top Item by Customer Gallery (routes/topOrdersGallery.js)
+// ═══════════════════════════════════════════════════════════════════════════════
+// Fetches the top selling items per customer per year for visual gallery display.
+// ═══════════════════════════════════════════════════════════════════════════════
+
 const express = require('express');
 const router = express.Router();
 const { getPool, sql } = require('../db');

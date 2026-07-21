@@ -1,3 +1,9 @@
+// ═══════════════════════════════════════════════════════════════════════════════
+// 📌 MODULE: Customer Report Matrix (routes/customerReportMatrix.js)
+// ═══════════════════════════════════════════════════════════════════════════════
+// Handles yearly aggregated sales data per customer directly querying OrdHD/OrdDT.
+// ═══════════════════════════════════════════════════════════════════════════════
+
 const express = require('express');
 const router = express.Router();
 const { getPool, sql } = require('../db');

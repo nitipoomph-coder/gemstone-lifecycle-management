@@ -37,14 +37,14 @@ export default function CustomSelect({ value, onChange, options, placeholder = "
         onClick={() => setIsOpen(!isOpen)}
         style={{
           width: '100%', padding: '8px 12px', borderRadius: 10,
-          border: '1px solid var(--color-border-strong)', background: 'var(--color-surface-0)',
+          border: '1px solid var(--color-border-light)', background: 'var(--color-surface-0)',
           color: 'var(--color-text-primary)', fontSize: '0.8rem', fontWeight: 700,
           outline: 'none', cursor: 'pointer',
-          boxShadow: '0 2px 6px color-mix(in srgb, var(--color-surface-900) 5%, transparent)',
+          boxShadow: 'none',
           transition: 'all 0.2s',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px'
         }}
-        className="hover:border-brand-400 focus:border-brand-500"
+        className="hover:border-[var(--color-border-default)] hover:bg-[var(--color-surface-1)] focus:border-[var(--color-brand-300)]"
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
           {icon && <span style={{ display: 'flex', alignItems: 'center', color: 'var(--color-brand-600)' }}>{icon}</span>}
@@ -63,11 +63,11 @@ export default function CustomSelect({ value, onChange, options, placeholder = "
             <button
               key={opt.value}
               onClick={() => { onChange(opt.value); setIsOpen(false); }}
-              className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm transition-colors font-bold ${String(value) === String(opt.value) ? "bg-[var(--color-brand-100)] text-[var(--color-brand-600)]" : "text-[var(--color-text-primary)] hover:bg-[var(--color-surface-0)]"}`}
-              style={{ border: 'none', cursor: 'pointer', textAlign: 'left' }}
+              className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm transition-colors font-bold ${String(value) === String(opt.value) ? "border border-[var(--color-brand-300)] bg-[color-mix(in_srgb,var(--color-brand-500)_9%,var(--color-surface-0))] text-[var(--color-brand-600)]" : "border border-transparent text-[var(--color-text-primary)] hover:bg-[var(--color-surface-0)]"}`}
+              style={{ cursor: 'pointer', textAlign: 'left' }}
             >
               <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textTransform: 'capitalize' }}>{opt.label}</span>
-              {String(value) === String(opt.value) && <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-brand-500)] shadow-[0_0_8px_rgba(var(--color-brand-500),0.6)] ml-2 flex-shrink-0" />}
+              {String(value) === String(opt.value) && <div className="w-1.5 h-1.5 rounded-full bg-[color-mix(in_srgb,var(--color-brand-500)_70%,var(--color-surface-0))] ml-2 flex-shrink-0" />}
             </button>
           ))}
         </div>

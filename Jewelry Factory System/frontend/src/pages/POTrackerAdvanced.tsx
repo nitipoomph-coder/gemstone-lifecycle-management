@@ -2,11 +2,11 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Topbar from '../components/layout/Topbar';
-import OrderTable, { MASTER_COLS, GROUP_PRESETS, COLUMN_GROUPS } from '../components/dashboard/OrderTable';
+import OrderTable, { GROUP_PRESETS } from '../components/dashboard/OrderTable';
 import CustomViewModal from '../components/dashboard/CustomViewModal';
 import CustomSelect from '../components/ui/CustomSelect';
 import { fetchOrders, type OrderSummary } from '../services/orderAPI';
-import { RefreshCw, AlertTriangle, Package, LayoutGrid, DollarSign, Filter, X, Layers, Search } from 'lucide-react';
+import { RefreshCw, AlertTriangle, Package, LayoutGrid, DollarSign, Filter, X, Layers } from 'lucide-react';
 
 const getDefaultDateRange = () => {
   const from = new Date();
@@ -41,8 +41,6 @@ export default function POTrackerAdvanced() {
 
   // ⭐️ Column Picker state (lifted from OrderTable)
   const [visibleKeys, setVisibleKeys] = useState<string[]>(GROUP_PRESETS[groupFilter] || GROUP_PRESETS.ALL);
-  const [showColumnPicker, setShowColumnPicker] = useState(false);
-  const [colSearch, setColSearch] = useState('');
   const lastGroupRef = useRef(groupFilter);
 
   const [dateFrom, setDateFrom] = useState(() => searchParams.get('dateFrom') || getDefaultDateRange().from);
@@ -145,7 +143,8 @@ export default function POTrackerAdvanced() {
     else if (keywords.some(k => ['all', 'ทั้งหมด'].includes(k))) setStatusFilter('all');
 
     // 2. ตรวจจับกลุ่ม (Group Detection)
-    if (keywords.some(k => k.includes('n083'))) setGroupFilter('N083');
+    if (keywords.some(k => k.includes('n098'))) setGroupFilter('N098');
+    else if (keywords.some(k => k.includes('n083'))) setGroupFilter('N083');
     else if (keywords.some(k => k.includes('n051'))) setGroupFilter('N051');
     else if (keywords.some(k => k.includes('n044'))) setGroupFilter('N044');
     else if (keywords.some(k => k.includes('mlt') || k.startsWith('u'))) setGroupFilter('MLT');
@@ -167,6 +166,7 @@ export default function POTrackerAdvanced() {
       else if (groupFilter === 'MLT') filteredList = filteredList.filter(o => o.CustCode?.includes('MLT') || o.CustCode?.startsWith('U'));
       else if (groupFilter === 'N083') filteredList = filteredList.filter(o => o.CustCode?.includes('N083'));
       else if (groupFilter === 'N044') filteredList = filteredList.filter(o => o.CustCode?.includes('N044'));
+      else if (groupFilter === 'N098') filteredList = filteredList.filter(o => o.CustCode?.includes('N098'));
       else if (groupFilter === 'N051') filteredList = filteredList.filter(o => o.CustCode?.includes('N051'));
     }
 
@@ -178,7 +178,7 @@ export default function POTrackerAdvanced() {
       // กรองคำที่เป็น metadata ออก (เช่นคำที่ใช้เลือก status/group ไปแล้ว)
       const dataKeywords = keywords.filter(k =>
         !['pending', 'ค้าง', 'finish', 'เสร็จ', 'all', 'ทั้งหมด', 'late', 'สาย', 'ช้า', 'delay'].includes(k) &&
-        !['n008', 'n083', 'n051', 'n044', 'mlt'].includes(k)
+        !['n008', 'n098', 'n083', 'n051', 'n044', 'mlt'].includes(k)
       );
 
       // ถ้าเหลือ keyword ที่เป็นข้อมูลจริงๆ ให้ค้นหา (ขยายให้ครอบคลุม Week และ ShipTo, Type ด้วย)
@@ -303,7 +303,7 @@ export default function POTrackerAdvanced() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--color-text-tertiary)', textTransform: 'capitalize', letterSpacing: '0.05em' }}>Group</span>
               <div style={{ display: 'flex', background: 'var(--color-surface-1)', padding: '4px', borderRadius: '12px', border: '1px solid var(--color-border-light)' }}>
-                {['N008', 'MLT', 'N083', 'N044', 'N051', 'ALL'].map(grp => (
+                {['N008', 'N044', 'N098', 'N051', 'N083', 'MLT', 'ALL'].map(grp => (
                   <button
                     key={grp}
                     onClick={() => setGroupFilter(grp)}

@@ -23,37 +23,44 @@ export const CUSTOMER_GROUPS: CustomerGroup[] = [
   {
     id: 'N008',
     label: 'N008 Group',
-    color: 'var(--color-brand-500)',
+    color: 'var(--color-chart-6)',
     prefixes: ['N008', 'N048', 'N065', 'N066', 'N067', 'N068', 'N069', 'N070', 'N071', 'N072', 'N073', 'N074', 'N075'],
   },
   {
+    id: 'N044',
+    label: 'N044 Group',
+    color: 'var(--color-chart-3)',
+    prefixes: ['N044'],
+  },
+  {
+    id: 'N098',
+    label: 'N098 Group',
+    color: 'var(--color-chart-4)',
+    prefixes: ['N098'],
+  },
+  {
+    id: 'N051',
+    label: 'N051 Group',
+    color: 'var(--color-chart-2)',
+    prefixes: ['N051'],
+  },
+  {
+    id: 'N083',
+    label: 'N083 Group',
+    color: 'var(--color-chart-1)',
+    prefixes: ['N083', 'N086', 'N087', 'N088', 'N089'],
+  },
+
+  {
     id: 'MLT',
     label: 'MLT Group',
-    color: 'var(--color-proc-polishing)',
+    color: 'var(--color-chart-5)',
     // U411 ถึง U426 (16 รหัส)
     prefixes: [
       'U411', 'U412', 'U413', 'U414', 'U415', 'U416',
       'U417', 'U418', 'U419', 'U420', 'U421', 'U422',
       'U423', 'U424', 'U425', 'U426',
     ],
-  },
-  {
-    id: 'N083',
-    label: 'N083 Group',
-    color: 'var(--color-proc-plating)',
-    prefixes: ['N083', 'N086', 'N087', 'N088', 'N089'],
-  },
-  {
-    id: 'N044',
-    label: 'N044 Group',
-    color: 'var(--color-proc-grinding)',
-    prefixes: ['N044'],
-  },
-  {
-    id: 'N051',
-    label: 'N051 Group',
-    color: 'var(--color-proc-packing)',
-    prefixes: ['N051'],
   },
 ];
 

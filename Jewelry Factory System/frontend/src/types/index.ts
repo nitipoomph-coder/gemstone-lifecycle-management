@@ -5,8 +5,9 @@ export interface NavMenuItem {
   id: string;
   label: string;
   code?: string;
-  path: string;
+  path?: string;
   roles?: string[];
+  items?: NavMenuItem[];
 }
 
 export interface NavMenuGroup {

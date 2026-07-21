@@ -9,6 +9,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const YEAR_COLORS = ['var(--color-chart-6)', 'var(--color-chart-2)', 'var(--color-chart-1)', 'var(--color-chart-3)', 'var(--color-chart-4)', 'var(--color-chart-5)'];
 
 // Custom Tooltip for Recharts
 const CustomTooltip = ({ active, payload, label, metric }: any) => {
@@ -28,7 +29,7 @@ const CustomTooltip = ({ active, payload, label, metric }: any) => {
                   {ALL_GROUPS.find(g => g.id === entry.dataKey)?.label || (String(entry.dataKey).length === 4 ? `Year ${entry.dataKey}` : entry.name)}
                 </div>
                 <span style={{ color: entry.color }}>
-                  {metric === 'qty' 
+                  {metric === 'qty'
                     ? entry.value.toLocaleString(undefined, { maximumFractionDigits: 0 })
                     : '$' + entry.value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
@@ -297,7 +298,7 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: 'amo
   if (loading) {
     return (
       <>
-        <Topbar breadcrumb={[{ label: 'JEWELRY FACTORY SYSTEM', path: '/' }, { label: 'SALES SUMMARY BY CUSTOMER' }]} />
+        <Topbar breadcrumb={[{ label: 'JEWELRY FACTORY SYSTEM', path: '/' }, { label: 'Sales Analytics' }]} />
         <div className="flex-1 p-6 flex flex-col gap-6 w-full h-full" style={{ background: 'var(--color-surface-1)' }}>
           {/* Header Skeleton */}
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -330,7 +331,7 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: 'amo
 
   return (
     <>
-      <Topbar breadcrumb={[{ label: 'JEWELRY FACTORY SYSTEM', path: '/' }, { label: 'SALES SUMMARY BY CUSTOMER' }]} />
+      <Topbar breadcrumb={[{ label: 'JEWELRY FACTORY SYSTEM', path: '/' }, { label: 'Sales Analytics' }]} />
       <div className="content-scrollbar flex-1 overflow-y-auto" style={{ background: 'var(--color-surface-1)' }}>
         <div className="p-6 flex flex-col gap-6 w-full">
 
@@ -338,10 +339,10 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: 'amo
           <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
             <div>
               <h1 style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--color-text-primary)', fontFamily: 'var(--font-display)', letterSpacing: '-0.02em', lineHeight: 1 }}>
-                Sales Analytics <span style={{ color: 'var(--color-proc-polishing)' }}>By Customer Group</span>
+                {metric === 'qty' ? 'Quantity Summary' : 'Sales Summary'} <span style={{ color: 'var(--color-proc-polishing)' }}>By Customer Group</span>
               </h1>
               <p style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-tertiary)', marginTop: 6, letterSpacing: '0.06em', textTransform: 'capitalize' }}>
-                Client Account Growth Analysis
+                {metric === 'qty' ? 'Client Quantity Growth Analysis' : 'Client Account Growth Analysis'}
               </p>
             </div>
 
@@ -352,20 +353,20 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: 'amo
                   display: 'flex', alignItems: 'center', gap: 6,
                   padding: '8px 16px', borderRadius: 12, fontSize: '0.75rem', fontWeight: 800, textTransform: 'capitalize',
                   color: 'var(--color-text-primary)', background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)',
-                  cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+                  cursor: 'pointer', transition: 'all 0.2s', boxShadow: 'none'
                 }}
                 className="hover:-translate-y-0.5 active:scale-95"
               >
                 <Users size={14} />
-                Customer Sales Analysis
+                Customer Trends
               </button>
               <button
                 onClick={() => navigate('/dashboard/customer-report?metric=' + metric)}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 6,
                   padding: '8px 16px', borderRadius: 12, fontSize: '0.75rem', fontWeight: 800, textTransform: 'capitalize',
-                  color: '#fff', background: 'var(--color-proc-polishing)', border: 'none',
-                  cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 4px 12px color-mix(in srgb, var(--color-proc-polishing) 40%, transparent)'
+                  color: 'var(--color-proc-polishing)', background: 'color-mix(in srgb, var(--color-proc-polishing) 8%, var(--color-surface-0))', border: '1px solid color-mix(in srgb, var(--color-proc-polishing) 32%, var(--color-border-light))',
+                  cursor: 'pointer', transition: 'all 0.2s', boxShadow: 'none'
                 }}
                 className="hover:-translate-y-0.5 active:scale-95"
               >
@@ -378,14 +379,14 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: 'amo
                   display: 'flex', alignItems: 'center', gap: 6,
                   padding: '8px 16px', borderRadius: 12, fontSize: '0.75rem', fontWeight: 800, textTransform: 'capitalize',
                   color: 'var(--color-text-tertiary)', background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)',
-                  cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+                  cursor: 'pointer', transition: 'all 0.2s', boxShadow: 'none'
                 }}
-                className="hover:text-red-500 hover:border-red-200 hover:bg-red-50"
+                className="hover:border-[var(--color-border-default)] hover:text-[var(--color-text-primary)]"
               >
                 <RefreshCw size={14} /> Reset All
               </button>
 
-              <div style={{ display: 'flex', background: 'var(--color-surface-0)', padding: 4, borderRadius: 16, border: '1px solid var(--color-border-light)', boxShadow: '0 4px 16px -4px rgba(0,0,0,0.05)' }}>
+              <div style={{ display: 'flex', background: 'var(--color-surface-0)', padding: 4, borderRadius: 12, border: '1px solid var(--color-border-light)', boxShadow: 'none' }}>
                 {[
                   { id: 'yearly', label: 'Yearly Comparison', icon: Building2 },
                   { id: 'monthly', label: 'Monthly Breakdown', icon: CalendarDays }
@@ -396,10 +397,11 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: 'amo
                     style={{
                       display: 'flex', alignItems: 'center', gap: 8,
                       padding: '8px 20px', borderRadius: 12, fontSize: '0.8rem', fontWeight: 800,
-                      color: mode === item.id ? 'var(--color-text-inverse)' : 'var(--color-text-tertiary)',
-                      background: mode === item.id ? 'var(--color-proc-polishing)' : 'transparent',
+                      color: mode === item.id ? 'var(--color-proc-polishing)' : 'var(--color-text-tertiary)',
+                      background: mode === item.id ? 'color-mix(in srgb, var(--color-proc-polishing) 9%, transparent)' : 'transparent',
+                      border: mode === item.id ? '1px solid color-mix(in srgb, var(--color-proc-polishing) 30%, var(--color-border-light))' : '1px solid transparent',
                       cursor: 'pointer', transition: 'all 0.2s',
-                      boxShadow: mode === item.id ? '0 2px 8px -2px rgba(0,0,0,0.2)' : 'none'
+                      boxShadow: 'none'
                     }}
                   >
                     <item.icon size={16} />
@@ -505,10 +507,10 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: 'amo
                 </div>
                 <button onClick={() => setShowLabels(!showLabels)} style={{
                   padding: '4px 12px', borderRadius: 20, fontSize: '0.65rem', fontWeight: 800, border: 'none', cursor: 'pointer', transition: 'all 0.2s',
-                  background: showLabels ? 'color-mix(in srgb, var(--color-success-500) 15%, transparent)' : 'color-mix(in srgb, var(--color-warning-500) 15%, transparent)',
-                  color: showLabels ? 'var(--color-success-500)' : 'var(--color-warning-500)',
+                  background: showLabels ? 'color-mix(in srgb, var(--color-success-500) 8%, var(--color-surface-0))' : 'var(--color-surface-1)',
+                  color: showLabels ? 'var(--color-success-500)' : 'var(--color-text-tertiary)',
                 }}>
-                  {showLabels ? "✓ Labels ON" : "Labels OFF"}
+                  {showLabels ? "Labels ON" : "Labels OFF"}
                 </button>
               </div>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -564,7 +566,7 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: 'amo
                             <span style={{ fontSize: isLatest ? '0.85rem' : '0.75rem', fontWeight: 900, color: 'var(--color-text-secondary)' }}>{yr}</span>
                             {prevYr && (
                               <span style={{ fontSize: '0.7rem', fontWeight: 800, color: pct === null ? 'var(--color-text-tertiary)' : itemColor }}>
-                                {pct === null ? '— No Existing Data' : `${pct >= 0 ? '↑ +' : '↓ '}${pct.toFixed(2)}%`}
+                                {pct === null ? 'No existing data' : `${pct >= 0 ? 'Up +' : 'Down '}${pct.toFixed(2)}%`}
                               </span>
                             )}
                           </div>
@@ -579,7 +581,7 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: 'amo
                     })}
                     {activeYears.length === 1 && (
                       <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--color-text-tertiary)', textAlign: 'right', marginTop: 4 }}>
-                        — Add another year to compare
+                        Add another year to compare
                       </div>
                     )}
                   </div>
@@ -594,22 +596,22 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: 'amo
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 32 }}>
               <div>
                 <h2 style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--color-text-primary)', textTransform: 'capitalize', letterSpacing: '0.05em', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 12 }}>
-                  {mode === 'yearly' ? `Annual Sales Comparison` : `Monthly Sales Breakdown`}
+                  {mode === 'yearly' ? (metric === 'qty' ? `Annual Quantity Comparison` : `Annual Sales Comparison`) : (metric === 'qty' ? `Monthly Quantity Breakdown` : `Monthly Sales Breakdown`)}
 
                 </h2>
                 <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--color-text-tertiary)', fontWeight: 700 }}>
-                  Unit: {metric === 'qty' ? 'PCS' : 'USD'} · Grouped Layout {showLabels ? '· Value Labels Displayed' : '· Value Labels Hidden (select ≤ 3 groups)'}
+                  Unit: {metric === 'qty' ? 'PCS' : 'USD'} / Grouped Layout {showLabels ? '/ Value Labels Displayed' : '/ Value Labels Hidden (select <= 3 groups)'}
                 </p>
 
                 {/* Chart Mode Toggles */}
                 <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-                    <button onClick={() => setMonthlySeries('year')} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 12px', borderRadius: 16, fontSize: '0.7rem', fontWeight: 800, background: monthlySeries === 'year' ? 'var(--color-brand-600)' : 'var(--color-surface-1)', color: monthlySeries === 'year' ? 'white' : 'var(--color-text-secondary)', border: '1px solid var(--color-border-light)', cursor: 'pointer', transition: 'all 0.2s' }}>
-                      <CalendarDays size={14} /> Compare by Year
-                    </button>
-                    <button onClick={() => setMonthlySeries('group')} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 12px', borderRadius: 16, fontSize: '0.7rem', fontWeight: 800, background: monthlySeries === 'group' ? 'var(--color-brand-600)' : 'var(--color-surface-1)', color: monthlySeries === 'group' ? 'white' : 'var(--color-text-secondary)', border: '1px solid var(--color-border-light)', cursor: 'pointer', transition: 'all 0.2s' }}>
-                      <Users size={14} /> Compare by Group
-                    </button>
-                  </div>
+                  <button onClick={() => setMonthlySeries('year')} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 12px', borderRadius: 16, fontSize: '0.7rem', fontWeight: 800, background: monthlySeries === 'year' ? 'color-mix(in srgb, var(--color-brand-500) 9%, var(--color-surface-0))' : 'var(--color-surface-1)', color: monthlySeries === 'year' ? 'var(--color-brand-600)' : 'var(--color-text-secondary)', border: '1px solid var(--color-border-light)', cursor: 'pointer', transition: 'all 0.2s' }}>
+                    <CalendarDays size={14} /> Compare by Year
+                  </button>
+                  <button onClick={() => setMonthlySeries('group')} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 12px', borderRadius: 16, fontSize: '0.7rem', fontWeight: 800, background: monthlySeries === 'group' ? 'color-mix(in srgb, var(--color-brand-500) 9%, var(--color-surface-0))' : 'var(--color-surface-1)', color: monthlySeries === 'group' ? 'var(--color-brand-600)' : 'var(--color-text-secondary)', border: '1px solid var(--color-border-light)', cursor: 'pointer', transition: 'all 0.2s' }}>
+                    <Users size={14} /> Compare by Group
+                  </button>
+                </div>
 
                 {/* Chart Legend */}
                 <div style={{ display: 'flex', gap: 12, marginTop: 16, flexWrap: 'wrap' }}>
@@ -622,7 +624,6 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: 'amo
                       </div>
                     );
                   }) : activeYears.map((y, idx) => {
-                    const YEAR_COLORS = ['var(--color-brand-500)', 'var(--color-proc-polishing)', 'var(--color-proc-plating)', 'var(--color-proc-grinding)', 'var(--color-success-500)', 'var(--color-warning-500)'];
                     const color = YEAR_COLORS[idx % YEAR_COLORS.length];
                     return (
                       <div key={y} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.7rem', fontWeight: 800, color: 'var(--color-text-secondary)', textTransform: 'capitalize' }}>
@@ -647,7 +648,7 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: 'amo
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 2, alignItems: 'flex-end' }}>
                     {grandYoy.slice(0, 1).map(({ currYr, prevYr, pct }) => (
                       <div key={`${currYr}-${prevYr}`} style={{ fontSize: '0.8rem', fontWeight: 800, color: pct === null ? 'var(--color-text-tertiary)' : pct >= 0 ? 'var(--color-success-600)' : 'var(--color-danger-600)', background: pct === null ? 'transparent' : pct >= 0 ? 'var(--color-success-50)' : 'var(--color-danger-50)', padding: '4px 10px', borderRadius: 12 }}>
-                        {pct === null ? `— No prior data` : `${pct >= 0 ? '↑ +' : '↓ '}${pct.toFixed(2)}%`}
+                        {pct === null ? `No prior data` : `${pct >= 0 ? 'Up +' : 'Down '}${pct.toFixed(2)}%`}
                         <span style={{ fontSize: '0.7rem', color: pct === null ? 'var(--color-text-quaternary)' : pct >= 0 ? 'var(--color-success-600)' : 'var(--color-danger-600)', opacity: 0.8, marginLeft: 6 }}>
                           Compared to {prevYr}
                         </span>
@@ -676,7 +677,6 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: 'amo
                       </Bar>
                     );
                   }) : activeYears.map((y, idx) => {
-                    const YEAR_COLORS = ['var(--color-brand-500)', 'var(--color-proc-polishing)', 'var(--color-proc-plating)', 'var(--color-proc-grinding)', 'var(--color-success-500)', 'var(--color-warning-500)'];
                     const color = YEAR_COLORS[idx % YEAR_COLORS.length];
                     return (
                       <Bar key={y} dataKey={y} name={`Year ${y}`} fill={color} radius={[4, 4, 0, 0]} maxBarSize={40}>

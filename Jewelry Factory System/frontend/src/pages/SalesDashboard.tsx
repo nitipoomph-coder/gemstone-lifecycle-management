@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
-import type { CSSProperties } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { CSSProperties, KeyboardEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, BarChart3, ChevronDown, Filter, Maximize2, RefreshCw, Search, Trophy } from 'lucide-react';
+import { ArrowLeft, BarChart3, ChevronDown, Filter, RefreshCw, Search, Trophy } from 'lucide-react';
 import Topbar from '../components/layout/Topbar';
+import '../components/sales/SalesDenseTable.css';
 import {
   fetchSalesCustomerGroups,
   fetchSalesMonthlyAnalytics,
@@ -12,27 +13,29 @@ import {
   type SalesMonthlyPoint,
   type SalesOrderRow,
 } from '../services/customerSalesAPI';
-import { ALL_GROUPS, getCustomerGroupId } from '../config/customerGroups';
 
 const REPORT_YEAR = '2026';
 const PREVIOUS_YEAR = '2025';
 const REFRESH_MS = 60_000;
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const MONTH_OPTIONS = MONTHS.map((label, index) => ({ label: label + ' ' + REPORT_YEAR, value: String(index + 1) }));
+const DATE_BASIS_OPTIONS: { value: SalesDateView; label: string }[] = [
+  { value: 'orddate', label: 'OrdDate' },
+  { value: 'duedate', label: 'DueDate' },
+  { value: 'custdate', label: 'CustDate' },
+  { value: 'ordmonth', label: 'OrdMonth' },
+  { value: 'shipmonth', label: 'ShipMonth' },
+];
 
 type PeriodMode = 'ytd' | 'month' | 'full';
 
-type CustomerMatrixRow = {
-  customerCode: string;
-  customerName: string;
-  groupLabel: string;
+type SalesMatrixRow = {
+  salesName: string;
   amount: number;
   dueAmount: number;
   qty: number;
   shippedQty: number;
   orderCount: number;
-  target: number;
-  completion: number;
   shippedRatio: number;
   dueRatio: number;
   months: MonthMetric[];
@@ -81,25 +84,17 @@ const fmtCompactQty = (value: number) => {
 };
 const fmtTime = (date: Date | null) => date ? date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-';
 
-function groupLabel(code: string) {
-  const groupId = getCustomerGroupId(code);
-  return ALL_GROUPS.find(group => group.id === groupId)?.label || groupId;
-}
-
 function matrixRows(rows: SalesCustomerGroupPoint[], months: string[]) {
-  const map = new Map<string, CustomerMatrixRow>();
+  const map = new Map<string, SalesMatrixRow>();
   rows.forEach(row => {
-    const current = map.get(row.customerCode) || {
-      customerCode: row.customerCode,
-      customerName: row.customerName || row.customerCode,
-      groupLabel: groupLabel(row.customerCode),
+    const salesName = row.salesName || row.customerName || row.customerCode || 'Unassigned';
+    const current = map.get(salesName) || {
+      salesName,
       amount: 0,
       dueAmount: 0,
       qty: 0,
       shippedQty: 0,
       orderCount: 0,
-      target: 0,
-      completion: 0,
       shippedRatio: 0,
       dueRatio: 0,
       months: months.map(month => ({ month: Number(month), label: MONTHS[Number(month) - 1], qty: 0, amount: 0 })),
@@ -115,20 +110,16 @@ function matrixRows(rows: SalesCustomerGroupPoint[], months: string[]) {
     current.qty += Number(row.qty || 0);
     current.shippedQty += Number(row.shippedQty || 0);
     current.orderCount += Number(row.orderCount || 0);
-    map.set(row.customerCode, current);
+    map.set(salesName, current);
   });
 
   return Array.from(map.values()).map(row => {
     const gapQty = Math.max(row.qty - row.shippedQty, 0);
     const dueAmount = row.qty > 0 ? row.amount * (gapQty / row.qty) : 0;
-    const target = Math.max(row.amount / 0.84, 1);
-    const completion = Math.min((row.amount / target) * 100, 100);
     const shippedRatio = row.qty > 0 ? Math.min((row.shippedQty / row.qty) * 100, 100) : 0;
     return {
       ...row,
       dueAmount,
-      target,
-      completion,
       shippedRatio,
       dueRatio: Math.max(100 - shippedRatio, 0),
     };
@@ -156,9 +147,10 @@ export default function SalesDashboard() {
   const [periodMode, setPeriodMode] = useState<PeriodMode>('ytd');
   const [startMonth, setStartMonth] = useState(1);
   const [endMonth, setEndMonth] = useState(currentMonthNumber());
-  const [dateView, setDateView] = useState<SalesDateView>('ship');
+  const [dateView, setDateView] = useState<SalesDateView>('shipmonth');
   const [comparePrevious, setComparePrevious] = useState(true);
   const [filterOpen, setFilterOpen] = useState(false);
+  const [searchDraft, setSearchDraft] = useState('');
   const [search, setSearch] = useState('');
 
   const activeMonths = useMemo(() => {
@@ -168,7 +160,7 @@ export default function SalesDashboard() {
   }, [periodMode, startMonth, endMonth]);
 
   // Sales Matrix pulls the selected 2026 period and refreshes every minute.
-  const loadData = async (silent = false) => {
+  const loadData = useCallback(async (silent = false) => {
     if (silent) setRefreshing(true);
     else setLoading(true);
     setError('');
@@ -187,20 +179,33 @@ export default function SalesDashboard() {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [activeMonths, dateView]);
 
   useEffect(() => {
-    loadData();
-    const timer = window.setInterval(() => loadData(true), REFRESH_MS);
-    return () => window.clearInterval(timer);
-  }, [activeMonths.join(','), dateView]);
+    const initialLoad = window.setTimeout(() => { void loadData(); }, 0);
+    const timer = window.setInterval(() => { void loadData(true); }, REFRESH_MS);
+    return () => {
+      window.clearTimeout(initialLoad);
+      window.clearInterval(timer);
+    };
+  }, [loadData]);
 
+  const applySearch = () => {
+    const nextSearch = searchDraft.toUpperCase();
+    setSearchDraft(nextSearch);
+    setSearch(nextSearch);
+  };
+
+  const handleSearchKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') applySearch();
+    if (event.key === 'Escape') setSearchDraft(search.toUpperCase());
+  };
   const todayLabel = todayKey();
   const rows = useMemo(() => matrixRows(data.groups, activeMonths), [data.groups, activeMonths]);
   const filteredRows = useMemo(() => {
     const term = search.trim().toLowerCase();
     if (!term) return rows;
-    return rows.filter(row => (row.customerCode + ' ' + row.customerName + ' ' + row.groupLabel).toLowerCase().includes(term));
+    return rows.filter(row => row.salesName.toLowerCase().includes(term));
   }, [rows, search]);
   const summary = useMemo(() => monthlySummary(data.monthly, activeMonths), [data.monthly, activeMonths]);
   const todayOrders = useMemo(() => data.currentMonthOrders.filter(row => asDateKey(row.ordDate) === todayLabel), [data.currentMonthOrders, todayLabel]);
@@ -215,10 +220,10 @@ export default function SalesDashboard() {
           <section style={commandBar}>
             <div style={leftTools}>
               <button type="button" onClick={() => navigate(-1)} style={toolButton}><ArrowLeft size={14} /> Back</button>
-              <button type="button" onClick={() => navigate('/dashboard/sales-customer-groups?years=' + REPORT_YEAR + '&months=' + activeMonths.join(',') + '&metric=amount')} style={activeToolButton}><BarChart3 size={14} /> Analytics</button>
+              <button type="button" onClick={() => navigate('/dashboard/sales-customer-groups?years=' + REPORT_YEAR + '&months=' + activeMonths.join(',') + '&metric=amount')} style={activeToolButton}><BarChart3 size={14} /> Customer Trends</button>
               <label style={searchBox}>
                 <Search size={14} />
-                <input value={search} onChange={event => setSearch(event.target.value)} placeholder="Search Sales Name..." style={searchInput} />
+                <input value={searchDraft} onChange={event => setSearchDraft(event.target.value.toUpperCase())} onKeyDown={handleSearchKeyDown} placeholder="Search Sales Name..." style={searchInput} />
               </label>
             </div>
             <div style={rightTools}>
@@ -236,8 +241,9 @@ export default function SalesDashboard() {
                 <div style={filterBody}>
                   <div style={filterTitle}>Define Period Basis</div>
                   <div style={toggleLine}>
-                    <button type="button" onClick={() => setDateView('order')} style={dateView === 'order' ? selectedToggle : smallToggle}>Order Basis</button>
-                    <button type="button" onClick={() => setDateView('ship')} style={dateView === 'ship' ? selectedToggle : smallToggle}>Due Ship-To Basis</button>
+                    {DATE_BASIS_OPTIONS.map(option => (
+                      <button key={option.value} type="button" onClick={() => setDateView(option.value)} style={dateView === option.value ? selectedToggle : smallToggle}>{option.label}</button>
+                    ))}
                   </div>
                   <div style={fieldGrid}>
                     <label style={fieldLabel}>Start Month:<select value={startMonth} onChange={event => setStartMonth(Number(event.target.value))} style={selectControl}>{MONTH_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
@@ -266,10 +272,32 @@ export default function SalesDashboard() {
 
           {error && <div style={errorBox}>{error}</div>}
 
-          <section style={matrixGrid}>
-            {loading && Array.from({ length: 6 }, (_, index) => <SkeletonCard key={index} />)}
-            {!loading && filteredRows.length === 0 && <div style={emptyPanel}>No sales data found for this period.</div>}
-            {!loading && filteredRows.slice(0, 12).map((row, index) => <PerformanceCard key={row.customerCode} row={row} rank={index + 1} />)}
+          <section className={['sales-dense-panel', searchDraft.trim() ? 'sales-dense-panel--searching' : ''].filter(Boolean).join(' ')} style={{ minHeight: 520 }}>
+            <div className="sales-dense-panel__header">
+              <div className="sales-dense-panel__title">Sales Performance Table</div>
+              <div className="sales-dense-panel__meta">{loading ? 'Loading...' : `${fmtQty(filteredRows.length)} rows`}</div>
+            </div>
+            <div className="content-scrollbar sales-dense-scroll">
+              <table className="sales-dense-table sales-dense-table--sticky-first" style={{ minWidth: 760 + activeMonths.length * 92 }}>
+                <thead>
+                  <tr>
+                    <th style={{ width: 170 }}>Sales Name</th>
+                    <th className="sales-dense-table__number" style={{ width: 74 }}>Orders</th>
+                    <th className="sales-dense-table__number" style={{ width: 92 }}>Ord Qty</th>
+                    <th className="sales-dense-table__number" style={{ width: 96 }}>Shipped</th>
+                    <th className="sales-dense-table__number" style={{ width: 82 }}>Ship %</th>
+                    <th className="sales-dense-table__number" style={{ width: 106 }}>Due Amt</th>
+                    <th className="sales-dense-table__number" style={{ width: 106 }}>Amount</th>
+                    {activeMonths.map(month => <th key={month} className="sales-dense-table__number" style={{ width: 92 }}>{MONTHS[Number(month) - 1]}</th>)}
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading && Array.from({ length: 12 }, (_, index) => <SalesMatrixSkeletonRow key={index} monthCount={activeMonths.length} />)}
+                  {!loading && filteredRows.length === 0 && <tr><td className="sales-dense-empty" colSpan={7 + activeMonths.length}>No sales data found for this period.</td></tr>}
+                  {!loading && filteredRows.map((row, index) => <SalesMatrixTableRow key={row.salesName} row={row} index={index} />)}
+                </tbody>
+              </table>
+            </div>
           </section>
         </main>
       </div>
@@ -285,63 +313,46 @@ function MetricPill({ label, value }: { label: string; value: string }) {
   return <span style={metricPill}><small>{label}</small><strong>{value}</strong></span>;
 }
 
-function PerformanceCard({ row, rank }: { row: CustomerMatrixRow; rank: number }) {
-  const avatarColor = avatarPalette[(rank - 1) % avatarPalette.length];
+function SalesMatrixTableRow({ row, index }: { row: SalesMatrixRow; index: number }) {
+  const shippedPct = Math.round(row.shippedRatio || 0);
   return (
-    <article style={matrixCard}>
-      <header style={cardHeader}>
-        <div style={personBlock}>
-          <div style={{ ...avatar, background: avatarColor }}>{row.customerName.slice(0, 1).toUpperCase()}</div>
-          <div style={personText}>
-            <strong>{row.customerName}</strong>
-            <span>{row.customerCode} · {row.groupLabel}</span>
-          </div>
-        </div>
-        <span style={targetBadge}>{fmtCompactMoney(row.target)} | {Math.round(row.completion)}% Target</span>
-      </header>
-
-      <div style={metricGrid}>
-        <MiniMetric label="KPI Target" value={fmtCompactMoney(row.target)} />
-        <MiniMetric label="Order Amount" value={fmtCompactMoney(row.amount)} />
-        <MiniMetric label="Due Amount" value={fmtCompactMoney(row.dueAmount)} />
-      </div>
-
-      <BarLabel label="KPI Completion Progress Bar" value={Math.round(row.completion) + '%'} />
-      <div style={progressTrack}><div style={{ ...progressFill, width: row.completion + '%' }} /></div>
-
-      <BarLabel label="Shipped vs. Due Proportion Bar" value="" />
-      <div style={splitTrack}>
-        <div style={{ ...splitDone, width: row.shippedRatio + '%' }} />
-        <div style={{ ...splitDue, width: row.dueRatio + '%' }} />
-      </div>
-      <div style={splitLegend}><span><i style={doneDot} />{Math.round(row.shippedRatio)}%</span><span><i style={dueDot} />{Math.round(row.dueRatio)}%</span></div>
-
-      <div style={monthHeader}>1-12 Month Due Ship-To Qty (Pcs)<Maximize2 size={12} /></div>
-      <div style={monthTiles}>
-        {row.months.map(month => (
-          <button type="button" key={month.month} style={monthTile} title={fmtMoney(month.amount)}>
-            <span>{month.label}</span>
-            <strong>{fmtCompactQty(month.qty)}</strong>
-            <Maximize2 size={10} />
-          </button>
-        ))}
-      </div>
-    </article>
+    <tr style={{ animationDelay: `${Math.min(index * 12, 180)}ms` }}>
+      <td>
+        <span className="sales-dense-table__code">{row.salesName}</span>
+        <span className="sales-dense-table__sub">{fmtCompactMoney(row.amount)} / {fmtCompactQty(row.qty)} pcs</span>
+      </td>
+      <td className="sales-dense-table__number">{fmtQty(row.orderCount)}</td>
+      <td className="sales-dense-table__number">{fmtQty(row.qty)}</td>
+      <td className="sales-dense-table__number">{fmtQty(row.shippedQty)}</td>
+      <td className="sales-dense-table__number">
+        <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
+          <span className="sales-dense-progress"><span style={{ width: `${shippedPct}%` }} /></span>
+          {shippedPct}%
+        </span>
+      </td>
+      <td className="sales-dense-table__number">{fmtCompactMoney(row.dueAmount)}</td>
+      <td className="sales-dense-table__number"><strong>{fmtCompactMoney(row.amount)}</strong></td>
+      {row.months.map(month => (
+        <td key={month.month} className="sales-dense-table__number" title={fmtMoney(month.amount)}>
+          {fmtCompactQty(month.qty)}
+        </td>
+      ))}
+    </tr>
   );
 }
 
-function MiniMetric({ label, value }: { label: string; value: string }) {
-  return <div style={miniMetric}><span>{label}</span><strong>{value}</strong></div>;
+function SalesMatrixSkeletonRow({ monthCount }: { monthCount: number }) {
+  const widths = [70, 44, 52, 56, 62, 58, 66, 48, 72, 54, 60, 46];
+  return (
+    <tr>
+      {Array.from({ length: 7 + monthCount }, (_, index) => (
+        <td key={index}>
+          <span className="sales-dense-skeleton" style={{ width: `${widths[index % widths.length]}%` }} />
+        </td>
+      ))}
+    </tr>
+  );
 }
-
-function BarLabel({ label, value }: { label: string; value: string }) {
-  return <div style={barLabel}><span>{label}</span><strong>{value}</strong></div>;
-}
-
-function SkeletonCard() {
-  return <div style={skeletonCard}><div style={skeletonLine} /><div style={skeletonMetrics} /><div style={skeletonBar} /><div style={skeletonTiles} /></div>;
-}
-
 const workspace: CSSProperties = { background: 'var(--color-surface-1)' };
 const pageShell: CSSProperties = { padding: 12, display: 'flex', flexDirection: 'column', gap: 10, width: '100%' };
 const commandBar: CSSProperties = { position: 'sticky', top: 0, zIndex: 20, minHeight: 42, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '7px 10px', border: '1px solid var(--color-border-light)', borderRadius: 8, background: 'var(--color-surface-0)' };
@@ -358,7 +369,7 @@ const periodOption: CSSProperties = { height: 30, textAlign: 'left', border: 0, 
 const activePeriodOption: CSSProperties = { ...periodOption, background: 'color-mix(in oklch, var(--color-brand-500) 14%, var(--color-surface-0))', color: 'var(--color-text-primary)' };
 const filterBody: CSSProperties = { padding: 12, display: 'flex', flexDirection: 'column', gap: 10 };
 const filterTitle: CSSProperties = { fontSize: '0.78rem', fontWeight: 850, color: 'var(--color-text-primary)' };
-const toggleLine: CSSProperties = { display: 'flex', gap: 8, flexWrap: 'wrap' };
+const toggleLine: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(86px, 1fr))', gap: 8 };
 const smallToggle: CSSProperties = { height: 28, border: '1px solid var(--color-border-light)', borderRadius: 999, background: 'var(--color-surface-1)', color: 'var(--color-text-secondary)', padding: '0 10px', fontSize: '0.7rem', fontWeight: 800, cursor: 'pointer' };
 const selectedToggle: CSSProperties = { ...smallToggle, background: 'var(--color-brand-500)', color: 'var(--color-text-inverse)', borderColor: 'var(--color-brand-500)' };
 const fieldGrid: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(2, minmax(130px, 1fr))', gap: 8 };
@@ -371,32 +382,4 @@ const titleRow: CSSProperties = { display: 'flex', alignItems: 'center', justify
 const pageTitle: CSSProperties = { margin: 0, display: 'flex', alignItems: 'center', gap: 8, color: 'var(--color-text-primary)', fontSize: '1rem', lineHeight: 1.2, fontWeight: 850, letterSpacing: 0 };
 const summaryStrip: CSSProperties = { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' };
 const metricPill: CSSProperties = { height: 32, display: 'inline-flex', alignItems: 'center', gap: 8, border: '1px solid var(--color-border-light)', borderRadius: 8, background: 'var(--color-surface-0)', padding: '0 10px', color: 'var(--color-text-primary)' };
-const matrixGrid: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(330px, 1fr))', gap: 12, alignItems: 'start' };
-const matrixCard: CSSProperties = { minWidth: 0, border: '1px solid var(--color-border-light)', borderRadius: 8, background: 'var(--color-surface-0)', padding: 10, display: 'flex', flexDirection: 'column', gap: 8, boxShadow: '0 4px 16px -8px rgba(0,0,0,0.22)' };
-const cardHeader: CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 };
-const personBlock: CSSProperties = { display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 };
-const avatar: CSSProperties = { width: 28, height: 28, borderRadius: 999, display: 'grid', placeItems: 'center', color: 'var(--color-text-inverse)', fontSize: '0.72rem', fontWeight: 900, flex: '0 0 auto' };
-const personText: CSSProperties = { minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1, color: 'var(--color-text-primary)', fontSize: '0.82rem', fontWeight: 850 };
-const targetBadge: CSSProperties = { flex: '0 0 auto', borderRadius: 999, background: 'var(--color-surface-2)', color: 'var(--color-text-primary)', padding: '4px 7px', fontSize: '0.66rem', fontWeight: 850, border: '1px solid var(--color-border-light)' };
-const metricGrid: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 6 };
-const miniMetric: CSSProperties = { minHeight: 40, borderRadius: 6, background: 'var(--color-surface-1)', border: '1px solid var(--color-border-light)', padding: '6px 7px', display: 'flex', flexDirection: 'column', gap: 2 };
-const barLabel: CSSProperties = { display: 'flex', justifyContent: 'space-between', gap: 8, color: 'var(--color-text-secondary)', fontSize: '0.67rem', fontWeight: 800 };
-const progressTrack: CSSProperties = { height: 6, borderRadius: 999, background: 'var(--color-surface-2)', overflow: 'hidden' };
-const progressFill: CSSProperties = { height: '100%', borderRadius: 999, background: 'var(--color-brand-500)' };
-const splitTrack: CSSProperties = { height: 12, display: 'flex', borderRadius: 999, background: 'var(--color-surface-2)', overflow: 'hidden' };
-const splitDone: CSSProperties = { height: '100%', background: 'var(--color-success-500)' };
-const splitDue: CSSProperties = { height: '100%', background: 'var(--color-danger-500)' };
-const splitLegend: CSSProperties = { display: 'flex', justifyContent: 'space-between', color: 'var(--color-text-secondary)', fontSize: '0.66rem', fontWeight: 800 };
-const doneDot: CSSProperties = { display: 'inline-block', width: 6, height: 6, borderRadius: 999, background: 'var(--color-success-500)', marginRight: 4 };
-const dueDot: CSSProperties = { ...doneDot, background: 'var(--color-danger-500)' };
-const monthHeader: CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--color-text-primary)', fontSize: '0.69rem', fontWeight: 850, paddingTop: 2 };
-const monthTiles: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 5 };
-const monthTile: CSSProperties = { position: 'relative', minHeight: 40, border: '1px solid var(--color-border-light)', borderRadius: 6, background: 'var(--color-surface-1)', color: 'var(--color-text-primary)', padding: '5px 6px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2, fontSize: '0.66rem', fontWeight: 800, cursor: 'pointer' };
 const errorBox: CSSProperties = { padding: '10px 12px', borderRadius: 8, border: '1px solid color-mix(in oklch, var(--color-danger-500) 35%, var(--color-border-light))', color: 'var(--color-danger-500)', background: 'color-mix(in oklch, var(--color-danger-500) 9%, var(--color-surface-0))', fontWeight: 780, fontSize: '0.8rem' };
-const emptyPanel: CSSProperties = { gridColumn: '1 / -1', minHeight: 160, display: 'grid', placeItems: 'center', border: '1px dashed var(--color-border-light)', borderRadius: 8, color: 'var(--color-text-tertiary)', background: 'var(--color-surface-0)', fontWeight: 800 };
-const skeletonCard: CSSProperties = { ...matrixCard, minHeight: 260 };
-const skeletonLine: CSSProperties = { height: 30, borderRadius: 7, background: 'var(--color-surface-1)' };
-const skeletonMetrics: CSSProperties = { height: 44, borderRadius: 7, background: 'var(--color-surface-1)' };
-const skeletonBar: CSSProperties = { height: 44, borderRadius: 7, background: 'var(--color-surface-1)' };
-const skeletonTiles: CSSProperties = { height: 90, borderRadius: 7, background: 'var(--color-surface-1)' };
-const avatarPalette = ['var(--color-brand-500)', 'var(--color-success-500)', 'var(--color-chart-3)', 'var(--color-warning-500)', 'var(--color-accent-500)', 'var(--color-chart-4)'];

@@ -140,11 +140,25 @@ export const fetchCardDetail = async (cardType: CardType, year1: number, year2: 
   return await res.json();
 };
 
-export const fetchAvailableYears = async (): Promise<number[]> => {
+export interface AvailableYearsResponse {
+  years: number[];
+  firstDataYear: number | null;
+}
+
+export const fetchAvailableYearsMeta = async (): Promise<AvailableYearsResponse> => {
   const res = await fetchWithAuth(`${BASE_URL}/dashboard/years`);
   if (!res.ok) throw new Error(`Years API error: ${res.status}`);
   const json = await res.json();
-  return json.years || [];
+  const years = json.years || [];
+  return {
+    years,
+    firstDataYear: json.firstDataYear ?? years[0] ?? null,
+  };
+};
+
+export const fetchAvailableYears = async (): Promise<number[]> => {
+  const { years } = await fetchAvailableYearsMeta();
+  return years;
 };
 
 export const fetchSalesSummary = async (years: string[]): Promise<any[]> => {

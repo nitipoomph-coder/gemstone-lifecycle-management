@@ -2,9 +2,10 @@ import { fetchWithAuth } from '../utils/fetchWithAuth';
 import { BASE_URL } from './poTrackerAPI';
 
 export type SalesMetric = 'amount' | 'qty';
-export type SalesDateView = 'order' | 'ship';
+export type SalesDateView = 'orddate' | 'duedate' | 'custdate' | 'ordmonth' | 'shipmonth';
 
 export interface SalesCustomerGroupPoint {
+  salesName?: string;
   customerCode: string;
   customerName: string;
   year: number;
@@ -58,6 +59,7 @@ export interface SalesOrderRow {
   amount: number;
   status: 'Open' | 'Partial' | 'Shipped' | 'Late';
   market: string;
+  salesName?: string;
 }
 
 export interface TopItemRow {
@@ -75,7 +77,7 @@ export interface TopItemRow {
   primaryCustomerName?: string;
 }
 
-// Shared filters for Customer Sales Analysis boxes and tables.
+// Shared filters for Customer Trends boxes and tables.
 interface SalesAnalyticsParams {
   years?: string[];
   months?: string[];
@@ -84,7 +86,7 @@ interface SalesAnalyticsParams {
   dateView?: SalesDateView;
 }
 
-// Builds the query string used by every Customer Sales Analysis endpoint.
+// Builds the query string used by every Customer Trends endpoint.
 const salesAnalyticsQuery = (params: SalesAnalyticsParams = {}) => {
   const qs = new URLSearchParams();
   if (params.years?.length) qs.set('years', params.years.join(','));

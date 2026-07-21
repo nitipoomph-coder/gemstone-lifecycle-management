@@ -21,10 +21,16 @@ export const menuConfig: NavMenuGroup[] = [
     accentColor: 'var(--color-success-500)',
     roles: ['admin', 'sales'],
     items: [
+      {
+        id: 'sales-summary-group',
+        label: 'Summary',
+        items: [
+          { id: 'dash-cust', label: 'Sales Summary', path: '/dashboard/customer' },
+          { id: 'dash-qty', label: 'Quantity Summary', path: '/dashboard/qty' },
+        ],
+      },
+      { id: 'dash-top-orders', label: 'Top Item Gallery', path: '/dashboard/top-orders' },
       { id: 'dash-sales', label: 'Sales Dashboard', path: '/dashboard/sales' },
-      { id: 'dash-cust', label: 'Sales by Customer', path: '/dashboard/customer' },
-      { id: 'dash-qty', label: 'Quantity by Customer', path: '/dashboard/qty' },
-      { id: 'dash-top-orders', label: 'Top Item by Customer Gallery', path: '/dashboard/top-orders' },
     ],
   },
 

@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 interface CompareYearDropdownProps {
   availableYears: string[];
@@ -52,7 +52,7 @@ export default function CompareYearDropdown({
           boxShadow: '0 2px 4px color-mix(in srgb, var(--color-surface-900) 4%, transparent)',
           transition: 'all 0.2s cubic-bezier(0.25, 1, 0.5, 1)',
         }}
-        className="hover:border-brand-300 hover:text-brand-600 hover:shadow-md"
+        className="hover:border-[var(--color-border-default)] hover:bg-[var(--color-surface-1)]"
       >
         <span className="text-[var(--color-text-secondary)] font-medium text-[0.8rem] capitalize tracking-wider">
           Compare with
@@ -81,10 +81,10 @@ export default function CompareYearDropdown({
                 onChange(year);
                 setOpen(false);
               }}
-              className={`flex w-full items-center justify-between rounded-lg px-4 py-2.5 text-sm transition-colors font-display font-bold ${compareYear === year ? 'bg-[var(--color-brand-100)] text-[var(--color-brand-600)]' : 'text-[var(--color-text-primary)] hover:bg-[var(--color-surface-0)]'}`}
+              className={`flex w-full items-center justify-between rounded-lg px-4 py-2.5 text-sm transition-colors font-display font-bold ${compareYear === year ? 'border border-[var(--color-brand-300)] bg-[color-mix(in_srgb,var(--color-brand-500)_9%,var(--color-surface-0))] text-[var(--color-brand-600)]' : 'border border-transparent text-[var(--color-text-primary)] hover:bg-[var(--color-surface-0)]'}`}
             >
               <span>{year}</span>
-              {compareYear === year && <div className="w-2 h-2 rounded-full bg-[var(--color-brand-500)]" />}
+              {compareYear === year && <div className="w-2 h-2 rounded-full bg-[color-mix(in_srgb,var(--color-brand-500)_70%,var(--color-surface-0))]" />}
             </button>
           ))}
         </div>

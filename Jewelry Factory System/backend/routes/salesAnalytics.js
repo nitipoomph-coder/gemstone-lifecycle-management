@@ -1,3 +1,10 @@
+// ═══════════════════════════════════════════════════════════════════════════════
+// 📌 MODULE: Customer Sales Analysis (routes/salesAnalytics.js)
+// ═══════════════════════════════════════════════════════════════════════════════
+// Handles data fetching for the Customer Sales dashboards, aggregating data from
+// OrdHD and OrdDT directly (without Legacy SPs).
+// ═══════════════════════════════════════════════════════════════════════════════
+
 const express = require('express');
 const router = express.Router();
 const { getPool, sql } = require('../db');
@@ -114,13 +121,37 @@ function itemTypeNameMaxSql(typeExpr, itemExpr, engExpr, localExpr) {
   `;
 }
 
+function salesDateBasis(req, headerAlias = 'h') {
+  const raw = String(req.query.dateView || req.query.dateBasis || 'orddate').toLowerCase();
+  const aliases = {
+    order: 'orddate',
+    ord: 'orddate',
+    orddate: 'orddate',
+    due: 'duedate',
+    duedate: 'duedate',
+    cust: 'custdate',
+    custdate: 'custdate',
+    ship: 'shipmonth',
+    shipmonth: 'shipmonth',
+    ordmonth: 'ordmonth',
+  };
+  const basis = aliases[raw] || 'orddate';
+  const dateExprByBasis = {
+    orddate: headerAlias + '.OrdDate',
+    duedate: headerAlias + '.DueDate',
+    custdate: headerAlias + '.CustDueDate',
+    ordmonth: headerAlias + '.OrdDate',
+    shipmonth: headerAlias + '.ExportDate',
+  };
+  return { basis, dateExpr: dateExprByBasis[basis] };
+}
 // Applies the shared year/month/customer/type filters for sales endpoints.
 function buildSalesFilters(req, request, headerAlias = 'h', detailAlias = 'd', dateExpr = null) {
   const years = parseCsvInts(req.query.years, [new Date().getFullYear()]);
   const months = parseCsvInts(req.query.months);
   const customers = parseCsvStrings(req.query.customers);
   const types = parseCsvStrings(req.query.types).map(v => v.toUpperCase());
-  const effectiveDateExpr = dateExpr || `${headerAlias}.OrdDate`;
+  const effectiveDateExpr = dateExpr || salesDateBasis(req, headerAlias).dateExpr;
 
   const yearParams = addInParams(request, 'sy', years, sql.Int);
   const filters = [
@@ -153,14 +184,16 @@ router.get('/sales-customer-groups', async (req, res) => {
   try {
     const pool = await getPool();
     const request = pool.request();
-    const { whereSql } = buildSalesFilters(req, request, 'h', 'd');
+    const { dateExpr } = salesDateBasis(req, 'h');
+    const { whereSql } = buildSalesFilters(req, request, 'h', 'd', dateExpr);
 
     const result = await request.query(`
       SELECT
-        h.CustCode AS customerCode,
-        ISNULL(MAX(c.CustName), h.CustCode) AS customerName,
-        YEAR(h.OrdDate) AS year,
-        MONTH(h.OrdDate) AS month,
+        ISNULL(NULLIF(h.SalesName, ''), 'Unassigned') AS salesName,
+        ISNULL(NULLIF(h.SalesName, ''), 'Unassigned') AS customerCode,
+        ISNULL(NULLIF(h.SalesName, ''), 'Unassigned') AS customerName,
+        YEAR(${dateExpr}) AS year,
+        MONTH(${dateExpr}) AS month,
         COUNT(DISTINCT h.OrdNo) AS orderCount,
         SUM(ISNULL(d.ItemQty, 0)) AS qty,
         SUM(ISNULL(d.ExportQty, 0)) AS shippedQty,
@@ -170,8 +203,8 @@ router.get('/sales-customer-groups', async (req, res) => {
       LEFT JOIN OrdDT d ON d.OrdNo = h.OrdNo
       WHERE ${whereSql}
         AND ISNULL(c.CustStatus, 'Y') = 'Y'
-      GROUP BY h.CustCode, YEAR(h.OrdDate), MONTH(h.OrdDate)
-      ORDER BY year, month, customerCode
+      GROUP BY ISNULL(NULLIF(h.SalesName, ''), 'Unassigned'), YEAR(${dateExpr}), MONTH(${dateExpr})
+      ORDER BY year, month, salesName
     `);
 
     res.json({ ok: true, data: result.recordset });
@@ -187,8 +220,7 @@ router.get('/sales-monthly-analytics', async (req, res) => {
   try {
     const pool = await getPool();
     const request = pool.request();
-    const dateView = String(req.query.dateView || 'order').toLowerCase() === 'ship' ? 'ship' : 'order';
-    const dateExpr = dateView === 'ship' ? 'd.ExportDate' : 'h.OrdDate';
+    const { dateExpr } = salesDateBasis(req, 'h');
     const { whereSql } = buildSalesFilters(req, request, 'h', 'd', dateExpr);
 
     const result = await request.query(`
@@ -225,8 +257,7 @@ router.get('/sales-type-analytics', async (req, res) => {
   try {
     const pool = await getPool();
     const request = pool.request();
-    const dateView = String(req.query.dateView || 'order').toLowerCase() === 'ship' ? 'ship' : 'order';
-    const dateExpr = dateView === 'ship' ? 'd.ExportDate' : 'h.OrdDate';
+    const { dateExpr } = salesDateBasis(req, 'h');
     const typeExpr = salesProductTypeSql('d');
     const { whereSql } = buildSalesFilters(req, request, 'h', 'd', dateExpr);
 
@@ -279,7 +310,8 @@ router.get('/sales-orders', async (req, res) => {
   try {
     const pool = await getPool();
     const request = pool.request();
-    const { whereSql } = buildSalesFilters(req, request, 'h', 'd');
+    const { dateExpr } = salesDateBasis(req, 'h');
+    const { whereSql } = buildSalesFilters(req, request, 'h', 'd', dateExpr);
 
     const result = await request.query(`
       SELECT
@@ -289,6 +321,7 @@ router.get('/sales-orders', async (req, res) => {
         h.CustDueDate AS custDueDate,
         h.CustCode AS customerCode,
         ISNULL(c.CustName, h.CustCode) AS customerName,
+        ISNULL(NULLIF(h.SalesName, ''), 'Unassigned') AS salesName,
         ISNULL(NULLIF(h.SoldTo, ''), ISNULL(c.CustName, h.CustCode)) AS brand,
         d.ItemNo AS itemNo,
         ISNULL(NULLIF(d.ItemType, ''), LEFT(ISNULL(d.ItemNo, ''), 3)) AS itemType,
@@ -322,7 +355,8 @@ router.get('/top-items', async (req, res) => {
   try {
     const pool = await getPool();
     const request = pool.request();
-    const { whereSql } = buildSalesFilters(req, request, 'h', 'd');
+    const { dateExpr } = salesDateBasis(req, 'h');
+    const { whereSql } = buildSalesFilters(req, request, 'h', 'd', dateExpr);
     const metric = String(req.query.metric || 'amount').toLowerCase() === 'qty' ? 'qty' : 'amount';
     const rawLimit = parseInt(req.query.limit, 10);
     const limit = Number.isNaN(rawLimit) ? 30 : Math.min(Math.max(rawLimit, 1), 100);

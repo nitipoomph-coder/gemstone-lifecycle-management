@@ -2,6 +2,12 @@
 // Procurement & Receiving API Routes
 // SPA (สั่งซื้อพลอย), SRA (รับพลอย), SRB (รับพลอย B), SIR (คืนพลอย)
 // ============================================
+// ═══════════════════════════════════════════════════════════════════════════════
+// 📌 MODULE: Procurement & Receiving (routes/procurementReceiving.js)
+// ═══════════════════════════════════════════════════════════════════════════════
+// Handles logic for Purchase Orders (SPA), Receipts (SRA, SRB), and Returns (SIR).
+// ═══════════════════════════════════════════════════════════════════════════════
+
 const express = require('express');
 const router = express.Router();
 const { getPool, sql } = require('../db');

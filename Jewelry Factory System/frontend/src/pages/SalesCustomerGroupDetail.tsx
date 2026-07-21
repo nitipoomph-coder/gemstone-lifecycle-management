@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
-import type { CSSProperties, ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { CSSProperties, KeyboardEvent, ReactNode } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, ChevronLeft, ChevronRight, DollarSign, Eye, Hash, Search } from 'lucide-react';
 import Topbar from '../components/layout/Topbar';
+import '../components/sales/SalesDenseTable.css';
 import { CUSTOMER_GROUPS } from '../config/customerGroups';
 import { fetchSalesOrders, type SalesOrderRow } from '../services/customerSalesAPI';
 
@@ -61,28 +62,53 @@ export default function SalesCustomerGroupDetail() {
   const types = useMemo(() => csv(searchParams.get('types')), [searchParams]);
   const customersFromUrl = useMemo(() => csv(searchParams.get('customers')), [searchParams]);
   const metric = searchParams.get('metric') === 'qty' ? 'qty' : 'amount';
+  const customersKey = customersFromUrl.join('|');
 
   const [selectedCustomers, setSelectedCustomers] = useState<string[]>(customersFromUrl);
   const [rows, setRows] = useState<SalesOrderRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [searchDraft, setSearchDraft] = useState('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
 
   useEffect(() => {
-    setSelectedCustomers(customersFromUrl);
-    setPage(1);
-  }, [customersFromUrl.join('|')]);
+    const syncTimer = window.setTimeout(() => {
+      setSelectedCustomers(customersFromUrl);
+      setPage(1);
+    }, 0);
+    return () => window.clearTimeout(syncTimer);
+  }, [customersKey, customersFromUrl]);
 
-  useEffect(() => {
+  const loadSalesOrders = useCallback(async () => {
     setLoading(true);
     setError('');
-    fetchSalesOrders({ years, months, customers: selectedCustomers, types })
-      .then(data => setRows(data))
-      .catch(err => setError(err instanceof Error ? err.message : 'Failed to load sales orders'))
-      .finally(() => setLoading(false));
+    try {
+      const data = await fetchSalesOrders({ years, months, customers: selectedCustomers, types });
+      setRows(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load sales orders');
+    } finally {
+      setLoading(false);
+    }
   }, [years, months, selectedCustomers, types]);
 
+  useEffect(() => {
+    const loadTimer = window.setTimeout(() => { void loadSalesOrders(); }, 0);
+    return () => window.clearTimeout(loadTimer);
+  }, [loadSalesOrders]);
+
+  const applySearch = () => {
+    const nextSearch = searchDraft.toUpperCase();
+    setSearchDraft(nextSearch);
+    setSearch(nextSearch);
+    setPage(1);
+  };
+
+  const handleSearchKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') applySearch();
+    if (event.key === 'Escape') setSearchDraft(search.toUpperCase());
+  };
   const customerOptions = useMemo(() => {
     const codes = new Set<string>(configuredCustomers);
     selectedCustomers.forEach(code => codes.add(code));
@@ -100,11 +126,8 @@ export default function SalesCustomerGroupDetail() {
   }, [rows, search, metric]);
 
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
-  const pageRows = filteredRows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-
-  useEffect(() => {
-    if (page > totalPages) setPage(totalPages);
-  }, [page, totalPages]);
+  const currentPage = Math.min(page, totalPages);
+  const pageRows = filteredRows.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const totals = useMemo(() => ({
     qty: filteredRows.reduce((sum, row) => sum + Number(row.orderQty || 0), 0),
@@ -121,7 +144,7 @@ export default function SalesCustomerGroupDetail() {
     next.set('metric', metric);
     const query = next.toString();
     return `/dashboard/sales-customer-groups${query ? `?${query}` : ''}`;
-  }, [years, months, groups, selectedCustomers, types, metric]);
+  }, [years, months, groups, selectedCustomers, metric]);
 
   const applyCustomers = (nextCustomers: string[]) => {
     const sorted = [...nextCustomers].sort();
@@ -148,7 +171,7 @@ export default function SalesCustomerGroupDetail() {
 
   return (
     <>
-      <Topbar breadcrumb={[{ label: 'JEWELRY FACTORY SYSTEM', path: '/' }, { label: 'Customer Sales Analysis', path: '/dashboard/sales-customer-groups' }, { label: 'Order List' }]} />
+      <Topbar breadcrumb={[{ label: 'JEWELRY FACTORY SYSTEM', path: '/' }, { label: 'Customer Trends', path: '/dashboard/sales-customer-groups' }, { label: 'Order List' }]} />
       <div className="content-scrollbar flex-1 overflow-y-auto" style={{ background: 'var(--color-surface-1)' }}>
         <div className="p-6 flex flex-col gap-4 w-full" style={{ minHeight: '100%' }}>
           <div style={pageHeader}>
@@ -178,27 +201,27 @@ export default function SalesCustomerGroupDetail() {
             </div>
             <div style={searchWrap}>
               <Search size={14} style={searchIcon} />
-              <input value={search} onChange={event => { setSearch(event.target.value); setPage(1); }} placeholder="Search order, item, customer..." style={searchInput} />
+              <input value={searchDraft} onChange={event => setSearchDraft(event.target.value.toUpperCase())} onKeyDown={handleSearchKeyDown} placeholder="Search order, item, customer..." style={searchInput} />
             </div>
           </section>
 
           {error && <div style={errorText}>{error}</div>}
 
-          <section style={tablePanel}>
-            <div className="content-scrollbar" style={{ overflow: 'auto', flex: 1 }}>
-              <table style={tableBase}>
-                <thead style={stickyHeader}>
+          <section className={['sales-dense-panel', searchDraft.trim() ? 'sales-dense-panel--searching' : ''].filter(Boolean).join(' ')} style={tablePanel}>
+            <div className="content-scrollbar sales-dense-scroll">
+              <table className="sales-dense-table sales-dense-table--sticky-first" style={tableBase}>
+                <thead>
                   <tr>
-                    {['Order No', 'Item No', 'Ord Date', 'Cust Due', 'Customer', 'Brand', 'Type', 'Ord Qty', 'Shipped', 'Amount', 'Status', 'Market', 'Actions'].map((head, index) => <th key={head} style={index >= 7 && index <= 9 ? thRight : th}>{head}</th>)}
+                    {['Order No', 'Item No', 'Ord Date', 'Cust Due', 'Customer', 'Brand', 'Type', 'Ord Qty', 'Shipped', 'Amount', 'Status', 'Market', 'Actions'].map((head, index) => <th key={head} className={index >= 7 && index <= 9 ? 'sales-dense-table__number' : undefined}>{head}</th>)}
                   </tr>
                 </thead>
                 <tbody>
-                  {loading && <tr><td colSpan={13} style={emptyCell}>Loading order detail...</td></tr>}
-                  {!loading && pageRows.length === 0 && <tr><td colSpan={13} style={emptyCell}>No orders match the current filter.</td></tr>}
+                  {loading && <DetailSkeletonRows columns={13} />}
+                  {!loading && pageRows.length === 0 && <tr><td colSpan={13} className="sales-dense-empty">No orders match the current filter.</td></tr>}
                   {!loading && pageRows.map(row => {
                     const shippedPct = row.orderQty > 0 ? Math.min(100, Math.round((row.shippedQty / row.orderQty) * 100)) : 0;
                     return (
-                      <tr key={`${row.orderNo}-${row.itemNo}`} style={tableRow}>
+                      <tr key={`${row.orderNo}-${row.itemNo}`}>
                         <td style={tdStrong}><button onClick={() => navigate(`/po-tracker/ord/${encodeURIComponent(row.orderNo)}`)} style={linkButton}>{row.orderNo}</button><div style={subText}>{row.poNo || '-'}</div></td>
                         <td style={tdStrong}><button onClick={() => navigate(`/item-detail/${encodeURIComponent(row.itemNo)}`)} style={linkButton}>{row.itemNo}</button></td>
                         <td style={td}>{fmtDate(row.ordDate)}</td>
@@ -218,12 +241,12 @@ export default function SalesCustomerGroupDetail() {
                 </tbody>
               </table>
             </div>
-            <div style={paginationBar}>
-              <div style={paginationText}>Showing {filteredRows.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1}-{Math.min(page * PAGE_SIZE, filteredRows.length)} of {filteredRows.length}</div>
+            <div className="sales-dense-pagination" style={paginationBar}>
+              <div style={paginationText}>Showing {filteredRows.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1}-{Math.min(currentPage * PAGE_SIZE, filteredRows.length)} of {filteredRows.length}</div>
               <div style={paginationButtons}>
-                <button disabled={page <= 1} onClick={() => setPage(page - 1)} style={{ ...pageButton, ...(page <= 1 ? disabledPageButton : null) }}><ChevronLeft size={14} /></button>
-                <span style={pageText}>Page {page} / {totalPages}</span>
-                <button disabled={page >= totalPages} onClick={() => setPage(page + 1)} style={{ ...pageButton, ...(page >= totalPages ? disabledPageButton : null) }}><ChevronRight size={14} /></button>
+                <button disabled={currentPage <= 1} onClick={() => setPage(currentPage - 1)} style={{ ...pageButton, ...(currentPage <= 1 ? disabledPageButton : null) }}><ChevronLeft size={14} /></button>
+                <span style={pageText}>Page {currentPage} / {totalPages}</span>
+                <button disabled={currentPage >= totalPages} onClick={() => setPage(currentPage + 1)} style={{ ...pageButton, ...(currentPage >= totalPages ? disabledPageButton : null) }}><ChevronRight size={14} /></button>
               </div>
             </div>
           </section>
@@ -246,8 +269,25 @@ function FilterChip({ active, onClick, label }: { active: boolean; onClick: () =
 }
 
 function StatusBadge({ status }: { status: SalesOrderRow['status'] }) {
-  const color = status === 'Shipped' ? 'var(--color-success-500)' : status === 'Late' ? 'var(--color-danger-500)' : status === 'Partial' ? 'var(--color-warning-500)' : 'var(--color-info-500)';
-  return <span style={{ ...statusBadge, background: `color-mix(in srgb, ${color} 12%, transparent)`, color }}>{status}</span>;
+  const tone = status === 'Shipped' ? 'success' : status === 'Late' ? 'danger' : status === 'Partial' ? 'warning' : 'info';
+  return <span className={`sales-dense-badge sales-dense-badge--${tone}`}>{status}</span>;
+}
+
+function DetailSkeletonRows({ columns, rows = 10 }: { columns: number; rows?: number }) {
+  const widths = [68, 72, 46, 54, 76, 48, 60, 44, 70, 58, 52, 46, 28];
+  return (
+    <>
+      {Array.from({ length: rows }, (_, rowIndex) => (
+        <tr key={rowIndex}>
+          {Array.from({ length: columns }, (_, columnIndex) => (
+            <td key={columnIndex}>
+              <span className="sales-dense-skeleton" style={{ width: `${widths[(rowIndex + columnIndex) % widths.length]}%` }} />
+            </td>
+          ))}
+        </tr>
+      ))}
+    </>
+  );
 }
 
 const pageHeader: CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 16, flexWrap: 'wrap' };
@@ -269,13 +309,9 @@ const chipActive: CSSProperties = { borderColor: 'var(--color-brand-500)', backg
 const searchWrap: CSSProperties = { position: 'relative', width: 'min(420px, 100%)' };
 const searchIcon: CSSProperties = { position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-tertiary)' };
 const searchInput: CSSProperties = { width: '100%', height: 36, background: 'var(--color-surface-1)', border: '1px solid var(--color-border-light)', borderRadius: 8, padding: '8px 12px 8px 32px', color: 'var(--color-text-primary)', fontSize: '0.78rem', fontWeight: 800, outline: 'none', fontFamily: 'var(--font-body)' };
-const tablePanel: CSSProperties = { background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)', borderRadius: 8, display: 'flex', flexDirection: 'column', minHeight: 0, flex: 1 };
-const tableBase: CSSProperties = { width: '100%', borderCollapse: 'collapse', minWidth: 1220, fontFamily: 'var(--font-body)' };
-const stickyHeader: CSSProperties = { position: 'sticky', top: 0, zIndex: 2, background: 'var(--color-table-header)' };
-const th: CSSProperties = { textAlign: 'left', padding: '10px 12px', color: 'var(--color-text-inverse)', fontSize: '0.68rem', fontWeight: 900, whiteSpace: 'nowrap' };
-const thRight: CSSProperties = { ...th, textAlign: 'right' };
-const tableRow: CSSProperties = { borderBottom: '1px solid var(--color-border-light)' };
-const td: CSSProperties = { padding: '12px', color: 'var(--color-text-primary)', fontSize: '0.75rem', fontWeight: 800, verticalAlign: 'middle', whiteSpace: 'nowrap' };
+const tablePanel: CSSProperties = { minHeight: 0, flex: 1 };
+const tableBase: CSSProperties = { minWidth: 1220 };
+const td: CSSProperties = { height: 48, padding: '6px 8px', color: 'var(--color-text-primary)', fontSize: '11px', fontWeight: 800, verticalAlign: 'middle', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
 const tdStrong: CSSProperties = { ...td, fontWeight: 900 };
 const tdRight: CSSProperties = { ...td, textAlign: 'right', fontVariantNumeric: 'tabular-nums' };
 const subText: CSSProperties = { color: 'var(--color-text-tertiary)', fontSize: '0.68rem', fontWeight: 700, marginTop: 2 };
@@ -283,7 +319,6 @@ const linkButton: CSSProperties = { background: 'none', border: 'none', color: '
 const shippedCell: CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8 };
 const progressTrack: CSSProperties = { width: 64, height: 6, background: 'var(--color-surface-2)', borderRadius: 999, overflow: 'hidden' };
 const progressFill: CSSProperties = { display: 'block', height: '100%' };
-const statusBadge: CSSProperties = { display: 'inline-flex', padding: '4px 9px', borderRadius: 999, fontSize: '0.7rem', fontWeight: 900 };
 const iconButton: CSSProperties = { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, borderRadius: 8, border: '1px solid var(--color-border-light)', background: 'var(--color-surface-1)', color: 'var(--color-text-secondary)', cursor: 'pointer' };
 const paginationBar: CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '12px 16px', borderTop: '1px solid var(--color-border-light)', flexWrap: 'wrap' };
 const paginationText: CSSProperties = { color: 'var(--color-text-tertiary)', fontSize: '0.75rem', fontWeight: 800 };
@@ -291,5 +326,4 @@ const paginationButtons: CSSProperties = { display: 'flex', alignItems: 'center'
 const pageButton: CSSProperties = { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, borderRadius: 8, border: '1px solid var(--color-border-light)', background: 'var(--color-surface-1)', color: 'var(--color-text-primary)', cursor: 'pointer' };
 const disabledPageButton: CSSProperties = { opacity: 0.45, cursor: 'not-allowed' };
 const pageText: CSSProperties = { color: 'var(--color-text-primary)', fontSize: '0.76rem', fontWeight: 900 };
-const emptyCell: CSSProperties = { ...td, textAlign: 'center', padding: 32, color: 'var(--color-text-tertiary)', fontWeight: 900 };
 const errorText: CSSProperties = { color: 'var(--color-danger-500)', fontWeight: 800, fontSize: '0.8rem' };

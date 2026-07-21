@@ -5,7 +5,7 @@
 
 export type ColGroup = 'core' | 'info' | 'sales' | 'production' | 'remark';
 export type ColAlign = 'left' | 'center' | 'right';
-export type ExcelType = 'text' | 'date' | 'int' | 'currency';
+export type ExcelType = 'general' | 'text' | 'date' | 'int' | 'currency';
 
 export interface OrderDetailColumn {
   key: string;
@@ -22,7 +22,9 @@ export interface OrderDetailColumn {
   readOnly?: boolean;
   /** Suffix appended to formatted numeric values on screen, e.g. "g" for weights. */
   unit?: string;
-}export const ORDER_DETAIL_COLUMNS: OrderDetailColumn[] = [
+}
+
+export const ORDER_DETAIL_COLUMNS: OrderDetailColumn[] = [
   { key: 'OrdNo', label: 'Order No.', group: 'core', width: 110, align: 'left', locked: true, excelType: 'general' },
   { key: 'CustCode', label: 'Customer', group: 'core', width: 70, align: 'left', locked: true, excelType: 'general' },
   { key: 'Sales', label: 'Sales', group: 'info', width: 130, align: 'left', excelType: 'general' },

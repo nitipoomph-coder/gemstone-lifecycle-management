@@ -1,3 +1,14 @@
+// ═══════════════════════════════════════════════════════════════════════════════
+// 📌 MODULE: Production Orders / PO Tracker (routes/poTracker.js)
+// ═══════════════════════════════════════════════════════════════════════════════
+// Handles data fetching and updates for the Production Order tracking system.
+// This file serves the main "PO Tracker" module in the frontend.
+//
+// ⚠️ MIXED DATA FETCHING:
+//    - The main listing endpoint (`GET /`) uses Legacy Stored Procedures.
+//    - The detail/grouping endpoints query the DB directly (OrdHD/OrdDT).
+// ═══════════════════════════════════════════════════════════════════════════════
+
 const express = require('express');
 const router = express.Router();
 const { getPool, sql } = require('../db');

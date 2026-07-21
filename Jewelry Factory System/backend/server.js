@@ -116,54 +116,21 @@ app.get('/api/photos/cad/:itemNo', (req, res) => {
   res.status(404).send('CAD Photo not found');
 });
 
-// Original legacy endpoint for backwards compatibility
-app.get('/api/photos/:itemNo', (req, res) => {
-  const itemNo = req.params.itemNo.trim();
-  console.log(`[PhotoBridge Legacy] Serving Item: ${itemNo}`);
 
-  const searchDirs = [
-    '\\\\chongdts\\Chong Photo\\Cost'
-  ];
-
-  const formats = ['.jpg', '.jpeg', '.png', '.JPG', '.JPEG', '.PNG'];
-  let foundFile = null;
-
-  for (const baseDir of searchDirs) {
-    try {
-      for (const ext of formats) {
-        const testPath = path.join(baseDir, `${itemNo}${ext}`);
-        if (fs.existsSync(testPath)) {
-          foundFile = testPath;
-          break;
-        }
-      }
-    } catch (e) {
-      // Access denied or offline share - skip silently
-    }
-    if (foundFile) break;
-  }
-
-  if (foundFile) {
-    res.setHeader('X-Source-Origin', 'RealServer');
-    return res.sendFile(foundFile);
-  }
-
-  res.status(404).send('Photo not found');
-});
 
 // Routes
 const authMiddleware = require('./middleware/authMiddleware');
 
 app.use('/api/auth', require('./routes/auth'));                // Login API
-app.use('/api/orders', authMiddleware, require('./routes/orders'));
-app.use('/api/dashboard', authMiddleware, require('./routes/dashboard'));
-app.use('/api/dashboard', authMiddleware, require('./routes/customerSummary'));
-app.use('/api/dashboard', authMiddleware, require('./routes/customerSales'));
-app.use('/api/items', authMiddleware, require('./routes/itemYearlySummary'));
+app.use('/api/orders', authMiddleware, require('./routes/poTracker'));
+app.use('/api/dashboard', authMiddleware, require('./routes/productionDashboard'));
+app.use('/api/dashboard', authMiddleware, require('./routes/customerReportMatrix'));
+app.use('/api/dashboard', authMiddleware, require('./routes/salesAnalytics'));
+app.use('/api/items', authMiddleware, require('./routes/topOrdersGallery'));
 app.use('/api/search', authMiddleware, require('./routes/search'));
-app.use('/api/procurement', authMiddleware, require('./routes/procurement'));
-app.use('/api/requisition', authMiddleware, require('./routes/requisition')); // Requisition routes (SOA, SIA, SIB, SIP, SIS)
-app.use('/api/sample', authMiddleware, require('./routes/sample'));            // Sample Room routes (SSA, SIM)
+app.use('/api/procurement', authMiddleware, require('./routes/procurementReceiving'));
+app.use('/api/requisition', authMiddleware, require('./routes/orderLinesIssues')); // Requisition routes (SOA, SIA, SIB, SIP, SIS)
+app.use('/api/sample', authMiddleware, require('./routes/sampleDepartment'));            // Sample Room routes (SSA, SIM)
 app.use('/api/lock', authMiddleware, require('./routes/lock'));                // Document locking
 
 // Global error handler

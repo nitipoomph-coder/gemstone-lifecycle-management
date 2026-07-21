@@ -1,18 +1,17 @@
 // src/pages/OrderDetailPage.tsx
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, type CSSProperties, type ReactNode } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
-import { RefreshCw, AlertTriangle, Search, Package, DollarSign, ClipboardList, FileSpreadsheet, Image, X, Layers } from 'lucide-react';
+import { RefreshCw, AlertTriangle, Search, Package, DollarSign, FileSpreadsheet, Image, X, Layers } from 'lucide-react';
 import Topbar from '../components/layout/Topbar';
 import { fetchOrderDetail, fetchOrderByPo, fetchOrderByGroup, type OrderDetail } from '../services/poTrackerAPI';
 import { PhotoGalleryModal } from '../components/orderDetail/PhotoGalleryModal';
 import OrderLineTable from '../components/orderDetail/OrderLineTable';
 import LineDetailDrawer from '../components/orderDetail/LineDetailDrawer';
-import CustomSelect from '../components/ui/CustomSelect';
 import { exportOrderDetailExcel } from '../utils/exportOrderDetailExcel';
 import { ORDER_DETAIL_COLUMNS, COLUMN_GROUP_PRESETS, type ColGroup, type ColumnPreset } from '../config/orderDetailColumns';
 import { fQty, fAmt } from '../components/orderDetail/format';
 
-const PRESET_BUTTONS: { key: ColumnPreset; label: string; icon: React.ReactNode }[] = [
+const PRESET_BUTTONS: { key: ColumnPreset; label: string; icon: ReactNode }[] = [
   { key: 'Sales', label: 'Sales View', icon: <DollarSign size={14} /> },
   { key: 'Production', label: 'Production View', icon: <Package size={14} /> },
   { key: 'All', label: 'All Details', icon: <Layers size={14} /> },
@@ -28,12 +27,12 @@ const TOGGLEABLE_GROUPS: { group: ColGroup; label: string }[] = [
 const VIEW_PARAM_TO_PRESET: Record<string, ColumnPreset> = { sales: 'Sales', prod: 'Production', all: 'All' };
 
 // ── Shared flat styles (theme-variable, no gradients/hardcoded hex) ──
-const LBL: React.CSSProperties = { fontSize: '0.7rem', fontWeight: 800, color: 'var(--color-text-tertiary)', textTransform: 'capitalize', letterSpacing: '0.05em' };
-const ACT_ICON: React.CSSProperties = { width: 40, height: 40, borderRadius: '10px', border: '1px solid var(--color-border-light)', background: 'var(--color-surface-1)', color: 'var(--color-text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s' };
-const ACT_BTN: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: '6px', padding: '9px 16px', borderRadius: '10px', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s', letterSpacing: '0.02em' };
-const ACT_SUCCESS: React.CSSProperties = { border: '1px solid color-mix(in srgb, var(--color-success-500) 35%, transparent)', background: 'color-mix(in srgb, var(--color-success-500) 12%, var(--color-surface-0))', color: 'var(--color-success-600)' };
-const ACT_NEUTRAL: React.CSSProperties = { border: '1px solid var(--color-border-strong)', background: 'var(--color-surface-0)', color: 'var(--color-text-primary)' };
-const ACT_DANGER: React.CSSProperties = { border: '1px solid color-mix(in srgb, var(--color-danger-500) 35%, transparent)', background: 'color-mix(in srgb, var(--color-danger-500) 10%, var(--color-surface-0))', color: 'var(--color-danger-600)' };
+const LBL: CSSProperties = { fontSize: '0.7rem', fontWeight: 800, color: 'var(--color-text-tertiary)', textTransform: 'capitalize', letterSpacing: '0.05em' };
+const ACT_ICON: CSSProperties = { width: 40, height: 40, borderRadius: '10px', border: '1px solid var(--color-border-light)', background: 'var(--color-surface-1)', color: 'var(--color-text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s' };
+const ACT_BTN: CSSProperties = { display: 'flex', alignItems: 'center', gap: '6px', padding: '9px 16px', borderRadius: '10px', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s', letterSpacing: '0.02em' };
+const ACT_SUCCESS: CSSProperties = { border: '1px solid color-mix(in srgb, var(--color-success-500) 35%, transparent)', background: 'color-mix(in srgb, var(--color-success-500) 12%, var(--color-surface-0))', color: 'var(--color-success-600)' };
+const ACT_NEUTRAL: CSSProperties = { border: '1px solid var(--color-border-strong)', background: 'var(--color-surface-0)', color: 'var(--color-text-primary)' };
+const ACT_DANGER: CSSProperties = { border: '1px solid color-mix(in srgb, var(--color-danger-500) 35%, transparent)', background: 'color-mix(in srgb, var(--color-danger-500) 10%, var(--color-surface-0))', color: 'var(--color-danger-600)' };
 
 // ── Segmented pill toggle (เข้าชุดกับ PO Tracker list) ──
 function Segmented({ options, value, onChange }: { options: { value: string; label: string }[]; value: string; onChange: (v: string) => void }) {
@@ -60,7 +59,7 @@ function Segmented({ options, value, onChange }: { options: { value: string; lab
 }
 
 // ── KPI stat (label เล็ก + ค่าใหญ่) ──
-function Stat({ label, value, color }: { label: string; value: React.ReactNode; color?: string }) {
+function Stat({ label, value, color }: { label: string; value: ReactNode; color?: string }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
       <span style={{ fontSize: '0.6rem', fontWeight: 900, color: 'var(--color-text-tertiary)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>{label}</span>
@@ -175,18 +174,13 @@ export default function OrderDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [showPhotoGallery, setShowPhotoGallery] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Locked date range (carried from PO Tracker list) + current status filter
   const dateFrom = searchParams.get('dateFrom');
   const dateTo = searchParams.get('dateTo');
   const statusFilter = searchParams.get('status') || 'ALL';
   const prefixFilter = searchParams.get('prefix') || 'ALL';
-
-  const updateFilter = (key: 'prefix' | 'status', value: string) => {
-    const p = new URLSearchParams(searchParams);
-    p.set(key, value);
-    setSearchParams(p, { replace: true });
-  };
 
   const updateCombinedFilter = (s: string, p: string) => {
     const params = new URLSearchParams(searchParams);
@@ -485,6 +479,12 @@ export default function OrderDetailPage() {
           />
         )}
       </div>
+
+      {toastMessage && (
+        <div style={{ position: 'fixed', right: 24, bottom: 24, zIndex: 200, padding: '12px 16px', borderRadius: 10, background: 'var(--color-surface-0)', border: '1px solid var(--color-success-500)', color: 'var(--color-success-600)', fontSize: '0.8rem', fontWeight: 800, boxShadow: '0 12px 32px color-mix(in srgb, var(--color-surface-900) 18%, transparent)' }}>
+          {toastMessage}
+        </div>
+      )}
 
       {/* Photo Gallery Modal */}
       {showPhotoGallery && (

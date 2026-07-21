@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Search, Check, Layers, Filter } from 'lucide-react';
 import { MASTER_COLS, COLUMN_GROUPS } from './OrderTable';
 
@@ -120,7 +120,7 @@ export default function CustomViewModal({ isOpen, onClose, initialVisibleKeys, i
               <div className="animate-fade-in-up">
                 <h3 style={{ margin: '0 0 20px 0', fontSize: '1rem', fontWeight: 800 }}>Select Data Group</h3>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px' }}>
-                  {['N008', 'MLT', 'N083', 'N044', 'N051', 'ALL'].map(grp => (
+                  {['N008', 'N044', 'N098', 'N051', 'N083', 'MLT', 'ALL'].map(grp => (
                     <button
                       key={grp}
                       onClick={() => setSelectedGroup(grp)}

@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowRight, CalendarDays, DollarSign, Hash, PackageSearch, RefreshCw, Users, X } from 'lucide-react';
 import Topbar from '../components/layout/Topbar';
+import '../components/sales/SalesDenseTable.css';
 import { ALL_GROUPS, CUSTOMER_GROUPS, getCustomerGroupId } from '../config/customerGroups';
 import { fetchAvailableYears } from '../services/dashboardAPI';
 import {
@@ -52,6 +53,7 @@ type GroupSummaryRow = {
 const fmtAmount = (value: number) => `$${value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
 const fmtQty = (value: number) => value.toLocaleString(undefined, { maximumFractionDigits: 0 });
 const fmtMetric = (value: number, metric: Metric) => metric === 'amount' ? fmtAmount(value) : fmtQty(value);
+const fmtSignedMetric = (value: number, metric: Metric) => (value > 0 ? '+' : value < 0 ? '-' : '') + fmtMetric(Math.abs(value), metric);
 
 function csv(value: string | null) {
   return String(value || '').split(',').map(item => item.trim()).filter(Boolean);
@@ -162,21 +164,28 @@ export default function SalesCustomerGroupAnalytics() {
   }, [requestedYears]);
 
   // Load the Customer Sales Overview KPI rows and Top 30 Items table.
-  useEffect(() => {
+  const loadCustomerTrends = useCallback(async () => {
     if (selectedYears.length === 0) return;
     setLoading(true);
     setError('');
-    Promise.all([
-      fetchSalesCustomerGroups({ years: selectedYears, months: selectedMonths, customers }),
-      fetchTopItems({ years: selectedYears, months: selectedMonths, customers, metric, limit: 30 }),
-    ])
-      .then(([groupData, itemData]) => {
-        setPoints(groupData);
-        setTopItems(itemData);
-      })
-      .catch(err => setError(err instanceof Error ? err.message : 'Failed to load sales analytics'))
-      .finally(() => setLoading(false));
+    try {
+      const [groupData, itemData] = await Promise.all([
+        fetchSalesCustomerGroups({ years: selectedYears, months: selectedMonths, customers }),
+        fetchTopItems({ years: selectedYears, months: selectedMonths, customers, metric, limit: 30 }),
+      ]);
+      setPoints(groupData);
+      setTopItems(itemData);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load customer trends');
+    } finally {
+      setLoading(false);
+    }
   }, [selectedYears, selectedMonths, customers, metric]);
+
+  useEffect(() => {
+    const loadTimer = window.setTimeout(() => { void loadCustomerTrends(); }, 0);
+    return () => window.clearTimeout(loadTimer);
+  }, [loadCustomerTrends]);
 
   // KPI cards are totals from the customer group endpoint.
   const kpi = useMemo(() => {
@@ -220,13 +229,13 @@ export default function SalesCustomerGroupAnalytics() {
 
   return (
     <>
-      <Topbar breadcrumb={[{ label: 'JEWELRY FACTORY SYSTEM', path: '/' }, { label: 'CUSTOMER SALES ANALYSIS' }]} />
+      <Topbar breadcrumb={[{ label: 'JEWELRY FACTORY SYSTEM', path: '/' }, { label: 'CUSTOMER TRENDS' }]} />
       <div className="content-scrollbar flex-1 overflow-y-auto" style={{ background: 'var(--color-surface-1)' }}>
         <div className="p-6 flex flex-col gap-5 w-full">
           <div style={pageHeader}>
             <div>
-              <h1 style={pageTitle}>Customer Sales Analysis</h1>
-              <p style={pageSubtitle}>Customer group, order, item, amount, quantity, and shipment review.</p>
+              <h1 style={pageTitle}>Customer Trends</h1>
+              <p style={pageSubtitle}>Customer group trends across amount, quantity, orders, and shipped qty.</p>
             </div>
             <div style={headerActions}>
               <SegmentButton active={metric === 'amount'} onClick={() => setMetric('amount')} icon={<DollarSign size={14} />} label="Amount" />
@@ -256,20 +265,21 @@ export default function SalesCustomerGroupAnalytics() {
           </section>
 
           {error && <div style={errorText}>{error}</div>}
-          {loading && <div style={loadingText}><RefreshCw size={14} className="animate-spin" /> Loading sales analytics...</div>}
+          {loading && <div className="sales-dense-loading-text"><RefreshCw size={14} className="animate-spin" /> Loading customer trends...</div>}
 
           <div style={twoColumnGrid}>
             <Panel title="Customer Group Summary" icon={<Users size={14} />} action={<button onClick={openDetail} style={linkAction}>Open Order List</button>}>
-              <div className="content-scrollbar" style={tableScroll}>
-                <table style={{ ...tableBase, minWidth: 880 }}>
+              <div className="content-scrollbar sales-dense-scroll" style={tableScroll}>
+                <table className="sales-dense-table sales-dense-table--sticky-first" style={{ minWidth: 880 }}>
                   <thead>
                     <tr>
-                      {['Customer Group', 'Customers', 'Orders', 'Ordered Qty', 'Shipped Qty', 'Sales Amount', primaryYear || 'Primary', compareYear === 'none' ? 'Compare' : compareYear, 'Delta'].map((head, index) => <th key={head} style={index >= 3 ? thRight : th}>{head}</th>)}
+                      {['Customer Group', 'Customers', 'Orders', 'Ordered Qty', 'Shipped Qty', 'Sales Amount', primaryYear || 'Primary', compareYear === 'none' ? 'Compare' : compareYear, 'Delta'].map((head, index) => <th key={head} className={index >= 3 ? 'sales-dense-table__number' : undefined}>{head}</th>)}
                     </tr>
                   </thead>
                   <tbody>
+                    {loading && <TableSkeletonRows columns={9} />}
                     {!loading && groupSummary.length === 0 && <EmptyRow colSpan={9} label="No customer group data matches the current filter." />}
-                    {groupSummary.map(row => {
+                    {!loading && groupSummary.map(row => {
                       const delta = row.compareValue === null ? null : row.primaryValue - row.compareValue;
                       return (
                         <tr key={row.id}>
@@ -281,7 +291,7 @@ export default function SalesCustomerGroupAnalytics() {
                           <td style={tdRight}>{fmtAmount(row.amount)}</td>
                           <td style={tdRight}>{fmtMetric(row.primaryValue, metric)}</td>
                           <td style={tdRight}>{row.compareValue === null ? '-' : fmtMetric(row.compareValue, metric)}</td>
-                          <td style={{ ...tdRight, color: delta === null ? 'var(--color-text-tertiary)' : delta >= 0 ? 'var(--color-success-500)' : 'var(--color-danger-500)' }}>{delta === null ? '-' : fmtMetric(delta, metric)}</td>
+                          <td className={`sales-dense-table__number ${delta === null ? 'sales-dense-table__tone-muted' : delta >= 0 ? 'sales-dense-table__tone-up' : 'sales-dense-table__tone-down'}`} style={tdRight}>{delta === null ? '-' : fmtSignedMetric(delta, metric)}</td>
                         </tr>
                       );
                     })}
@@ -291,16 +301,17 @@ export default function SalesCustomerGroupAnalytics() {
             </Panel>
 
             <Panel title="Item / Order Lines" icon={<PackageSearch size={14} />} action={<span style={panelMeta}>Sorted by {metric === 'amount' ? 'Sales Amount' : 'Ordered Qty'}</span>}>
-              <div className="content-scrollbar" style={tableScroll}>
-                <table style={{ ...tableBase, minWidth: 980 }}>
+              <div className="content-scrollbar sales-dense-scroll" style={tableScroll}>
+                <table className="sales-dense-table sales-dense-table--sticky-first" style={{ minWidth: 980 }}>
                   <thead>
                     <tr>
-                      {['Item No', 'Customer Group', 'Type', 'Orders', 'Ordered Qty', 'Shipped Qty', 'Sales Amount', 'Avg Price'].map((head, index) => <th key={head} style={index >= 3 ? thRight : th}>{head}</th>)}
+                      {['Item No', 'Customer Group', 'Type', 'Orders', 'Ordered Qty', 'Shipped Qty', 'Sales Amount', 'Avg Price'].map((head, index) => <th key={head} className={index >= 3 ? 'sales-dense-table__number' : undefined}>{head}</th>)}
                     </tr>
                   </thead>
                   <tbody>
+                    {loading && <TableSkeletonRows columns={8} />}
                     {!loading && topItems.length === 0 && <EmptyRow colSpan={8} label="No item lines match the current filter." />}
-                    {topItems.map((item, index) => (
+                    {!loading && topItems.map((item, index) => (
                       <tr key={`${item.itemNo}-${index}`}>
                         <td style={tdItem}><button onClick={() => navigate(`/item-detail/${encodeURIComponent(item.itemNo)}`)} style={linkButton}>{item.itemNo}</button><div style={subText}>{item.itemDesc || '-'}</div></td>
                         <td style={tdStrong}>{groupLabelFromCode(item.primaryCustomerCode)}<div style={subText}>{item.primaryCustomerCode || '-'}</div></td>
@@ -394,7 +405,24 @@ function Panel({ title, icon, action, children }: { title: string; icon: ReactNo
 }
 
 function EmptyRow({ colSpan, label }: { colSpan: number; label: string }) {
-  return <tr><td colSpan={colSpan} style={emptyCell}>{label}</td></tr>;
+  return <tr><td colSpan={colSpan} className="sales-dense-empty">{label}</td></tr>;
+}
+
+function TableSkeletonRows({ columns, rows = 8 }: { columns: number; rows?: number }) {
+  const widths = [70, 46, 56, 62, 54, 74, 66, 50, 58];
+  return (
+    <>
+      {Array.from({ length: rows }, (_, rowIndex) => (
+        <tr key={rowIndex}>
+          {Array.from({ length: columns }, (_, columnIndex) => (
+            <td key={columnIndex}>
+              <span className="sales-dense-skeleton" style={{ width: `${widths[(rowIndex + columnIndex) % widths.length]}%` }} />
+            </td>
+          ))}
+        </tr>
+      ))}
+    </>
+  );
 }
 
 const pageHeader: CSSProperties = { display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-end', flexWrap: 'wrap' };
@@ -434,17 +462,12 @@ const panelHeader: CSSProperties = { display: 'flex', alignItems: 'center', just
 const panelTitle: CSSProperties = { display: 'flex', alignItems: 'center', gap: 8, margin: 0, color: 'var(--color-text-primary)', fontSize: '0.9rem', fontWeight: 900 };
 const panelMeta: CSSProperties = { color: 'var(--color-text-tertiary)', fontSize: '0.7rem', fontWeight: 900 };
 const linkAction: CSSProperties = { border: 'none', background: 'transparent', color: 'var(--color-brand-600)', fontSize: '0.72rem', fontWeight: 900, cursor: 'pointer' };
-const tableScroll: CSSProperties = { overflow: 'auto', maxHeight: 430, border: '1px solid var(--color-border-light)', borderRadius: 8 };
-const tableBase: CSSProperties = { width: '100%', borderCollapse: 'collapse', fontFamily: 'var(--font-body)', tableLayout: 'fixed' };
-const th: CSSProperties = { textAlign: 'left', padding: '10px 12px', color: 'var(--color-text-inverse)', background: 'var(--color-table-header)', fontSize: '0.68rem', fontWeight: 900, whiteSpace: 'nowrap', position: 'sticky', top: 0, zIndex: 1 };
-const thRight: CSSProperties = { ...th, textAlign: 'right' };
-const td: CSSProperties = { padding: '10px 12px', color: 'var(--color-text-primary)', fontSize: '0.75rem', fontWeight: 800, verticalAlign: 'middle', borderBottom: '1px solid var(--color-border-light)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
+const tableScroll: CSSProperties = { maxHeight: 430 };
+const td: CSSProperties = { height: 48, padding: '6px 8px', color: 'var(--color-text-primary)', fontSize: '11px', fontWeight: 800, verticalAlign: 'middle', borderBottom: '1px solid var(--color-border-strong)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
 const tdStrong: CSSProperties = { ...td, fontWeight: 900 };
 const tdItem: CSSProperties = { ...tdStrong, whiteSpace: 'normal' };
 const tdRight: CSSProperties = { ...td, textAlign: 'right', fontVariantNumeric: 'tabular-nums' };
 const subText: CSSProperties = { color: 'var(--color-text-tertiary)', fontSize: '0.68rem', fontWeight: 700, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' };
 const linkButton: CSSProperties = { background: 'none', border: 'none', color: 'var(--color-brand-600)', fontWeight: 900, cursor: 'pointer', padding: 0, fontFamily: 'var(--font-body)' };
 const groupDot: CSSProperties = { display: 'inline-block', width: 8, height: 8, borderRadius: 999, marginRight: 8 };
-const emptyCell: CSSProperties = { ...td, textAlign: 'center', color: 'var(--color-text-tertiary)', padding: 28 };
 const errorText: CSSProperties = { color: 'var(--color-danger-500)', fontWeight: 800, fontSize: '0.8rem' };
-const loadingText: CSSProperties = { display: 'flex', gap: 8, alignItems: 'center', color: 'var(--color-brand-500)', fontWeight: 900 };

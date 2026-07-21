@@ -14,12 +14,13 @@ interface TopbarProps {
   breadcrumb: BreadcrumbItem[];
   hideSearch?: boolean;
   rightContent?: React.ReactNode;
+  bottomContent?: React.ReactNode;
   icon?: React.ReactNode;
 }
 
 // Using SearchResultItem from API
 
-export default function Topbar({ breadcrumb, hideSearch, rightContent, icon }: TopbarProps) {
+export default function Topbar({ breadcrumb, hideSearch, rightContent, bottomContent, icon }: TopbarProps) {
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
   const [showThemeMenu, setShowThemeMenu] = useState(false);
@@ -92,7 +93,7 @@ export default function Topbar({ breadcrumb, hideSearch, rightContent, icon }: T
 
   return (
     <header
-      className="flex items-center justify-between px-7 py-3.5"
+      className="flex flex-col px-7 py-3.5"
       style={{
         background: 'var(--color-surface-0)',
         borderBottom: '1px solid var(--color-border-light)',
@@ -102,6 +103,7 @@ export default function Topbar({ breadcrumb, hideSearch, rightContent, icon }: T
         boxShadow: '0 4px 20px color-mix(in srgb, var(--color-success-600) 7%, transparent)',
       }}
     >
+      <div className="flex w-full items-center justify-between gap-4">
       {/* Left: Navigation & Branding */}
       <div className="flex items-center gap-4 min-w-0">
         {location.pathname !== '/' && (
@@ -324,6 +326,12 @@ export default function Topbar({ breadcrumb, hideSearch, rightContent, icon }: T
           </div>
         </div>
       </div>
+      </div>
+      {bottomContent && (
+        <div className="mt-3 w-full border-t border-[var(--color-border-light)] pt-3">
+          {bottomContent}
+        </div>
+      )}
     </header>
   );
 }

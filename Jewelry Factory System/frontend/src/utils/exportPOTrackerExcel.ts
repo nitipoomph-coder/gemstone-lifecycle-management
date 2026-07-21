@@ -182,17 +182,14 @@ export const exportPOTrackerExcel = async (
     // VB Logic: < 60 Red, > 79 Green, else Yellow
     if (rawExpPct === 0 || rawExpPct < 60) {
       // Red
-      const style = {
-        font: { name: 'Calibri', size: 10, color: { argb: 'FFC00000' }, bold: true },
-        fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8EBE' } } // RGB 255, 232, 235
-      } as Partial<ExcelJS.Cell>;
+      const dangerFont: Partial<ExcelJS.Font> = { name: 'Calibri', size: 10, color: { argb: 'FFC00000' }, bold: true };
       // Note: exceljs fill color uses ARGB format.
       // RGB 192, 0, 0 -> ARGB FFC00000
       // RGB 255, 232, 235 -> ARGB FFFFE8EB
 
-      balQtyCell.font = style.font;
+      balQtyCell.font = dangerFont;
       balQtyCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFE8EB' } };
-      expPctCell.font = style.font;
+      expPctCell.font = dangerFont;
       expPctCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFE8EB' } };
 
     } else if (rawExpPct > 79) {

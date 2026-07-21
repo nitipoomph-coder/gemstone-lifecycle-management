@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { PanelLeftClose, PanelLeftOpen, LogOut } from 'lucide-react';
 import NavGroup from '../navigation/NavGroup';
 import { menuConfig } from '../../config/menuConfig';
+import type { NavMenuItem } from '../../types';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -18,7 +19,8 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
   const role = (localStorage.getItem('auth_role') || 'sales').toLowerCase();
   const filteredMenu = menuConfig.filter(g => !g.roles || g.roles.includes(role));
 
-  const isMenuPathActive = (path: string) => {
+  const isMenuPathActive = (path?: string) => {
+    if (!path) return false;
     if (location.pathname === path) return true;
     if (path === '/dashboard/customer') {
       return location.pathname === '/dashboard/customer-report' && new URLSearchParams(location.search).get('metric') !== 'qty';
@@ -27,9 +29,13 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       return location.pathname === '/dashboard/customer-report' && new URLSearchParams(location.search).get('metric') === 'qty';
     }
     if (path === '/dashboard/top-orders') {
-      return location.pathname === '/dashboard/top-orders/analytics'
-        || location.pathname === '/dashboard/sales-customer-groups'
-        || location.pathname === '/dashboard/sales-customer-detail';
+      return location.pathname === '/dashboard/top-orders/analytics';
+    }
+    if (path === '/dashboard/top-orders/analytics') {
+      return location.pathname === '/dashboard/top-orders/analytics';
+    }
+    if (path === '/dashboard/sales-customer-groups') {
+      return location.pathname === '/dashboard/sales-customer-detail';
     }
     if (path === '/po-tracker') {
       return location.pathname.startsWith('/po-tracker/');
@@ -37,16 +43,20 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
     return false;
   };
 
+  const isMenuItemActive = (item: NavMenuItem): boolean => {
+    return isMenuPathActive(item.path) || Boolean(item.items?.some(child => isMenuItemActive(child)));
+  };
+
   // Accordion: only one group open at a time
   const activeGroupId = filteredMenu.find(g =>
-    g.path ? isMenuPathActive(g.path) : (g.items || []).some(item => isMenuPathActive(item.path))
+    g.path ? isMenuPathActive(g.path) : (g.items || []).some(item => isMenuItemActive(item))
   )?.id || 'sales-dashboard';
 
   const [openGroupId, setOpenGroupId] = useState<string>(activeGroupId);
 
   useEffect(() => {
     const found = menuConfig.find(g =>
-      g.path ? isMenuPathActive(g.path) : (g.items || []).some(item => isMenuPathActive(item.path))
+      g.path ? isMenuPathActive(g.path) : (g.items || []).some(item => isMenuItemActive(item))
     );
     if (found) {
       setOpenGroupId(found.id);
@@ -77,7 +87,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
     }
   };
 
-  // ─── Collapsed state ───
+  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Collapsed state Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
   if (!isOpen) {
     return (
       <aside
@@ -97,7 +107,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
 
         <div className="brand-accent-line mx-3 w-8 mb-2" />
 
-        {/* Icons only — click to expand sidebar + open group */}
+        {/* Icons only Ã¢â‚¬â€ click to expand sidebar + open group */}
         <nav className="flex flex-1 flex-col items-center gap-1.5 py-2 w-full px-2">
           {filteredMenu.map(group => (
             <NavGroup
@@ -121,7 +131,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
               background: 'var(--color-brand-500)',
               color: 'var(--color-text-inverse)'
             }}
-            title={`${localStorage.getItem('auth_user') || 'User'} — ${role}`}
+            title={`${localStorage.getItem('auth_user') || 'User'} Ã¢â‚¬â€ ${role}`}
           >
             {localStorage.getItem('auth_user')?.[0] || 'U'}
           </div>
@@ -130,7 +140,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
     );
   }
 
-  // ─── Expanded state ───
+  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Expanded state Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
   return (
     <aside
       className="flex h-screen w-[270px] min-w-[270px] flex-col transition-all duration-300 relative z-20 shadow-xl"

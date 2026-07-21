@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   ChevronRight,
@@ -12,10 +13,12 @@ import {
   TrendingUp,
   Handshake,
 } from 'lucide-react';
-import type { NavMenuGroup } from '../../types';
+import type { NavMenuGroup, NavMenuItem } from '../../types';
 
 const NAV_ICON_SIZE = 16;
 const NAV_CHEVRON_SIZE = 14;
+const ROW_HEIGHT = 36;
+const CHILD_ROW_HEIGHT = 30;
 
 const iconComponents: Record<string, React.ElementType> = {
   'package-check': PackageCheck,
@@ -40,9 +43,10 @@ interface NavGroupProps {
 export default function NavGroup({ group, isOpen, onToggle, collapsed = false }: NavGroupProps) {
   const navigate = useNavigate();
   const location = useLocation();
-
   const items = group.items || [];
-  const isItemActive = (itemPath: string) => {
+
+  const isPathActive = (itemPath?: string) => {
+    if (!itemPath) return false;
     if (location.pathname === itemPath) return true;
     if (itemPath === '/dashboard/customer') {
       return location.pathname === '/dashboard/customer-report' && new URLSearchParams(location.search).get('metric') !== 'qty';
@@ -51,23 +55,46 @@ export default function NavGroup({ group, isOpen, onToggle, collapsed = false }:
       return location.pathname === '/dashboard/customer-report' && new URLSearchParams(location.search).get('metric') === 'qty';
     }
     if (itemPath === '/dashboard/top-orders') {
-      return location.pathname === '/dashboard/top-orders/analytics'
-        || location.pathname === '/dashboard/sales-customer-groups'
-        || location.pathname === '/dashboard/sales-customer-detail';
+      return location.pathname === '/dashboard/top-orders/analytics';
+    }
+    if (itemPath === '/dashboard/top-orders/analytics') {
+      return location.pathname === '/dashboard/top-orders/analytics';
+    }
+    if (itemPath === '/dashboard/sales-customer-groups') {
+      return location.pathname === '/dashboard/sales-customer-detail';
     }
     if (itemPath === '/po-tracker') {
       return location.pathname.startsWith('/po-tracker/');
     }
     return false;
   };
-  const isGroupActive = group.path
-    ? location.pathname === group.path
-    : items.some(item => isItemActive(item.path));
-  const IconComponent = iconComponents[group.icon] || PackageCheck;
 
+  const isItemActive = (item: NavMenuItem): boolean => {
+    return isPathActive(item.path) || Boolean(item.items?.some(child => isItemActive(child)));
+  };
+
+  const activeParentId = useMemo(() => items.find(item => item.items?.some(child => isItemActive(child)))?.id || '', [items, location.pathname, location.search]);
+  const [openItemId, setOpenItemId] = useState(activeParentId);
+
+  useEffect(() => {
+    if (activeParentId) setOpenItemId(activeParentId);
+  }, [activeParentId]);
+
+  const visibleRows = items.reduce((count, item) => {
+    const childCount = item.items && openItemId === item.id ? item.items.length : 0;
+    return count + 1 + childCount;
+  }, 0);
+
+  const isGroupActive = group.path
+    ? isPathActive(group.path)
+    : items.some(item => isItemActive(item));
+  const IconComponent = iconComponents[group.icon] || PackageCheck;
   const accentColor = group.accentColor || 'var(--color-brand-500)';
 
-  // Collapsed mode — icon only with tooltip + glow ring
+  const openPath = (path?: string) => {
+    if (path) navigate(path);
+  };
+
   if (collapsed) {
     return (
       <div className="mb-1 flex justify-center">
@@ -79,8 +106,7 @@ export default function NavGroup({ group, isOpen, onToggle, collapsed = false }:
               onToggle();
             }
           }}
-          className={`flex h-9 w-9 items-center justify-center rounded-lg transition-all duration-200 hover:bg-[var(--color-sidebar-hover)] ${isGroupActive ? 'bg-[var(--color-sidebar-hover)]' : ''
-            }`}
+          className={`flex h-9 w-9 items-center justify-center rounded-lg transition-all duration-200 hover:bg-[var(--color-sidebar-hover)] ${isGroupActive ? 'bg-[var(--color-sidebar-hover)]' : ''}`}
           style={isGroupActive ? {
             boxShadow: `0 0 12px 1px color-mix(in oklch, ${accentColor} 25%, transparent)`,
           } : undefined}
@@ -88,10 +114,7 @@ export default function NavGroup({ group, isOpen, onToggle, collapsed = false }:
         >
           <IconComponent
             size={NAV_ICON_SIZE}
-            className={`transition-colors duration-150 ${isGroupActive
-              ? 'text-[var(--color-sidebar-accent)]'
-              : 'text-[var(--color-sidebar-text)]'
-              }`}
+            className={`transition-colors duration-150 ${isGroupActive ? 'text-[var(--color-sidebar-accent)]' : 'text-[var(--color-sidebar-text)]'}`}
           />
         </button>
       </div>
@@ -100,7 +123,6 @@ export default function NavGroup({ group, isOpen, onToggle, collapsed = false }:
 
   return (
     <div className="mb-0.5">
-      {/* Group Header with accent bar */}
       <button
         onClick={() => {
           if (group.path) {
@@ -110,11 +132,8 @@ export default function NavGroup({ group, isOpen, onToggle, collapsed = false }:
           }
         }}
         className={`nav-accent-bar nav-item-hover flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left transition-colors duration-150 hover:bg-[var(--color-sidebar-hover)] ${isGroupActive || isOpen ? 'active' : ''}`}
-        style={{
-          '--accent-bar-color': accentColor,
-        } as React.CSSProperties}
+        style={{ '--accent-bar-color': accentColor } as React.CSSProperties}
       >
-        {/* Active indicator dot */}
         <span className="flex w-5 shrink-0 items-center justify-center relative">
           {(isGroupActive || isOpen) && (
             <span
@@ -124,84 +143,106 @@ export default function NavGroup({ group, isOpen, onToggle, collapsed = false }:
           )}
           <IconComponent
             size={NAV_ICON_SIZE}
-            className={`transition-colors duration-150 ${isGroupActive || isOpen
-              ? 'text-[var(--color-sidebar-accent)]'
-              : 'text-[var(--color-sidebar-text)]'
-              }`}
+            className={`transition-colors duration-150 ${isGroupActive || isOpen ? 'text-[var(--color-sidebar-accent)]' : 'text-[var(--color-sidebar-text)]'}`}
           />
         </span>
         <span
-          className={`flex-1 text-[13px] font-medium transition-colors duration-150 ${isGroupActive || isOpen
-            ? 'text-[var(--color-sidebar-text-active)]'
-            : 'text-[var(--color-sidebar-text)]'
-            }`}
+          className={`flex-1 text-[13px] font-medium transition-colors duration-150 ${isGroupActive || isOpen ? 'text-[var(--color-sidebar-text-active)]' : 'text-[var(--color-sidebar-text)]'}`}
           style={{ fontFamily: 'var(--font-display)' }}
         >
           {group.label}
         </span>
 
-        {/* Badge count for groups with items */}
-        {items.length > 0 && (
-          <span className="nav-badge opacity-50">
-            {items.length}
-          </span>
-        )}
+        {items.length > 0 && <span className="nav-badge opacity-50">{items.length}</span>}
 
         {items.length > 0 && (
           <ChevronRight
             size={NAV_CHEVRON_SIZE}
-            className={`shrink-0 text-[var(--color-sidebar-text)] opacity-40 transition-transform duration-300 ${isOpen ? 'rotate-90' : ''
-              }`}
+            className={`shrink-0 text-[var(--color-sidebar-text)] opacity-40 transition-transform duration-300 ${isOpen ? 'rotate-90' : ''}`}
             style={{ transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)' }}
           />
         )}
       </button>
 
-      {/* Group Items — accordion with slide animation */}
       <div
         className="overflow-hidden transition-all duration-300"
         style={{
-          maxHeight: isOpen ? `${items.length * 36}px` : '0px',
+          maxHeight: isOpen ? `${visibleRows * ROW_HEIGHT + 12}px` : '0px',
           transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)',
         }}
       >
         {items.map((item, idx) => {
-          const isActive = isItemActive(item.path);
+          const hasChildren = Boolean(item.items?.length);
+          const isActive = isItemActive(item);
+          const isSubOpen = openItemId === item.id;
           return (
-            <button
-              key={item.id}
-              onClick={() => navigate(item.path)}
-              className={`nav-item-hover flex w-full items-center gap-2 rounded py-1.5 pl-10 pr-3 text-left transition-all duration-150 ${isActive
-                ? 'bg-[var(--color-brand-50)]'
-                : 'hover:bg-[var(--color-sidebar-hover)]'
-                }`}
-              style={isOpen ? {
-                animation: `slideInLeft 0.25s cubic-bezier(0.16, 1, 0.3, 1) ${idx * 40}ms both`,
-              } : undefined}
-            >
-              {/* Active sub-item dot */}
-              {isActive && <span className="sub-item-active-dot" />}
-
-              <span
-                className={`flex-1 truncate text-[12.5px] leading-relaxed transition-colors duration-150 ${isActive
-                  ? 'font-bold text-[var(--color-sidebar-text-active)]'
-                  : 'text-[var(--color-sidebar-text)] hover:text-[var(--color-sidebar-text-active)]'
-                  }`}
-                title={item.label}
+            <div key={item.id}>
+              <button
+                onClick={() => {
+                  if (hasChildren) {
+                    setOpenItemId(prev => (prev === item.id ? '' : item.id));
+                  } else {
+                    openPath(item.path);
+                  }
+                }}
+                className={`nav-item-hover flex w-full items-center gap-2 rounded py-1.5 pl-10 pr-3 text-left transition-all duration-150 ${isActive ? 'bg-[var(--color-brand-50)]' : 'hover:bg-[var(--color-sidebar-hover)]'}`}
+                style={isOpen ? {
+                  animation: `slideInLeft 0.25s cubic-bezier(0.16, 1, 0.3, 1) ${idx * 40}ms both`,
+                  minHeight: ROW_HEIGHT,
+                } : undefined}
               >
-                {item.label}
-              </span>
-              {item.code && (
+                {isActive && <span className="sub-item-active-dot" />}
                 <span
-                  className={`shrink-0 rounded px-1 py-0.5 text-[9px] font-mono font-bold tracking-wider transition-colors duration-150 ${isActive
-                    ? 'bg-[var(--color-brand-100)] text-[var(--color-brand-600)]'
-                    : 'text-[var(--color-sidebar-text)] opacity-30'
-                    }`}
+                  className={`flex-1 truncate text-[12.5px] leading-relaxed transition-colors duration-150 ${isActive ? 'font-bold text-[var(--color-sidebar-text-active)]' : 'text-[var(--color-sidebar-text)] hover:text-[var(--color-sidebar-text-active)]'}`}
+                  title={item.label}
                 >
-                  {item.code}
+                  {item.label}
                 </span>
+                {item.code && (
+                  <span className={`shrink-0 rounded px-1 py-0.5 text-[9px] font-mono font-bold tracking-wider transition-colors duration-150 ${isActive ? 'bg-[var(--color-brand-100)] text-[var(--color-brand-600)]' : 'text-[var(--color-sidebar-text)] opacity-30'}`}>
+                    {item.code}
+                  </span>
+                )}
+                {hasChildren && (
+                  <ChevronRight
+                    size={12}
+                    className={`shrink-0 text-[var(--color-sidebar-text)] opacity-40 transition-transform duration-200 ${isSubOpen ? 'rotate-90' : ''}`}
+                  />
+                )}
+              </button>
+
+              {hasChildren && (
+                <div
+                  className="overflow-hidden transition-all duration-200"
+                  style={{ maxHeight: isSubOpen ? `${(item.items?.length || 0) * CHILD_ROW_HEIGHT}px` : '0px' }}
+                >
+                  {item.items!.map(child => {
+                    const isChildActive = isItemActive(child);
+                    return (
+                      <button
+                        key={child.id}
+                        onClick={() => openPath(child.path)}
+                        className={`nav-item-hover flex w-full items-center gap-2 rounded py-1 pl-14 pr-3 text-left transition-all duration-150 ${isChildActive ? 'bg-[var(--color-brand-50)]' : 'hover:bg-[var(--color-sidebar-hover)]'}`}
+                        style={{ minHeight: CHILD_ROW_HEIGHT }}
+                      >
+                        {isChildActive && <span className="sub-item-active-dot" />}
+                        <span
+                          className={`flex-1 truncate text-[12px] leading-relaxed transition-colors duration-150 ${isChildActive ? 'font-bold text-[var(--color-sidebar-text-active)]' : 'text-[var(--color-sidebar-text)] hover:text-[var(--color-sidebar-text-active)]'}`}
+                          title={child.label}
+                        >
+                          {child.label}
+                        </span>
+                        {child.code && (
+                          <span className={`shrink-0 rounded px-1 py-0.5 text-[9px] font-mono font-bold tracking-wider transition-colors duration-150 ${isChildActive ? 'bg-[var(--color-brand-100)] text-[var(--color-brand-600)]' : 'text-[var(--color-sidebar-text)] opacity-30'}`}>
+                            {child.code}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
               )}
-            </button>
+            </div>
           );
         })}
       </div>

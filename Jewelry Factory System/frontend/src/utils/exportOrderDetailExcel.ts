@@ -11,12 +11,6 @@ const EXPORT_COLUMNS = ORDER_DETAIL_COLUMNS.filter(c =>
   !['FQCQty', 'FinishQty', 'ExportQty', 'InvoiceNo', 'AWB', 'InvoiceDate', 'OrdRemark'].includes(c.key)
 );
 
-const EMU_PER_PIXEL = 9525; // ค่ามาตรฐานคงที่ของ Office: 914400 EMU/inch, 96px/inch
-
-function pxToEMU(px: number): number {
-  return Math.round(px * EMU_PER_PIXEL);
-}
-
 const PHOTO_IMG_WIDTH = 60;
 const PHOTO_IMG_HEIGHT = 42;
 const PHOTO_COL_PX = 98; // Width 14 in Excel units ≈ 98px
@@ -66,8 +60,8 @@ async function fetchImageAsBuffer(itemNo: string): Promise<ArrayBuffer | null> {
 
 export async function exportOrderDetailExcel(
   lines: Record<string, unknown>[],
-  header: Record<string, unknown> | null | undefined,
-  pageTitle: string,
+  _header: Record<string, unknown> | null | undefined,
+  _pageTitle: string,
   onSuccess?: (filePath: string) => void
 ) {
   const workbook = new ExcelJS.Workbook();
@@ -131,7 +125,8 @@ export async function exportOrderDetailExcel(
         bottom: { style: 'thin' },
         right: { style: 'thin' }
       };
-      cell.numFmt = numFmtFor(col.excelType);
+      const numFmt = numFmtFor(col.excelType);
+      if (numFmt) cell.numFmt = numFmt;
 
       // Null, undefined, or 0 becomes empty string
       if (raw == null || raw === 0 || raw === '0') {
@@ -175,7 +170,7 @@ export async function exportOrderDetailExcel(
 
     // Embed Image
     if (photoColIdx !== -1) {
-      const itemNo = line.ItemNo as string;
+      const itemNo = typeof line.ItemNo === 'string' ? line.ItemNo : String(line.ItemNo ?? '');
       if (itemNo) {
         const buffer = await fetchImageAsBuffer(itemNo);
         if (buffer) {
@@ -188,12 +183,7 @@ export async function exportOrderDetailExcel(
             const rowOffsetPx = (PHOTO_ROW_PX - PHOTO_IMG_HEIGHT) / 2;
 
             worksheet.addImage(imageId, {
-              tl: {
-                nativeCol: photoColIdx,
-                nativeColOff: pxToEMU(colOffsetPx),
-                nativeRow: headerRowIdx + rIdx,
-                nativeRowOff: pxToEMU(rowOffsetPx),
-              },
+              tl: { col: photoColIdx + (colOffsetPx / PHOTO_COL_PX), row: headerRowIdx + rIdx + (rowOffsetPx / PHOTO_ROW_PX) },
               ext: { width: PHOTO_IMG_WIDTH, height: PHOTO_IMG_HEIGHT },
               editAs: 'oneCell'
             });
@@ -219,7 +209,6 @@ export async function exportOrderDetailExcel(
 
   const buffer = await workbook.xlsx.writeBuffer();
   const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-  const safeTitle = pageTitle.replace(/[^a-zA-Z0-9]/g, '_');
   const defaultFilename = `ItemSum_${dateStr}.xlsx`;
 
   // File System Access API for custom save location

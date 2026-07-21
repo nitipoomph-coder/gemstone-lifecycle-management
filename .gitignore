@@ -15,3 +15,9 @@ Jewelry Factory System/frontend/temp_*.tsx
 Jewelry Factory System/frontend/parse.cjs
 Jewelry Factory System/backend/check-*.js
 Jewelry Factory System/backend/get-*.js
+
+# Local Codex/tooling artifacts
+.codex/
+.impeccable/
+frontend-vite.err.log
+frontend-vite.out.log

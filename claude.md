@@ -1,5 +1,13 @@
 # Gemstone Lifecycle Management — Project Context
 
+## Database Environment Guardrail
+
+- Current `VW_SalesOrderLineAnalytics` work, validation counts, and audit findings are from the **TEST DATABASE ONLY**.
+- This view has not been approved or applied to the production database.
+- Do not treat the configured host or database name as proof that an operation is approved for production.
+- Keep database checks read-only unless the user explicitly approves a test-database change.
+- Any production SQL change requires a separate schema check, review, and explicit user approval.
+
 ## Project Overview
 
 ระบบจัดการวงจรชีวิตพลอยและเครื่องประดับ (Gemstone Lifecycle Management) สำหรับโรงงานเครื่องประดับ
@@ -21,7 +29,7 @@
 | ห้องตัวอย่าง            | SSA, SIM                             | 🟡 DocumentLayout done |
 | ตรวจสอบและนับสต็อก      | Check Dispatch/Sample/Purchase/Stock | ⬜ Placeholder      |
 | Production / PO Tracker | —                                  | ✅ Live (core feature, admin only) |
-| Customer Sales Analysis | —                              | ✅ Customer group sales overview + order list detail |
+| Customer Trends | —                              | ✅ Customer movement overview + order list detail |
 | สต็อกอะไหล่             | SP-Order, SP-Issue, SP-Receive, …    | ⬜ Placeholder      |
 | งานเหมา (Subcontract Management) | —                           | 🟡 UI Preview (1/3, ไม่มี Backend) |
 
@@ -157,7 +165,7 @@ gemstone-lifecycle-management/
     │       │   ├── CustomerReportPage.tsx      # ⭐ Customer Report (Matrix Table สรุปยอดขายรายลูกค้า)
     │       │   ├── TopOrdersGalleryPage.tsx    # ⭐ Top Orders Gallery (Enterprise BI layout with custom themes)
     │       │   ├── POTrackerAdvanced.tsx       # ⭐ PO Tracker main (list view — เดิมชื่อ OrderTrackerAdvanced)
-    │       │   ├── SalesCustomerGroupAnalytics.tsx # ✅ Customer Sales Analysis overview route: /dashboard/sales-customer-groups
+    │       │   ├── SalesCustomerGroupAnalytics.tsx # ✅ Customer Trends overview route: /dashboard/sales-customer-groups
     │       │   ├── SalesCustomerGroupDetail.tsx     # ✅ Customer Order List route: /dashboard/sales-customer-detail
     │       │   ├── OrderDetailPage.tsx         # Order detail (by ord/po/group)
     │       │   ├── ItemDetailPage.tsx          # Item-level detail
@@ -405,15 +413,8 @@ npm run dev
 | `status`   | string | `pending` | `pending` or `finish` or `All`   |
 | `noCache`  | string | —         | Set to skip cache                |
 
-### Dashboard (Protected)
-
-| Method | Endpoint                              | Description                        |
-|--------|---------------------------------------|------------------------------------|
-| GET    | `/api/dashboard`                      | Main Dashboard stats (9 sections)  |
-| GET    | `/api/dashboard/years`                | Available years for filter         |
-| GET    | `/api/dashboard/detail/:cardType`     | Card drill-down (YoY comparison)   |
-| GET    | `/api/dashboard/sales-summary`        | Sales by rep/year (SalesDashboard) |
-| GET    | `/api/dashboard/customer-summary`     | Sales+Qty by cust/year/month (CustomerDashboard — ทั้ง amount และ qty mode ใช้ endpoint เดียวกัน) |
+### Dashboard and Sales Analytics Details
+Dashboard/report endpoint details moved to dashboard.md. Sales menu/navigation details moved to sales-menu.md.
 
 ### Documents — Unified DocumentLayout (Protected)
 
@@ -599,7 +600,6 @@ APP_SALES_PASSWORD=<sales login password>
 3. **Thai Language UI** — ข้อความในระบบเป็นภาษาไทย, ใช้ web fonts (Outfit, Prompt)
 4. **Legacy Migration** — กำลัง migrate จาก VB.net ทีละ module, หลายหน้ายังเป็น Placeholder
 5. **Photo Data** — รูปสินค้าเก็บเป็น VARBINARY ใน DB, แปลงเป็น base64 ตอน serve — ระวัง payload size
-6. **Active Order Filters** — เนื่องจากมีข้อมูลขยะ (Sample/Dead orders) ในระบบจำนวนมาก Dashboard จึงต้องถูกฟิลเตอร์ให้แสดงเฉพาะออเดอร์ 13 รหัสหลักที่มีความเคลื่อนไหวตั้งแต่ปี 2024 ขึ้นมาเท่านั้น (BBC, BBQ, BBD, BBI, BBF, BBP, BBT, BBX, BBK, BBR, BBL, BBS, BBE)
 
 ---
 
@@ -666,6 +666,85 @@ APP_SALES_PASSWORD=<sales login password>
 - **Visual Distinctness**: ใช้ `border`, และ `bg-[var(--color-surface-*)]` เพื่อแบ่งสัดส่วนเนื้อหา (Header, Details, Lines) ให้ชัดเจน
 - **Data Configuration**: โครงสร้างฟอร์มและตารางต่างๆ ต้องกำหนดที่เดียวใน `formConfigs.ts` เพื่อให้จัดการง่าย
 
+## Operational Data Visualization Standard (System-Wide)
+
+This standard applies to every dashboard, report, KPI, chart, and infographic in the system. A visualization is an operational control, not decoration. It must help the user understand a situation, identify the cause, or continue to the records that require action. If a visual does none of these better than a number or table, do not add it.
+
+### Information Architecture
+
+- Arrange analytical pages in the order `Scope/Filters -> Summary -> Explanation -> Details/Action`.
+- Show the easiest overview first, then let users switch or drill down to exact records without opening a duplicate menu page.
+- Keep active filters, sort, selected measure, and drill-down context when moving between overview and detail.
+- Before adding any local selector, audit the existing page-level filters. Reuse an existing control when its meaning and scope are the same; add a second control only when it intentionally controls an independent dataset and the distinction is visible.
+- Display the active data scope, unit, period, comparison basis, and last refresh time where relevant.
+- Search affects only the dataset explicitly labeled by that search field. It must not silently change unrelated KPIs or charts.
+
+### Choosing The Right Display
+
+- Use a KPI for one exact result that users must recognize quickly.
+- Use a line or column chart for change over time.
+- Use stacked columns/bars for total plus composition; use 100% stacked only when the question is share, not volume.
+- Use sorted horizontal bars for rankings.
+- Use small multiples with the same scale when comparing periods or groups would make one chart crowded.
+- Use a table when users need exact rows, many attributes, reconciliation, export, or direct actions.
+- Use a funnel only for a real sequential process where each stage shares the same population.
+- Avoid pie/donut charts for trends or many categories, 3D charts, decorative gauges, gradients, illustrations, and animation that does not communicate state.
+- Do not repeat a KPI as a chart unless the chart adds trend, composition, distribution, or comparison.
+
+### KPI Requirements
+
+- Every KPI must include a clear label, formatted value, unit, and active period.
+- A delta or trend arrow is allowed only when its comparison period and calculation are explicit.
+- Do not mix order count, item quantity, weight, and amount under an ambiguous label such as `Total`.
+- When a KPI combines categories, provide a compact breakdown or a direct path to the contributing records.
+
+### Interaction And Drill-Down
+
+- Tooltips must show exact values, units, category, period, and denominator/percentage when applicable.
+- Clicking, tapping, or keyboard-activating a meaningful data point must filter or open the corresponding detail records when those records exist.
+- Show drill-down context as a title, breadcrumb, or removable filter chips, with a clear reset/back action.
+- Keep chart legends and series names consistent with filters, tables, exports, and domain terminology.
+- Hover-only information is insufficient. The same information and action must be available by keyboard and touch.
+
+### Color And Accessibility
+
+- Use color only for defined meaning: status, severity, selection, process stage, or data series.
+- Keep the same meaning and series color consistent across the system. Do not assign decorative colors to categories with no analytical purpose.
+- Color must never be the only identifier; use labels, icons, patterns, ordering, or text as a second cue.
+- Provide visible keyboard focus, sufficient contrast in every theme, screen-reader names, and readable labels at all supported sizes.
+
+### Data Integrity
+
+- KPI, chart, table, and export totals must use the same filter scope and calculation definitions.
+- Clearly distinguish zero, missing, unavailable, and not-applicable values. Never silently remove them.
+- Comparison charts must use compatible units and scales. Side-by-side period comparisons use the same axis scale unless a difference is clearly disclosed.
+- Currency, quantity, weight, percentage, date, and timezone formats must be consistent with the domain and locale.
+- Production screens use production-stage language and status semantics. Sales screens use customer, order, item, shipment, quantity, and amount semantics. Do not mix the domains without an explicit cross-domain view.
+
+### States, Responsive Behavior, And Performance
+
+- Provide loading skeleton, empty, error, partial-data, stale-data, and permission-denied states.
+- Empty states must identify the active scope and offer a useful recovery action such as clearing filters.
+- On smaller screens, reduce simultaneous comparisons, allow purposeful scrolling, or switch views. Never overlap, clip, or shrink labels until unreadable.
+- Reuse fetched data when only changing presentation. Memoize expensive derived datasets and avoid unnecessary API requests.
+- Keep motion between 150-250 ms and use it only to explain selection, transition, loading, or drill-down.
+
+### Domain Examples
+
+- Customer Trends: monthly order type mix -> filtered order lines.
+- Production: delayed work by stage -> affected jobs or orders.
+- Procurement: overdue or pending purchase orders -> matching PO records.
+- Dispatch: shipment volume/status by period -> matching shipment rows.
+
+### Definition Of Done
+
+- Every visual has a named business question and a user action or decision it supports.
+- Filters update all in-scope KPIs, charts, details, and exports consistently.
+- Drill-down returns the correct records and can be cleared without losing the page context.
+- Displayed totals reconcile with the API and detail records for the same scope.
+- The workflow is tested on desktop and mobile with mouse, keyboard, and touch where applicable.
+- Loading, empty, error, zero, partial-data, and long-label cases are verified.
+
 ## Testing & Cleanup Rules
 
 - ห้ามลบหน้าเพจเดิม (เช่น `SOAPage.tsx`, `ProcurementPage.tsx`) จนกว่าการสร้าง Unified Layout และเพจใหม่จะเสร็จสมบูรณ์และทดสอบแล้วว่าไม่มีข้อผิดพลาด
@@ -674,133 +753,13 @@ APP_SALES_PASSWORD=<sales login password>
 
 ---
 
-## Customer Dashboard (Yearly Sales By Customer)
+## Split Domain Documents
 
-### ภาพรวม
-หน้า `CustomerDashboard.tsx` แสดงกราฟเปรียบเทียบยอดขายรายลูกค้า ข้ามหลายปี
-- **2 Metric Modes**: Amount (route: `/dashboard/customer`) และ Qty (route: `/dashboard/qty`) — ใช้ component เดียวกันแต่รับ `metric` prop ต่างกัน
-- **2 โหมดการแสดงผล**: Monthly View (กราฟรายเดือนรวม) / Yearly Breakdown (กราฟรายลูกค้า)
-- **2 Series Modes**: Compare by Year / Compare by Group
+Detailed dashboard/report guidance has moved to dashboard.md.
 
-### Year-Color Mapping
-สีของปีถูก Map แบบ Fixed ตาม Index ของ `availableYears` (ไม่ใช่ `selectedYears`) เพื่อป้องกันสีเลื่อนเมื่อกดเปิด-ปิดปี
-- ใช้ `COLORS` array ที่อ้างอิง CSS Custom Properties ทั้งหมด (**ห้าม Hardcode HEX/RGB**)
-
-### Filter System (Frontend-side filtering)
-ข้อมูลถูก filter ที่ฝั่ง Frontend ด้วย `useMemo` — ไม่ได้ filter ที่ Backend
-
-| Filter             | ตัวเลือก                                                     | State Variable    |
-|--------------------|--------------------------------------------------------------|-------------------|
-| **Target Year(s)** | Multi-select จาก available years (toggle on/off)              | `selectedYears`   |
-| **Month Selector** | เลือกเดือนเดียวใน `Monthly Detail` หรือ All Months          | `selectedMonth`   |
-| **Customer Group** | N008, MLT, N083, N044, N051, General (toggle pills)           | `selGroups`       |
-| **Show Labels**    | ON/OFF — ซ่อน/แสดง label บนกราฟ (auto-off เมื่อ >3 groups)  | `showLabels`      |
-
-- **Customer Group Mapping**: จัดการผ่าน SSOT ที่ `src/config/customerGroups.ts`
-  - N008 Group: N008, N048, N066-N075
-  - MLT Group: U411-U426
-  - N083 Group: N083, N086-N089
-  - N044 Group: N044
-  - N051 Group: N051
-  - General: ลูกค้าที่ไม่ตรงกับกลุ่มด้านบน
-- ปุ่ม Filter ใช้ Radio-button style (วงกลมเล็กด้านหน้า)
-- **Default Chart Grouping**: เนื่องจากบางกลุ่มมียอดขายสูงมากจนไปกดสเกลกราฟของกลุ่มอื่นให้มองไม่เห็น กราฟถูกตั้งค่าให้เลือกเฉพาะ 4 กลุ่มแรก (Top 4) ขึ้นมาเป็นค่าเริ่มต้น หากมีกลุ่มที่ 5, 6, ... หรือ General จะถูก Uncheck ซ่อนไว้ก่อน เพื่อให้กราฟ Scale สวยงาม (ผู้ใช้สามารถติ๊กเปิดดูภายหลังได้)
-
-### Interactive Charts & Full Report Page
-1. **Recharts Integration**: เปลี่ยนจากการใช้ CSS Chart ล้วนมาเป็น library `recharts`
-   - สามารถ Toggle เป็น Bar Chart และ Line Chart ได้
-   - โชว์ Label บนกราฟ หรือ Tooltip ตามการทำงานที่สมบูรณ์ขึ้น
-   - **Chart Margins**: Bar Chart ใช้ `{ top: 20, right: 30, left: 10, bottom: 5 }`, Line Chart ใช้ `{ top: 20, right: 40, left: 10, bottom: 5 }` เพื่อป้องกันชนขอบ
-   - **XAxis Padding** (Line Chart): `{ left: 30, right: 30 }` ป้องกันจุดข้อมูลชิดขอบ
-   - **YAxis**: width=70, dx=-5 ป้องกัน label ถูกตัด
-   - **Dot Markers**: Line Chart ใช้ r=6, strokeWidth=3, activeDot r=8
-2. **CustomerReportPage**: หน้าต่างสรุปตัวเลขแบบ Full-screen Matrix (รายลูกค้า × รายเดือน) ที่ถูกแยก (Separate) ออกมาจาก `CustomerDashboard.tsx` เดิมที่เป็นเพียง Modal
-   - **หน้าที่และความจำเป็น**: ทำหน้าที่แสดงผลตารางสรุปยอดขาย (Matrix Table) แบบเจาะลึกทุกเดือนและทุกปี การแยกออกมาเป็นหน้าจอใหม่ (Page) ช่วยลดความหนาแน่นของโค้ดในหน้า Dashboard และให้พื้นที่เต็มหน้าจอสำหรับตารางข้อมูลขนาดใหญ่
-   - **ขีดจำกัด (Limitations)**: ตารางมีการเรนเดอร์ DOM Elements จำนวนมหาศาล (จำนวนลูกค้า × จำนวนปี × จำนวน 12 เดือน) หากผู้ใช้เลือกช่วงปีจำนวนมาก และไม่กรองกลุ่มลูกค้า (แสดงทั้งหมด) อาจทำให้เกิดความหน่วง (Lag) ในระหว่างการ Scroll หรือการสลับโหมด View/Growth เนื่องจาก React ต้องคำนวณและวาดคอมโพเนนต์จำนวนมากในครั้งเดียว
-   - กรองข้อมูลผ่าน Base Year, Compare Year, Customer Groups, และเลือก Customer IDs ได้
-   - **Dynamic Sorting**: รองรับการจัดเรียงข้อมูลลูกค้าในตาราง (Sort Order) จากมากไปน้อย หรือน้อยไปมาก โดยอิงจากยอดขายรวมของปีเป้าหมาย
-   - แสดง Badge อัตราการเติบโต YoY แบบ Inline ในตาราง รองรับการเลือกเทียบปี (Multiple Growth Comparisons) หลายคู่พร้อมกัน
-
-### Growth Indicator Design
-ไอคอน Growth ใช้ `ArrowUpRight` / `ArrowDownRight` จาก `lucide-react` (size 16, strokeWidth 2.5)
-- ขนาดฟอนต์: 0.78rem / fontWeight: 900
-- Border-left accent 3px สี success/danger
-- Border-radius: 20px (pill shape)
-- Background: color-mix 14% ของสี success/danger
-- Flat indicator: ใช้ `Minus` icon (size 14, strokeWidth 3)
-
-### API Endpoint
-`GET /api/dashboard/customer-summary?years=2025,2026`
-- OrdNo Filter: NOT IN blocklist (`BBP, BBK, BBS, BBL, BBT, BBD`)
-- กรองเฉพาะ `CustStatus = 'Y'` (Active customers)
-- Return: `{ ok, data: [{ id, name, custStatus, salesName, data: {year: total}, dataQty: {year: totalQty}, monthly: {year: {month: total}}, monthlyQty: {year: {month: qty}}, currentMonthSales, topItem, topItemQty }] }`
-
----
-
-## Top Orders Gallery (TopOrdersGalleryPage.tsx)
-
-### ภาพรวม
-หน้าแสดงแกลเลอรีรูปภาพสินค้าที่ขายดีที่สุด (Top Item) ของลูกค้ารายนั้นๆ โดยออกแบบด้วยหลักการ **World-Class Enterprise BI Layout**:
-- **Clean Corporate Geometry**: ใช้กรอบ Widget แบบเหลี่ยมขอบมนน้อย (8px) แบบระบบ Dashboard สากล
-- **Canvas Framing**: กรอบภาพใช้พื้นหลังสว่างแบบ Solid White 100% เพื่อให้รูปภาพสินค้าที่มีพื้นหลังสีขาวถูกกลืนเนียนเป็นเนื้อเดียวกันเหมือนหน้านิตยสาร ไม่ดูลอยแยกชิ้นเมื่อเปลี่ยน Theme เป็นสีเข้ม
-- **Staircase Ranking Grid**: การวางเลย์เอาต์กริดที่จัดอันดับ 1 ให้ใหญ่ที่สุดและไล่ระดับรองลงมาแบบขั้นบันได
-- **Luxury Preview Modal**: เมื่อกดคลิกดูรูปภาพ จะขยายขึ้นมาเต็มจอ (Lightbox) โดยมีการเช็คหากเป็นสินค้าอันดับ 1-3 จะได้รับ **มงกุฎแห่งเกียรติยศ (The Top 3 Crown)** ส่องประกายตามลำดับสี (ทอง, เงิน, ทองแดง)
-- **Smart Data Hover**: เมื่อนำเมาส์ชี้ที่รูปขนาดย่อ จะมีป๊อปอัปข้อความเด้งแสดงรายละเอียด "ชื่อลูกค้า", "ยอดการสั่งซื้อ", และ "มูลค่ารวม" ของสินค้านั้น
+Detailed Sales Analytics menu, naming, breadcrumb, and Customer Trends guidance has moved to sales-menu.md.
 
 
-
-## Customer Report Module (CustomerReportPage.tsx)
-
-### Features & Refinements
-- **Dual Analytical Views**: Fully integrated 'YTD View' (Year-to-Date aggregation up to selected months) and 'Monthly Comparison' for direct side-by-side performance tracking.
-- **Dynamic Checkbox Filtering**: Users can select arbitrary combinations of months. The table structure intelligently pivots depending on the active view mode while respecting selected months.
-- **Resilient Theme Design (Growth Indicators)**:
-  - Eliminated hardcoded hex colors. Backgrounds use CSS color-mix with ar(--color-success-500) and ar(--color-danger-500) at 15% opacity to seamlessly blend with any Light/Dark theme.
-  - Left-aligned currency symbols ($) and growth direction arrows (▲/▼) using flexbox for perfect accounting-style visual alignment.
-  - Implemented smart NEW badge logic: displays instantly recognizable pill badge when previous period is 0 and current period has sales.
-- **Clean UI**: Removed redundant back buttons, optimizing header space for Search and View Toggle controls.
-
----
-
-## Customer Sales Analysis (replaces deprecated Sales Order Analytics)
-
-### สถานะ: ✅ Sales Analytics overview + drilldown detail table
-โมดูลนี้อยู่ใต้กลุ่ม `Sales Analytics` สำหรับดูภาพรวม Order/Item เพื่อใช้ประชุม ไม่ใช่ระบบติดตาม production แบบ live tracking:
-- `SalesCustomerGroupAnalytics.tsx` — route `/dashboard/sales-customer-groups`; overview แบบ table-first สำหรับ KPI summary และ Top 30 Items; no charts in v1
-- `SalesCustomerGroupDetail.tsx` — route `/dashboard/sales-customer-detail`; table-first Customer Order List สำหรับ Order No / Item No / Customer / Due / Qty / Shipped / Sales Status
-- Deprecated Sales Order Analytics files were removed; current data access is via `dashboardAPI.ts` and `/api/dashboard/sales-*` endpoints
-
-### Menu / Routing
-- Menu ใต้ `Sales Analytics`: `Customer Sales Analysis`
-- Routes ใน `App.tsx`: `/dashboard/sales-customer-groups` และ `/dashboard/sales-customer-detail`
-
-### Design Rules
-- หน้าแรกต้องเป็น analytics dashboard ก่อน ไม่ใช่ table-first
-- ใช้ดีไซน์ family เดียวกับ `SalesDashboard.tsx` และ `CustomerDashboard.tsx`: `Topbar`, `var(--color-surface-*)`, cards, rounded 16/24, heavy heading, Recharts
-- ห้าม hardcode สีใน UI; ใช้ CSS variables และ `color-mix` เท่านั้น
-- ปุ่ม/การ์ดเป็นทางเข้า drilldown เช่น Completed, WIP, Overdue, Rework, View Detail Table
-
-### Data Contract ปัจจุบัน
-- ใช้ข้อมูล summary จาก PO Tracker API (`/api/orders`) ผ่าน `fetchOrders()` จาก `src/services/orderAPI.ts`
-- Order view map จาก `OrderSummary` โดยตรง
-- Item view ใช้ `SampleItemNo` เป็น representative item ต่อ order/group เพราะ endpoint summary ยังไม่ได้คืน line-item เต็ม
-- Bucket: completed จาก `CloseStatus = 'Y'` หรือ `ExportQty >= TotalQty`, rework จาก QC fail/risk text, overdue จาก due date เทียบวันปัจจุบัน, ที่เหลือเป็น WIP
-
-### Chart Data Mapping
-- Reference Excel: `Centric Order Detail Year 2025-2026 Eileen.xlsx` ใช้แนวคิดจาก sheet `2025-2026`, `By Month`, `By Month (2)`, `Top Items`
-- กราฟหลัก Item Type/Sales mix ต้องใช้ `OrdDT.ItemType` join `GMGoodType` เพื่อแสดงชื่อเต็ม เช่น Ring, Earring, Necklace, Bracelet; ห้ามเดาจาก prefix item no เช่น BBS/BES/BNS
-- Chart controls: `Year Compare` สำหรับเทียบปี, `Monthly Detail` สำหรับเลือกเดือน; ใช้ `Compare Years` (`selectedYears`) เลือกปีที่จะนำมาชนกัน และ `selectedMonth` เลือกเดือนในโหมด monthly
-- Year comparison และ monthly detail ใช้ `OrdDate` เป็นฐานปี/เดือนสำหรับกราฟหลัก และไม่ plot record ที่ไม่มีปี
-- Group mapping: ใช้ prefix 3 ตัวแรกของ `SampleItemNo` เป็นกลุ่มสินค้า และตัด suffix ตัวอักษรท้ายเพื่อได้ item SKU แบบเดียวกับ column `item SKU` ในไฟล์ Excel
-- KPI cards: ใช้ status bucket `Completed`, `WIP`, `Overdue`, `Rework` เพื่อเป็นปุ่ม drilldown ไม่ใช่กราฟหลัก
-- กราฟ `Item Flow by Department`: ใช้ pending qty จาก `CastPenQty`, `WijPenQty`, `WstPenQty`, `StonePenQty`, `FitPenQty`, `GrindPenQty`, `PolishPenQty`, `PlatePenQty`, `QCPenQty`
-- `Top Review List`: ใช้ status bucket + pending qty รวม เพื่อดันรายการ overdue/rework/pending สูงขึ้นมาให้ดูในการประชุม
-- ฟิลด์แสดงใน detail: `CustCode`, `CustName`, `PONo`, `OrdNo`, `OrdKind`, `DueDate`, `CustDueDate`, `TotalQty`, `FinishQty`, `ExportQty`, pending qty รายแผนก
-
-### Next Step ถ้าต้องการ SKU จริง
-ต้องเพิ่ม Backend API/SP ที่คืน line-item จริงจาก `OrdDT`/`OrdTrackDT` ก่อน แล้วค่อยเปลี่ยน item view จาก representative item เป็น SKU rows จริง
-
----
 ## Subcontract Management (งานเหมา) — Planned Module
 
 ### สถานะ: 🟡 UI Preview 1/3 (ไม่มี Backend)
@@ -820,48 +779,7 @@ Sidebar menu group `subcontract` (icon: `handshake`) มี 3 รายการ
 **หมายเหตุ**: ยังไม่มี Backend API หรือ Stored Procedure สำหรับข้อมูล Vendor/Subcontract ในระบบ — ต้องสร้างใหม่ทั้งหมดก่อนเริ่ม build หน้าจอจริง (ห้ามสร้างข้อมูลตัวอย่าง/mock มาแสดงแทนข้อมูลจริงในระบบ production)
 
 ---
-## Sales Customer Analysis - Design Prompt / UI Governance
 
-### Purpose
-หน้า `Customer Sales Analysis` คือหน้าวิเคราะห์ฝั่ง Sales โดยโฟกัสลูกค้า สินค้า ยอดขาย จำนวนชิ้น และการส่งออก ไม่ใช่ Production Dashboard
-
-### Naming Rules
-- Menu name: `Customer Sales Analysis`
-- Overview page title: `Customer Sales Overview`
-- Detail page title: `Customer Order List`
-- Sales overview v1 is table-first: KPI summary, filters, and `Top 30 Items`. Do not add charts until the business question is confirmed.
-- Avoid generic/technical names such as `Sales Customer Analytics`, `Sales Order Analytics`, `Top Item Types` unless the screen is explicitly technical
-
-### Design Rules
-- Must visually follow existing `CustomerDashboard.tsx` and `CustomerReportPage.tsx` patterns: Topbar, surface variables, dense enterprise layout, readable tables
-- Do not introduce a separate visual language for this module
-- Use `var(--color-*)`, `color-mix`, existing fonts, and existing spacing rhythm
-- Keep cards/panels clean and business-focused; avoid decorative hero sections, glass effects, gradients, or oversized marketing composition
-- Overview v1 should be a no-chart working surface: filters, KPI totals, Top 30 Items, and drilldown to order rows
-- Detail should answer sales follow-up questions: which Order No / Item No / Customer / Due / Qty / Shipped / Sales Status needs attention
-- Filter area should use compact enterprise filter cards: Year uses Primary Year / Compare Year select controls, Month uses a drill dropdown with All / Q1-Q4 / month grid, and Customer Group can use chips with a reset action; avoid long unstructured chip rows
-- Item Type Distribution was removed from the Sales overview because it did not provide enough actionable value for v1. Keep the overview focused on KPI summary and Top 30 Items with order-level drilldown. All charts were removed for v1 while the analysis model is being reconsidered step by step.
-
-### Sales vs Production Boundary
-- Sales status is limited to `Open`, `Partial`, `Shipped`, `Late`
-- Do not show production-stage detail such as Casting, Polishing, Plating, QC in Sales pages
-- If deeper production state is needed, link out to PO Tracker / Order Detail instead of duplicating Production Dashboard logic
-
-### Data Rules
-- Top products and order rows must come from real `OrdHD + OrdDT` line data
-- Amount uses line amount (`ItemExchAmnt` fallback `ItemAmnt`) for Sales views
-- Qty uses line qty (`ItemQty`); shipped uses `ExportQty`
-- Customer grouping must use `frontend/src/config/customerGroups.ts` as the single source of truth
-- Top items should expose the primary customer/customer group for each item; choose the primary customer by the active metric (mount or qty)
-- `/api/dashboard/item-type-distribution` was removed with the Item Type Distribution panel; do not reintroduce it unless a clear business use case is confirmed.
----
-### Analysis Rebuild Rules
-- Sales overview v1 must not include charts. Rebuild the analysis model step by step from table evidence first.
-- Product Type / Item Type names must come from `GMGoodType` by joining `OrdDT.ItemType = GMGoodType.GoodTypeCode`; display `GoodTypeNameEng` fallback `GoodTypeName`. Do not infer type from item number prefixes such as `BBS`, `BES`, or `BNS`.
-- New charts may be added only after a concrete business question is confirmed, e.g. customer risk, shipment gap, repeat item demand, or month-to-month order intake.
-- If multiple years are selected, keep totals visible in KPI/table summaries first; do not create a comparison chart until the comparison logic is agreed.
-
----
 ## 2026-07-16 API/Route Domain Split Notes
 
 ### Scope

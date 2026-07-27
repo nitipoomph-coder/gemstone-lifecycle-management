@@ -23,38 +23,38 @@ export const CUSTOMER_GROUPS: CustomerGroup[] = [
   {
     id: 'N008',
     label: 'N008 Group',
-    color: 'var(--color-chart-6)',
+    color: 'var(--color-customer-group-n008)',
     prefixes: ['N008', 'N048', 'N065', 'N066', 'N067', 'N068', 'N069', 'N070', 'N071', 'N072', 'N073', 'N074', 'N075'],
   },
   {
     id: 'N044',
     label: 'N044 Group',
-    color: 'var(--color-chart-3)',
+    color: 'var(--color-customer-group-n044)',
     prefixes: ['N044'],
   },
   {
     id: 'N098',
     label: 'N098 Group',
-    color: 'var(--color-chart-4)',
+    color: 'var(--color-customer-group-n098)',
     prefixes: ['N098'],
   },
   {
     id: 'N051',
     label: 'N051 Group',
-    color: 'var(--color-chart-2)',
+    color: 'var(--color-customer-group-n051)',
     prefixes: ['N051'],
   },
   {
     id: 'N083',
     label: 'N083 Group',
-    color: 'var(--color-chart-1)',
+    color: 'var(--color-customer-group-n083)',
     prefixes: ['N083', 'N086', 'N087', 'N088', 'N089'],
   },
 
   {
     id: 'MLT',
     label: 'MLT Group',
-    color: 'var(--color-chart-5)',
+    color: 'var(--color-customer-group-mlt)',
     // U411 ถึง U426 (16 รหัส)
     prefixes: [
       'U411', 'U412', 'U413', 'U414', 'U415', 'U416',
@@ -68,7 +68,7 @@ export const CUSTOMER_GROUPS: CustomerGroup[] = [
 export const GENERAL_GROUP: CustomerGroup = {
   id: 'General',
   label: 'General',
-  color: 'var(--color-text-tertiary)',
+  color: 'var(--color-customer-group-general)',
   prefixes: [],
 };
 

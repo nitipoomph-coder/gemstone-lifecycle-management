@@ -21,14 +21,7 @@ export const menuConfig: NavMenuGroup[] = [
     accentColor: 'var(--color-success-500)',
     roles: ['admin', 'sales'],
     items: [
-      {
-        id: 'sales-summary-group',
-        label: 'Summary',
-        items: [
-          { id: 'dash-cust', label: 'Sales Summary', path: '/dashboard/customer' },
-          { id: 'dash-qty', label: 'Quantity Summary', path: '/dashboard/qty' },
-        ],
-      },
+      { id: 'dash-cust', label: 'Sales & Qty Summary', path: '/dashboard/customer' },
       { id: 'dash-top-orders', label: 'Top Item Gallery', path: '/dashboard/top-orders' },
       { id: 'dash-sales', label: 'Sales Dashboard', path: '/dashboard/sales' },
     ],
@@ -144,4 +137,3 @@ export const menuConfig: NavMenuGroup[] = [
     ],
   },
 ];
-

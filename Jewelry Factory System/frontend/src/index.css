@@ -92,19 +92,22 @@
   --color-sidebar-accent: oklch(0.68 0.14 245);
   --color-sidebar-divider: oklch(0.26 0.03 250);
 
-  /* Chart Series Colors (for dynamic chart color arrays) */
-  --color-chart-1: oklch(0.65 0.18 45);
-  /* Warm Amber */
-  --color-chart-2: oklch(0.70 0.16 150);
-  /* Emerald */
-  --color-chart-3: oklch(0.58 0.16 300);
-  /* Violet */
-  --color-chart-4: oklch(0.65 0.18 340);
-  /* Pink */
-  --color-chart-5: oklch(0.62 0.20 25);
-  /* Rose Red */
-  --color-chart-6: oklch(0.72 0.14 200);
-  /* Cyan */
+  /* Chart Series Colors (Enterprise Corporate Palette) */
+  --color-chart-1: #2563EB;
+  --color-chart-2: #0D9488;
+  --color-chart-3: #D97706;
+  --color-chart-4: #7C3AED;
+  --color-chart-5: #E11D48;
+  --color-chart-6: #475569;
+
+  /* Customer Group Series Colors */
+  --color-customer-group-n008: #2563EB;
+  --color-customer-group-n044: #D97706;
+  --color-customer-group-n098: #7C3AED;
+  --color-customer-group-n051: #059669;
+  --color-customer-group-n083: #E11D48;
+  --color-customer-group-mlt: #0891B2;
+  --color-customer-group-general: #64748B;
 
   /* Table Colors */
   --color-table-header: oklch(0.22 0.06 250);
@@ -115,6 +118,164 @@
   --font-logo: 'Cinzel', serif;
   --font-display: 'Roboto', sans-serif;
   --font-body: 'Roboto', sans-serif;
+}
+
+:root {
+  /* Compact ERP typography scale */
+  --erp-text-meta: 0.625rem;
+  --erp-text-dense: 0.6875rem;
+  --erp-text-control: 0.75rem;
+  --erp-text-body: 0.8125rem;
+  --erp-text-panel: 0.875rem;
+  --erp-text-section: 1rem;
+  --erp-text-page: 1.25rem;
+  --erp-text-kpi: 1.25rem;
+  --erp-text-grand: 1.5rem;
+}
+
+.app-main {
+  min-width: 0;
+  container: app-main / inline-size;
+}
+
+.app-content-frame {
+  --app-page-gutter: 24px;
+  width: 100%;
+  min-width: 0;
+  margin-inline: auto;
+}
+
+.app-content-frame--dashboard {
+  max-width: 1860px;
+}
+
+.app-content-frame--dashboard-wide {
+  max-width: 2400px;
+}
+
+.app-content-frame--workspace {
+  max-width: none;
+}
+
+.app-page-content {
+  padding: var(--app-page-gutter);
+}
+
+.app-page-inline {
+  padding-inline: var(--app-page-gutter);
+}
+
+.app-topbar__left,
+.app-topbar__right,
+.app-topbar__page-actions {
+  min-width: 0;
+}
+
+.app-topbar__search {
+  width: 320px;
+  min-width: 220px;
+  flex: 0 1 320px;
+}
+
+.app-topbar__page-actions {
+  display: flex;
+  align-items: center;
+}
+
+@container app-main (max-width: 1200px) {
+  .app-content-frame {
+    --app-page-gutter: 20px;
+  }
+
+  .app-topbar__row,
+  .app-topbar__right {
+    gap: 12px;
+  }
+
+  .app-topbar__search {
+    width: 260px;
+    flex-basis: 260px;
+  }
+}
+
+@container app-main (max-width: 1120px) {
+  .app-content-frame {
+    --app-page-gutter: 16px;
+  }
+
+  .app-topbar__row,
+  .app-topbar__right {
+    flex-wrap: wrap;
+  }
+
+  .app-topbar__left {
+    flex: 1 1 auto;
+  }
+
+  .app-topbar__right {
+    width: 100%;
+    flex: 1 1 100%;
+    justify-content: flex-end;
+  }
+
+  .app-topbar__search {
+    flex: 1 1 240px;
+    width: auto;
+  }
+
+  .app-topbar__divider {
+    display: none;
+  }
+
+  .app-topbar__page-actions {
+    order: 1;
+    max-width: 100%;
+    flex: 1 1 auto;
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+
+  .app-topbar__system-actions {
+    order: 2;
+  }
+}
+
+@container app-main (max-width: 620px) {
+  .app-content-frame {
+    --app-page-gutter: 12px;
+  }
+
+  .app-topbar {
+    padding-block: 10px;
+  }
+
+  .app-topbar__row {
+    gap: 8px;
+  }
+
+  .app-topbar__left {
+    gap: 8px;
+  }
+
+  .app-topbar__right {
+    gap: 6px;
+  }
+
+  .app-topbar__search {
+    order: 3;
+    flex-basis: 100%;
+    min-width: 0;
+  }
+
+  .app-topbar__page-actions {
+    order: 4;
+    flex-basis: 100%;
+  }
+
+  .app-topbar__system-actions {
+    margin-left: auto;
+    padding-left: 0;
+  }
 }
 
 @layer base {
@@ -312,6 +473,15 @@
     --color-chart-5: oklch(0.62 0.20 25);
     --color-chart-6: oklch(0.72 0.14 200);
 
+    /* Customer Group Series Colors */
+    --color-customer-group-n008: oklch(0.72 0.15 240);
+    --color-customer-group-n044: oklch(0.78 0.16 65);
+    --color-customer-group-n098: oklch(0.69 0.18 330);
+    --color-customer-group-n051: oklch(0.70 0.14 155);
+    --color-customer-group-n083: oklch(0.68 0.16 285);
+    --color-customer-group-mlt: oklch(0.74 0.14 200);
+    --color-customer-group-general: oklch(0.78 0.03 85);
+
     /* Success - warm teal-green that blends with gold */
     --color-success-50: oklch(0.25 0.04 160);
     --color-success-100: oklch(0.35 0.08 160);
@@ -418,6 +588,15 @@
     --color-chart-4: oklch(0.55 0.18 340);
     --color-chart-5: oklch(0.52 0.20 25);
     --color-chart-6: oklch(0.55 0.14 200);
+
+    /* Customer Group Series Colors */
+    --color-customer-group-n008: oklch(0.49 0.18 245);
+    --color-customer-group-n044: oklch(0.58 0.17 70);
+    --color-customer-group-n098: oklch(0.50 0.20 330);
+    --color-customer-group-n051: oklch(0.47 0.16 150);
+    --color-customer-group-n083: oklch(0.46 0.18 285);
+    --color-customer-group-mlt: oklch(0.50 0.15 200);
+    --color-customer-group-general: oklch(0.46 0.03 260);
 
     /* Process Colors (Darker for Light Mode contrast) */
     --color-proc-casting: oklch(0.40 0.16 250);
@@ -1054,4 +1233,4 @@ h6 {
 .parchment-form .login-input:not(:placeholder-shown) ~ .floating-label {
   transform: translate(14px, -9px) scale(0.75);
   color: var(--bronze);
-}
+}

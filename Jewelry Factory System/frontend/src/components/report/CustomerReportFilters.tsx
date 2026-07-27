@@ -444,10 +444,10 @@ const blockHeaderStyle: React.CSSProperties = {
 
 const blockTitleStyle: React.CSSProperties = {
   color: 'var(--color-text-quaternary)',
-  fontSize: '0.61rem',
+  fontSize: 'var(--erp-text-meta)',
   fontWeight: 760,
   textTransform: 'uppercase',
-  letterSpacing: '0.04em',
+  letterSpacing: 0,
   whiteSpace: 'nowrap',
 };
 
@@ -490,7 +490,7 @@ const addYearButtonStyle = (disabled: boolean): React.CSSProperties => ({
   background: disabled ? 'transparent' : 'color-mix(in srgb, var(--color-brand-500) 7%, var(--color-surface-0))',
   color: disabled ? 'var(--color-text-quaternary)' : 'color-mix(in srgb, var(--color-brand-600) 80%, var(--color-text-primary))',
   padding: '0 8px',
-  fontSize: '0.66rem',
+  fontSize: 'var(--erp-text-meta)',
   fontWeight: 850,
   cursor: disabled ? 'not-allowed' : 'pointer',
   whiteSpace: 'nowrap',
@@ -499,7 +499,7 @@ const addYearButtonStyle = (disabled: boolean): React.CSSProperties => ({
 const yearHintStyle: React.CSSProperties = {
   alignSelf: 'center',
   color: 'var(--color-text-tertiary)',
-  fontSize: '0.68rem',
+  fontSize: 'var(--erp-text-dense)',
   fontWeight: 760,
   whiteSpace: 'nowrap',
 };
@@ -512,7 +512,7 @@ const selectFieldStyle: React.CSSProperties = {
 
 const selectLabelStyle: React.CSSProperties = {
   color: 'var(--color-text-quaternary)',
-  fontSize: '0.62rem',
+  fontSize: 'var(--erp-text-meta)',
   fontWeight: 850,
 };
 
@@ -565,7 +565,7 @@ const growthRemoveButtonStyle = (disabled: boolean): React.CSSProperties => ({
 
 const vsStyle: React.CSSProperties = {
   color: 'var(--color-text-tertiary)',
-  fontSize: '0.66rem',
+  fontSize: 'var(--erp-text-meta)',
   fontWeight: 950,
   lineHeight: 1,
 };
@@ -581,7 +581,7 @@ const textActionStyle = (disabled: boolean, tone: 'brand' | 'danger'): React.CSS
   border: 0,
   background: 'transparent',
   color: disabled ? 'var(--color-text-quaternary)' : tone === 'danger' ? 'color-mix(in srgb, var(--color-danger-500) 76%, var(--color-text-secondary))' : 'color-mix(in srgb, var(--color-brand-600) 72%, var(--color-text-secondary))',
-  fontSize: '0.64rem',
+  fontSize: 'var(--erp-text-meta)',
   fontWeight: 760,
   cursor: disabled ? 'not-allowed' : 'pointer',
   padding: 0,
@@ -600,7 +600,7 @@ const choiceStyle = (selected: boolean, compact: boolean): React.CSSProperties =
   border: `1px solid ${selected ? 'color-mix(in srgb, var(--color-brand-500) 32%, var(--color-border-light))' : 'var(--color-border-light)'}`,
   background: selected ? 'color-mix(in srgb, var(--color-brand-500) 5%, var(--color-surface-0))' : 'color-mix(in srgb, var(--color-surface-0) 82%, transparent)',
   color: selected ? 'color-mix(in srgb, var(--color-brand-600) 78%, var(--color-text-primary))' : 'var(--color-text-secondary)',
-  fontSize: compact ? '0.68rem' : '0.71rem',
+  fontSize: compact ? 'var(--erp-text-dense)' : 'var(--erp-text-control)',
   fontWeight: selected ? 850 : 760,
   cursor: 'pointer',
 });
@@ -620,7 +620,7 @@ const markStyle = (selected: boolean, type: 'radio' | 'checkbox'): React.CSSProp
 
 const emptyTextStyle: React.CSSProperties = {
   color: 'var(--color-text-tertiary)',
-  fontSize: '0.7rem',
+  fontSize: 'var(--erp-text-dense)',
   fontWeight: 800,
   padding: '4px 0',
 };

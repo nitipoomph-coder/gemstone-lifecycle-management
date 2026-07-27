@@ -146,3 +146,25 @@ New analytics endpoints were added into the nearest existing dashboard files. Th
 1. Split by domain responsibility before renaming files. If one file still contains multiple domains, extract the domains first.
 2. Preserve endpoint URLs during structure refactors unless the change is explicitly planned as a breaking API migration.
 3. For draft pages like TopOrdersAnalyticsPage.tsx, keep changes limited to import boundaries until the final UX/data model is confirmed.
+
+## Issue: Deselected Customer Group Chip Retained a Dark Border
+**Date:** 2026-07-23
+**Component:** `SalesCustomerGroupAnalytics.tsx`
+
+### Symptoms:
+After selecting a customer group and then clicking `All`, the previously selected chip retained a dark frame. It looked like a stuck focus ring, but browser inspection confirmed that neither `:focus` nor `:focus-visible` was active.
+
+### Root Cause:
+The base React inline style used the `border` shorthand, while the selected state conditionally overrode only `borderColor`. When the chip changed from selected to inactive, React removed the conditional `borderColor`, but the unchanged `border` shorthand was not reapplied. The border color therefore fell back to `currentColor`, making the chip's text color become its border color.
+
+### Fix:
+Replaced the `border` shorthand with explicit `borderWidth`, `borderStyle`, and `borderColor` properties in the base styles. The selected state now overrides the same `borderColor` property, so React reliably restores `var(--color-border-light)` when the chip becomes inactive. The same correction was applied to month options that used the same pattern.
+
+### Verification:
+A browser interaction test simulated `N051 Group -> All`. After deselection, the computed border color matched `--color-border-light`, the outline was `none`, and both focus states were false.
+
+### Prevention & Lessons Learned:
+1. Do not mix CSS shorthand and longhand properties across conditional React inline-style states.
+2. Keep the same property keys in base, active, hover, and disabled style objects.
+3. When a visual state appears stuck, inspect computed styles and pseudo-classes before assuming it is a focus problem.
+4. Test the complete state transition, not only the initial selected appearance.

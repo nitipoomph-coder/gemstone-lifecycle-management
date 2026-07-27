@@ -49,7 +49,12 @@ export default function NavGroup({ group, isOpen, onToggle, collapsed = false }:
     if (!itemPath) return false;
     if (location.pathname === itemPath) return true;
     if (itemPath === '/dashboard/customer') {
-      return location.pathname === '/dashboard/customer-report' && new URLSearchParams(location.search).get('metric') !== 'qty';
+      return (
+        location.pathname === '/dashboard/qty' ||
+        location.pathname === '/dashboard/sales-customer-groups' ||
+        location.pathname === '/dashboard/sales-customer-detail' ||
+        (location.pathname === '/dashboard/customer-report' && new URLSearchParams(location.search).get('metric') !== 'qty')
+      );
     }
     if (itemPath === '/dashboard/qty') {
       return location.pathname === '/dashboard/customer-report' && new URLSearchParams(location.search).get('metric') === 'qty';
@@ -59,9 +64,6 @@ export default function NavGroup({ group, isOpen, onToggle, collapsed = false }:
     }
     if (itemPath === '/dashboard/top-orders/analytics') {
       return location.pathname === '/dashboard/top-orders/analytics';
-    }
-    if (itemPath === '/dashboard/sales-customer-groups') {
-      return location.pathname === '/dashboard/sales-customer-detail';
     }
     if (itemPath === '/po-tracker') {
       return location.pathname.startsWith('/po-tracker/');
@@ -199,7 +201,7 @@ export default function NavGroup({ group, isOpen, onToggle, collapsed = false }:
                   {item.label}
                 </span>
                 {item.code && (
-                  <span className={`shrink-0 rounded px-1 py-0.5 text-[9px] font-mono font-bold tracking-wider transition-colors duration-150 ${isActive ? 'bg-[var(--color-brand-100)] text-[var(--color-brand-600)]' : 'text-[var(--color-sidebar-text)] opacity-30'}`}>
+                  <span className={`shrink-0 rounded px-1 py-0.5 text-[length:var(--erp-text-meta)] font-mono font-bold transition-colors duration-150 ${isActive ? 'bg-[var(--color-brand-100)] text-[var(--color-brand-600)]' : 'text-[var(--color-sidebar-text)] opacity-30'}`}>
                     {item.code}
                   </span>
                 )}
@@ -233,7 +235,7 @@ export default function NavGroup({ group, isOpen, onToggle, collapsed = false }:
                           {child.label}
                         </span>
                         {child.code && (
-                          <span className={`shrink-0 rounded px-1 py-0.5 text-[9px] font-mono font-bold tracking-wider transition-colors duration-150 ${isChildActive ? 'bg-[var(--color-brand-100)] text-[var(--color-brand-600)]' : 'text-[var(--color-sidebar-text)] opacity-30'}`}>
+                          <span className={`shrink-0 rounded px-1 py-0.5 text-[length:var(--erp-text-meta)] font-mono font-bold transition-colors duration-150 ${isChildActive ? 'bg-[var(--color-brand-100)] text-[var(--color-brand-600)]' : 'text-[var(--color-sidebar-text)] opacity-30'}`}>
                             {child.code}
                           </span>
                         )}

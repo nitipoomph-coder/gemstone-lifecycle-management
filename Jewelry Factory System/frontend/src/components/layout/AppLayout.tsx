@@ -7,14 +7,28 @@ export default function AppLayout() {
   const location = useLocation();
 
   useEffect(() => {
-    // ย่อแถบเมนูโดยอัตโนมัติเมื่อมีการเปลี่ยนเส้นทางไปยังหน้าใดๆ
-    setSidebarOpen(false);
+    const closeTimer = window.setTimeout(() => setSidebarOpen(false), 0);
+    return () => window.clearTimeout(closeTimer);
   }, [location.pathname]);
+
+  useEffect(() => {
+    // Auto blur buttons on mouse/pointer release to prevent stuck focus borders
+    const handlePointerUp = (e: PointerEvent) => {
+      const btn = (e.target as HTMLElement)?.closest('button, [role="button"]');
+      if (btn && btn instanceof HTMLElement) {
+        window.setTimeout(() => {
+          btn.blur();
+        }, 0);
+      }
+    };
+    document.addEventListener('pointerup', handlePointerUp);
+    return () => document.removeEventListener('pointerup', handlePointerUp);
+  }, []);
 
   return (
     <div className="flex h-screen w-full overflow-hidden">
       <Sidebar isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
-      <main className="flex flex-1 flex-col overflow-hidden">
+      <main className="app-main flex min-w-0 flex-1 flex-col overflow-hidden">
         <Outlet />
       </main>
     </div>

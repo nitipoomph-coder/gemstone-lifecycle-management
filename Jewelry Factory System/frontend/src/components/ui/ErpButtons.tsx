@@ -43,6 +43,7 @@ interface ErpIconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   tone?: IconButtonTone;
   icon: ReactNode;
   size?: 'sm' | 'md';
+  loading?: boolean;
 }
 
 export function ErpIconButton({
@@ -50,6 +51,8 @@ export function ErpIconButton({
   tone = 'neutral',
   icon,
   size = 'sm',
+  loading,
+  disabled,
   className = '',
   ...props
 }: ErpIconButtonProps) {
@@ -59,9 +62,10 @@ export function ErpIconButton({
       type={props.type || 'button'}
       title={label}
       aria-label={label}
+      disabled={disabled || loading}
       className={`erp-icon-btn erp-icon-btn--${tone} erp-icon-btn--${size} ${className}`}
     >
-      {icon}
+      {loading ? <Loader2 size={erpButtonTokens.iconSize} className="erp-btn__spinner" /> : icon}
     </button>
   );
 }

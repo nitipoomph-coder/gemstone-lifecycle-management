@@ -57,6 +57,7 @@ export interface SalesOrderRow {
   orderQty: number;
   shippedQty: number;
   amount: number;
+  shippedAmount: number;
   status: 'Open' | 'Partial' | 'Shipped' | 'Late';
   market: string;
   salesName?: string;

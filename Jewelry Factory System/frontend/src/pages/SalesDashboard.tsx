@@ -214,7 +214,7 @@ export default function SalesDashboard() {
 
   return (
     <>
-      <Topbar breadcrumb={[{ label: 'JEWELRY FACTORY SYSTEM', path: '/' }, { label: 'SALES DASHBOARD' }]} hideSearch />
+      <Topbar breadcrumb={[{ label: 'JEWELRY FACTORY SYSTEM', path: '/' }, { label: 'Sales Analytics' }, { label: 'Sales Dashboard' }]} hideSearch />
       <div className="content-scrollbar flex-1 overflow-y-auto" style={workspace}>
         <main style={pageShell}>
           <section style={commandBar}>
@@ -358,28 +358,28 @@ const pageShell: CSSProperties = { padding: 12, display: 'flex', flexDirection: 
 const commandBar: CSSProperties = { position: 'sticky', top: 0, zIndex: 20, minHeight: 42, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '7px 10px', border: '1px solid var(--color-border-light)', borderRadius: 8, background: 'var(--color-surface-0)' };
 const leftTools: CSSProperties = { display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flex: 1 };
 const rightTools: CSSProperties = { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' };
-const toolButton: CSSProperties = { height: 30, display: 'inline-flex', alignItems: 'center', gap: 6, border: '1px solid var(--color-border-light)', borderRadius: 7, background: 'var(--color-surface-1)', color: 'var(--color-text-secondary)', padding: '0 10px', fontSize: '0.72rem', fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap' };
+const toolButton: CSSProperties = { height: 30, display: 'inline-flex', alignItems: 'center', gap: 6, border: '1px solid var(--color-border-light)', borderRadius: 7, background: 'var(--color-surface-1)', color: 'var(--color-text-secondary)', padding: '0 10px', fontSize: 'var(--erp-text-control)', fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap' };
 const activeToolButton: CSSProperties = { ...toolButton, color: 'var(--color-brand-500)', borderColor: 'var(--color-brand-500)', background: 'color-mix(in oklch, var(--color-brand-500) 12%, var(--color-surface-0))' };
 const periodButton: CSSProperties = { ...toolButton, minWidth: 210, justifyContent: 'space-between' };
 const searchBox: CSSProperties = { height: 30, maxWidth: 420, minWidth: 220, flex: '0 1 420px', display: 'flex', alignItems: 'center', gap: 7, border: '1px solid var(--color-border-light)', borderRadius: 7, background: 'var(--color-surface-1)', color: 'var(--color-text-tertiary)', padding: '0 10px' };
-const searchInput: CSSProperties = { flex: 1, minWidth: 0, border: 0, outline: 'none', background: 'transparent', color: 'var(--color-text-primary)', fontSize: '0.76rem', fontWeight: 700 };
+const searchInput: CSSProperties = { flex: 1, minWidth: 0, border: 0, outline: 'none', background: 'transparent', color: 'var(--color-text-primary)', fontSize: 'var(--erp-text-control)', fontWeight: 700 };
 const filterPanel: CSSProperties = { position: 'absolute', right: 10, top: 42, width: 'min(520px, calc(100vw - 36px))', display: 'grid', gridTemplateColumns: '112px 1fr', border: '1px solid var(--color-border-default)', borderRadius: 8, background: 'var(--color-surface-0)', boxShadow: '0 16px 42px rgba(0,0,0,0.22)', overflow: 'hidden' };
 const periodList: CSSProperties = { display: 'flex', flexDirection: 'column', padding: 8, gap: 4, borderRight: '1px solid var(--color-border-light)', background: 'var(--color-surface-1)' };
-const periodOption: CSSProperties = { height: 30, textAlign: 'left', border: 0, borderRadius: 6, background: 'transparent', color: 'var(--color-text-secondary)', fontSize: '0.72rem', fontWeight: 800, padding: '0 9px', cursor: 'pointer' };
+const periodOption: CSSProperties = { height: 30, textAlign: 'left', border: 0, borderRadius: 6, background: 'transparent', color: 'var(--color-text-secondary)', fontSize: 'var(--erp-text-control)', fontWeight: 800, padding: '0 9px', cursor: 'pointer' };
 const activePeriodOption: CSSProperties = { ...periodOption, background: 'color-mix(in oklch, var(--color-brand-500) 14%, var(--color-surface-0))', color: 'var(--color-text-primary)' };
 const filterBody: CSSProperties = { padding: 12, display: 'flex', flexDirection: 'column', gap: 10 };
-const filterTitle: CSSProperties = { fontSize: '0.78rem', fontWeight: 850, color: 'var(--color-text-primary)' };
+const filterTitle: CSSProperties = { fontSize: 'var(--erp-text-body)', fontWeight: 850, color: 'var(--color-text-primary)' };
 const toggleLine: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(86px, 1fr))', gap: 8 };
-const smallToggle: CSSProperties = { height: 28, border: '1px solid var(--color-border-light)', borderRadius: 999, background: 'var(--color-surface-1)', color: 'var(--color-text-secondary)', padding: '0 10px', fontSize: '0.7rem', fontWeight: 800, cursor: 'pointer' };
+const smallToggle: CSSProperties = { height: 28, border: '1px solid var(--color-border-light)', borderRadius: 999, background: 'var(--color-surface-1)', color: 'var(--color-text-secondary)', padding: '0 10px', fontSize: 'var(--erp-text-dense)', fontWeight: 800, cursor: 'pointer' };
 const selectedToggle: CSSProperties = { ...smallToggle, background: 'var(--color-brand-500)', color: 'var(--color-text-inverse)', borderColor: 'var(--color-brand-500)' };
 const fieldGrid: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(2, minmax(130px, 1fr))', gap: 8 };
-const fieldLabel: CSSProperties = { display: 'flex', flexDirection: 'column', gap: 5, color: 'var(--color-text-secondary)', fontSize: '0.7rem', fontWeight: 800 };
-const selectControl: CSSProperties = { height: 32, border: '1px solid var(--color-border-light)', borderRadius: 7, background: 'var(--color-surface-1)', color: 'var(--color-text-primary)', padding: '0 9px', fontSize: '0.74rem', fontWeight: 800 };
-const compareLine: CSSProperties = { display: 'flex', alignItems: 'center', gap: 7, color: 'var(--color-text-secondary)', fontSize: '0.72rem', fontWeight: 800 };
+const fieldLabel: CSSProperties = { display: 'flex', flexDirection: 'column', gap: 5, color: 'var(--color-text-secondary)', fontSize: 'var(--erp-text-dense)', fontWeight: 800 };
+const selectControl: CSSProperties = { height: 32, border: '1px solid var(--color-border-light)', borderRadius: 7, background: 'var(--color-surface-1)', color: 'var(--color-text-primary)', padding: '0 9px', fontSize: 'var(--erp-text-control)', fontWeight: 800 };
+const compareLine: CSSProperties = { display: 'flex', alignItems: 'center', gap: 7, color: 'var(--color-text-secondary)', fontSize: 'var(--erp-text-control)', fontWeight: 800 };
 const filterFooter: CSSProperties = { display: 'flex', justifyContent: 'flex-end', gap: 8, paddingTop: 8, borderTop: '1px solid var(--color-border-light)' };
 const applyButton: CSSProperties = { ...toolButton, background: 'var(--color-brand-500)', color: 'var(--color-text-inverse)', borderColor: 'var(--color-brand-500)' };
 const titleRow: CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', padding: '2px 2px 0' };
-const pageTitle: CSSProperties = { margin: 0, display: 'flex', alignItems: 'center', gap: 8, color: 'var(--color-text-primary)', fontSize: '1rem', lineHeight: 1.2, fontWeight: 850, letterSpacing: 0 };
+const pageTitle: CSSProperties = { margin: 0, display: 'flex', alignItems: 'center', gap: 8, color: 'var(--color-text-primary)', fontSize: 'var(--erp-text-section)', lineHeight: 1.2, fontWeight: 850, letterSpacing: 0 };
 const summaryStrip: CSSProperties = { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' };
 const metricPill: CSSProperties = { height: 32, display: 'inline-flex', alignItems: 'center', gap: 8, border: '1px solid var(--color-border-light)', borderRadius: 8, background: 'var(--color-surface-0)', padding: '0 10px', color: 'var(--color-text-primary)' };
-const errorBox: CSSProperties = { padding: '10px 12px', borderRadius: 8, border: '1px solid color-mix(in oklch, var(--color-danger-500) 35%, var(--color-border-light))', color: 'var(--color-danger-500)', background: 'color-mix(in oklch, var(--color-danger-500) 9%, var(--color-surface-0))', fontWeight: 780, fontSize: '0.8rem' };
+const errorBox: CSSProperties = { padding: '10px 12px', borderRadius: 8, border: '1px solid color-mix(in oklch, var(--color-danger-500) 35%, var(--color-border-light))', color: 'var(--color-danger-500)', background: 'color-mix(in oklch, var(--color-danger-500) 9%, var(--color-surface-0))', fontWeight: 780, fontSize: 'var(--erp-text-body)' };

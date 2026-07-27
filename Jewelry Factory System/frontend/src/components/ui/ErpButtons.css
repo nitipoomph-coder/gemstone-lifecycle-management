@@ -4,7 +4,7 @@
   border: 1px solid var(--erp-button-border, var(--color-border-light));
   border-radius: var(--erp-button-radius, 6px);
   font-family: var(--font-body);
-  font-size: var(--erp-button-font-size, 11px);
+  font-size: var(--erp-button-font-size, var(--erp-text-dense));
   font-weight: var(--erp-button-font-weight, 800);
   letter-spacing: 0;
   transition: background 150ms ease, border-color 150ms ease, color 150ms ease, transform 100ms ease, opacity 150ms ease;
@@ -67,6 +67,13 @@
   cursor: not-allowed;
   opacity: 0.45;
   transform: none;
+}
+
+.erp-btn:focus:not(:focus-visible),
+.erp-icon-btn:focus:not(:focus-visible),
+.erp-segment:focus:not(:focus-visible) {
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 .erp-btn:focus-visible,

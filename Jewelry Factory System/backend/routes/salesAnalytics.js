@@ -1,13 +1,16 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 // 📌 MODULE: Customer Sales Analysis (routes/salesAnalytics.js)
 // ═══════════════════════════════════════════════════════════════════════════════
-// Handles data fetching for the Customer Sales dashboards, aggregating data from
-// OrdHD and OrdDT directly (without Legacy SPs).
+// Handles data fetching for the Customer Sales dashboards from the reviewed
+// TEST DATABASE sales analytics view (without Legacy SPs).
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const express = require('express');
 const router = express.Router();
 const { getPool, sql } = require('../db');
+
+// TEST DATABASE source. Production use requires separate review and approval.
+const SALES_ANALYTICS_VIEW = 'dbo.VW_SalesOrderLineAnalytics';
 
 /*
  * =============================================================================
@@ -61,20 +64,6 @@ function salesStatusSql(qtyExpr, shippedExpr, dueExpr) {
   `;
 }
 
-function salesProductTypeSql(detailAlias = 'd') {
-  return `
-    CASE
-      WHEN UPPER(LEFT(ISNULL(${detailAlias}.ItemNo, ''), 3)) IN ('BBS','BES','BNS','BRS') THEN UPPER(LEFT(ISNULL(${detailAlias}.ItemNo, ''), 3))
-      WHEN UPPER(ISNULL(${detailAlias}.ItemType, '')) IN ('BBS','BES','BNS','BRS') THEN UPPER(${detailAlias}.ItemType)
-      WHEN UPPER(LEFT(ISNULL(${detailAlias}.ItemType, ''), 1)) IN ('B', 'T') THEN 'BBS'
-      WHEN UPPER(LEFT(ISNULL(${detailAlias}.ItemType, ''), 1)) = 'E' THEN 'BES'
-      WHEN UPPER(LEFT(ISNULL(${detailAlias}.ItemType, ''), 1)) = 'N' THEN 'BNS'
-      WHEN UPPER(LEFT(ISNULL(${detailAlias}.ItemType, ''), 1)) = 'R' THEN 'BRS'
-      ELSE 'Others'
-    END
-  `;
-}
-
 function salesProductTypeNameSql(codeExpr = 'typeCode') {
   return `
     CASE ${codeExpr}
@@ -121,7 +110,7 @@ function itemTypeNameMaxSql(typeExpr, itemExpr, engExpr, localExpr) {
   `;
 }
 
-function salesDateBasis(req, headerAlias = 'h') {
+function salesDateBasis(req, viewAlias = 'v') {
   const raw = String(req.query.dateView || req.query.dateBasis || 'orddate').toLowerCase();
   const aliases = {
     order: 'orddate',
@@ -137,27 +126,27 @@ function salesDateBasis(req, headerAlias = 'h') {
   };
   const basis = aliases[raw] || 'orddate';
   const dateExprByBasis = {
-    orddate: headerAlias + '.OrdDate',
-    duedate: headerAlias + '.DueDate',
-    custdate: headerAlias + '.CustDueDate',
-    ordmonth: headerAlias + '.OrdDate',
-    shipmonth: headerAlias + '.ExportDate',
+    orddate: viewAlias + '.OrderDate',
+    duedate: viewAlias + '.FactoryDueDate',
+    custdate: viewAlias + '.CustomerDueDate',
+    ordmonth: viewAlias + '.OrderDate',
+    shipmonth: viewAlias + '.ShipDate',
   };
   return { basis, dateExpr: dateExprByBasis[basis] };
 }
 // Applies the shared year/month/customer/type filters for sales endpoints.
-function buildSalesFilters(req, request, headerAlias = 'h', detailAlias = 'd', dateExpr = null) {
+function buildSalesFilters(req, request, viewAlias = 'v', dateExpr = null) {
   const years = parseCsvInts(req.query.years, [new Date().getFullYear()]);
   const months = parseCsvInts(req.query.months);
   const customers = parseCsvStrings(req.query.customers);
   const types = parseCsvStrings(req.query.types).map(v => v.toUpperCase());
-  const effectiveDateExpr = dateExpr || salesDateBasis(req, headerAlias).dateExpr;
+  const effectiveDateExpr = dateExpr || salesDateBasis(req, viewAlias).dateExpr;
 
   const yearParams = addInParams(request, 'sy', years, sql.Int);
   const filters = [
     `YEAR(${effectiveDateExpr}) IN (${yearParams})`,
-    `SUBSTRING(${headerAlias}.OrdNo, 1, 3) NOT IN ('BBP','BBK','BBS','BBL','BBT','BBD')`,
-    `(${headerAlias}.PONo IS NULL OR UPPER(${headerAlias}.PONo) NOT LIKE '%SAMPLE%')`,
+    `SUBSTRING(${viewAlias}.OrderNo, 1, 3) NOT IN ('BBP','BBK','BBS','BBL','BBT','BBD')`,
+    `(${viewAlias}.PONo IS NULL OR UPPER(${viewAlias}.PONo) NOT LIKE '%SAMPLE%')`,
   ];
 
   if (months.length > 0) {
@@ -167,12 +156,12 @@ function buildSalesFilters(req, request, headerAlias = 'h', detailAlias = 'd', d
 
   if (customers.length > 0) {
     const customerParams = addInParams(request, 'sc', customers, sql.NVarChar);
-    filters.push(`${headerAlias}.CustCode IN (${customerParams})`);
+    filters.push(`${viewAlias}.CustomerCode IN (${customerParams})`);
   }
 
   if (types.length > 0) {
     const typeParams = addInParams(request, 'st', types, sql.NVarChar);
-    filters.push(`${salesProductTypeSql(detailAlias)} IN (${typeParams})`);
+    filters.push(`UPPER(ISNULL(${viewAlias}.ProductType, 'OTHERS')) IN (${typeParams})`);
   }
 
   return { years, months, customers, types, whereSql: filters.join('\n        AND ') };
@@ -184,26 +173,24 @@ router.get('/sales-customer-groups', async (req, res) => {
   try {
     const pool = await getPool();
     const request = pool.request();
-    const { dateExpr } = salesDateBasis(req, 'h');
-    const { whereSql } = buildSalesFilters(req, request, 'h', 'd', dateExpr);
+    const { dateExpr } = salesDateBasis(req, 'v');
+    const { whereSql } = buildSalesFilters(req, request, 'v', dateExpr);
 
     const result = await request.query(`
       SELECT
-        ISNULL(NULLIF(h.SalesName, ''), 'Unassigned') AS salesName,
-        ISNULL(NULLIF(h.SalesName, ''), 'Unassigned') AS customerCode,
-        ISNULL(NULLIF(h.SalesName, ''), 'Unassigned') AS customerName,
+        ISNULL(NULLIF(v.SalesName, ''), 'Unassigned') AS salesName,
+        ISNULL(NULLIF(v.SalesName, ''), 'Unassigned') AS customerCode,
+        ISNULL(NULLIF(v.SalesName, ''), 'Unassigned') AS customerName,
         YEAR(${dateExpr}) AS year,
         MONTH(${dateExpr}) AS month,
-        COUNT(DISTINCT h.OrdNo) AS orderCount,
-        SUM(ISNULL(d.ItemQty, 0)) AS qty,
-        SUM(ISNULL(d.ExportQty, 0)) AS shippedQty,
-        SUM(ISNULL(d.ItemExchAmnt, d.ItemAmnt)) AS amount
-      FROM OrdHD h
-      LEFT JOIN GMCust c ON c.CustCode = h.CustCode
-      LEFT JOIN OrdDT d ON d.OrdNo = h.OrdNo
+        COUNT(DISTINCT v.OrderNo) AS orderCount,
+        SUM(v.OrderQty) AS qty,
+        SUM(v.ShippedQty) AS shippedQty,
+        SUM(v.OrderAmount) AS amount
+      FROM ${SALES_ANALYTICS_VIEW} v
       WHERE ${whereSql}
-        AND ISNULL(c.CustStatus, 'Y') = 'Y'
-      GROUP BY ISNULL(NULLIF(h.SalesName, ''), 'Unassigned'), YEAR(${dateExpr}), MONTH(${dateExpr})
+        AND ISNULL(v.CustomerStatus, 'Y') = 'Y'
+      GROUP BY ISNULL(NULLIF(v.SalesName, ''), 'Unassigned'), YEAR(${dateExpr}), MONTH(${dateExpr})
       ORDER BY year, month, salesName
     `);
 
@@ -220,26 +207,23 @@ router.get('/sales-monthly-analytics', async (req, res) => {
   try {
     const pool = await getPool();
     const request = pool.request();
-    const { dateExpr } = salesDateBasis(req, 'h');
-    const { whereSql } = buildSalesFilters(req, request, 'h', 'd', dateExpr);
+    const { dateExpr } = salesDateBasis(req, 'v');
+    const { whereSql } = buildSalesFilters(req, request, 'v', dateExpr);
 
     const result = await request.query(`
       SELECT
         YEAR(${dateExpr}) AS year,
         MONTH(${dateExpr}) AS month,
-        COUNT(DISTINCT h.OrdNo) AS orderCount,
-        SUM(ISNULL(d.ItemQty, 0)) AS qty,
-        SUM(ISNULL(d.ExportQty, 0)) AS shippedQty,
-        SUM(CASE WHEN ISNULL(d.ItemQty, 0) > ISNULL(d.ExportQty, 0) THEN ISNULL(d.ItemQty, 0) - ISNULL(d.ExportQty, 0) ELSE 0 END) AS gapQty,
-        SUM(ISNULL(d.ItemExchAmnt, d.ItemAmnt)) AS amount,
-        SUM(ISNULL(d.ExportAmnt, 0)) AS shippedAmount,
-        CASE WHEN SUM(ISNULL(d.ItemQty, 0)) = 0 THEN 0 ELSE (SUM(ISNULL(d.ExportQty, 0)) / SUM(ISNULL(d.ItemQty, 0))) * 100 END AS fulfillmentRate
-      FROM OrdHD h
-      LEFT JOIN GMCust c ON c.CustCode = h.CustCode
-      LEFT JOIN OrdDT d ON d.OrdNo = h.OrdNo
+        COUNT(DISTINCT v.OrderNo) AS orderCount,
+        SUM(v.OrderQty) AS qty,
+        SUM(v.ShippedQty) AS shippedQty,
+        SUM(v.OpenQty) AS gapQty,
+        SUM(v.OrderAmount) AS amount,
+        SUM(v.ShippedAmount) AS shippedAmount,
+        CASE WHEN SUM(v.OrderQty) = 0 THEN 0 ELSE (SUM(v.ShippedQty) / SUM(v.OrderQty)) * 100 END AS fulfillmentRate
+      FROM ${SALES_ANALYTICS_VIEW} v
       WHERE ${whereSql}
-        AND ISNULL(c.CustStatus, 'Y') = 'Y'
-        AND d.ItemNo IS NOT NULL
+        AND ISNULL(v.CustomerStatus, 'Y') = 'Y'
       GROUP BY YEAR(${dateExpr}), MONTH(${dateExpr})
       ORDER BY year, month
     `);
@@ -257,9 +241,9 @@ router.get('/sales-type-analytics', async (req, res) => {
   try {
     const pool = await getPool();
     const request = pool.request();
-    const { dateExpr } = salesDateBasis(req, 'h');
-    const typeExpr = salesProductTypeSql('d');
-    const { whereSql } = buildSalesFilters(req, request, 'h', 'd', dateExpr);
+    const { dateExpr } = salesDateBasis(req, 'v');
+    const typeExpr = `UPPER(ISNULL(v.ProductType, 'OTHERS'))`;
+    const { whereSql } = buildSalesFilters(req, request, 'v', dateExpr);
 
     const result = await request.query(`
       WITH Lines AS (
@@ -267,18 +251,15 @@ router.get('/sales-type-analytics', async (req, res) => {
           YEAR(${dateExpr}) AS year,
           MONTH(${dateExpr}) AS month,
           ${typeExpr} AS typeCode,
-          h.OrdNo AS orderNo,
-          ISNULL(d.ItemQty, 0) AS qty,
-          ISNULL(d.ExportQty, 0) AS shippedQty,
-          CASE WHEN ISNULL(d.ItemQty, 0) > ISNULL(d.ExportQty, 0) THEN ISNULL(d.ItemQty, 0) - ISNULL(d.ExportQty, 0) ELSE 0 END AS gapQty,
-          ISNULL(d.ItemExchAmnt, d.ItemAmnt) AS amount,
-          ISNULL(d.ExportAmnt, 0) AS shippedAmount
-        FROM OrdHD h
-        LEFT JOIN GMCust c ON c.CustCode = h.CustCode
-        LEFT JOIN OrdDT d ON d.OrdNo = h.OrdNo
+          v.OrderNo AS orderNo,
+          v.OrderQty AS qty,
+          v.ShippedQty AS shippedQty,
+          v.OpenQty AS gapQty,
+          v.OrderAmount AS amount,
+          v.ShippedAmount AS shippedAmount
+        FROM ${SALES_ANALYTICS_VIEW} v
         WHERE ${whereSql}
-          AND ISNULL(c.CustStatus, 'Y') = 'Y'
-          AND d.ItemNo IS NOT NULL
+          AND ISNULL(v.CustomerStatus, 'Y') = 'Y'
       )
       SELECT
         year,
@@ -310,36 +291,34 @@ router.get('/sales-orders', async (req, res) => {
   try {
     const pool = await getPool();
     const request = pool.request();
-    const { dateExpr } = salesDateBasis(req, 'h');
-    const { whereSql } = buildSalesFilters(req, request, 'h', 'd', dateExpr);
+    const { dateExpr } = salesDateBasis(req, 'v');
+    const { whereSql } = buildSalesFilters(req, request, 'v', dateExpr);
 
     const result = await request.query(`
       SELECT
-        h.OrdNo AS orderNo,
-        h.PONo AS poNo,
-        h.OrdDate AS ordDate,
-        h.CustDueDate AS custDueDate,
-        h.CustCode AS customerCode,
-        ISNULL(c.CustName, h.CustCode) AS customerName,
-        ISNULL(NULLIF(h.SalesName, ''), 'Unassigned') AS salesName,
-        ISNULL(NULLIF(h.SoldTo, ''), ISNULL(c.CustName, h.CustCode)) AS brand,
-        d.ItemNo AS itemNo,
-        ISNULL(NULLIF(d.ItemType, ''), LEFT(ISNULL(d.ItemNo, ''), 3)) AS itemType,
-        ${itemTypeNameSql('d.ItemType', 'd.ItemNo', 'gt.GoodTypeNameEng', 'gt.GoodTypeName')} AS itemTypeName,
-        ${salesProductTypeSql('d')} AS productTypeCode,
-        ISNULL(d.ItemQty, 0) AS orderQty,
-        ISNULL(d.ExportQty, 0) AS shippedQty,
-        ISNULL(d.ItemExchAmnt, d.ItemAmnt) AS amount,
-        ${salesStatusSql('d.ItemQty', 'd.ExportQty', 'h.CustDueDate')} AS status,
-        ISNULL(NULLIF(c.Country, ''), '-') AS market
-      FROM OrdHD h
-      LEFT JOIN GMCust c ON c.CustCode = h.CustCode
-      LEFT JOIN OrdDT d ON d.OrdNo = h.OrdNo
-      LEFT JOIN GMGoodType gt ON gt.GoodTypeCode = d.ItemType
+        v.OrderNo AS orderNo,
+        v.PONo AS poNo,
+        v.OrderDate AS ordDate,
+        v.CustomerDueDate AS custDueDate,
+        v.CustomerCode AS customerCode,
+        ISNULL(v.CustomerName, v.CustomerCode) AS customerName,
+        ISNULL(NULLIF(v.SalesName, ''), 'Unassigned') AS salesName,
+        ISNULL(NULLIF(v.Brand, ''), ISNULL(v.CustomerName, v.CustomerCode)) AS brand,
+        v.ItemNo AS itemNo,
+        ISNULL(NULLIF(v.ItemType, ''), LEFT(ISNULL(v.ItemNo, ''), 3)) AS itemType,
+        ${itemTypeNameSql('v.ItemType', 'v.ItemNo', 'gt.GoodTypeNameEng', 'gt.GoodTypeName')} AS itemTypeName,
+        UPPER(ISNULL(v.ProductType, 'OTHERS')) AS productTypeCode,
+        v.OrderQty AS orderQty,
+        v.ShippedQty AS shippedQty,
+        v.OrderAmount AS amount,
+        v.ShippedAmount AS shippedAmount,
+        ${salesStatusSql('v.OrderQty', 'v.ShippedQty', 'v.CustomerDueDate')} AS status,
+        ISNULL(NULLIF(v.Market, ''), '-') AS market
+      FROM ${SALES_ANALYTICS_VIEW} v
+      LEFT JOIN GMGoodType gt ON gt.GoodTypeCode = v.ItemType
       WHERE ${whereSql}
-        AND ISNULL(c.CustStatus, 'Y') = 'Y'
-        AND d.ItemNo IS NOT NULL
-      ORDER BY h.OrdDate DESC, h.OrdNo, d.OrdLineNo
+        AND ISNULL(v.CustomerStatus, 'Y') = 'Y'
+      ORDER BY v.OrderDate DESC, v.OrderNo, v.OrderLineNo
     `);
 
     res.json({ ok: true, data: result.recordset });
@@ -355,8 +334,8 @@ router.get('/top-items', async (req, res) => {
   try {
     const pool = await getPool();
     const request = pool.request();
-    const { dateExpr } = salesDateBasis(req, 'h');
-    const { whereSql } = buildSalesFilters(req, request, 'h', 'd', dateExpr);
+    const { dateExpr } = salesDateBasis(req, 'v');
+    const { whereSql } = buildSalesFilters(req, request, 'v', dateExpr);
     const metric = String(req.query.metric || 'amount').toLowerCase() === 'qty' ? 'qty' : 'amount';
     const rawLimit = parseInt(req.query.limit, 10);
     const limit = Number.isNaN(rawLimit) ? 30 : Math.min(Math.max(rawLimit, 1), 100);
@@ -367,18 +346,15 @@ router.get('/top-items', async (req, res) => {
     const result = await request.query(`
       WITH ItemCustomer AS (
         SELECT
-          d.ItemNo AS itemNo,
-          h.CustCode AS customerCode,
-          ISNULL(c.CustName, h.CustCode) AS customerName,
-          SUM(ISNULL(d.ItemQty, 0)) AS qty,
-          SUM(ISNULL(d.ItemExchAmnt, d.ItemAmnt)) AS amount
-        FROM OrdHD h
-        LEFT JOIN GMCust c ON c.CustCode = h.CustCode
-        LEFT JOIN OrdDT d ON d.OrdNo = h.OrdNo
+          v.ItemNo AS itemNo,
+          v.CustomerCode AS customerCode,
+          ISNULL(v.CustomerName, v.CustomerCode) AS customerName,
+          SUM(v.OrderQty) AS qty,
+          SUM(v.OrderAmount) AS amount
+        FROM ${SALES_ANALYTICS_VIEW} v
         WHERE ${whereSql}
-          AND ISNULL(c.CustStatus, 'Y') = 'Y'
-          AND d.ItemNo IS NOT NULL
-        GROUP BY d.ItemNo, h.CustCode, c.CustName
+          AND ISNULL(v.CustomerStatus, 'Y') = 'Y'
+        GROUP BY v.ItemNo, v.CustomerCode, v.CustomerName
       ),
       PrimaryCustomer AS (
         SELECT
@@ -390,23 +366,20 @@ router.get('/top-items', async (req, res) => {
       ),
       ItemTotals AS (
         SELECT
-          d.ItemNo AS itemNo,
-          MAX(d.ItemDesc) AS itemDesc,
-          ISNULL(NULLIF(MAX(d.ItemType), ''), LEFT(ISNULL(d.ItemNo, ''), 3)) AS itemType,
-          ${itemTypeNameMaxSql('d.ItemType', 'd.ItemNo', 'gt.GoodTypeNameEng', 'gt.GoodTypeName')} AS itemTypeName,
-          ${salesProductTypeSql('d')} AS productTypeCode,
-          SUM(ISNULL(d.ItemQty, 0)) AS qty,
-          SUM(ISNULL(d.ExportQty, 0)) AS shippedQty,
-          SUM(ISNULL(d.ItemExchAmnt, d.ItemAmnt)) AS amount,
-          COUNT(DISTINCT h.OrdNo) AS orderCount
-        FROM OrdHD h
-        LEFT JOIN GMCust c ON c.CustCode = h.CustCode
-        LEFT JOIN OrdDT d ON d.OrdNo = h.OrdNo
-        LEFT JOIN GMGoodType gt ON gt.GoodTypeCode = d.ItemType
+          v.ItemNo AS itemNo,
+          MAX(v.ItemDescription) AS itemDesc,
+          ISNULL(NULLIF(MAX(v.ItemType), ''), LEFT(ISNULL(v.ItemNo, ''), 3)) AS itemType,
+          ${itemTypeNameMaxSql('v.ItemType', 'v.ItemNo', 'gt.GoodTypeNameEng', 'gt.GoodTypeName')} AS itemTypeName,
+          UPPER(ISNULL(v.ProductType, 'OTHERS')) AS productTypeCode,
+          SUM(v.OrderQty) AS qty,
+          SUM(v.ShippedQty) AS shippedQty,
+          SUM(v.OrderAmount) AS amount,
+          COUNT(DISTINCT v.OrderNo) AS orderCount
+        FROM ${SALES_ANALYTICS_VIEW} v
+        LEFT JOIN GMGoodType gt ON gt.GoodTypeCode = v.ItemType
         WHERE ${whereSql}
-          AND ISNULL(c.CustStatus, 'Y') = 'Y'
-          AND d.ItemNo IS NOT NULL
-        GROUP BY d.ItemNo, ${salesProductTypeSql('d')}
+          AND ISNULL(v.CustomerStatus, 'Y') = 'Y'
+        GROUP BY v.ItemNo, UPPER(ISNULL(v.ProductType, 'OTHERS'))
       )
       SELECT TOP (@limit)
         t.itemNo,

@@ -2,6 +2,8 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
+const apiProxyTarget = process.env.VITE_API_PROXY_TARGET || 'http://localhost:3001'
+
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
@@ -15,7 +17,7 @@ export default defineConfig({
     port: 3000,
     proxy: {
       '/api': {
-        target: 'http://localhost:3001',
+        target: apiProxyTarget,
         changeOrigin: true,
       }
     }
@@ -23,6 +25,5 @@ export default defineConfig({
 })
 // trigger reload
 // force reload 2
-
 // remove custom group
 // trigger modal reload

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowDown, ArrowUp, Download, RotateCcw, Search, SlidersHorizontal } from 'lucide-react';
+import { ArrowDown, ArrowUp, Download, RefreshCw, RotateCcw, Search, SlidersHorizontal } from 'lucide-react';
 import { ErpButton, ErpIconButton, ErpSegmentedControl } from '../ui/ErpButtons';
 import './CustomerReportTable.css';
 
@@ -64,7 +64,7 @@ function formatChangeAmount(fmt: (val: number) => string, diff: number) {
 function formatGrowthRate(baseVal: number, compVal: number) {
   const diff = baseVal - compVal;
   if (compVal === 0 && baseVal === 0) return '-';
-  if (compVal === 0) return 'No base';
+  if (compVal === 0) return '0.0%';
   const pct = (diff / compVal) * 100;
   const sign = pct > 0 ? '+' : pct < 0 ? '\u2212' : '';
   return `${sign}${Math.abs(pct).toFixed(1)}%`;
@@ -100,7 +100,14 @@ export default function CustomerReportTable({
 }: CustomerReportTableProps) {
   const activeGrowthCount = displayYears.length > 1 ? growthComparisons.length : 0;
   const [searchDraft, setSearchDraft] = React.useState(searchQuery);
+  const [resetPending, setResetPending] = React.useState(false);
+  const resetPendingTimerRef = React.useRef<number | null>(null);
   const lastAppliedSearchRef = React.useRef(searchQuery);
+
+
+  React.useEffect(() => () => {
+    if (resetPendingTimerRef.current) window.clearTimeout(resetPendingTimerRef.current);
+  }, []);
 
   React.useEffect(() => {
     if (searchQuery !== lastAppliedSearchRef.current) {
@@ -125,6 +132,9 @@ export default function CustomerReportTable({
   const isSearchActive = searchDraft.trim().length > 0;
 
   const resetMatrix = () => {
+    if (resetPendingTimerRef.current) window.clearTimeout(resetPendingTimerRef.current);
+    setResetPending(true);
+    resetPendingTimerRef.current = window.setTimeout(() => setResetPending(false), 450);
     setSearchDraft('');
     if (onResetMatrix) {
       onResetMatrix();
@@ -217,14 +227,14 @@ export default function CustomerReportTable({
   };
 
   const skeletonYearCount = Math.max(displayYears.length, 2);
-  const skeletonMonthCount = displayMonths.length || (viewMode === 'ytd' ? 8 : 6);
-  const skeletonColumnCount = Math.min(22, Math.max(10, viewMode === 'ytd'
+  const skeletonMonthCount = MONTHS.length;
+  const skeletonColumnCount = Math.min(32, Math.max(14, viewMode === 'ytd'
     ? skeletonYearCount * (skeletonMonthCount + 1) + activeGrowthCount * 2
     : (skeletonMonthCount + 1) * (skeletonYearCount + activeGrowthCount * 2)));
   const skeletonColumns = Array.from({ length: skeletonColumnCount }, (_, index) => index);
   const skeletonRows = Array.from({ length: 17 }, (_, index) => index);
   const skeletonWidths = [54, 72, 60, 84, 66, 78, 58, 70, 88, 62, 76, 56];
-  const activeCurrentMonthIndex = displayMonths.findIndex((month) => MONTHS.indexOf(month) === currentMonthIdx);
+  const activeCurrentMonthIndex = currentMonthIdx;
   const skeletonPeriod = Math.max(skeletonMonthCount + 1, 1);
   const skeletonGridStyle: MatrixSkeletonStyle = { '--matrix-skeleton-columns': skeletonColumnCount };
   const skeletonCellStyle = (index: number): MatrixSkeletonStyle => ({
@@ -244,7 +254,7 @@ export default function CustomerReportTable({
           <span className="customer-matrix-loading-status">Loading matrix...</span>
           <span className="customer-matrix-control-spacer" />
           <span className="customer-matrix-skeleton customer-matrix-skeleton--icon" />
-          <span className="customer-matrix-skeleton customer-matrix-skeleton--icon" />
+          <span className="customer-matrix-loading-reload" title="Reloading matrix"><RefreshCw size={14} className="erp-btn__spinner" /></span>
           <span className="customer-matrix-skeleton customer-matrix-skeleton--button" />
         </div>
 
@@ -293,7 +303,7 @@ export default function CustomerReportTable({
   if (!baseYear) {
     return (
       <div className="customer-matrix-shell">
-        <div className="customer-matrix-empty">No base year selected. Please apply filters.</div>
+        <div className="customer-matrix-empty">No year selected. Please apply filters.</div>
       </div>
     );
   }
@@ -372,7 +382,7 @@ export default function CustomerReportTable({
             onClick={() => setShowFilters(!showFilters)}
           />
         )}
-        <ErpIconButton label="Reset table view" tone="refresh" icon={<RotateCcw size={14} />} onClick={resetMatrix} />
+        <ErpIconButton label="Reset table view" tone="refresh" icon={<RotateCcw size={14} />} onClick={resetMatrix} loading={resetPending} />
         <ErpButton size="sm" variant="secondary" icon={<Download size={14} />} onClick={exportCsv} disabled={tableData.rows.length === 0}>
           Export
         </ErpButton>

@@ -11,6 +11,8 @@ import CustomerReportFilters from '../components/report/CustomerReportFilters';
 import { useTheme } from '../contexts/ThemeContext';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const ALL_GROUP_IDS = ALL_GROUPS.map(group => group.id);
+const SUMMARY_DEFAULT_GROUP_IDS = ALL_GROUP_IDS.slice(0, 4);
 
 interface CustomerSummaryRecord {
   id: string;
@@ -46,7 +48,12 @@ function parseMonths(value: string | null) {
 }
 
 function parseGroups(value: string | null) {
-  const groupIds = new Set(ALL_GROUPS.map(group => group.id));
+  const normalized = String(value || '').trim().toLowerCase();
+  if (!normalized) return [];
+  if (normalized === 'all') return ALL_GROUP_IDS;
+  if (normalized === 'none') return [];
+
+  const groupIds = new Set(ALL_GROUP_IDS);
   return csv(value).filter(groupId => groupIds.has(groupId));
 }
 
@@ -54,9 +61,12 @@ export default function CustomerReportPage() {
   const { theme } = useTheme();
   const [searchParams] = useSearchParams();
   const metric = searchParams.get('metric') || 'amount';
+  const source = searchParams.get('src');
+  const hasGroupsParam = searchParams.has('groups');
   const requestedYears = useMemo(() => csv(searchParams.get('years')), [searchParams]);
   const requestedMonths = useMemo(() => parseMonths(searchParams.get('months')), [searchParams]);
   const requestedGroups = useMemo(() => parseGroups(searchParams.get('groups')), [searchParams]);
+  const defaultGroups = source === 'summary' ? SUMMARY_DEFAULT_GROUP_IDS : ALL_GROUP_IDS;
   const requestedCustomers = useMemo(() => csv(searchParams.get('customers')).map(customer => customer.toUpperCase()), [searchParams]);
   const requestedViewMode = searchParams.get('view') === 'monthly' ? 'monthly' : 'ytd';
 
@@ -78,7 +88,7 @@ export default function CustomerReportPage() {
   const [compareYear, setCompareYear] = useState<string>('none');
   const [compareYear2, setCompareYear2] = useState<string>('none');
   const [compareYear3, setCompareYear3] = useState<string>('none');
-  const [selGroups, setSelGroups] = useState<string[]>(() => requestedGroups.length ? requestedGroups : ALL_GROUPS.map(group => group.id));
+  const [selGroups, setSelGroups] = useState<string[]>(() => hasGroupsParam ? requestedGroups : defaultGroups);
   const [selCustomers, setSelCustomers] = useState<string[]>(() => requestedCustomers);
   const [selMonths, setSelMonths] = useState<string[]>(() => requestedMonths.length ? requestedMonths : MONTHS);
   const [searchQuery, setSearchQuery] = useState('');
@@ -108,7 +118,7 @@ export default function CustomerReportPage() {
       bgColor,
       node: (
         <div style={{ width: '100%', textAlign: 'right' }}>
-          <span style={{ color: textColor, fontWeight: 900, fontSize: '0.9rem', fontVariantNumeric: 'tabular-nums' }}>{signedValue}</span>
+          <span style={{ color: textColor, fontWeight: 900, fontSize: 'var(--erp-text-panel)', fontVariantNumeric: 'tabular-nums' }}>{signedValue}</span>
         </div>
       )
     };
@@ -123,13 +133,13 @@ export default function CustomerReportPage() {
       bgColor: theme === 'royal-white' ? 'color-mix(in srgb, var(--color-success-500) 8%, var(--color-surface-0))' : 'transparent',
       node: (
         <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
-          <span style={{ background: 'color-mix(in srgb, var(--color-success-500) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--color-success-500) 45%, var(--color-border-light))', color: 'var(--color-success-500)', padding: '2px 6px', borderRadius: '4px', fontWeight: 900, fontSize: '0.65rem', letterSpacing: '0.05em' }}>NEW</span>
+          <span style={{ background: 'color-mix(in srgb, var(--color-success-500) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--color-success-500) 45%, var(--color-border-light))', color: 'var(--color-success-500)', padding: '2px 6px', borderRadius: '4px', fontWeight: 900, fontSize: 'var(--erp-text-meta)', letterSpacing: 0 }}>NEW</span>
         </div>
       )
     };
     if (compVal === 0 && baseVal > 0) return {
       bgColor: 'transparent',
-      node: <div style={{ textAlign: 'right', color: 'var(--color-text-tertiary)', fontWeight: 900, fontVariantNumeric: 'tabular-nums' }}>No base</div>
+      node: <div style={{ textAlign: 'right', color: 'var(--color-text-tertiary)', fontWeight: 900, fontVariantNumeric: 'tabular-nums' }}>0.0%</div>
     };
     const pct = ((baseVal - compVal) / compVal) * 100;
     const isUp = pct > 0;
@@ -143,7 +153,7 @@ export default function CustomerReportPage() {
       bgColor,
       node: (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', width: '100%' }}>
-          <span style={{ color: textColor, fontWeight: 900, fontSize: '0.9rem', fontVariantNumeric: 'tabular-nums' }}>{sign}{Math.abs(pct).toFixed(1)}%</span>
+          <span style={{ color: textColor, fontWeight: 900, fontSize: 'var(--erp-text-panel)', fontVariantNumeric: 'tabular-nums' }}>{sign}{Math.abs(pct).toFixed(1)}%</span>
         </div>
       )
     };
@@ -382,7 +392,8 @@ export default function CustomerReportPage() {
       <Topbar
         breadcrumb={[
           { label: 'JEWELRY FACTORY SYSTEM', path: '/' },
-          { label: metric === 'qty' ? 'Quantity Analytics' : 'Sales Analytics', path: metric === 'qty' ? '/dashboard/qty' : '/dashboard/customer' },
+          { label: 'Sales Analytics' },
+          { label: 'Sales & Qty Summary', path: '/dashboard/customer' },
           { label: metric === 'qty' ? 'Quantity Matrix' : 'Sales Matrix' }
         ]}
         hideSearch
@@ -422,9 +433,9 @@ export default function CustomerReportPage() {
                 <div key={yr} style={{ background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)', borderRadius: 10, padding: '12px 18px', flex: '1 1 min-content', minWidth: 200, boxShadow: '0 10px 24px -20px color-mix(in srgb, var(--color-surface-900) 36%, transparent)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--color-text-tertiary)', marginBottom: 4 }}>
                     <DollarSign size={14} />
-                    <span style={{ fontSize: '0.65rem', fontWeight: 800, textTransform: 'capitalize', letterSpacing: '0.04em' }}>Year {yr}</span>
+                    <span style={{ fontSize: 'var(--erp-text-meta)', fontWeight: 800, textTransform: 'capitalize', letterSpacing: 0 }}>Year {yr}</span>
                   </div>
-                  <div style={{ fontSize: '1.2rem', fontWeight: 900, color: yIdx === 0 ? 'var(--color-text-primary)' : 'var(--color-text-secondary)', fontFamily: 'var(--font-display)', letterSpacing: '-0.02em' }}>
+                  <div style={{ fontSize: 'var(--erp-text-kpi)', fontWeight: 900, color: yIdx === 0 ? 'var(--color-text-primary)' : 'var(--color-text-secondary)', fontFamily: 'var(--font-display)', letterSpacing: 0 }}>
                     {fmtCurr(tableData.colTotals[`${yr}_total`] || 0)}
                   </div>
                 </div>
@@ -432,9 +443,9 @@ export default function CustomerReportPage() {
               <div style={{ background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)', borderRadius: 10, padding: '12px 18px', flex: '1 1 min-content', minWidth: 160, boxShadow: '0 10px 24px -20px color-mix(in srgb, var(--color-surface-900) 36%, transparent)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--color-text-tertiary)', marginBottom: 4 }}>
                   <Users size={14} />
-                  <span style={{ fontSize: '0.65rem', fontWeight: 800, textTransform: 'capitalize', letterSpacing: '0.04em' }}>Customers</span>
+                  <span style={{ fontSize: 'var(--erp-text-meta)', fontWeight: 800, textTransform: 'capitalize', letterSpacing: 0 }}>Customers</span>
                 </div>
-                <div style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--color-text-primary)', fontFamily: 'var(--font-display)', letterSpacing: '-0.02em' }}>
+                <div style={{ fontSize: 'var(--erp-text-kpi)', fontWeight: 900, color: 'var(--color-text-primary)', fontFamily: 'var(--font-display)', letterSpacing: 0 }}>
                   {kpi.count}
                 </div>
               </div>

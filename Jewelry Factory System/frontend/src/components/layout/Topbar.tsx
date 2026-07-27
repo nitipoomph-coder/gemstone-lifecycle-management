@@ -10,9 +10,13 @@ interface BreadcrumbItem {
   path?: string;
 }
 
+type SearchScope = 'all' | 'order' | 'item' | 'customer' | 'po';
+type ContentLayout = 'dashboard' | 'dashboard-wide' | 'workspace';
+
 interface TopbarProps {
   breadcrumb: BreadcrumbItem[];
   hideSearch?: boolean;
+  contentLayout?: ContentLayout;
   rightContent?: React.ReactNode;
   bottomContent?: React.ReactNode;
   icon?: React.ReactNode;
@@ -20,7 +24,7 @@ interface TopbarProps {
 
 // Using SearchResultItem from API
 
-export default function Topbar({ breadcrumb, hideSearch, rightContent, bottomContent, icon }: TopbarProps) {
+export default function Topbar({ breadcrumb, hideSearch, contentLayout = 'workspace', rightContent, bottomContent, icon }: TopbarProps) {
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
   const [showThemeMenu, setShowThemeMenu] = useState(false);
@@ -29,7 +33,7 @@ export default function Topbar({ breadcrumb, hideSearch, rightContent, bottomCon
 
   // Universal search state
   const [query, setQuery] = useState('');
-  const [searchScope, setSearchScope] = useState<'all' | 'order' | 'item' | 'customer' | 'po'>('all');
+  const [searchScope, setSearchScope] = useState<SearchScope>('all');
   const [results, setResults] = useState<SearchResultItem[] | null>(null);
   const [searching, setSearching] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
@@ -38,7 +42,7 @@ export default function Topbar({ breadcrumb, hideSearch, rightContent, bottomCon
   const searchRef = useRef<HTMLDivElement>(null);
   const scopeDropdownRef = useRef<HTMLDivElement>(null);
 
-  const SCOPES = [
+  const SCOPES: Array<{ value: SearchScope; label: string }> = [
     { value: 'all', label: 'ALL' },
     { value: 'order', label: 'ORDER' },
     { value: 'po', label: 'PO NO' },
@@ -64,13 +68,10 @@ export default function Topbar({ breadcrumb, hideSearch, rightContent, bottomCon
 
   // Connect to API for Global Search
   useEffect(() => {
-    if (query.trim().length < 2) {
-      setResults(null);
-      return;
-    }
+    if (query.trim().length < 2) return;
 
-    setSearching(true);
     const timer = setTimeout(async () => {
+      setSearching(true);
       try {
         const data = await fetchSearch(query, searchScope);
         setResults(data);
@@ -91,9 +92,11 @@ export default function Topbar({ breadcrumb, hideSearch, rightContent, bottomCon
     setQuery('');
   };
 
+  const frameClassName = `app-content-frame app-content-frame--${contentLayout}`;
+
   return (
     <header
-      className="flex flex-col px-7 py-3.5"
+      className="app-topbar flex flex-col py-3.5"
       style={{
         background: 'var(--color-surface-0)',
         borderBottom: '1px solid var(--color-border-light)',
@@ -103,9 +106,9 @@ export default function Topbar({ breadcrumb, hideSearch, rightContent, bottomCon
         boxShadow: '0 4px 20px color-mix(in srgb, var(--color-success-600) 7%, transparent)',
       }}
     >
-      <div className="flex w-full items-center justify-between gap-4">
+      <div className={`${frameClassName} app-page-inline app-topbar__row flex items-center justify-between gap-4`}>
       {/* Left: Navigation & Branding */}
-      <div className="flex items-center gap-4 min-w-0">
+      <div className="app-topbar__left flex min-w-0 items-center gap-4">
         {location.pathname !== '/' && (
           <button
             onClick={() => navigate(-1)}
@@ -127,7 +130,7 @@ export default function Topbar({ breadcrumb, hideSearch, rightContent, bottomCon
         {/* Premium Titles Layout */}
         <div className="flex min-w-0 flex-col">
           {breadcrumb.length > 1 && (
-            <div className="mb-1 flex min-w-0 items-center gap-1.5 text-[0.68rem] font-bold leading-none text-[var(--color-success-600)]">
+            <div className="mb-1 flex min-w-0 items-center gap-1.5 text-[length:var(--erp-text-dense)] font-bold leading-none text-[var(--color-success-600)]">
               {breadcrumb.slice(0, -1).map((item, i) => (
                 <span key={i} className="flex items-center gap-1.5">
                   {i > 0 && <ChevronRight size={10} className="text-[var(--color-success-600)] opacity-55" />}
@@ -142,7 +145,7 @@ export default function Topbar({ breadcrumb, hideSearch, rightContent, bottomCon
               ))}
             </div>
           )}
-          <h1 className="m-0 flex min-w-0 items-center gap-2 truncate text-[1.18rem] font-extrabold leading-tight text-[var(--color-text-primary)] font-display">
+          <h1 className="m-0 flex min-w-0 items-center gap-2 truncate text-[length:var(--erp-text-section)] font-extrabold leading-tight text-[var(--color-text-primary)] font-display">
             {icon && <span className="flex items-center text-[var(--color-success-600)]">{icon}</span>}
             <span className="truncate">{breadcrumb[breadcrumb.length - 1].label}</span>
           </h1>
@@ -150,10 +153,10 @@ export default function Topbar({ breadcrumb, hideSearch, rightContent, bottomCon
       </div>
 
       {/* Right: Tools & Search */}
-      <div className="flex items-center gap-4">
+      <div className="app-topbar__right flex min-w-0 items-center gap-4">
         {/* Universal Search Bar */}
         {!hideSearch && (
-          <div className="relative w-64 lg:w-80" ref={searchRef}>
+          <div className="app-topbar__search relative" ref={searchRef}>
             <div
               className={`flex items-center gap-2 rounded-xl pl-1 pr-3 py-1.5 transition-all duration-200 ${isSearchFocused ? 'shadow-md border-[var(--color-success-600)]' : 'border-[var(--color-border-light)]'}`}
               style={{
@@ -165,7 +168,7 @@ export default function Topbar({ breadcrumb, hideSearch, rightContent, bottomCon
               <div className="relative" ref={scopeDropdownRef} style={{ borderRight: '1px solid var(--color-border-light)' }}>
                 <button
                   onClick={() => setIsScopeDropdownOpen(!isScopeDropdownOpen)}
-                  className="flex items-center gap-1.5 bg-transparent border-none text-[10px] font-black capitalize tracking-wider text-[var(--color-text-tertiary)] outline-none cursor-pointer px-2 py-1.5 hover:text-[var(--color-success-600)] transition-colors h-full"
+                  className="flex items-center gap-1.5 bg-transparent border-none text-[length:var(--erp-text-meta)] font-black capitalize text-[var(--color-text-tertiary)] outline-none cursor-pointer px-2 py-1.5 hover:text-[var(--color-success-600)] transition-colors h-full"
                 >
                   {SCOPES.find(s => s.value === searchScope)?.label}
                   <svg width="8" height="5" viewBox="0 0 12 7" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ transform: isScopeDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s', opacity: 0.6 }}>
@@ -178,8 +181,8 @@ export default function Topbar({ breadcrumb, hideSearch, rightContent, bottomCon
                     {SCOPES.map(sc => (
                       <button
                         key={sc.value}
-                        onClick={() => { setSearchScope(sc.value as any); setIsScopeDropdownOpen(false); }}
-                        className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-[10px] font-black capitalize tracking-wider transition-colors border-none cursor-pointer text-left ${searchScope === sc.value ? 'bg-[var(--color-success-50)] text-[var(--color-success-600)]' : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-0)] hover:text-[var(--color-text-primary)]'}`}
+                        onClick={() => { setSearchScope(sc.value); setIsScopeDropdownOpen(false); }}
+                        className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-[length:var(--erp-text-meta)] font-black capitalize transition-colors border-none cursor-pointer text-left ${searchScope === sc.value ? 'bg-[var(--color-success-50)] text-[var(--color-success-600)]' : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-0)] hover:text-[var(--color-text-primary)]'}`}
                       >
                         {sc.label}
                         {searchScope === sc.value && <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-success-600)] ml-2 flex-shrink-0" style={{ boxShadow: '0 0 8px color-mix(in srgb, var(--color-success-600) 60%, transparent)' }} />}
@@ -193,9 +196,16 @@ export default function Topbar({ breadcrumb, hideSearch, rightContent, bottomCon
                 type="text"
                 placeholder="Search anything..."
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                onChange={(e) => {
+                  const nextQuery = e.target.value;
+                  setQuery(nextQuery);
+                  if (nextQuery.trim().length < 2) {
+                    setResults(null);
+                    setSearching(false);
+                  }
+                }}
                 onFocus={() => setIsSearchFocused(true)}
-                className="flex-1 bg-transparent border-none text-sm font-semibold text-[var(--color-text-primary)] outline-none placeholder:text-[var(--color-text-tertiary)] placeholder:font-medium min-w-0 px-2"
+                className="flex-1 bg-transparent border-none text-[length:var(--erp-text-body)] font-semibold text-[var(--color-text-primary)] outline-none placeholder:text-[var(--color-text-tertiary)] placeholder:font-medium min-w-0 px-2"
               />
 
               <div className="flex-shrink-0 flex items-center justify-center text-[var(--color-text-tertiary)]">
@@ -211,7 +221,7 @@ export default function Topbar({ breadcrumb, hideSearch, rightContent, bottomCon
             {isSearchFocused && query.length >= 2 && results && (
               <div className="absolute top-full left-0 right-0 mt-2 rounded-xl border border-[var(--color-border-light)] bg-[var(--color-surface-1)] shadow-xl z-[100] animate-fade-in-up overflow-hidden flex flex-col max-h-[60vh]">
                 {results.length === 0 ? (
-                  <div className="p-4 text-center text-sm font-bold text-[var(--color-text-secondary)] bg-[var(--color-surface-0)]">
+                  <div className="p-4 text-center text-[length:var(--erp-text-body)] font-bold text-[var(--color-text-secondary)] bg-[var(--color-surface-0)]">
                     No results found for "{query}"
                   </div>
                 ) : (
@@ -222,7 +232,7 @@ export default function Topbar({ breadcrumb, hideSearch, rightContent, bottomCon
 
                       return (
                         <div key={type} className="mb-2 last:mb-0">
-                          <div className="px-3 py-1 text-[10px] font-bold capitalize tracking-widest text-[var(--color-text-tertiary)] opacity-60">
+                          <div className="px-3 py-1 text-[length:var(--erp-text-meta)] font-bold capitalize text-[var(--color-text-tertiary)] opacity-60">
                             {type === 'order' ? 'Orders' : type === 'item' ? 'Items' : 'Customers'}
                           </div>
                           {typeResults.map(res => (
@@ -245,8 +255,8 @@ export default function Topbar({ breadcrumb, hideSearch, rightContent, bottomCon
                                 </div>
                               )}
                               <div className="flex-1 min-w-0">
-                                <div className="text-sm font-bold text-[var(--color-text-primary)] truncate">{res.title}</div>
-                                <div className="text-[11px] font-medium text-[var(--color-text-tertiary)] truncate">{res.sub}</div>
+                                <div className="text-[length:var(--erp-text-body)] font-bold text-[var(--color-text-primary)] truncate">{res.title}</div>
+                                <div className="text-[length:var(--erp-text-dense)] font-medium text-[var(--color-text-tertiary)] truncate">{res.sub}</div>
                               </div>
                               <ChevronRight size={14} className="text-[var(--color-text-tertiary)] opacity-0 group-hover:opacity-100 transition-opacity" />
                             </button>
@@ -256,22 +266,19 @@ export default function Topbar({ breadcrumb, hideSearch, rightContent, bottomCon
                     })}
                   </div>
                 )}
-                <div className="bg-[var(--color-surface-0)] px-4 py-2 text-[10px] font-bold tracking-wide text-center text-[var(--color-text-tertiary)] border-t border-[var(--color-border-light)] capitalize">
-                  Press Enter for global results
-                </div>
               </div>
             )}
           </div>
         )}
 
         {/* Divider if needed */}
-        {(rightContent || !hideSearch) && <div className="w-[1px] h-6 bg-[var(--color-border-light)] mx-1" />}
+        {(rightContent || !hideSearch) && <div className="app-topbar__divider mx-1 h-6 w-px bg-[var(--color-border-light)]" />}
 
         {/* Page Custom Actions */}
-        {rightContent}
+        {rightContent && <div className="app-topbar__page-actions">{rightContent}</div>}
 
         {/* System Action Icons */}
-        <div className="flex items-center gap-1.5 pl-2">
+        <div className="app-topbar__system-actions flex shrink-0 items-center gap-1.5 pl-2">
           <button
             className="relative flex h-10 w-10 items-center justify-center rounded-xl text-[var(--color-text-secondary)] transition-colors duration-150 hover:bg-[var(--color-surface-0)] hover:text-[var(--color-text-primary)]"
             title="Notifications"
@@ -297,26 +304,26 @@ export default function Topbar({ breadcrumb, hideSearch, rightContent, bottomCon
 
             {showThemeMenu && (
               <div className="absolute right-0 mt-2 w-48 rounded-2xl border border-[var(--color-border-light)] bg-[var(--color-surface-1)] p-2 shadow-xl z-[100] animate-fade-in-up">
-                <div className="mb-2 px-3 pt-1 text-[10px] font-bold capitalize tracking-wider text-[var(--color-text-tertiary)]">
+                <div className="mb-2 px-3 pt-1 text-[length:var(--erp-text-meta)] font-bold capitalize text-[var(--color-text-tertiary)]">
                   UI Themes
                 </div>
                 <button
                   onClick={() => { setTheme('royal-white'); setShowThemeMenu(false); }}
-                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors ${theme === 'royal-white' ? 'bg-[var(--color-success-50)] text-[var(--color-success-600)] font-bold' : 'text-[var(--color-text-primary)] hover:bg-[var(--color-surface-0)] font-semibold'}`}
+                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[length:var(--erp-text-body)] transition-colors ${theme === 'royal-white' ? 'bg-[var(--color-success-50)] text-[var(--color-success-600)] font-bold' : 'text-[var(--color-text-primary)] hover:bg-[var(--color-surface-0)] font-semibold'}`}
                 >
                   <span className="h-4 w-4 rounded-full bg-white border border-slate-300 shadow-sm"></span>
                   Royal White
                 </button>
                 <button
                   onClick={() => { setTheme('dark-gold'); setShowThemeMenu(false); }}
-                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors ${theme === 'dark-gold' ? 'bg-[var(--color-success-50)] text-[var(--color-success-600)] font-bold' : 'text-[var(--color-text-primary)] hover:bg-[var(--color-surface-0)] font-semibold'}`}
+                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[length:var(--erp-text-body)] transition-colors ${theme === 'dark-gold' ? 'bg-[var(--color-success-50)] text-[var(--color-success-600)] font-bold' : 'text-[var(--color-text-primary)] hover:bg-[var(--color-surface-0)] font-semibold'}`}
                 >
                   <span className="h-4 w-4 rounded-full bg-amber-500 shadow-[0_0_8px_color-mix(in srgb, #f59e0b 50%, transparent)]"></span>
                   Dark Gold
                 </button>
                 <button
                   onClick={() => { setTheme('modern-dark'); setShowThemeMenu(false); }}
-                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors ${theme === 'modern-dark' ? 'bg-[var(--color-success-50)] text-[var(--color-success-600)] font-bold' : 'text-[var(--color-text-primary)] hover:bg-[var(--color-surface-0)] font-semibold'}`}
+                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[length:var(--erp-text-body)] transition-colors ${theme === 'modern-dark' ? 'bg-[var(--color-success-50)] text-[var(--color-success-600)] font-bold' : 'text-[var(--color-text-primary)] hover:bg-[var(--color-surface-0)] font-semibold'}`}
                 >
                   <span className="h-4 w-4 rounded-full bg-sky-500 border border-slate-600"></span>
                   Modern Dark
@@ -328,8 +335,10 @@ export default function Topbar({ breadcrumb, hideSearch, rightContent, bottomCon
       </div>
       </div>
       {bottomContent && (
-        <div className="mt-3 w-full border-t border-[var(--color-border-light)] pt-3">
-          {bottomContent}
+        <div className={`${frameClassName} app-page-inline`}>
+          <div className="app-topbar__bottom mt-3 w-full border-t border-[var(--color-border-light)] pt-3">
+            {bottomContent}
+          </div>
         </div>
       )}
     </header>

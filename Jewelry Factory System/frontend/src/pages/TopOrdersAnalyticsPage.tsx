@@ -97,7 +97,7 @@ const selectedMonthsLabel = (months: number[]) => {
 
 const fmtQty = (value: number) => value.toLocaleString(undefined, { maximumFractionDigits: 0 });
 const fmtSignedQty = (value: number) => `${value > 0 ? "+" : value < 0 ? "-" : ""}${Math.abs(value).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
-const fmtPct = (value: number | null, isNew = false) => (value === null ? (isNew ? "New" : "No base") : `${value > 0 ? "+" : value < 0 ? "-" : ""}${Math.abs(value).toFixed(1)}%`);
+const fmtPct = (value: number | null, isNew = false) => (value === null ? (isNew ? "New" : "0.0%") : `${value > 0 ? "+" : value < 0 ? "-" : ""}${Math.abs(value).toFixed(1)}%`);
 
 export default function TopOrdersAnalyticsPage() {
   const navigate = useNavigate();

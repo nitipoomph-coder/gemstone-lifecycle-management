@@ -622,6 +622,7 @@ export default function TopOrdersGalleryPage() {
         ]}
         icon={<Award size={22} />}
         hideSearch={true}
+        contentLayout="dashboard"
         rightContent={
           <div className="flex min-w-0 flex-1 items-center gap-2 pr-2" style={{ width: "min(78vw, 980px)" }}>
             <button

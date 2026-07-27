@@ -23,7 +23,12 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
     if (!path) return false;
     if (location.pathname === path) return true;
     if (path === '/dashboard/customer') {
-      return location.pathname === '/dashboard/customer-report' && new URLSearchParams(location.search).get('metric') !== 'qty';
+      return (
+        location.pathname === '/dashboard/qty' ||
+        location.pathname === '/dashboard/sales-customer-groups' ||
+        location.pathname === '/dashboard/sales-customer-detail' ||
+        (location.pathname === '/dashboard/customer-report' && new URLSearchParams(location.search).get('metric') !== 'qty')
+      );
     }
     if (path === '/dashboard/qty') {
       return location.pathname === '/dashboard/customer-report' && new URLSearchParams(location.search).get('metric') === 'qty';
@@ -33,9 +38,6 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
     }
     if (path === '/dashboard/top-orders/analytics') {
       return location.pathname === '/dashboard/top-orders/analytics';
-    }
-    if (path === '/dashboard/sales-customer-groups') {
-      return location.pathname === '/dashboard/sales-customer-detail';
     }
     if (path === '/po-tracker') {
       return location.pathname.startsWith('/po-tracker/');

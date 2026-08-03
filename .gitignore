@@ -1,8 +1,30 @@
-# Ignore AI dev files
+# Ignore AI & IDE artifacts
 .claude/
-*.md
-!README.md
-!DESIGN.md
+.codex-artifacts/
+.codex-*/
+.codex/
+.impeccable/
+.agents/
+.vscode/
+
+# Ignore logs & locks
+*.log
+000003.log
+LOCK
+LOG
+CURRENT
+NetworkData*
+Safe Browsing*
+frontend-vite.err.log
+frontend-vite.out.log
+
+# Ignore dependencies & build output
+node_modules/
+dist/
+build/
+.cache/
+tmp/
+temp/
 
 # Local scratch / generated files
 ItemSum_*.csv
@@ -16,8 +38,3 @@ Jewelry Factory System/frontend/parse.cjs
 Jewelry Factory System/backend/check-*.js
 Jewelry Factory System/backend/get-*.js
 
-# Local Codex/tooling artifacts
-.codex/
-.impeccable/
-frontend-vite.err.log
-frontend-vite.out.log

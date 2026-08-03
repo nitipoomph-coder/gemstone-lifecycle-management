@@ -4,7 +4,7 @@ import { psPhotoUrl, attachPhotoFallback } from '../../utils/photoUrl';
 export interface ActiveWindow {
   id: string;
   idx: number;
-  line: any;
+  line: Record<string, unknown>;
   photoUrl: string;
   isZoomed: boolean;
   zoomPos: { x: number; y: number };
@@ -13,7 +13,7 @@ export interface ActiveWindow {
   zIndex: number;
 }
 
-export function useFloatingWindows() {
+function useFloatingWindows() {
   const [activeWindows, setActiveWindows] = useState<ActiveWindow[]>([]);
   const [maxZIndex, setMaxZIndex] = useState(10005);
   const [draggingWinId, setDraggingWinId] = useState<string | null>(null);
@@ -96,11 +96,9 @@ export function useFloatingWindows() {
     });
   }, [activeWindows, maxZIndex]);
 
-  const handleGlobalDragMove = useCallback((e: React.MouseEvent<HTMLDivElement> | React.MouseEvent<Document>) => {
+  const handleGlobalDragMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (!draggingWinId) return;
-    // @ts-ignore
     const clientX = e.clientX;
-    // @ts-ignore
     const clientY = e.clientY;
     const newX = clientX - dragOffset.x;
     const newY = clientY - dragOffset.y;
@@ -128,6 +126,8 @@ export function useFloatingWindows() {
 }
 
 export function FloatingWindowsRenderer({ manager }: { manager: ReturnType<typeof useFloatingWindows> }) {
+  const internalManager = useFloatingWindows();
+  manager = manager || internalManager;
   const {
     activeWindows,
     draggingWinId,
@@ -143,7 +143,7 @@ export function FloatingWindowsRenderer({ manager }: { manager: ReturnType<typeo
 
   return (
     <div
-      onMouseMove={handleGlobalDragMove as any}
+      onMouseMove={handleGlobalDragMove}
       onMouseUp={stopGlobalDrag}
       style={{
         position: 'fixed', inset: 0,
@@ -163,9 +163,9 @@ export function FloatingWindowsRenderer({ manager }: { manager: ReturnType<typeo
             width: '450px',
             height: '520px',
             background: 'var(--color-surface-0)',
-            borderRadius: '16px',
+            borderRadius: '8px',
             border: '1px solid var(--color-border-light)',
-            boxShadow: '0 25px 60px rgba(0,0,0,0.3)',
+            boxShadow: 'var(--shadow-modal)',
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
@@ -223,7 +223,7 @@ export function FloatingWindowsRenderer({ manager }: { manager: ReturnType<typeo
                 <img
                   src={win.photoUrl}
                   alt={String(win.line.ItemNo)}
-                  onError={(e) => attachPhotoFallback(e, win.line.ItemNo as string)}
+                  onError={(e) => attachPhotoFallback(e, String(win.line.ItemNo ?? ''))}
                   onClick={() => toggleZoom(win.id)}
                   style={{
                     maxWidth: '100%', maxHeight: '100%', objectFit: 'contain',

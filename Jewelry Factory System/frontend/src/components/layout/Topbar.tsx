@@ -1,6 +1,6 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Search, Bell, ChevronRight, ChevronLeft, Palette, Package, Gem, User } from 'lucide-react';
-import { useTheme } from '../../contexts/ThemeContext';
+import { Search, ChevronDown, ChevronRight, ChevronLeft, Palette, Package, Gem, User } from 'lucide-react';
+import { useTheme } from '../../contexts/useTheme';
 import { useState, useRef, useEffect } from 'react';
 import { fetchSearch, type SearchResultItem } from '../../services/poTrackerAPI';
 import { psPhotoUrl, attachPhotoFallback } from '../../utils/photoUrl';
@@ -98,12 +98,12 @@ export default function Topbar({ breadcrumb, hideSearch, contentLayout = 'worksp
     <header
       className="app-topbar flex flex-col py-3.5"
       style={{
-        background: 'var(--color-surface-0)',
+        background: 'var(--color-ui-surface)',
         borderBottom: '1px solid var(--color-border-light)',
         position: 'sticky',
         top: 0,
         zIndex: 100,
-        boxShadow: '0 4px 20px color-mix(in srgb, var(--color-success-600) 7%, transparent)',
+        boxShadow: 'var(--shadow-panel)',
       }}
     >
       <div className={`${frameClassName} app-page-inline app-topbar__row flex items-center justify-between gap-4`}>
@@ -114,28 +114,28 @@ export default function Topbar({ breadcrumb, hideSearch, contentLayout = 'worksp
             onClick={() => navigate(-1)}
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              width: 38, height: 38, borderRadius: 999,
-              background: 'var(--color-surface-0)', color: 'var(--color-text-secondary)',
+              width: 34, height: 34, borderRadius: 8,
+              background: 'var(--color-ui-surface)', color: 'var(--color-text-secondary)',
               border: '1px solid var(--color-border-light)', cursor: 'pointer',
-              transition: 'all 0.2s cubic-bezier(0.25, 1, 0.5, 1)',
-              boxShadow: '0 2px 8px color-mix(in srgb, var(--color-surface-900) 8%, transparent)'
+              transition: 'color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease',
             }}
-            className="hover:text-[var(--color-success-600)] hover:border-[var(--color-success-600)] hover:shadow-md active:scale-95 flex-shrink-0"
+            className="app-topbar__back flex-shrink-0 hover:border-[var(--color-brand-600)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-brand-600)]"
             title="Back"
+            aria-label="Go back"
           >
-            <ChevronLeft size={20} />
+            <ChevronLeft size={18} />
           </button>
         )}
 
         {/* Premium Titles Layout */}
         <div className="flex min-w-0 flex-col">
           {breadcrumb.length > 1 && (
-            <div className="mb-1 flex min-w-0 items-center gap-1.5 text-[length:var(--erp-text-dense)] font-bold leading-none text-[var(--color-success-600)]">
+            <div className="app-topbar__breadcrumbs mb-1 flex min-w-0 items-center gap-1.5 text-[length:var(--erp-text-dense)] font-bold leading-none text-[var(--color-brand-600)]">
               {breadcrumb.slice(0, -1).map((item, i) => (
                 <span key={i} className="flex items-center gap-1.5">
-                  {i > 0 && <ChevronRight size={10} className="text-[var(--color-success-600)] opacity-55" />}
+                  {i > 0 && <ChevronRight size={10} className="text-[var(--color-brand-600)] opacity-55" />}
                   {item.path ? (
-                    <button onClick={() => navigate(item.path!)} className="truncate transition-colors hover:text-[var(--color-success-600)]">
+                    <button onClick={() => navigate(item.path!)} className="truncate transition-colors hover:text-[var(--color-brand-600)]">
                       {item.label}
                     </button>
                   ) : (
@@ -146,7 +146,7 @@ export default function Topbar({ breadcrumb, hideSearch, contentLayout = 'worksp
             </div>
           )}
           <h1 className="m-0 flex min-w-0 items-center gap-2 truncate text-[length:var(--erp-text-section)] font-extrabold leading-tight text-[var(--color-text-primary)] font-display">
-            {icon && <span className="flex items-center text-[var(--color-success-600)]">{icon}</span>}
+            {icon && <span className="flex items-center text-[var(--color-brand-600)]">{icon}</span>}
             <span className="truncate">{breadcrumb[breadcrumb.length - 1].label}</span>
           </h1>
         </div>
@@ -158,34 +158,34 @@ export default function Topbar({ breadcrumb, hideSearch, contentLayout = 'worksp
         {!hideSearch && (
           <div className="app-topbar__search relative" ref={searchRef}>
             <div
-              className={`flex items-center gap-2 rounded-xl pl-1 pr-3 py-1.5 transition-all duration-200 ${isSearchFocused ? 'shadow-md border-[var(--color-success-600)]' : 'border-[var(--color-border-light)]'}`}
+              className="flex items-center gap-2 rounded-lg py-1.5 pl-1 pr-3 transition-[border-color,box-shadow] duration-150"
               style={{
-                background: 'var(--color-surface-0)',
-                border: `1px solid ${isSearchFocused ? 'var(--color-success-600)' : 'var(--color-border-light)'}`,
+                background: 'var(--color-ui-surface)',
+                border: `1px solid ${isSearchFocused ? 'var(--color-brand-500)' : 'var(--color-border-light)'}`,
+                boxShadow: isSearchFocused ? '0 0 0 3px var(--color-ui-focus-ring)' : 'none',
               }}
             >
               {/* Scope Dropdown Custom */}
               <div className="relative" ref={scopeDropdownRef} style={{ borderRight: '1px solid var(--color-border-light)' }}>
                 <button
+                  type="button"
                   onClick={() => setIsScopeDropdownOpen(!isScopeDropdownOpen)}
-                  className="flex items-center gap-1.5 bg-transparent border-none text-[length:var(--erp-text-meta)] font-black capitalize text-[var(--color-text-tertiary)] outline-none cursor-pointer px-2 py-1.5 hover:text-[var(--color-success-600)] transition-colors h-full"
+                  className="flex items-center gap-1.5 bg-transparent border-none text-[length:var(--erp-text-meta)] font-black capitalize text-[var(--color-text-tertiary)] outline-none cursor-pointer px-2 py-1.5 hover:text-[var(--color-brand-600)] transition-colors h-full"
                 >
                   {SCOPES.find(s => s.value === searchScope)?.label}
-                  <svg width="8" height="5" viewBox="0 0 12 7" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ transform: isScopeDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s', opacity: 0.6 }}>
-                    <path d="M1 1L6 6L11 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
+                  <ChevronDown size={12} style={{ transform: isScopeDropdownOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s ease', opacity: 0.65 }} />
                 </button>
 
                 {isScopeDropdownOpen && (
-                  <div className="absolute top-full left-0 mt-3 w-32 rounded-xl border border-[var(--color-border-light)] bg-[var(--color-surface-1)] p-1.5 z-[110] animate-fade-in-up" style={{ boxShadow: '0 10px 40px -10px color-mix(in srgb, var(--color-surface-900) 25%, transparent)' }}>
+                  <div className="absolute left-0 top-full z-[110] mt-2 w-32 rounded-lg border border-[var(--color-border-light)] bg-[var(--color-ui-surface)] p-1.5" style={{ boxShadow: 'var(--shadow-dropdown)' }}>
                     {SCOPES.map(sc => (
                       <button
                         key={sc.value}
                         onClick={() => { setSearchScope(sc.value); setIsScopeDropdownOpen(false); }}
-                        className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-[length:var(--erp-text-meta)] font-black capitalize transition-colors border-none cursor-pointer text-left ${searchScope === sc.value ? 'bg-[var(--color-success-50)] text-[var(--color-success-600)]' : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-0)] hover:text-[var(--color-text-primary)]'}`}
+                        className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-[length:var(--erp-text-meta)] font-black capitalize transition-colors border-none cursor-pointer text-left ${searchScope === sc.value ? 'bg-[var(--color-brand-50)] text-[var(--color-brand-600)]' : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text-primary)]'}`}
                       >
                         {sc.label}
-                        {searchScope === sc.value && <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-success-600)] ml-2 flex-shrink-0" style={{ boxShadow: '0 0 8px color-mix(in srgb, var(--color-success-600) 60%, transparent)' }} />}
+                        {searchScope === sc.value && <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-brand-500)] ml-2 flex-shrink-0" />}
                       </button>
                     ))}
                   </div>
@@ -210,7 +210,7 @@ export default function Topbar({ breadcrumb, hideSearch, contentLayout = 'worksp
 
               <div className="flex-shrink-0 flex items-center justify-center text-[var(--color-text-tertiary)]">
                 {searching ? (
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--color-success-600)] border-t-transparent" />
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--color-brand-500)] border-t-transparent" />
                 ) : (
                   <Search size={16} />
                 )}
@@ -219,7 +219,7 @@ export default function Topbar({ breadcrumb, hideSearch, contentLayout = 'worksp
 
             {/* Floating Dropdown Results */}
             {isSearchFocused && query.length >= 2 && results && (
-              <div className="absolute top-full left-0 right-0 mt-2 rounded-xl border border-[var(--color-border-light)] bg-[var(--color-surface-1)] shadow-xl z-[100] animate-fade-in-up overflow-hidden flex flex-col max-h-[60vh]">
+              <div className="absolute left-0 right-0 top-full z-[100] mt-2 flex max-h-[60vh] flex-col overflow-hidden rounded-lg border border-[var(--color-border-light)] bg-[var(--color-ui-surface)]" style={{ boxShadow: 'var(--shadow-dropdown)' }}>
                 {results.length === 0 ? (
                   <div className="p-4 text-center text-[length:var(--erp-text-body)] font-bold text-[var(--color-text-secondary)] bg-[var(--color-surface-0)]">
                     No results found for "{query}"
@@ -279,53 +279,41 @@ export default function Topbar({ breadcrumb, hideSearch, contentLayout = 'worksp
 
         {/* System Action Icons */}
         <div className="app-topbar__system-actions flex shrink-0 items-center gap-1.5 pl-2">
-          <button
-            className="relative flex h-10 w-10 items-center justify-center rounded-xl text-[var(--color-text-secondary)] transition-colors duration-150 hover:bg-[var(--color-surface-0)] hover:text-[var(--color-text-primary)]"
-            title="Notifications"
-          >
-            <Bell size={20} />
-            <span
-              className="absolute top-2 right-2 h-2 w-2 rounded-full"
-              style={{
-                background: 'var(--color-danger-500)',
-                border: '2px solid var(--color-surface-1)',
-              }}
-            />
-          </button>
-
           <div className="relative z-[100]" ref={themeMenuRef}>
             <button
+              type="button"
               onClick={() => setShowThemeMenu(!showThemeMenu)}
-              className={`flex h-10 w-10 items-center justify-center rounded-xl transition-colors duration-150 ${showThemeMenu ? 'bg-[var(--color-success-50)] text-[var(--color-success-600)]' : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-0)] hover:text-[var(--color-success-600)]'}`}
+              className={`flex h-9 w-9 items-center justify-center rounded-lg transition-colors duration-150 ${showThemeMenu ? 'bg-[var(--color-brand-50)] text-[var(--color-brand-600)]' : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-brand-600)]'}`}
               title="Change Theme"
+              aria-label="Change theme"
             >
-              <Palette size={20} />
+              <Palette size={18} />
             </button>
 
             {showThemeMenu && (
-              <div className="absolute right-0 mt-2 w-48 rounded-2xl border border-[var(--color-border-light)] bg-[var(--color-surface-1)] p-2 shadow-xl z-[100] animate-fade-in-up">
+              <div className="absolute right-0 z-[100] mt-2 w-48 rounded-lg border border-[var(--color-border-light)] bg-[var(--color-ui-surface)] p-2" style={{ boxShadow: 'var(--shadow-dropdown)' }}>
                 <div className="mb-2 px-3 pt-1 text-[length:var(--erp-text-meta)] font-bold capitalize text-[var(--color-text-tertiary)]">
                   UI Themes
                 </div>
                 <button
                   onClick={() => { setTheme('royal-white'); setShowThemeMenu(false); }}
-                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[length:var(--erp-text-body)] transition-colors ${theme === 'royal-white' ? 'bg-[var(--color-success-50)] text-[var(--color-success-600)] font-bold' : 'text-[var(--color-text-primary)] hover:bg-[var(--color-surface-0)] font-semibold'}`}
+                  className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[length:var(--erp-text-body)] transition-colors ${theme === 'royal-white' ? 'bg-[var(--color-brand-50)] text-[var(--color-brand-600)] font-bold' : 'text-[var(--color-text-primary)] hover:bg-[var(--color-surface-2)] font-semibold'}`}
                 >
-                  <span className="h-4 w-4 rounded-full bg-white border border-slate-300 shadow-sm"></span>
+                  <span className="h-4 w-4 rounded-full border border-[var(--color-border-default)]" style={{ background: 'var(--color-theme-preview-royal)' }} />
                   Royal White
                 </button>
                 <button
                   onClick={() => { setTheme('dark-gold'); setShowThemeMenu(false); }}
-                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[length:var(--erp-text-body)] transition-colors ${theme === 'dark-gold' ? 'bg-[var(--color-success-50)] text-[var(--color-success-600)] font-bold' : 'text-[var(--color-text-primary)] hover:bg-[var(--color-surface-0)] font-semibold'}`}
+                  className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[length:var(--erp-text-body)] transition-colors ${theme === 'dark-gold' ? 'bg-[var(--color-brand-50)] text-[var(--color-brand-600)] font-bold' : 'text-[var(--color-text-primary)] hover:bg-[var(--color-surface-2)] font-semibold'}`}
                 >
-                  <span className="h-4 w-4 rounded-full bg-amber-500 shadow-[0_0_8px_color-mix(in srgb, #f59e0b 50%, transparent)]"></span>
+                  <span className="h-4 w-4 rounded-full border border-[var(--color-border-default)]" style={{ background: 'var(--color-theme-preview-gold)' }} />
                   Dark Gold
                 </button>
                 <button
                   onClick={() => { setTheme('modern-dark'); setShowThemeMenu(false); }}
-                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[length:var(--erp-text-body)] transition-colors ${theme === 'modern-dark' ? 'bg-[var(--color-success-50)] text-[var(--color-success-600)] font-bold' : 'text-[var(--color-text-primary)] hover:bg-[var(--color-surface-0)] font-semibold'}`}
+                  className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[length:var(--erp-text-body)] transition-colors ${theme === 'modern-dark' ? 'bg-[var(--color-brand-50)] text-[var(--color-brand-600)] font-bold' : 'text-[var(--color-text-primary)] hover:bg-[var(--color-surface-2)] font-semibold'}`}
                 >
-                  <span className="h-4 w-4 rounded-full bg-sky-500 border border-slate-600"></span>
+                  <span className="h-4 w-4 rounded-full border border-[var(--color-border-default)]" style={{ background: 'var(--color-theme-preview-dark)' }} />
                   Modern Dark
                 </button>
               </div>

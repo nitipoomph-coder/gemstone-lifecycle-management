@@ -48,7 +48,7 @@
 - **Pagination — Pinned, ไม่ต้องเลื่อนจอ**: รวมเป็นแถบเดียวที่ด้านล่างตาราง (Showing X–Y of Z + page size selector + Prev/page numbers/Next ทั้งหมดอยู่แถวเดียวกัน) — `OrderTable.tsx` ไม่รับ props `totalCount`/`pageSize`/`onPageSizeChange` อีกต่อไป เพราะ Pagination UI ทั้งหมดย้ายไปอยู่ใน `POTrackerAdvanced.tsx` แล้ว และ Data Table card ใช้ flex column (`flex:1, minHeight:0`) ให้ตารางขยายเต็มพื้นที่ที่เหลือของจอเสมอ ส่วน scroll container ใน `OrderTable.tsx` เปลี่ยนจาก `maxHeight: calc(100vh - 280px)` (เลขคงที่ที่ไม่ตรงกับความสูงจริงของ Filters/KPI) เป็น `flex:1, minHeight:0` แทน — ทำให้แถบ pagination ติดอยู่ด้านล่างของจอเสมอ ไม่ต้อง scroll หน้าทั้งหน้าเพื่อกด Next
 - **Line Detail Drawer & Order Line Table**:
   - ปรับ `OrderLineTable.tsx` ไม่ให้ตัดคำ (Wrap text) ในคอลัมน์แคบๆ เช่น 'Plating' เพื่อให้อ่านง่าย
-  - ปรับพื้นหลังกล่องรูปใน `LineDetailDrawer.tsx` เป็นสีขาว (`#FFFFFF`) เพื่อให้รูปสินค้าเบลนด์เนียนเข้ากับกรอบอย่างไร้รอยต่อ และปรับทรงปุ่มปิด (Close Button) ให้เป็นวงกลมสอดคล้องกับ Lightbox
+  - พื้นหลังกล่องรูปใน `LineDetailDrawer.tsx` ใช้ `--color-product-canvas` เพื่อให้รูปสินค้าอ่านง่ายทุกธีม และปุ่มปิดใช้รูปแบบเดียวกับ Lightbox
 - **Column Presets Synchronization**: ปรับปรุงค่าเริ่มต้นของกลุ่มคอลัมน์ (Sales, Production, All) ใน `orderDetailColumns.ts` ให้ตรงกับ Checkboxes ของระบบ VB.net เดิมแบบ 100% (เพิ่ม `QCDate`, `FinishQty` ใน Sales และ `OrdRemark` ใน Production)
 ---
 
@@ -98,11 +98,13 @@
 | Theme Engine  | 3 themes via `ThemeContext` + CSS custom properties |
 | Themes        | `modern-dark` (default), `dark-gold`, `royal-white` |
 | Color System  | OKLCH color space                                |
-| Fonts         | **Cinzel** (logo), **Outfit** (headings/display), **Kanit** (body) |
+| Fonts         | **Cinzel** (logo), **Roboto** (headings, body, and dense tables) |
+| 60-30-10 Roles | `--color-ui-canvas` 60%, `--color-ui-surface` / `--color-ui-raised` 30%, `--color-ui-interactive` 10% |
+| Interaction Color | Brand token only; semantic and chart colors never represent generic selection/action |
 | Chart Colors  | `--color-chart-1` ~ `--color-chart-6` (semantic, ครบทุก theme) |
 | Table Colors  | `--color-table-header`, `--color-table-row-alt`, `--color-table-footer` |
-| Animations    | `fadeInUp`, skeleton shimmer, stagger classes    |
-| Login Page    | Redesigned split-screen layout with Luxury UI enhancements (parchment texture, floating inputs, glare-sweep buttons). Protected Registration Flow (Admin Auth). Custom generated realistic catalog photos for background slider. Forced `royal-white` theme to prevent dark-mode text invisibility on logout. |
+| Animations    | Skeleton shimmer and short state transitions only; no decorative continuous motion |
+| Login Page    | Standard surface-based form with protected registration flow and fixed `royal-white` theme for predictable contrast. |
 
 ---
 
@@ -157,7 +159,13 @@ gemstone-lifecycle-management/
     │       │       └── NavGroup.tsx         # Collapsible nav group component
     │       │
     │       ├── pages/
-    │       │   ├── LoginPage.tsx              # หน้า Login (JWT auth + role selection)
+    │       │   ├── login/                     # Authentication page feature folder
+    │       │   │   ├── LoginPage.tsx          # Page composition only
+    │       │   │   ├── LoginPage.css          # Login-only layout, fields, modals, and responsive styles
+    │       │   │   ├── login.constants.ts     # Copy, languages, images, and registration types
+    │       │   │   ├── hooks/
+    │       │   │   │   └── useLoginController.ts # Auth state and API workflow
+    │       │   │   └── components/            # Forms, cover, language control, fields, and modals
     │       │   ├── Dashboard.tsx              # หน้าภาพรวม (home, admin only)
     │       │   ├── DashboardDetail.tsx         # Dashboard detail drilldown
     │       │   ├── SalesDashboard.tsx          # ⭐ Sales Summary By Rep (กราฟเปรียบเทียบยอดขาย Sales)
@@ -258,21 +266,33 @@ gemstone-lifecycle-management/
 
 1. **Component Style**: ใช้ Functional Components + Hooks เท่านั้น (ไม่ใช้ Class Components)
 2. **Styling**: ใช้ Tailwind CSS v4 เป็นหลัก, inline `@theme` variables ใน `index.css`
-3. **Theme Variables**: สีทั้งหมดต้องอ้างอิงผ่าน CSS Custom Properties ใน `@theme` block — ห้าม hardcode สี
+3. **Theme Variables**: สีทั้งหมดต้องอ้างอิงผ่าน CSS Custom Properties ใน `@theme` block — ห้าม hardcode สี และ component ใหม่ต้องเลือก role token (`--color-ui-*`) ก่อน palette token
 4. **Type Safety**: ทุก component ต้อง type props ด้วย TypeScript interfaces (ประกาศใน `types/index.ts` หรือ inline)
 5. **Routing**: ใช้ React Router v7 (`BrowserRouter` + `Routes` + `Route`), layout ผ่าน `<Route element={<AppLayout />}>`
 6. **API Calls**: แยก API calls ไว้ใน `services/` folder — ห้ามเรียก fetch ตรงใน component
 7. **Icons**: ใช้ `lucide-react` เท่านั้น — import เฉพาะ icon ที่ใช้ (tree-shakable)
 8. **Menu Config**: Menu structure ทั้งหมดอยู่ใน `config/menuConfig.ts` — ห้าม hardcode menu ใน Sidebar
 9. **Font Stack**:
-   - Headings: `font-display` → Outfit (or Inter for enterprise/B2B feel)
-   - Body text: `font-body` → Kanit
+   - Headings: `font-display` → Roboto
+   - Body text: `font-body` → Roboto
    - Logo/Brand: `font-logo` → Cinzel
 10. **Loading Skeletons**: เมื่อมีการเพิ่ม/แก้ไข กล่องข้อมูล (Boxes/Cards) ในหน้าจอใด ๆ ต้องอัปเดตส่วนแสดงสถานะกำลังโหลด (Loading Skeleton) ให้สอดคล้องกันทั้งหน้าจอ เพื่อหลีกเลี่ยงอาการ Layout Shift โดยส่วนโหลดนี้ต้องคลุมเฉพาะพื้นที่แสดงผลของหน้านั้น ๆ (Content Outlet) ไม่ต้องโหลดส่วนเมนู (Sidebar/Topbar) ซ้ำ
 11. **UI Components & UX**:
     - หลีกเลี่ยงการใช้ native `<datalist>` สำหรับ Dropdown ที่ซับซ้อน ให้ใช้ Custom React Dropdown component แทน เพื่อให้สามารถกำหนด CSS, z-index, hover states และ interaction ได้เต็มที่
-    - **Accessibility & Contrast**: สีตัวอักษรบนพื้นหลังใดๆ ต้องมี Contrast ratio อย่างน้อย 4.5:1 (เช่น placeholder บนพื้นสีเข้มควรใช้สีที่สว่างพอ, หรือเพิ่ม glassmorphism card รองรับแบบฟอร์มเพื่อป้องกันพื้นหลังลายตา)
+    - **Accessibility & Contrast**: สีตัวอักษรปกติต้องมี Contrast ratio อย่างน้อย 4.5:1 และข้อความขนาดใหญ่ต้องอย่างน้อย 3:1 ทุกธีม ใช้พื้นผิวทึบเมื่อพื้นหลังรบกวนการอ่าน
     - **Capitalization**: ใช้มาตรฐานเดียวกันทั้งแอป เช่น Title Case ("Sales", "Password") แทนที่จะผสม ALL CAPS กับ Title Case ใน level เดียวกัน
+
+### System-Wide Responsive And Loading Standard
+
+- `AppLayout` is the shared responsive shell for every protected route. It uses `100dvh`; only the content outlet scrolls.
+- Use `app-content-frame--dashboard` (max 1860px), `app-content-frame--dashboard-wide` (max 2400px), or `app-content-frame--workspace` (full width) according to the work surface.
+- Use container breakpoints at 1200px, 1120px, and 620px. Below 820px viewport width, the sidebar opens as an overlay with a scrim.
+- Never use CSS `zoom`, whole-page transforms, or viewport-based font scaling. Reflow grids, stack panels, wrap controls, or use local scrolling.
+- Keep compact ERP typography fixed through `--erp-text-*` tokens and keep letter spacing at zero. Large screens gain working area, not larger type.
+- Wide tables and toolbars may scroll inside their own region; the page document must not overflow horizontally.
+- Keep Sidebar and Topbar visible during data loading. Skeletons replace only data-dependent content and must match the final layout footprint.
+- Theme switching is immediate and must never display a full-screen loading overlay.
+- Verify representative pages at 390x844, 1440x900, and 2560x1440 in `royal-white`, `dark-gold`, and `modern-dark`.
 
 ## Frontend Architecture Rules (UI Layout Patterns)
 
@@ -597,7 +617,7 @@ APP_SALES_PASSWORD=<sales login password>
 
 1. **ระบบนี้เป็น Internal Tool** — ใช้งานภายใน LAN ของโรงงาน มีระบบ Authentication ผ่าน JWT + Role-based (admin/sales) แล้ว — sales เข้าได้เฉพาะ Sales Analytics และ Customer Dashboard, admin เข้าได้ทุกหน้า
 2. **Data จาก Production DB** — ระวังเรื่อง query performance, ใช้ cache เสมอสำหรับ heavy queries
-3. **Thai Language UI** — ข้อความในระบบเป็นภาษาไทย, ใช้ web fonts (Outfit, Prompt)
+3. **Thai Language UI** — ข้อความในระบบเป็นภาษาไทย และใช้ Roboto เป็น font หลักของ UI/ตาราง
 4. **Legacy Migration** — กำลัง migrate จาก VB.net ทีละ module, หลายหน้ายังเป็น Placeholder
 5. **Photo Data** — รูปสินค้าเก็บเป็น VARBINARY ใน DB, แปลงเป็น base64 ตอน serve — ระวัง payload size
 
@@ -708,10 +728,14 @@ This standard applies to every dashboard, report, KPI, chart, and infographic in
 
 ### Color And Accessibility
 
+- ใช้กฎ 60-30-10 ทั้งระบบ: `--color-ui-canvas` ประมาณ 60% สำหรับพื้นแอป, `--color-ui-surface` / `--color-ui-raised` ประมาณ 30% สำหรับพื้นที่ทำงาน, และ `--color-ui-interactive` ประมาณ 10% สำหรับ action/selection/focus
+- สัดส่วนนี้เป็นเป้าหมายด้านลำดับสายตาของแต่ละหน้าจอ ไม่ใช่การนับพิกเซล และสีสถานะ/กราฟเป็นข้อยกเว้นเชิงข้อมูลที่ต้องใช้เท่าที่จำเป็น
+- ปุ่มหลัก, link, selected tab/filter, active navigation และ focus ring ใช้ Brand role เดียวเท่านั้น ห้ามใช้ success/warning/danger หรือสี customer group แทนสถานะ interactive
 - Use color only for defined meaning: status, severity, selection, process stage, or data series.
 - Keep the same meaning and series color consistent across the system. Do not assign decorative colors to categories with no analytical purpose.
 - Color must never be the only identifier; use labels, icons, patterns, ordering, or text as a second cue.
 - Provide visible keyboard focus, sufficient contrast in every theme, screen-reader names, and readable labels at all supported sizes.
+- ห้ามใส่ hex, rgb, hsl, oklch, named color หรือ Tailwind palette color ใน component; เพิ่ม token ที่ `src/index.css` และรัน `npm run lint:colors` (`npm run lint` เรียกให้อัตโนมัติ)
 
 ### Data Integrity
 
@@ -816,3 +840,17 @@ For backend route files, prefer a top overview block with:
 - Filter policy or data boundary
 
 Inside route handlers, add only short section labels for important boxes/queries, for example KPI cards, Top 30 Items, drilldown rows, or comparison data. Avoid comments that explain obvious syntax.
+
+---
+## 2026-07-30 Presentation & Code Quality Updates (Phase 1-4)
+
+### Scope
+- Addressed security vulnerabilities in Login (DB auth, bcrypt, removed localStorage tokens on logout).
+- Built Executive Overview page (`/dashboard/overview`) as the main entry point for client presentations.
+- Refactored frontend structure for maintainability.
+
+### Frontend Structural Refactoring (Phase 4)
+- **LoginPage**: Extracted massive inline styles into `LoginPage.css`.
+- **SalesCustomerGroupAnalytics**: Refactored massive 1,700+ line component into modular sub-components for KPIs, charts, filters, and drill-down tables.
+- **TopOrdersGalleryPage**: Separated gallery cards and ranking tables into dedicated sub-components.
+- Centralized UI notifications into a shared Toast component for consistent error and success handling across the application.

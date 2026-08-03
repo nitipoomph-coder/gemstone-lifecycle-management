@@ -5,8 +5,8 @@ colors:
   brand-500: "oklch(0.68 0.14 245)"
   brand-600: "oklch(0.78 0.11 245)"
   accent-500: "oklch(0.72 0.14 200)"
-  surface-0: "oklch(0.18 0.03 250)"
-  surface-1: "oklch(0.22 0.03 250)"
+  surface-0: "oklch(0.22 0.03 250)"
+  surface-1: "oklch(0.18 0.03 250)"
   surface-2: "oklch(0.28 0.03 250)"
   surface-800: "oklch(0.12 0.02 250)"
   surface-900: "oklch(0.08 0.02 250)"
@@ -20,19 +20,19 @@ colors:
   sidebar: "oklch(0.16 0.03 250)"
   sidebar-hover: "oklch(0.20 0.03 250)"
   sidebar-accent: "oklch(0.68 0.14 245)"
-  table-header: "oklch(0.22 0.06 250)"
-  table-row-alt: "oklch(0.20 0.03 250)"
-  table-footer: "oklch(0.25 0.04 250)"
+  table-header: "oklch(0.28 0.03 250)"
+  table-row-alt: "color-mix(in srgb, var(--color-surface-1) 65%, var(--color-surface-0))"
+  table-footer: "color-mix(in srgb, var(--color-brand-500) 6%, var(--color-surface-0))"
   success-500: "oklch(0.70 0.16 150)"
   warning-500: "oklch(0.75 0.16 80)"
-  danger-500: "oklch(0.62 0.20 25)"
+  danger-500: "oklch(0.68 0.18 25)"
   info-500: "oklch(0.70 0.15 220)"
-  chart-1: "oklch(0.65 0.18 45)"
-  chart-2: "oklch(0.70 0.16 150)"
-  chart-3: "oklch(0.58 0.16 300)"
-  chart-4: "oklch(0.65 0.18 340)"
-  chart-5: "oklch(0.62 0.20 25)"
-  chart-6: "oklch(0.72 0.14 200)"
+  chart-1: "oklch(0.62 0.17 255)"
+  chart-2: "oklch(0.62 0.14 165)"
+  chart-3: "oklch(0.70 0.15 80)"
+  chart-4: "oklch(0.60 0.17 300)"
+  chart-5: "oklch(0.60 0.18 20)"
+  chart-6: "oklch(0.55 0.05 255)"
 typography:
   display:
     fontFamily: "Roboto, sans-serif"
@@ -63,7 +63,7 @@ typography:
     fontSize: "0.75rem"
     fontWeight: 700
     lineHeight: 1.2
-    letterSpacing: "0.08em"
+    letterSpacing: "0"
 rounded:
   sm: "6px"
   md: "8px"
@@ -85,26 +85,26 @@ components:
     padding: "8px 14px"
     height: "36px"
   button-secondary:
-    backgroundColor: "{colors.surface-1}"
+    backgroundColor: "{colors.surface-0}"
     textColor: "{colors.text-primary}"
     typography: "{typography.label}"
     rounded: "{rounded.md}"
     padding: "8px 14px"
     height: "36px"
   filter-chip:
-    backgroundColor: "{colors.surface-1}"
+    backgroundColor: "{colors.surface-0}"
     textColor: "{colors.text-secondary}"
     typography: "{typography.label}"
     rounded: "{rounded.md}"
     padding: "6px 10px"
   panel:
-    backgroundColor: "{colors.surface-1}"
+    backgroundColor: "{colors.surface-0}"
     textColor: "{colors.text-primary}"
-    rounded: "{rounded.lg}"
+    rounded: "{rounded.md}"
     padding: "16px"
   table-header:
     backgroundColor: "{colors.table-header}"
-    textColor: "{colors.text-inverse}"
+    textColor: "{colors.text-primary}"
     typography: "{typography.label}"
     padding: "10px 12px"
 ---
@@ -129,14 +129,25 @@ Key Characteristics:
 
 ## Colors
 
-The palette is a restrained control-room system: deep blue-indigo for primary action, calm neutral surfaces for dense data, and functional status colors for business meaning.
+The palette follows a system-wide 60-30-10 role model. The ratio is a visual hierarchy target for a screen, not a requirement to measure every pixel.
+
+60-30-10 Roles:
+- **60% Operational Canvas**: `--color-ui-canvas` for the app workspace and page background.
+- **30% Working Surfaces**: `--color-ui-surface` and `--color-ui-raised` for tables, filters, panels, menus, and hover surfaces.
+- **10% Interaction Accent**: `--color-ui-interactive`, `--color-ui-interactive-hover`, `--color-ui-selected`, and `--color-ui-focus-ring` for primary actions, selection, links, active navigation, and keyboard focus.
+
+Implementation Rules:
+- Components consume role tokens first. Theme classes own the underlying palette values.
+- Brand is the only color for generic interaction. Never use success green, warning amber, chart colors, or customer-group colors merely to make a control look active.
+- Status, severity, production stage, ranked data, and chart series are semantic exceptions. Use them only where the color communicates actual data, and always pair color with text, icon, value, or position.
+- Neutral content should visually dominate every operational page. Repeated colorful cards, decorative category dots, gradients, glass effects, and color-coded filters are not allowed.
 
 Primary:
 - **Control Blue** (`oklch(0.68 0.14 245)`): primary buttons, active navigation, selected filters, focus states, and important linked identifiers such as Order No.
 - **Action Blue Lift** (`oklch(0.78 0.11 245)`): hover and active emphasis for primary controls.
 
 Accent:
-- **Analytic Cyan** (`oklch(0.72 0.14 200)`): secondary analytical emphasis, comparison markers, and non-destructive information highlights.
+- **Analytic Cyan** (`oklch(0.72 0.14 200)`): reserved for data visualization or an explicitly defined informational meaning; it is not a second interaction color.
 
 Neutral:
 - **Operational Canvas** (`oklch(0.18 0.03 250)`): default dark workspace background.
@@ -149,11 +160,13 @@ Neutral:
 Status:
 - **Success Green** (`oklch(0.70 0.16 150)`): shipped, completed, healthy, and confirmed states.
 - **Warning Gold** (`oklch(0.75 0.16 80)`): partial, pending attention, and approaching due states.
-- **Danger Red** (`oklch(0.62 0.20 25)`): late, overdue, error, and blocked states.
+- **Danger Red** (`oklch(0.68 0.18 25)`): late, overdue, error, and blocked states.
 - **Info Blue** (`oklch(0.70 0.15 220)`): open, processing, and neutral informational state.
 
 Named Rules:
-**The Meaning Before Color Rule.** A color must map to a known domain meaning: action, selection, status, process, or series. Do not introduce a new color just because a chart needs variety.
+**The Meaning Before Color Rule.** A color must map to a known domain meaning: action, selection, status, process, rank, or series. Do not introduce a new color for decoration.
+
+**The One Interaction Color Rule.** Buttons, links, focus, selected filters, and active navigation use the brand role tokens in every theme. Semantic colors never stand in for selection.
 
 **The Sales Restraint Rule.** Sales dashboards use customer, order, amount, quantity, shipment, and item language. Do not use production-stage colors or labels in Sales unless the user explicitly enters a production detail view.
 
@@ -177,14 +190,27 @@ Named Rules:
 
 **The Numeric Clarity Rule.** Quantities, percentages, and amounts must align consistently. Right-align numeric table cells and keep currency/quantity formats stable across screens.
 
+## Responsive Layout And Density
+
+The interface uses responsive reflow, stable type, and local overflow. It does not scale the entire application to imitate another monitor size.
+
+- The shell fills `100dvh`. Sidebar and topbar remain usable while the content outlet owns page scrolling.
+- Shared content frames use the available width with controlled limits: 1860px for standard dashboards, 2400px for wide analytics, and full width for document/table workspaces.
+- Container breakpoints respond to usable content width at 1200px, 1120px, and 620px. Below 820px viewport width, the expanded sidebar is an overlay with a dismissible scrim.
+- Typography uses the fixed compact ERP tokens from `src/index.css`; font size never scales with viewport width and letter spacing remains zero.
+- Large displays add columns, chart width, or comparison panels. Small displays stack sections, wrap commands, and provide local scrolling for wide tables or toolbars.
+- CSS `zoom`, transformed whole-page scaling, and document-level horizontal overflow are prohibited.
+- Loading skeletons match the final data footprint and replace only the content outlet. Sidebar, topbar, navigation state, and theme controls remain available.
+- Responsive verification covers 390x844, 1440x900, and 2560x1440 in Royal White, Dark Gold, and Modern Dark.
+
 ## Elevation
 
 The system is layered more by tone, border, and state than by heavy shadows. Panels sit on surface color changes; dropdowns, popovers, menus, modals, and floating pagination may use shadows to clarify stacking. Resting dashboards should not feel floaty.
 
 Shadow Vocabulary:
-- **Panel Ambient** (`0 4px 16px -4px rgba(0, 0, 0, 0.04)`): optional low emphasis for repeated cards or KPI tiles.
-- **Dropdown Layer** (`0 12px 40px rgba(0, 0, 0, 0.15)`): menus, multi-select dropdowns, date pickers, and popovers.
-- **Modal Layer** (`0 32px 64px rgba(0, 0, 0, 0.28)`): dialogs and blocking workflows.
+- **Panel Ambient**: `--shadow-panel` for the few repeated items that need low elevation.
+- **Dropdown Layer**: `--shadow-dropdown` or `--shadow-floating` for menus, date pickers, and popovers.
+- **Modal Layer**: `--shadow-modal` for dialogs and blocking workflows.
 
 Named Rules:
 **The Flat By Default Rule.** A dense business screen should look stable at rest. Use borders and surface contrast first; add shadow only when an element must sit above the work surface.
@@ -205,13 +231,13 @@ Filters and Selectors:
 - **Customer Groups:** show group name and included customer codes clearly. A selected group must be visually stronger than unselected groups.
 
 Chips:
-- **Style:** small radius, surface background, border, optional colored dot for category identity.
+- **Style:** small radius, neutral surface, border, and text label. Do not add category-colored dots unless color is required to match a visible data series.
 - **State:** active chips use brand tint and stronger border; inactive chips stay quiet.
 - **Use:** customer groups, market, status, type, and saved filters.
 
 Cards / Containers:
-- **Corner Style:** 8px to 16px depending on scale; repeated table-adjacent panels should stay tighter.
-- **Background:** surface-1 for panels, surface-2 for selected or hovered subareas.
+- **Corner Style:** 8px maximum for operational cards and panels.
+- **Background:** `--color-ui-surface` for panels and `--color-ui-raised` for hovered or raised subareas.
 - **Border:** one-pixel border-light or border-default. Use border-strong only for active/selected structures.
 - **Internal Padding:** 12px to 24px. Dashboards can be dense; avoid oversized decorative cards.
 
@@ -236,6 +262,7 @@ Tables:
 
 Do:
 - Use existing tokens from `Jewelry Factory System/frontend/src/index.css`.
+- Run `npm run lint:colors` after UI changes; `npm run lint` includes this guard automatically.
 - Keep Sales pages focused on customer groups, orders, amounts, quantities, shipped quantities, item type, and item lines.
 - Keep filters compact, visible, and close to the table they control.
 - Use table-first layouts when users need exact order-level data.
@@ -248,6 +275,7 @@ Don't:
 - Do not use production-stage labels or colors in Sales overview pages.
 - Do not create hero sections, glass panels, gradient text, or oversized metric cards for operational dashboards.
 - Do not hardcode one-off chart colors when tokenized chart/status colors already exist.
+- Do not use a semantic or chart color for a normal button, selected tab, focus ring, or decorative card.
 - Do not hide exact Order No or Item No behind summary-only views.
 - Do not make filters so large that they push the table or key report below the fold.
 - Do not introduce a new font unless the whole system is intentionally migrating.

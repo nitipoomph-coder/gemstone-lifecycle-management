@@ -1,3 +1,4 @@
+// color-lint-ignore-file: print-only output requires fixed black and white ink colors.
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import DocumentLayout from '../../components/layout/DocumentLayout';
@@ -9,7 +10,8 @@ import {
   generateNextDocumentNumber,
   updateDocumentHeader,
 } from '../../services/procurementAPI';
-import type { ProcDocDetail, ProcDocLine } from '../../services/procurementAPI';
+import type { ProcDocDetail, ProcDocHeader, ProcDocLine } from '../../services/procurementAPI';
+import { getErrorMessage } from '../../utils/errors';
 
 // ─── Route → docType mapping ──────────────────
 const routeToDocType: Record<string, string> = {
@@ -22,6 +24,10 @@ const routeToDocType: Record<string, string> = {
 export default function ProcurementDocPage() {
   const location = useLocation();
   const docType = routeToDocType[location.pathname] || 'SPA';
+  return <ProcurementDocWorkspace key={docType} docType={docType} />;
+}
+
+function ProcurementDocWorkspace({ docType }: { docType: string }) {
   const formConfig = formConfigMap[docType];
 
   const [docList, setDocList] = useState<DocListItem[]>([]);
@@ -34,9 +40,14 @@ export default function ProcurementDocPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState('');
 
-  const [loading, setLoading] = useState(true);
-  const [detailLoading, setDetailLoading] = useState(false);
+  const [listRefreshVersion, setListRefreshVersion] = useState(0);
+  const [loadedListKey, setLoadedListKey] = useState('');
+  const [loadedDetailNo, setLoadedDetailNo] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const listKey = `${docType}:${page}:${search}:${listRefreshVersion}`;
+  const loading = loadedListKey !== listKey;
+  const detailLoading = actionLoading || Boolean(selectedDocNo && loadedDetailNo !== selectedDocNo);
 
   const groupLabel = formConfig?.groupLabel || 'จัดซื้อและรับเข้า';
   const itemLabel = formConfig?.titleTh || docType;
@@ -48,82 +59,95 @@ export default function ProcurementDocPage() {
   ];
 
   // ─── Load document list ─────────────────────
-  const loadDocList = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await fetchDocumentList(docType, { page, limit: 50, search });
-      const mappedList = response.data.map((d: any) => ({
-        no: d.docNumber,
-        date: d.docDate,
-        status: d.status,
-      }));
-      setDocList(mappedList);
-      setTotalPages(response.totalPages || 1);
-      if (mappedList.length > 0 && !selectedDocNo) {
-        setSelectedDocNo(mappedList[0].no);
-      }
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    setDocList([]);
-    setDocDetail(null);
-    setSelectedDocNo('');
-    setIsEditing(false);
-    setEditDraft({});
-    setPage(1);
-    setSearch('');
-  }, [docType]);
-
-  useEffect(() => {
-    loadDocList();
-  }, [docType, page, search]);
+    let cancelled = false;
+    fetchDocumentList(docType, { page, limit: 50, search })
+      .then(response => {
+        if (cancelled) return;
+        const mappedList = response.data.map(d => ({
+          no: d.docNumber,
+          date: d.docDate,
+          status: d.status,
+        }));
+        setDocList(mappedList);
+        setTotalPages(response.totalPages || 1);
+        setSelectedDocNo(current => current || mappedList[0]?.no || '');
+        setError(null);
+      })
+      .catch((requestError: unknown) => {
+        if (!cancelled) setError(getErrorMessage(requestError, 'Failed to load document list'));
+      })
+      .finally(() => {
+        if (!cancelled) setLoadedListKey(listKey);
+      });
+    return () => { cancelled = true; };
+  }, [docType, page, search, listKey]);
 
   useEffect(() => {
     if (!selectedDocNo) return;
-    setDetailLoading(true);
+    let cancelled = false;
+    fetchDocumentDetail(selectedDocNo)
+      .then(nextDetail => {
+        if (cancelled) return;
+        setDocDetail(nextDetail);
+        setLoadedDetailNo(selectedDocNo);
+        setIsEditing(false);
+        setEditDraft({});
+        setError(null);
+      })
+      .catch((requestError: unknown) => {
+        if (cancelled) return;
+        setError(getErrorMessage(requestError, 'Failed to load document'));
+        setDocDetail(null);
+        setLoadedDetailNo(selectedDocNo);
+      });
+    return () => { cancelled = true; };
+  }, [selectedDocNo]);
+
+  const handleSelectDoc = (docNo: string) => {
+    setSelectedDocNo(docNo);
     setIsEditing(false);
     setEditDraft({});
-    setError(null);
-    fetchDocumentDetail(selectedDocNo)
-      .then(setDocDetail)
-      .catch(err => {
-        setError(err.message);
-        setDocDetail(null);
-      })
-      .finally(() => setDetailLoading(false));
-  }, [selectedDocNo]);
+  };
+
+  const loadDocList = () => setListRefreshVersion(version => version + 1);
 
   // ─── Handlers ───────────────────────────────
 
   const handleNew = async () => {
-    setDetailLoading(true);
+    setActionLoading(true);
     try {
       const nextNo = await generateNextDocumentNumber(docType);
       setSelectedDocNo('');
       setIsEditing(true);
-      const newHeader = {
+      const newHeader: ProcDocHeader = {
         docNumber: nextNo,
         docDate: new Date().toLocaleDateString('th-TH'),
+        purchaseDate: '',
+        dueDate: '',
+        receiveDate: '',
+        supplierCode: '',
+        supplierName: '',
+        buyer: '',
         currency: 'THB',
         exchangeRate: 1,
         totalQty: 0,
         totalAmount: 0,
+        refNumber: '',
+        billNumber: '',
+        invoiceNumber: '',
+        remark: '',
+        category: '',
         status: 'N',
       };
-      setDocDetail({ header: newHeader as any, lines: [] });
+      setDocDetail({ header: newHeader, lines: [] });
       setEditDraft(Object.fromEntries(
         Object.entries(newHeader).map(([k, v]) => [k, String(v)])
       ));
-    } catch (err: any) {
-      setError(err.message || 'Failed to generate new document');
+    } catch (requestError: unknown) {
+      setError(getErrorMessage(requestError, 'Failed to generate new document'));
     } finally {
-      setDetailLoading(false);
+      setActionLoading(false);
     }
   };
 
@@ -133,7 +157,7 @@ export default function ProcurementDocPage() {
 
   const handleEdit = async () => {
     if (!selectedDocNo) return;
-    setDetailLoading(true);
+    setActionLoading(true);
     try {
       const res = await fetch('/api/lock/acquire', {
         method: 'POST',
@@ -151,18 +175,24 @@ export default function ProcurementDocPage() {
         ));
       }
       setIsEditing(true);
-    } catch (err: any) {
-      alert('Failed to acquire lock: ' + err.message);
+    } catch (requestError: unknown) {
+      alert('Failed to acquire lock: ' + getErrorMessage(requestError, 'Unknown error'));
     } finally {
-      setDetailLoading(false);
+      setActionLoading(false);
     }
   };
 
   const handleSave = async () => {
     if (!docDetail?.header) return;
-    setDetailLoading(true);
+    setActionLoading(true);
     try {
-      const updatedHeader = { ...docDetail.header, ...editDraft };
+      const updatedHeader: ProcDocHeader = {
+        ...docDetail.header,
+        ...editDraft,
+        exchangeRate: Number(editDraft.exchangeRate ?? docDetail.header.exchangeRate),
+        totalQty: Number(editDraft.totalQty ?? docDetail.header.totalQty),
+        totalAmount: Number(editDraft.totalAmount ?? docDetail.header.totalAmount),
+      };
       await updateDocumentHeader(selectedDocNo, updatedHeader);
 
       await fetch('/api/lock/release', {
@@ -171,14 +201,14 @@ export default function ProcurementDocPage() {
         body: JSON.stringify({ docNo: selectedDocNo, user: 'Staff' }),
       }).catch(e => console.error('Lock release error:', e));
 
-      setDocDetail(prev => prev ? { ...prev, header: updatedHeader as any } : null);
+      setDocDetail(prev => prev ? { ...prev, header: updatedHeader } : null);
       setIsEditing(false);
       setEditDraft({});
       loadDocList();
-    } catch (err: any) {
-      setError(err.message || 'บันทึกไม่สำเร็จ');
+    } catch (requestError: unknown) {
+      setError(getErrorMessage(requestError, 'บันทึกไม่สำเร็จ'));
     } finally {
-      setDetailLoading(false);
+      setActionLoading(false);
     }
   };
 
@@ -367,13 +397,13 @@ export default function ProcurementDocPage() {
       breadcrumb={breadcrumb}
       docList={docList}
       selectedDocNo={selectedDocNo}
-      onSelectDoc={setSelectedDocNo}
+      onSelectDoc={handleSelectDoc}
       onSearchList={(text) => {
         setSearch(text);
         setPage(1);
       }}
       onSearchSubmit={(text) => {
-        if (text.trim()) setSelectedDocNo(text.trim());
+        if (text.trim()) handleSelectDoc(text.trim());
       }}
       page={page}
       totalPages={totalPages}

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   ChevronRight,
@@ -14,6 +14,7 @@ import {
   Handshake,
 } from 'lucide-react';
 import type { NavMenuGroup, NavMenuItem } from '../../types';
+import { CUSTOMER_TRENDS_PATH, LEGACY_CUSTOMER_TRENDS_PATH } from '../../utils/customerTrendsUrl';
 
 const NAV_ICON_SIZE = 16;
 const NAV_CHEVRON_SIZE = 14;
@@ -38,9 +39,10 @@ interface NavGroupProps {
   isOpen: boolean;
   onToggle: () => void;
   collapsed?: boolean;
+  onNavigate?: () => void;
 }
 
-export default function NavGroup({ group, isOpen, onToggle, collapsed = false }: NavGroupProps) {
+export default function NavGroup({ group, isOpen, onToggle, collapsed = false, onNavigate }: NavGroupProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const items = group.items || [];
@@ -51,7 +53,8 @@ export default function NavGroup({ group, isOpen, onToggle, collapsed = false }:
     if (itemPath === '/dashboard/customer') {
       return (
         location.pathname === '/dashboard/qty' ||
-        location.pathname === '/dashboard/sales-customer-groups' ||
+        location.pathname === CUSTOMER_TRENDS_PATH ||
+        location.pathname === LEGACY_CUSTOMER_TRENDS_PATH ||
         location.pathname === '/dashboard/sales-customer-detail' ||
         (location.pathname === '/dashboard/customer-report' && new URLSearchParams(location.search).get('metric') !== 'qty')
       );
@@ -75,12 +78,10 @@ export default function NavGroup({ group, isOpen, onToggle, collapsed = false }:
     return isPathActive(item.path) || Boolean(item.items?.some(child => isItemActive(child)));
   };
 
-  const activeParentId = useMemo(() => items.find(item => item.items?.some(child => isItemActive(child)))?.id || '', [items, location.pathname, location.search]);
-  const [openItemId, setOpenItemId] = useState(activeParentId);
-
-  useEffect(() => {
-    if (activeParentId) setOpenItemId(activeParentId);
-  }, [activeParentId]);
+  const activeParentId = items.find(item => item.items?.some(child => isItemActive(child)))?.id || '';
+  const routeKey = `${location.pathname}${location.search}`;
+  const [itemOverride, setItemOverride] = useState<{ routeKey: string; id: string } | null>(null);
+  const openItemId = itemOverride?.routeKey === routeKey ? itemOverride.id : activeParentId;
 
   const visibleRows = items.reduce((count, item) => {
     const childCount = item.items && openItemId === item.id ? item.items.length : 0;
@@ -94,7 +95,10 @@ export default function NavGroup({ group, isOpen, onToggle, collapsed = false }:
   const accentColor = group.accentColor || 'var(--color-brand-500)';
 
   const openPath = (path?: string) => {
-    if (path) navigate(path);
+    if (path) {
+      navigate(path);
+      if (onNavigate) onNavigate();
+    }
   };
 
   if (collapsed) {
@@ -129,6 +133,7 @@ export default function NavGroup({ group, isOpen, onToggle, collapsed = false }:
         onClick={() => {
           if (group.path) {
             navigate(group.path);
+            if (onNavigate) onNavigate();
           } else {
             onToggle();
           }
@@ -182,7 +187,7 @@ export default function NavGroup({ group, isOpen, onToggle, collapsed = false }:
               <button
                 onClick={() => {
                   if (hasChildren) {
-                    setOpenItemId(prev => (prev === item.id ? '' : item.id));
+                    setItemOverride({ routeKey, id: openItemId === item.id ? '' : item.id });
                   } else {
                     openPath(item.path);
                   }

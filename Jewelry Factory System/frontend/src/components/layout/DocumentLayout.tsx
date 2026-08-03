@@ -89,54 +89,61 @@ export default function DocumentLayout({
   onPageChange
 }: DocumentLayoutProps) {
   const navigate = useNavigate();
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [searchText] = useState('');
-  // removed unused refInput
-
   const [showToolbarSearch, setShowToolbarSearch] = useState(false);
   const [toolbarSearchText, setToolbarSearchText] = useState('');
 
   const [selectedLineIdx, setSelectedLineIdx] = useState<number>(0);
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
 
-  const [psUrl, setPsUrl] = useState<string>('');
-  const [cadUrl, setCadUrl] = useState<string>('');
-  const [psLoading, setPsLoading] = useState<boolean>(true);
-  const [cadLoading, setCadLoading] = useState<boolean>(true);
+  const [photoState, setPhotoState] = useState({
+    itemNo: '', psUrl: '', cadUrl: '', psLoaded: false, cadLoaded: false,
+  });
 
   const lines = docDetail?.lines || [];
   const header = docDetail?.header || {};
 
   const activeItemNo = lines[selectedLineIdx]?.ItemNo;
+  const photoKey = isPhotoModalOpen && activeItemNo ? String(activeItemNo) : '';
+  const hasCurrentPhoto = photoState.itemNo === photoKey;
+  const psUrl = hasCurrentPhoto ? photoState.psUrl : '';
+  const cadUrl = hasCurrentPhoto ? photoState.cadUrl : '';
+  const psLoading = Boolean(photoKey) && (!hasCurrentPhoto || !photoState.psLoaded);
+  const cadLoading = Boolean(photoKey) && (!hasCurrentPhoto || !photoState.cadLoaded);
 
   React.useEffect(() => {
-    if (!isPhotoModalOpen || !activeItemNo) {
-      setPsUrl('');
-      setCadUrl('');
-      return;
-    }
+    if (!photoKey) return;
+    let cancelled = false;
 
-    setPsLoading(true);
-    setCadLoading(true);
+    const updatePhoto = (update: Partial<typeof photoState>) => {
+      if (cancelled) return;
+      setPhotoState((previous) => ({
+        ...(previous.itemNo === photoKey
+          ? previous
+          : { itemNo: photoKey, psUrl: '', cadUrl: '', psLoaded: false, cadLoaded: false }),
+        ...update,
+      }));
+    };
 
     // รูปดึงจาก network path อย่างเดียว (relative ผ่าน Photo Bridge) — เลิกใช้ base64 fallback แล้ว
-    const psTargetUrl = psPhotoUrl(activeItemNo);
+    const psTargetUrl = psPhotoUrl(photoKey);
     const imgPs = new window.Image();
     imgPs.src = psTargetUrl;
-    imgPs.onload = () => { setPsUrl(psTargetUrl); setPsLoading(false); };
-    imgPs.onerror = () => { setPsUrl(''); setPsLoading(false); };
+    imgPs.onload = () => updatePhoto({ psUrl: psTargetUrl, psLoaded: true });
+    imgPs.onerror = () => updatePhoto({ psUrl: '', psLoaded: true });
 
-    const cadTargetUrl = cadPhotoUrl(activeItemNo);
+    const cadTargetUrl = cadPhotoUrl(photoKey);
     const imgCad = new window.Image();
     imgCad.src = cadTargetUrl;
-    imgCad.onload = () => { setCadUrl(cadTargetUrl); setCadLoading(false); };
-    imgCad.onerror = () => { setCadUrl(''); setCadLoading(false); };
-  }, [isPhotoModalOpen, activeItemNo]);
+    imgCad.onload = () => updatePhoto({ cadUrl: cadTargetUrl, cadLoaded: true });
+    imgCad.onerror = () => updatePhoto({ cadUrl: '', cadLoaded: true });
+
+    return () => { cancelled = true; };
+  }, [photoKey]);
 
   const isServerSide = !!onPageChange;
   const filteredDocs = isServerSide
     ? docList
-    : docList.filter(d => d.no.toLowerCase().includes(searchText.toLowerCase()));
+    : docList.filter(d => d.no.toLowerCase().includes(toolbarSearchText.toLowerCase()));
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const totalWeight = lines.reduce((s: number, l: any) => s + Number(l.weight || 0), 0);
@@ -221,19 +228,19 @@ export default function DocumentLayout({
   const isEditingRef = !selectedDocNo;
 
   return (
-    <div className="flex h-full flex-col bg-[var(--color-surface-0)] relative font-body text-[var(--color-text-primary)]">
+    <div className="flex h-full flex-col bg-[var(--color-ui-canvas)] relative font-body text-[var(--color-text-primary)]">
       <div className="screen-only flex h-full flex-col overflow-hidden">
         <Topbar breadcrumb={breadcrumb} />
 
         {/* Toolbar */}
-        <div className="flex h-14 items-center gap-1 border-b border-[var(--color-border-light)] bg-[var(--color-surface-0)] px-4 shrink-0 overflow-x-auto shadow-sm z-10">
-          <button onClick={onNew} className="flex items-center gap-1.5 rounded-lg bg-[var(--color-surface-900)] text-white px-3 py-1.5 text-[13px] font-bold transition-all hover:bg-[var(--color-surface-800)] shadow-md shadow-black/10">
+        <div className="document-toolbar flex h-14 items-center gap-1 border-b border-[var(--color-border-light)] bg-[var(--color-ui-surface)] px-4 shrink-0 overflow-x-auto z-10" style={{ boxShadow: 'var(--shadow-panel)' }}>
+          <button onClick={onNew} className="flex items-center gap-1.5 rounded-lg bg-[var(--color-brand-500)] text-[var(--color-ui-on-interactive)] px-3 py-1.5 text-[13px] font-bold transition-colors hover:bg-[var(--color-brand-600)]">
             <FilePlus size={15} /> <span className="hidden md:inline">สร้างใหม่</span>
           </button>
-          <button onClick={onSave} disabled={detailLoading || !docDetail || (!isEditing && !!selectedDocNo)} className="flex items-center gap-1.5 rounded-lg border border-[var(--color-border-light)] px-3 py-1.5 text-[13px] font-medium transition-colors hover:bg-[var(--color-surface-1)] disabled:opacity-50 text-[var(--color-text-secondary)] bg-[var(--color-surface-0)] ml-2">
+          <button onClick={onSave} disabled={detailLoading || !docDetail || (!isEditing && !!selectedDocNo)} className="flex items-center gap-1.5 rounded-lg border border-[var(--color-border-light)] px-3 py-1.5 text-[13px] font-medium transition-colors hover:bg-[var(--color-surface-2)] disabled:opacity-50 text-[var(--color-text-secondary)] bg-[var(--color-surface-0)] ml-2">
             <Save size={15} /> <span className="hidden md:inline">บันทึก</span>
           </button>
-          <button onClick={onEdit} disabled={!docDetail || isEditing} className="flex items-center gap-1.5 rounded-lg border border-[var(--color-border-light)] px-3 py-1.5 text-[13px] font-medium transition-colors hover:bg-[var(--color-surface-1)] disabled:opacity-50 text-[var(--color-text-secondary)] bg-[var(--color-surface-0)]">
+          <button onClick={onEdit} disabled={!docDetail || isEditing} className="flex items-center gap-1.5 rounded-lg border border-[var(--color-border-light)] px-3 py-1.5 text-[13px] font-medium transition-colors hover:bg-[var(--color-surface-2)] disabled:opacity-50 text-[var(--color-text-secondary)] bg-[var(--color-surface-0)]">
             <Edit3 size={15} /> <span className="hidden md:inline">แก้ไข</span>
           </button>
 
@@ -268,7 +275,7 @@ export default function DocumentLayout({
               } else if (onSearchClick) {
                 onSearchClick();
               }
-            }} className="flex items-center gap-1.5 rounded-lg border border-[var(--color-border-light)] px-3 py-1.5 text-[13px] font-medium transition-colors hover:bg-[var(--color-surface-1)] text-[var(--color-text-secondary)] bg-[var(--color-surface-0)]">
+            }} className="flex items-center gap-1.5 rounded-lg border border-[var(--color-border-light)] px-3 py-1.5 text-[13px] font-medium transition-colors hover:bg-[var(--color-surface-2)] text-[var(--color-text-secondary)] bg-[var(--color-surface-0)]">
               <Search size={15} /> <span className="hidden md:inline">ค้นหา</span>
             </button>
           )}
@@ -276,22 +283,22 @@ export default function DocumentLayout({
           <button onClick={onDelete} disabled={!docDetail} className="flex items-center gap-1.5 rounded-lg border border-[var(--color-danger-200)] px-3 py-1.5 text-[13px] font-medium transition-colors text-[var(--color-danger-600)] hover:bg-[var(--color-danger-50)] bg-[var(--color-surface-0)] disabled:opacity-50 ml-1">
             <Trash2 size={15} /> <span className="hidden md:inline">ลบ</span>
           </button>
-          <button onClick={onCancel} className="flex items-center gap-1.5 rounded-lg border border-[var(--color-border-light)] px-3 py-1.5 text-[13px] font-medium transition-colors hover:bg-[var(--color-surface-1)] text-[var(--color-text-secondary)] bg-[var(--color-surface-0)]">
+          <button onClick={onCancel} className="flex items-center gap-1.5 rounded-lg border border-[var(--color-border-light)] px-3 py-1.5 text-[13px] font-medium transition-colors hover:bg-[var(--color-surface-2)] text-[var(--color-text-secondary)] bg-[var(--color-surface-0)]">
             <CornerUpLeft size={15} /> <span className="hidden md:inline">ยกเลิก</span>
           </button>
 
           <div className="flex-1"></div>
 
-          <button onClick={() => window.print()} className="flex items-center gap-1.5 rounded-lg border border-[var(--color-border-light)] px-3 py-1.5 text-[13px] font-medium transition-colors hover:bg-[var(--color-surface-1)] text-[var(--color-text-secondary)] bg-[var(--color-surface-0)]">
+          <button onClick={() => window.print()} className="flex items-center gap-1.5 rounded-lg border border-[var(--color-border-light)] px-3 py-1.5 text-[13px] font-medium transition-colors hover:bg-[var(--color-surface-2)] text-[var(--color-text-secondary)] bg-[var(--color-surface-0)]">
             <Printer size={15} /> <span className="hidden md:inline">พิมพ์</span>
           </button>
-          <button className="flex items-center gap-1.5 rounded-lg border border-[var(--color-success-500)]/30 px-3 py-1.5 text-[13px] font-medium transition-colors text-[var(--color-success-600)] hover:bg-[var(--color-success-500)]/10 bg-[var(--color-surface-0)]">
+          <button className="flex items-center gap-1.5 rounded-lg border border-[var(--color-border-light)] px-3 py-1.5 text-[13px] font-medium transition-colors text-[var(--color-text-secondary)] hover:bg-[var(--color-ui-raised)] bg-[var(--color-ui-surface)]">
             <FileSpreadsheet size={15} /> <span className="hidden md:inline">Excel</span>
           </button>
 
           <span className="mx-2 h-6 w-px bg-[var(--color-border-light)]" />
 
-          <button onClick={() => navigate('/')} className="flex items-center gap-1.5 rounded-lg border border-[var(--color-border-light)] px-3 py-1.5 text-[13px] font-medium transition-colors hover:bg-[var(--color-surface-1)] text-[var(--color-text-secondary)] bg-[var(--color-surface-0)]">
+          <button onClick={() => navigate('/')} className="flex items-center gap-1.5 rounded-lg border border-[var(--color-border-light)] px-3 py-1.5 text-[13px] font-medium transition-colors hover:bg-[var(--color-surface-2)] text-[var(--color-text-secondary)] bg-[var(--color-surface-0)]">
             <X size={15} /> <span className="hidden md:inline">ปิด</span>
           </button>
 
@@ -304,10 +311,12 @@ export default function DocumentLayout({
         </div>
 
         {/* TOP Document List (Horizontal) */}
-        <div className="flex items-center bg-[var(--color-surface-0)] border-b border-[var(--color-border-light)] overflow-x-auto h-[64px] shrink-0 px-2 gap-2 content-scrollbar-x shadow-[inset_0_-2px_4px_rgba(0,0,0,0.02)]">
+        <div className="document-list flex items-center bg-[var(--color-ui-surface)] border-b border-[var(--color-border-light)] overflow-x-auto h-[64px] shrink-0 px-2 gap-2 content-scrollbar-x" style={{ boxShadow: 'var(--shadow-inset-soft)' }}>
           {loading ? (
-            <div className="flex items-center justify-center w-full text-[var(--color-text-tertiary)] text-xs gap-2">
-              <RefreshCw size={14} className="animate-spin" /> โหลดข้อมูล...
+            <div className="flex min-w-max items-center gap-2" aria-busy="true" aria-label="Loading document list">
+              {Array.from({ length: 7 }).map((_, index) => (
+                <div key={index} className="app-skeleton h-[46px] w-[140px] shrink-0" />
+              ))}
             </div>
           ) : filteredDocs.length === 0 ? (
             <div className="flex items-center justify-center w-full text-[var(--color-text-tertiary)] text-xs">
@@ -325,9 +334,9 @@ export default function DocumentLayout({
                 return (
                   <button key={d.no}
                     onClick={() => onSelectDoc(d.no)}
-                    className={`shrink-0 flex flex-col justify-center h-[46px] min-w-[140px] px-4 rounded-xl border transition-all ${isActive ? 'border-[var(--color-surface-900)] bg-[var(--color-surface-900)]/5 shadow-sm relative' : 'border-transparent text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-1)] hover:border-[var(--color-border-light)]'}`}>
-                    {isActive && <div className="absolute -top-[1px] left-1/2 -translate-x-1/2 w-6 h-1 rounded-b-full bg-[var(--color-surface-900)]"></div>}
-                    <span className={`text-[13px] font-mono font-black ${isActive ? 'text-[var(--color-surface-900)]' : 'text-[var(--color-text-primary)]'}`}>
+                    className={`shrink-0 flex flex-col justify-center h-[46px] min-w-[140px] px-4 rounded-lg border transition-colors ${isActive ? 'border-[var(--color-brand-500)] bg-[var(--color-brand-50)] relative' : 'border-transparent text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-2)] hover:border-[var(--color-border-light)]'}`}>
+                    {isActive && <div className="absolute -top-[1px] left-1/2 -translate-x-1/2 w-6 h-1 rounded-b-full bg-[var(--color-brand-500)]"></div>}
+                    <span className={`text-[13px] font-mono font-black ${isActive ? 'text-[var(--color-brand-600)]' : 'text-[var(--color-text-primary)]'}`}>
                       {d.no}
                     </span>
                     <span className="text-[10px] font-medium text-[var(--color-text-tertiary)] opacity-80">
@@ -346,38 +355,38 @@ export default function DocumentLayout({
         </div>
 
         {error && (
-          <div className="bg-[var(--color-danger-50)] border-l-4 border-[var(--color-danger-500)] text-[var(--color-danger-700)] p-3 mx-4 mt-4 rounded shadow-sm text-sm font-semibold flex items-center justify-between shrink-0">
+          <div className="bg-[var(--color-danger-50)] border border-[var(--color-danger-500)] text-[var(--color-danger-700)] p-3 mx-4 mt-4 rounded text-sm font-semibold flex items-center justify-between shrink-0">
             <span>{error}</span>
             <button onClick={onClearError}><X size={16} /></button>
           </div>
         )}
 
         {/* MAIN Split View */}
-        <div className="flex flex-1 overflow-hidden bg-[var(--color-surface-2)]">
+        <div className="document-workspace flex flex-1 overflow-hidden bg-[var(--color-ui-canvas)]">
           {/* Left Dark Sidebar (Active Doc Summary) */}
-          <div className="w-[280px] shrink-0 bg-[var(--color-surface-900)] text-white flex flex-col overflow-y-auto z-10 shadow-2xl relative border-r border-[var(--color-surface-900)]">
+          <div className="document-summary w-[280px] shrink-0 bg-[var(--color-surface-900)] text-[var(--color-overlay-text)] flex flex-col overflow-y-auto z-10 relative border-r border-[var(--color-surface-900)]">
             {!docDetail && !isEditingRef ? (
-              <div className="p-8 flex flex-col items-center justify-center h-full text-white/40 text-center">
+              <div className="p-8 flex flex-col items-center justify-center h-full text-[var(--color-overlay-text-muted)] opacity-60 text-center">
                 <Package size={48} className="mb-4 opacity-50" />
                 <p className="text-sm font-medium">กรุณาเลือกเอกสารจากรายการด้านบน</p>
               </div>
             ) : (
               <>
                 {/* Header Section */}
-                <div className="p-6 flex flex-col border-b border-white/10 relative overflow-hidden">
+                <div className="p-6 flex flex-col border-b border-[var(--color-overlay-border)] relative overflow-hidden">
 
                   <span className="text-[10px] font-extrabold capitalize tracking-[0.2em] text-[var(--color-brand-400)] mb-1 z-10">
                     {formConfig?.titleTh || _docType}
                   </span>
-                  <span className="text-2xl font-mono font-black text-white leading-none z-10 tracking-tight">
+                  <span className="text-2xl font-mono font-black text-[var(--color-overlay-text)] leading-none z-10 tracking-tight">
                     {getHeaderValue(header, 'docNumber') || selectedDocNo || 'NEW'}
                   </span>
-                  <span className="text-[11px] font-medium text-white/60 mt-2 z-10 flex items-center gap-1.5">
+                  <span className="text-[11px] font-medium text-[var(--color-overlay-text-muted)] mt-2 z-10 flex items-center gap-1.5">
                     <Calendar size={12} /> {getHeaderValue(header, 'docDate')}
                   </span>
 
-                  <div className="mt-5 inline-flex items-center gap-2 bg-[var(--color-success-500)]/10 text-[var(--color-success-500)] px-3 py-1.5 rounded-full self-start border border-[var(--color-success-500)]/20 z-10 shadow-lg shadow-[var(--color-success-500)]/5 backdrop-blur-sm">
-                    <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-success-500)] shadow-[0_0_8px_var(--color-success-500)]"></div>
+                  <div className="mt-5 inline-flex items-center gap-2 bg-[var(--color-success-500)]/10 text-[var(--color-success-500)] px-3 py-1.5 rounded-full self-start border border-[var(--color-success-500)]/20 z-10">
+                    <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-success-500)]"></div>
                     <span className="text-[10px] font-black tracking-widest capitalize">
                       {header.status === 'C' ? 'Canceled' : header.status === 'A' ? 'Approved' : 'Normal'}
                     </span>
@@ -387,56 +396,56 @@ export default function DocumentLayout({
                 {/* Metrics Section */}
                 <div className="p-6 flex flex-col gap-6 flex-1">
                   <div className="flex flex-col gap-1.5">
-                    <span className="text-[10px] font-bold capitalize text-white/40 tracking-widest">มูลค่ารวม - Total Value</span>
+                    <span className="text-[10px] font-bold capitalize text-[var(--color-overlay-text-muted)] opacity-60 tracking-widest">มูลค่ารวม - Total Value</span>
                     <div className="flex items-baseline gap-2">
-                      <span className="text-[22px] font-black text-[var(--color-accent-500)] font-mono tracking-tight drop-shadow-md">
+                      <span className="text-[22px] font-black text-[var(--color-overlay-text)] font-mono tracking-tight">
                         {Number(getHeaderValue(header, 'totalAmount') || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </span>
                     </div>
-                    <span className="text-[10px] font-medium text-white/50">{getHeaderValue(header, 'currency') || 'Thai Baht (THB)'}</span>
+                    <span className="text-[10px] font-medium text-[var(--color-overlay-text-muted)]">{getHeaderValue(header, 'currency') || 'Thai Baht (THB)'}</span>
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <span className="text-[10px] font-bold capitalize text-white/40 tracking-widest">จำนวนรวม - Quantity</span>
+                    <span className="text-[10px] font-bold capitalize text-[var(--color-overlay-text-muted)] opacity-60 tracking-widest">จำนวนรวม - Quantity</span>
                     <div className="flex items-baseline gap-2">
-                      <span className="text-[22px] font-black text-white font-mono tracking-tight">
+                      <span className="text-[22px] font-black text-[var(--color-overlay-text)] font-mono tracking-tight">
                         {Number(getHeaderValue(header, 'totalQty') || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </span>
                     </div>
-                    <span className="text-[10px] font-medium text-white/50">กิโลกรัม (KG)</span>
+                    <span className="text-[10px] font-medium text-[var(--color-overlay-text-muted)]">กิโลกรัม (KG)</span>
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <span className="text-[10px] font-bold capitalize text-white/40 tracking-widest">น้ำหนักสุทธิ - Net Weight</span>
+                    <span className="text-[10px] font-bold capitalize text-[var(--color-overlay-text-muted)] opacity-60 tracking-widest">น้ำหนักสุทธิ - Net Weight</span>
                     <div className="flex items-baseline gap-2">
-                      <span className="text-[22px] font-black text-white font-mono tracking-tight">
+                      <span className="text-[22px] font-black text-[var(--color-overlay-text)] font-mono tracking-tight">
                         {totalWeight.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}
                       </span>
                     </div>
-                    <span className="text-[10px] font-medium text-white/50">KG per unit</span>
+                    <span className="text-[10px] font-medium text-[var(--color-overlay-text-muted)]">KG per unit</span>
                   </div>
 
                   {/* GEM INFO BOX */}
                   {lines[selectedLineIdx] && (
-                    <div className="mt-auto flex flex-col pt-6 border-t border-white/10">
-                      <span className="text-[10px] font-bold capitalize text-white/40 tracking-widest mb-3">ข้อมูลพลอย - GEM</span>
-                      <div className="bg-white/5 rounded-xl border border-white/10 p-4 flex flex-col gap-3 shadow-inner">
+                    <div className="mt-auto flex flex-col pt-6 border-t border-[var(--color-overlay-border)]">
+                      <span className="text-[10px] font-bold capitalize text-[var(--color-overlay-text-muted)] opacity-60 tracking-widest mb-3">ข้อมูลพลอย - GEM</span>
+                      <div className="bg-[var(--color-overlay-control)] rounded-lg border border-[var(--color-overlay-border)] p-4 flex flex-col gap-3 shadow-inner">
                         <div className="flex flex-col">
-                          <span className="text-sm font-black text-white leading-tight">
+                          <span className="text-sm font-black text-[var(--color-overlay-text)] leading-tight">
                             {lines[selectedLineIdx]?.stoneName || lines[selectedLineIdx]?.GoodCode || lines[selectedLineIdx]?.ItemNo}
                           </span>
                           {(lines[selectedLineIdx]?.shapeName || lines[selectedLineIdx]?.specName) && (
-                            <span className="text-[11px] font-bold text-white/70 mt-1">
+                            <span className="text-[11px] font-bold text-[var(--color-overlay-text-muted)] mt-1">
                               {lines[selectedLineIdx]?.specName || ''} {lines[selectedLineIdx]?.shapeName || ''}
                             </span>
                           )}
                         </div>
                         <div className="flex flex-wrap gap-1.5 mt-1">
-                          {lines[selectedLineIdx]?.GoodColorCode && <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[var(--color-accent-500)]/20 text-[var(--color-accent-500)] border border-[var(--color-accent-500)]/20">{lines[selectedLineIdx].GoodColorCode}</span>}
-                          {lines[selectedLineIdx]?.GoodShapeCode && <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[var(--color-surface-1)]/30 text-white border border-[var(--color-border-light)]">{lines[selectedLineIdx].GoodShapeCode} Shape</span>}
-                          {lines[selectedLineIdx]?.GoodSizeCode && <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[var(--color-surface-1)]/30 text-white/80 border border-[var(--color-border-light)]">Size {lines[selectedLineIdx].GoodSizeCode}</span>}
+                          {lines[selectedLineIdx]?.GoodColorCode && <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[var(--color-overlay-control)] text-[var(--color-overlay-text)] border border-[var(--color-overlay-border)]">{lines[selectedLineIdx].GoodColorCode}</span>}
+                          {lines[selectedLineIdx]?.GoodShapeCode && <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[var(--color-surface-1)]/30 text-[var(--color-overlay-text)] border border-[var(--color-border-light)]">{lines[selectedLineIdx].GoodShapeCode} Shape</span>}
+                          {lines[selectedLineIdx]?.GoodSizeCode && <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[var(--color-surface-1)]/30 text-[var(--color-overlay-text)] opacity-90 border border-[var(--color-border-light)]">Size {lines[selectedLineIdx].GoodSizeCode}</span>}
                           {lines[selectedLineIdx]?.GoodGradeCode && <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[var(--color-warning-50)] text-[var(--color-warning-600)] border border-[var(--color-warning-100)]">Grade {lines[selectedLineIdx].GoodGradeCode}</span>}
-                          {lines[selectedLineIdx]?.InveCode && <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-white/10 text-white/80 border border-white/10 tracking-wider">{lines[selectedLineIdx].InveCode}</span>}
+                          {lines[selectedLineIdx]?.InveCode && <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[var(--color-overlay-control)] text-[var(--color-overlay-text)] opacity-90 border border-[var(--color-overlay-border)] tracking-wider">{lines[selectedLineIdx].InveCode}</span>}
                         </div>
                       </div>
                     </div>
@@ -444,16 +453,16 @@ export default function DocumentLayout({
                 </div>
 
                 {/* TIMELINE */}
-                <div className="p-6 border-t border-white/10 flex flex-col gap-3 bg-black/20">
-                  <span className="text-[10px] font-bold capitalize text-white/40 tracking-widest">Timeline</span>
+                <div className="p-6 border-t border-[var(--color-overlay-border)] flex flex-col gap-3 bg-[var(--color-overlay-scrim-soft)]">
+                  <span className="text-[10px] font-bold capitalize text-[var(--color-overlay-text-muted)] opacity-60 tracking-widest">Timeline</span>
                   <div className="flex gap-4">
                     <div className="flex flex-col items-center mt-1">
                       <div className="w-2.5 h-2.5 rounded-full bg-[var(--color-success-500)] shadow-[0_0_10px_var(--color-success-500)]"></div>
-                      <div className="w-px flex-1 bg-white/20 my-1"></div>
+                      <div className="w-px flex-1 bg-[var(--color-overlay-border)] my-1"></div>
                     </div>
                     <div className="flex flex-col pb-2">
-                      <span className="text-xs font-bold text-white tracking-wide">สร้างเอกสาร</span>
-                      <span className="text-[11px] font-medium text-white/50 mt-0.5 font-mono">{getHeaderValue(header, 'docDate')} - 12:00</span>
+                      <span className="text-xs font-bold text-[var(--color-overlay-text)] tracking-wide">สร้างเอกสาร</span>
+                      <span className="text-[11px] font-medium text-[var(--color-overlay-text-muted)] mt-0.5 font-mono">{getHeaderValue(header, 'docDate')} - 12:00</span>
                     </div>
                   </div>
                 </div>
@@ -462,12 +471,13 @@ export default function DocumentLayout({
           </div>
 
           {/* Right Main Form Area */}
-          <div className="flex-1 overflow-y-auto p-4 md:p-8 relative content-scrollbar bg-[var(--color-surface-2)] flex justify-center">
+          <div className="document-form flex-1 overflow-y-auto p-4 md:p-6 relative content-scrollbar bg-[var(--color-surface-2)] flex justify-center">
             {detailLoading && (
-              <div className="absolute inset-0 bg-[var(--color-surface-2)]/60 backdrop-blur-sm flex items-center justify-center z-50">
-                <div className="bg-[var(--color-surface-0)] p-5 rounded-2xl shadow-xl flex items-center gap-4 border border-[var(--color-border-light)]">
-                  <RefreshCw size={24} className="animate-spin text-[var(--color-brand-500)]" />
-                  <span className="text-sm font-bold text-[var(--color-text-primary)] tracking-wide">กำลังโหลดข้อมูล...</span>
+              <div className="document-detail-loading absolute inset-0 z-50 bg-[var(--color-surface-2)] p-4 md:p-6" aria-busy="true" aria-label="Loading document detail">
+                <div className="mx-auto flex w-full max-w-5xl flex-col gap-5">
+                  <div className="app-skeleton h-44" />
+                  <div className="app-skeleton h-24" />
+                  <div className="app-skeleton h-64" />
                 </div>
               </div>
             )}
@@ -480,9 +490,9 @@ export default function DocumentLayout({
               <div className="w-full max-w-5xl flex flex-col gap-6 pb-20">
 
                 {/* Section 01: Header */}
-                <div className="bg-[var(--color-surface-0)] rounded-2xl shadow-sm border border-[var(--color-border-light)] overflow-visible">
-                  <div className="border-b border-[var(--color-border-light)] px-6 py-4 flex items-center gap-4 bg-[var(--color-surface-0)] rounded-t-2xl">
-                    <div className="bg-[var(--color-brand-500)] text-white text-xs font-black w-8 h-8 rounded-lg flex items-center justify-center shadow-sm">01</div>
+                <div className="bg-[var(--color-surface-0)] rounded-lg shadow-sm border border-[var(--color-border-light)] overflow-visible">
+                  <div className="border-b border-[var(--color-border-light)] px-6 py-4 flex items-center gap-4 bg-[var(--color-surface-0)] rounded-t-lg">
+                    <div className="bg-[var(--color-brand-500)] text-[var(--color-ui-on-interactive)] text-xs font-black w-8 h-8 rounded-lg flex items-center justify-center shadow-sm">01</div>
                     <h2 className="text-base font-bold text-[var(--color-text-primary)] tracking-wide">ข้อมูลเอกสาร <span className="text-[var(--color-text-tertiary)] font-medium text-sm ml-2">Order Information</span></h2>
                   </div>
                   <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-6">
@@ -500,7 +510,7 @@ export default function DocumentLayout({
                         value={String(val)}
                         disabled={f.readOnly || !isEditing}
                         onChange={e => onFieldChange?.(f.name, e.target.value)}
-                        className="h-[46px] w-full rounded-xl border border-[var(--color-border-default)] bg-transparent px-3 text-[14px] font-bold text-[var(--color-text-primary)] outline-none focus:border-[var(--color-brand-500)] focus:ring-2 focus:ring-[var(--color-brand-500)]/20 disabled:bg-[var(--color-surface-1)] disabled:text-[var(--color-text-secondary)] transition-all pt-1"
+                        className="h-[42px] w-full rounded-lg border border-[var(--color-border-default)] bg-transparent px-3 text-[13px] font-bold text-[var(--color-text-primary)] outline-none focus:border-[var(--color-brand-500)] focus:ring-2 focus:ring-[var(--color-brand-500)]/20 disabled:bg-[var(--color-surface-1)] disabled:text-[var(--color-text-secondary)] transition-colors pt-1"
                       >
                         <option value="">{val !== '' ? val : '-- เลือก --'}</option>
                         {f.options.map(o => <option key={o} value={o}>{o}</option>)}
@@ -511,7 +521,7 @@ export default function DocumentLayout({
                         value={val}
                         readOnly={f.readOnly || !isEditing}
                         onChange={e => onFieldChange?.(f.name, e.target.value)}
-                        className={`h-[46px] w-full rounded-xl border border-[var(--color-border-default)] bg-transparent px-3 text-[14px] font-bold text-[var(--color-text-primary)] outline-none focus:border-[var(--color-brand-500)] focus:ring-2 focus:ring-[var(--color-brand-500)]/20 read-only:bg-[var(--color-surface-1)]/50 read-only:text-[var(--color-text-secondary)] transition-all pt-1 ${(f.name === 'docNumber' || f.name === 'totalAmount') ? 'font-mono text-[15px]' : ''} ${f.type === 'number' ? 'text-right' : ''}`}
+                        className={`h-[42px] w-full rounded-lg border border-[var(--color-border-default)] bg-transparent px-3 text-[13px] font-bold text-[var(--color-text-primary)] outline-none focus:border-[var(--color-brand-500)] focus:ring-2 focus:ring-[var(--color-brand-500)]/20 read-only:bg-[var(--color-surface-1)]/50 read-only:text-[var(--color-text-secondary)] transition-colors pt-1 ${(f.name === 'docNumber' || f.name === 'totalAmount') ? 'font-mono text-[14px]' : ''} ${f.type === 'number' ? 'text-right' : ''}`}
                       />
                     )}
                   </div>
@@ -522,9 +532,9 @@ export default function DocumentLayout({
 
                  {/* Section 02: Stone Info */}
             {!hasPhoto && formConfig?.stoneFields && lines.length > 0 && (
-              <div className="bg-[var(--color-surface-0)] rounded-2xl shadow-sm border border-[var(--color-border-light)] overflow-visible">
-                <div className="border-b border-[var(--color-border-light)] px-6 py-4 flex items-center gap-4 bg-[var(--color-surface-0)] rounded-t-2xl">
-                  <div className="bg-[var(--color-brand-500)] text-white text-xs font-black w-8 h-8 rounded-lg flex items-center justify-center shadow-sm">02</div>
+              <div className="bg-[var(--color-surface-0)] rounded-lg shadow-sm border border-[var(--color-border-light)] overflow-visible">
+                <div className="border-b border-[var(--color-border-light)] px-6 py-4 flex items-center gap-4 bg-[var(--color-surface-0)] rounded-t-lg">
+                  <div className="bg-[var(--color-brand-500)] text-[var(--color-ui-on-interactive)] text-xs font-black w-8 h-8 rounded-lg flex items-center justify-center shadow-sm">02</div>
                   <h2 className="text-base font-bold text-[var(--color-text-primary)] tracking-wide">ข้อมูลพลอย <span className="text-[var(--color-text-tertiary)] font-medium text-sm ml-2">Gemstone Specification</span></h2>
                 </div>
                 <div className="p-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-x-6 gap-y-6">
@@ -537,7 +547,7 @@ export default function DocumentLayout({
                           type="text"
                           value={val}
                           readOnly
-                          className="h-[42px] w-full rounded-xl border border-[var(--color-border-default)] bg-[var(--color-surface-1)]/30 px-3 text-[13px] font-bold text-[var(--color-text-secondary)] outline-none transition-all pt-1"
+                          className="h-[42px] w-full rounded-lg border border-[var(--color-border-default)] bg-[var(--color-surface-1)]/30 px-3 text-[13px] font-bold text-[var(--color-text-secondary)] outline-none transition-colors pt-1"
                         />
                       </div>
                     );
@@ -548,9 +558,9 @@ export default function DocumentLayout({
 
             {/* Section 03: Notes */}
             {!hasPhoto && (
-              <div className="bg-[var(--color-surface-0)] rounded-2xl shadow-sm border border-[var(--color-border-light)] overflow-visible">
-                <div className="border-b border-[var(--color-border-light)] px-6 py-4 flex items-center gap-4 bg-[var(--color-surface-0)] rounded-t-2xl">
-                  <div className="bg-[var(--color-brand-500)] text-white text-xs font-black w-8 h-8 rounded-lg flex items-center justify-center shadow-sm">03</div>
+              <div className="bg-[var(--color-surface-0)] rounded-lg shadow-sm border border-[var(--color-border-light)] overflow-visible">
+                <div className="border-b border-[var(--color-border-light)] px-6 py-4 flex items-center gap-4 bg-[var(--color-surface-0)] rounded-t-lg">
+                  <div className="bg-[var(--color-brand-500)] text-[var(--color-ui-on-interactive)] text-xs font-black w-8 h-8 rounded-lg flex items-center justify-center shadow-sm">03</div>
                   <h2 className="text-base font-bold text-[var(--color-text-primary)] tracking-wide">หมายเหตุ <span className="text-[var(--color-text-tertiary)] font-medium text-sm ml-2">Notes & Remarks</span></h2>
                 </div>
                 <div className="p-6">
@@ -561,7 +571,7 @@ export default function DocumentLayout({
                       readOnly={!isEditing}
                       onChange={e => onFieldChange?.('note', e.target.value)}
                       rows={2}
-                      className="w-full rounded-xl border border-[var(--color-border-default)] bg-transparent p-4 text-[14px] font-medium text-[var(--color-text-primary)] outline-none focus:border-[var(--color-brand-500)] focus:ring-2 focus:ring-[var(--color-brand-500)]/20 read-only:bg-[var(--color-surface-1)]/50 read-only:text-[var(--color-text-secondary)] transition-all resize-none"
+                      className="w-full rounded-lg border border-[var(--color-border-default)] bg-transparent p-4 text-[13px] font-medium text-[var(--color-text-primary)] outline-none focus:border-[var(--color-brand-500)] focus:ring-2 focus:ring-[var(--color-brand-500)]/20 read-only:bg-[var(--color-surface-1)]/50 read-only:text-[var(--color-text-secondary)] transition-colors resize-none"
                     ></textarea>
                   </div>
                 </div>
@@ -569,14 +579,14 @@ export default function DocumentLayout({
             )}
 
             {/* Section 04: Detail Table */}
-            <div className="bg-[var(--color-surface-0)] rounded-2xl shadow-sm border border-[var(--color-border-light)] overflow-hidden flex flex-col">
-              <div className="border-b border-[var(--color-border-light)] px-6 py-4 flex items-center justify-between bg-[var(--color-surface-0)] rounded-t-2xl">
+            <div className="bg-[var(--color-surface-0)] rounded-lg shadow-sm border border-[var(--color-border-light)] overflow-hidden flex flex-col">
+              <div className="border-b border-[var(--color-border-light)] px-6 py-4 flex items-center justify-between bg-[var(--color-surface-0)] rounded-t-lg">
                 <div className="flex items-center gap-4">
-                  <div className="bg-[var(--color-brand-500)] text-white text-xs font-black w-8 h-8 rounded-lg flex items-center justify-center shadow-sm">04</div>
+                  <div className="bg-[var(--color-brand-500)] text-[var(--color-ui-on-interactive)] text-xs font-black w-8 h-8 rounded-lg flex items-center justify-center shadow-sm">04</div>
                   <h2 className="text-base font-bold text-[var(--color-text-primary)] tracking-wide">รายการสั่งซื้อ <span className="text-[var(--color-text-tertiary)] font-medium text-sm ml-2">Line Items • {lines.length} รายการ</span></h2>
                 </div>
                 {!isEditing && (
-                  <button className="px-4 py-2 rounded-xl border border-[var(--color-border-default)] text-[13px] font-bold text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-1)] transition-colors flex items-center gap-1.5 shadow-sm">
+                  <button className="px-4 py-2 rounded-lg border border-[var(--color-border-default)] text-[13px] font-bold text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-1)] transition-colors flex items-center gap-1.5 shadow-sm">
                     + เพิ่มรายการ
                   </button>
                 )}
@@ -635,11 +645,12 @@ export default function DocumentLayout({
   {
     isPhotoModalOpen && activeItemNo && (
       <div
-        className="fixed inset-0 z-[999] flex items-center justify-center bg-black/60 backdrop-blur-sm transition-all duration-300"
+        className="fixed inset-0 z-[999] flex items-center justify-center bg-[var(--color-overlay-scrim)] p-3"
         onClick={() => setIsPhotoModalOpen(false)}
       >
         <div
-          className="relative max-w-[96vw] max-h-[95vh] w-full md:max-w-[1200px] bg-[var(--color-surface-0)] p-5 rounded-2xl border border-[var(--color-border-light)] shadow-2xl flex flex-col items-center overflow-hidden"
+          className="relative max-w-[96vw] max-h-[95vh] w-full md:max-w-[1200px] bg-[var(--color-surface-0)] p-5 rounded-lg border border-[var(--color-border-light)] flex flex-col items-center overflow-hidden"
+          style={{ boxShadow: 'var(--shadow-modal)' }}
           onClick={e => e.stopPropagation()}
         >
           <div className="w-full flex items-center justify-between border-b border-[var(--color-border-light)] pb-2 mb-3">
@@ -649,13 +660,13 @@ export default function DocumentLayout({
             </div>
             <button
               onClick={() => setIsPhotoModalOpen(false)}
-              className="w-8 h-8 rounded-lg bg-[var(--color-surface-2)] flex items-center justify-center text-[var(--color-text-tertiary)] hover:bg-[var(--color-danger-500)] hover:text-white transition-all shadow-sm">
+              className="w-8 h-8 rounded-lg bg-[var(--color-surface-2)] flex items-center justify-center text-[var(--color-text-tertiary)] hover:bg-[var(--color-danger-500)] hover:text-[var(--color-overlay-text)] transition-all shadow-sm">
               <X size={16} />
             </button>
           </div>
 
           <div className="flex-1 w-full grid grid-cols-1 md:grid-cols-2 gap-4 min-h-[350px] md:min-h-[500px] lg:min-h-[600px] overflow-hidden">
-            <div className="flex flex-col border border-[var(--color-border-light)] rounded-xl bg-[var(--color-surface-1)] overflow-hidden">
+            <div className="flex flex-col border border-[var(--color-border-light)] rounded-lg bg-[var(--color-surface-1)] overflow-hidden">
               <div className="bg-[var(--color-surface-2)] px-3 py-1.5 border-b border-[var(--color-border-light)] font-bold text-[11px] text-[var(--color-text-primary)] flex justify-between items-center">
                 <span>PS (รูปถ่ายชิ้นงานจริง)</span>
                 <span className="text-[9px] font-black capitalize bg-[var(--color-success-500)]/10 text-[var(--color-success-600)] border border-[var(--color-success-500)]/20 px-2 py-0.5 rounded">REAL PHOTO</span>
@@ -669,7 +680,7 @@ export default function DocumentLayout({
                   <img src={psUrl} alt="PS Item" className="max-w-full max-h-[62vh] object-contain rounded drop-shadow-md select-none" />
                 ) : (
                   <div className="text-[var(--color-text-tertiary)] text-[10px] flex flex-col items-center gap-2">
-                    <div className="w-20 h-20 border-2 border-dashed border-[var(--color-border-light)] rounded-xl flex items-center justify-center bg-[var(--color-surface-1)]">
+                    <div className="w-20 h-20 border-2 border-dashed border-[var(--color-border-light)] rounded-lg flex items-center justify-center bg-[var(--color-surface-1)]">
                       <span className="opacity-50 font-bold">NO PS</span>
                     </div>
                     <span>ไม่พบรูปชิ้นงานจริง</span>
@@ -678,7 +689,7 @@ export default function DocumentLayout({
               </div>
             </div>
 
-            <div className="flex flex-col border border-[var(--color-border-light)] rounded-xl bg-[var(--color-surface-1)] overflow-hidden">
+            <div className="flex flex-col border border-[var(--color-border-light)] rounded-lg bg-[var(--color-surface-1)] overflow-hidden">
               <div className="bg-[var(--color-surface-2)] px-3 py-1.5 border-b border-[var(--color-border-light)] font-bold text-[11px] text-[var(--color-text-primary)] flex justify-between items-center">
                 <span>CAD (แบบดีไซน์ 3D / แม่พิมพ์)</span>
                 <span className="text-[9px] font-black capitalize bg-[var(--color-brand-500)]/10 text-[var(--color-brand-600)] border border-[var(--color-brand-500)]/20 px-2 py-0.5 rounded">3D BLUEPRINT</span>
@@ -692,7 +703,7 @@ export default function DocumentLayout({
                   <img src={cadUrl} alt="CAD Item" className="max-w-full max-h-[62vh] object-contain rounded drop-shadow-md select-none" />
                 ) : (
                   <div className="text-[var(--color-text-tertiary)] text-[10px] flex flex-col items-center gap-2">
-                    <div className="w-20 h-20 border-2 border-dashed border-[var(--color-border-light)] rounded-xl flex items-center justify-center bg-[var(--color-surface-1)]">
+                    <div className="w-20 h-20 border-2 border-dashed border-[var(--color-border-light)] rounded-lg flex items-center justify-center bg-[var(--color-surface-1)]">
                       <span className="opacity-50 font-bold">NO CAD</span>
                     </div>
                     <span>ไม่พบแบบดีไซน์ CAD (Mold)</span>
@@ -704,8 +715,8 @@ export default function DocumentLayout({
 
           <div className="w-full mt-3 pt-2 border-t border-[var(--color-border-light)] flex items-center justify-between text-xs text-[var(--color-text-tertiary)]">
             <span>เบอร์งาน: <strong className="font-mono text-[var(--color-text-primary)] font-extrabold">{activeItemNo}</strong></span>
-            <span>พลอย: <strong className="text-[var(--color-brand-600)] font-extrabold">{lines[selectedLineIdx]?.GoodCode || '—'}</strong></span>
-            <span>จำนวนใช้พลอย: <strong className="text-[var(--color-danger-600)] font-extrabold">{lines[selectedLineIdx]?.GoodQty || lines[selectedLineIdx]?.ItemQty || 0}</strong></span>
+            <span>พลอย: <strong className="text-[var(--color-text-primary)] font-extrabold">{lines[selectedLineIdx]?.GoodCode || '—'}</strong></span>
+            <span>จำนวนใช้พลอย: <strong className="text-[var(--color-text-primary)] font-extrabold">{lines[selectedLineIdx]?.GoodQty || lines[selectedLineIdx]?.ItemQty || 0}</strong></span>
           </div>
         </div>
       </div>
@@ -726,7 +737,7 @@ export function MiniCard({ icon, label, value, accent }: { icon: React.ReactNode
     brand: 'var(--color-brand-500)',
     info: 'var(--color-info-500)',
     success: 'var(--color-success-500)',
-    accent: 'var(--color-accent-500)',
+    accent: 'var(--color-brand-500)',
     danger: 'var(--color-danger-500)',
   };
   return (

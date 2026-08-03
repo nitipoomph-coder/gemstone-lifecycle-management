@@ -15,6 +15,7 @@ import { fetchItemCustomerYearlySummary } from "../services/itemYearlySummaryAPI
 import type { ItemCustomerYearlySummaryItem, ItemCustomerYearlySummaryPair } from "../services/itemYearlySummaryAPI";
 import { getCustomerGroupId, ALL_GROUPS } from "../config/customerGroups";
 import Topbar from "../components/layout/Topbar";
+import "./SalesResponsive.css";
 
 // -----------------------------------------------------------------------------
 const MONTHS = [
@@ -539,9 +540,9 @@ export default function TopOrdersGalleryPage() {
 
 
   const getRankStyle = (idx: number) => {
-    if (idx === 0) return { bg: "#F59E0B", text: "#FFFFFF" }; // Gold
-    if (idx === 1) return { bg: "#9CA3AF", text: "#FFFFFF" }; // Silver
-    if (idx === 2) return { bg: "#B45309", text: "#FFFFFF" }; // Bronze
+    if (idx === 0) return { bg: "var(--color-rank-1)", text: "var(--color-on-rank)" };
+    if (idx === 1) return { bg: "var(--color-rank-2)", text: "var(--color-on-rank)" };
+    if (idx === 2) return { bg: "var(--color-rank-3)", text: "var(--color-on-rank)" };
     return { bg: "var(--color-surface-2)", text: "var(--color-text-primary)" };
   };
   const previewComparison = previewItem
@@ -614,24 +615,24 @@ export default function TopOrdersGalleryPage() {
 
   // -----------------------------------------------------------------------------
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-[var(--color-surface-1)]">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-[var(--color-surface-1)]">
       <Topbar
         breadcrumb={[
           { label: "JEWELRY FACTORY SYSTEM", path: "/" },
+          { label: "Sales Analytics" },
           { label: "Top Items Gallery" },
         ]}
-        icon={<Award size={22} />}
         hideSearch={true}
-        contentLayout="dashboard"
+        contentLayout="dashboard-wide"
         rightContent={
-          <div className="flex min-w-0 flex-1 items-center gap-2 pr-2" style={{ width: "min(78vw, 980px)" }}>
+          <div className="sales-gallery-topbar-tools flex min-w-0 flex-1 items-center gap-2 pr-2">
             <button
               type="button"
               onClick={() => navigate(analyticsPath)}
               style={{
                 background: "var(--color-surface-0)",
                 border: "1px solid var(--color-border-light)",
-                borderRadius: 12,
+                borderRadius: 8,
                 padding: "8px 14px",
                 fontSize: "0.85rem",
                 fontWeight: 900,
@@ -668,7 +669,7 @@ export default function TopOrdersGalleryPage() {
                 style={{
                   background: "var(--color-surface-0)",
                   border: "1px solid var(--color-border-light)",
-                  borderRadius: 10,
+                  borderRadius: 8,
                   padding: "8px 16px 8px 34px",
                   fontSize: "0.85rem",
                   color: "var(--color-text-primary)",
@@ -707,7 +708,7 @@ export default function TopOrdersGalleryPage() {
                 style={{
                   background: "var(--color-surface-0)",
                   border: "1px solid var(--color-border-light)",
-                  borderRadius: 12,
+                  borderRadius: 8,
                   padding: "8px 14px",
                   fontSize: "0.86rem",
                   fontWeight: 900,
@@ -745,7 +746,7 @@ export default function TopOrdersGalleryPage() {
               </button>
 
               {showYearMenu && periodDraft && (
-                <div className="absolute right-0 mt-2 w-[520px] rounded-2xl border border-[var(--color-border-light)] bg-[var(--color-surface-1)] p-4 shadow-2xl z-[100] animate-fade-in-up">
+                <div className="sales-gallery-period-menu absolute right-0 z-[100] mt-2 rounded-lg border border-[var(--color-border-light)] bg-[var(--color-ui-surface)] p-4" style={{ boxShadow: 'var(--shadow-dropdown)' }}>
                   <div className="mb-4 flex items-center justify-between border-b border-[var(--color-border-light)] pb-3">
                     <span className="text-[10px] font-black capitalize tracking-wider text-[var(--color-text-tertiary)]">
                       Period Setup
@@ -869,7 +870,7 @@ export default function TopOrdersGalleryPage() {
                       ? "var(--color-brand-50)"
                       : "var(--color-surface-0)",
                   border: `1px solid ${selGroups.length > 0 || selectedProductType !== "ALL" ? "var(--color-brand-400)" : "var(--color-border-light)"}`,
-                  borderRadius: 12,
+                  borderRadius: 8,
                   padding: "8px 16px",
                   fontSize: "0.9rem",
                   fontWeight: 800,
@@ -901,7 +902,7 @@ export default function TopOrdersGalleryPage() {
               </button>
 
               {showGroupMenu && (
-                <div className="absolute right-0 mt-2 w-80 rounded-2xl border border-[var(--color-border-light)] bg-[var(--color-surface-1)] p-4 shadow-2xl z-[100] animate-fade-in-up">
+                <div className="absolute right-0 z-[100] mt-2 w-80 rounded-lg border border-[var(--color-border-light)] bg-[var(--color-ui-surface)] p-4" style={{ boxShadow: 'var(--shadow-dropdown)' }}>
                   <div className="mb-3 flex items-center justify-between border-b border-[var(--color-border-light)] pb-2">
                     <span className="text-[10px] font-bold capitalize tracking-wider text-[var(--color-text-tertiary)]">
                       Filters
@@ -962,10 +963,9 @@ export default function TopOrdersGalleryPage() {
 
       {/* Main gallery grid */}
       <div
-        className="content-scrollbar"
+        className="content-scrollbar sales-gallery-scroll"
         style={{
           flex: 1,
-          padding: "24px",
           overflowY: "auto",
           background: "var(--color-surface-1)",
           position: "relative",
@@ -989,10 +989,7 @@ export default function TopOrdersGalleryPage() {
             opacity: 1;
           }
           .gallery-img {
-            transition: all 0.3s ease;
-          }
-          .gallery-card-hover:hover .gallery-img {
-            transform: scale(1.02);
+            transition: opacity 0.15s ease;
           }
           .gallery-grid {
             --gallery-track: clamp(280px, 18vw, 360px);
@@ -1005,7 +1002,7 @@ export default function TopOrdersGalleryPage() {
             justify-content: stretch;
             gap: var(--gallery-gap);
             width: 100%;
-            max-width: 1760px;
+            max-width: 2400px;
             margin: 0 auto;
             direction: ltr;
           }
@@ -1047,7 +1044,7 @@ export default function TopOrdersGalleryPage() {
               --gallery-track: 320px;
               --gallery-row: 340px;
               --gallery-gap: 24px;
-              max-width: 1840px;
+              max-width: 2400px;
             }
           }
           @media (max-width: 1180px) {
@@ -1064,6 +1061,10 @@ export default function TopOrdersGalleryPage() {
               grid-template-columns: 1fr;
               overflow: auto;
             }
+            .gallery-loading-card--featured {
+              grid-column: span 1;
+              grid-row: span 1;
+            }
           }
           @media (max-width: 760px) {
             .gallery-grid {
@@ -1073,6 +1074,31 @@ export default function TopOrdersGalleryPage() {
             .gallery-preview-shell {
               width: 96vw;
               height: 94vh;
+            }
+            .gallery-preview-header {
+              align-items: flex-start !important;
+              gap: 12px;
+              padding: 14px 16px !important;
+            }
+          }
+          .gallery-loading-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            grid-auto-rows: 260px;
+            grid-auto-flow: row;
+            gap: 20px;
+            width: 100%;
+            max-width: 2400px;
+            margin: 0 auto;
+          }
+          .gallery-loading-card--featured {
+            grid-column: span 2;
+            grid-row: span 2;
+          }
+          @media (max-width: 1180px) {
+            .gallery-loading-card--featured {
+              grid-column: span 1;
+              grid-row: span 1;
             }
           }
           .gallery-filter-spinner {
@@ -1094,24 +1120,17 @@ export default function TopOrdersGalleryPage() {
         {isInitialLoading ? (
           /* Shimmer skeleton */
           <div
+            className="gallery-loading-grid"
             style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
-              gridAutoRows: "260px",
-              gridAutoFlow: "dense",
-              gap: "20px",
-              maxWidth: "2000px",
-              margin: "0 auto",
             }}
           >
             {Array.from({ length: 12 }).map((_, i) => (
               <div
                 key={i}
+                className={i < 3 ? "gallery-loading-card gallery-loading-card--featured" : "gallery-loading-card"}
                 style={{
-                  gridColumn: i < 3 ? "span 2" : "span 1",
-                  gridRow: i < 3 ? "span 2" : "span 1",
                   background: "var(--color-surface-0)",
-                  borderRadius: 24,
+                  borderRadius: 8,
                   overflow: "hidden",
                   border: "1px solid var(--color-border-light)",
                 }}
@@ -1139,6 +1158,7 @@ export default function TopOrdersGalleryPage() {
             }}
           >
             <div
+              className="gallery-preview-header"
               style={{
                 width: "min(720px, 100%)",
                 position: "relative",
@@ -1241,7 +1261,7 @@ export default function TopOrdersGalleryPage() {
                 : "1px solid var(--color-border-light)";
               const featuredShadow = isFeaturedRank
                 ? "0 14px 34px color-mix(in srgb, var(--color-surface-900) 16%, transparent), 0 0 0 1px color-mix(in srgb, var(--color-brand-500) 8%, transparent)"
-                : "0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)";
+                : "var(--shadow-panel)";
               const comparison = comparisonsByPair[customerItemKey(row.customerCode, row.topItem)];
               const compareDensity: CompareDensity = isFeaturedRank ? "medium" : "compact";
 
@@ -1266,14 +1286,13 @@ export default function TopOrdersGalleryPage() {
                     cursor: "pointer",
                     display: "flex",
                     flexDirection: "column",
-                    transition: "all 0.2s ease",
-                    animation: `fadeInUp 0.3s ease ${Math.min(idx * 30, 300)}ms both`,
+                    transition: "border-color 0.15s ease, box-shadow 0.15s ease",
                     direction: "ltr",
                   } as React.CSSProperties}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.boxShadow = isFeaturedRank
                       ? "0 18px 42px color-mix(in srgb, var(--color-surface-900) 20%, transparent), 0 0 0 1px color-mix(in srgb, var(--color-brand-500) 14%, transparent)"
-                      : "0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04)";
+                      : "var(--shadow-floating)";
                     e.currentTarget.style.borderColor = isFeaturedRank
                       ? `color-mix(in srgb, ${rankStyle.bg} 58%, var(--color-brand-300))`
                       : "var(--color-brand-300)";
@@ -1332,7 +1351,6 @@ export default function TopOrdersGalleryPage() {
                       style={{
                         background:
                           "color-mix(in srgb, var(--color-surface-900) 80%, transparent)",
-                        backdropFilter: "blur(4px)",
                       }}
                     >
                       <CompareCardOverlay
@@ -1429,7 +1447,6 @@ export default function TopOrdersGalleryPage() {
               alignItems: "center",
               justifyContent: "center",
               background: "color-mix(in srgb, var(--color-surface-1) 72%, transparent)",
-              backdropFilter: "blur(2px)",
               pointerEvents: "auto",
             }}
           >
@@ -1473,12 +1490,9 @@ export default function TopOrdersGalleryPage() {
             zIndex: 1000,
             background:
               "color-mix(in srgb, var(--color-surface-900) 85%, transparent)",
-            backdropFilter: "blur(16px)",
-            WebkitBackdropFilter: "blur(16px)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            animation: "fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
           }}
         >
           <div
@@ -1486,15 +1500,13 @@ export default function TopOrdersGalleryPage() {
             className="gallery-preview-shell"
             style={{
               background: "var(--color-surface-0)",
-              borderRadius: 12,
+              borderRadius: 8,
               border:
                 "1px solid color-mix(in srgb, var(--color-border-light) 50%, transparent)",
-              boxShadow:
-                "0 32px 100px color-mix(in srgb, var(--color-surface-900) 60%, transparent), inset 0 2px 4px rgba(255,255,255,0.1)",
+              boxShadow: "var(--shadow-modal), var(--shadow-inset-panel)",
               display: "flex",
               flexDirection: "column",
               overflow: "hidden",
-              animation: "fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1)",
             }}
           >
             {/* Modal Title Bar */}
@@ -1507,7 +1519,6 @@ export default function TopOrdersGalleryPage() {
                 borderBottom: "1px solid var(--color-border-light)",
                 background:
                   "color-mix(in srgb, var(--color-surface-1) 80%, transparent)",
-                backdropFilter: "blur(10px)",
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
@@ -1851,7 +1862,7 @@ function ModalDetailPanel({
             key={row.label}
             style={{
               border: "1px solid var(--color-border-light)",
-              borderRadius: 10,
+              borderRadius: 8,
               background: "var(--color-surface-0)",
               padding: "10px 12px",
               gridColumn: row.wide ? "1 / -1" : undefined,
@@ -1879,7 +1890,7 @@ function ModalDetailPanel({
       <div
         style={{
           border: "1px solid var(--color-border-default)",
-          borderRadius: 12,
+          borderRadius: 8,
           background: "color-mix(in srgb, var(--color-surface-0) 72%, var(--color-surface-2))",
           padding: "12px",
           marginTop: 0,

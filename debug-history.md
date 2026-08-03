@@ -168,3 +168,116 @@ A browser interaction test simulated `N051 Group -> All`. After deselection, the
 2. Keep the same property keys in base, active, hover, and disabled style objects.
 3. When a visual state appears stuck, inspect computed styles and pseudo-classes before assuming it is a focus problem.
 4. Test the complete state transition, not only the initial selected appearance.
+
+## Issue: 60-30-10 Role Tokens Did Not Follow the Active Theme
+**Date:** 2026-07-29
+**Component:** `src/index.css` theme and role tokens
+
+### Symptoms:
+`body` had the correct theme class, but `--color-ui-canvas`, `--color-ui-surface`, and `--color-ui-interactive` still resolved to Modern Dark values in Royal White and Dark Gold.
+
+### Root Cause:
+The role aliases were declared only on `:root` by Tailwind's `@theme`. Their references to palette tokens were resolved at the root scope before the palette overrides on the themed `body` element applied.
+
+### Fix:
+Redeclared the 60-30-10 role aliases on `body`, the same element that receives the theme class. Each role now resolves against the active theme palette. Focus-ring opacity and semantic status tokens were also adjusted to meet contrast requirements.
+
+### Verification:
+Headless browser tests confirmed distinct computed canvas, surface, and interaction values for all three themes. Text/status contrast passes 4.5:1, focus indicators pass 3:1, and desktop/mobile pages have no document-level horizontal overflow.
+
+### Prevention & Lessons Learned:
+1. Declare alias tokens on the same element that owns palette overrides, or repeat aliases inside each theme scope.
+2. Test computed custom-property values after switching themes; checking class names alone is insufficient.
+3. Verify focus and semantic colors as composited contrast, including alpha transparency.
+
+## Issue: High-Resolution Screens Looked Undersized And Loading Replaced The App Shell
+**Date:** 2026-07-29
+**Component:** `AppLayout.tsx`, `ThemeContext.tsx`, shared page layouts, and `src/index.css`
+
+### Symptoms:
+1. At 2560x1440, some pages kept a narrow fixed composition or used CSS scaling, leaving large unused areas and making the interface feel unlike 1920x1080.
+2. Mobile layouts inherited desktop widths, causing crowded controls or page-level horizontal scrolling.
+3. Loading and theme changes could cover the full screen, including navigation that was already available.
+
+### Root Cause:
+Pages used unrelated fixed widths, nested `100vh` containers, and in one case CSS `zoom` instead of sharing a responsive shell. Loading states were implemented as page or theme overlays rather than data-region states.
+
+### Fix:
+1. Added one `100dvh` app shell with container-based reflow, shared content-frame variants, mobile sidebar overlay behavior, and local overflow for wide tools and tables.
+2. Removed whole-page CSS `zoom`, stabilized the compact ERP type scale, and enforced zero letter spacing across the interface.
+3. Replaced full-screen and spinner-only loading with footprint-matched skeletons inside each page outlet. Theme changes now apply immediately.
+
+### Verification:
+Representative Sales, PO Tracker, Order Detail, Item Detail, document, vendor, placeholder, and login screens were checked at 390x844, 1440x900, and 2560x1440. Tested app screens had no document-level horizontal overflow, and all three themes resolved their own role tokens.
+
+### Prevention & Lessons Learned:
+1. Do not solve monitor differences by scaling the whole application; let layouts add columns or reflow around the available content width.
+2. Keep navigation mounted during loading and skeleton only the data that has not arrived.
+3. Test actual screenshots plus computed overflow at mobile, standard desktop, and high-resolution desktop sizes.
+
+## Issue: Login Fields Showed Double Or Retained Focus Borders
+**Date:** 2026-07-30
+**Component:** `src/pages/LoginPage.tsx` and `src/index.css`
+
+### Root Cause:
+1. The focused floating fieldset already used a 2px brand border, while a page-level style added a second 2px focus `box-shadow` around it.
+2. The border rule grouped `:focus` with `:not(:placeholder-shown)`. A filled field therefore kept the brand border after focus moved to another field.
+
+### Fix And Verification:
+Removed the redundant shadow and limited the 2px brand border to `:focus`. Filled but unfocused fields now return to the default 1px border while their labels remain floated. Browser state-matrix verification covered empty blur, empty focus, filled focus, focus transfer, and filled blur; only the active field retained the brand border.
+
+## Issue: Frontend Compilation And React Lifecycle Errors
+**Date:** 2026-07-30
+**Component:** frontend application shell, dashboards, PO Tracker, document pages, and shared UI
+
+### Symptoms:
+1. TypeScript could not parse `App.tsx` and `Sidebar.tsx` because duplicated and incomplete code blocks had been left in both files.
+2. ESLint reported 74 errors from unsafe `any` values, conditional hooks, state resets inside effects, mixed Fast Refresh exports, and untyped browser APIs.
+3. The project color-token check failed on hardcoded Login and dashboard colors.
+
+### Root Cause:
+Partial merges left the app shell structurally invalid. Several pages also stored values that could be derived from route or request keys, then synchronized those values with immediate `setState` calls in effects. Table configuration and React components shared one module, which broke Fast Refresh boundaries.
+
+### Fix:
+1. Rebuilt the damaged app shell while preserving all existing routes, including Executive Overview.
+2. Replaced effect-driven state synchronization with route-keyed and request-keyed state, added cancellation guards, and typed API/document records and error handling.
+3. Moved PO table column configuration into `orderTableConfig.tsx` and split the theme hook from its provider.
+4. Added Login palette tokens and replaced hardcoded component colors with design tokens.
+
+### Verification:
+`npm run lint` and `npm run build` both pass. The production build transforms 2,396 modules successfully; only the existing bundle-size advisory remains. The running frontend on port 3000 returns HTTP 200.
+
+### Prevention & Lessons Learned:
+1. Run TypeScript and ESLint after resolving large or interrupted merges.
+2. Derive loading from a request key instead of synchronously resetting loading state in an effect.
+3. Keep shared constants and hooks in modules separate from Fast Refresh component exports.
+4. Add new palette values to `src/index.css` before using them in UI code.
+
+## Issue: Login Form Was Undersized And Misaligned On Mobile
+**Date:** 2026-07-30
+**Component:** `src/pages/LoginPage.tsx`
+
+### Symptoms:
+The mobile Login page split the viewport between a decorative cover and the form, while the inner form stage remained 500px tall. The result was cramped vertical space, narrow or clipped content, and excessive empty space after scrolling past the cover.
+
+### Root Cause:
+The mobile breakpoint reused the desktop split-panel model with fixed `35vh` and `65vh` sections. That conflicted with the fixed-height form stage and its desktop padding. The shared `.parchment-form` surface color also painted a separate rectangular block inside the parchment page.
+
+### Fix:
+Mobile now uses one full-height form surface, hides the decorative cover, applies safe-area padding and a bounded responsive form width, and allows the longer registration state to scroll. Inputs and the primary action keep usable touch heights, while the desktop split layout remains unchanged.
+
+### Verification:
+CDP viewport checks at 320x568, 384x768, 390x844, and 1366x768 confirmed no horizontal document overflow. The registration form remains vertically scrollable on short screens, focus borders return to 1px after blur, and both `npm run lint` and `npm run build` pass.
+
+## Issue: Login Floating Labels Did Not Align With The Outline
+**Date:** 2026-07-30
+**Component:** `src/pages/login/LoginPage.css` and `src/index.css`
+
+### Root Cause:
+Floating-field rules existed in both the global stylesheet and the Login feature stylesheet. The two copies used different negative offsets for the fieldset while sharing the same label transforms, so source order determined which outline position won. The hidden legend also inherited a different font from the visible label, making the border gap width inaccurate.
+
+### Fix:
+Removed all global floating-field rules from `src/index.css` and kept one scoped implementation under `.parchment-form` in `LoginPage.css`. The 11px legend now offsets the fieldset by half its height, and the visible label uses a 24px line box with matching center-based transforms. The legend uses the same font and font size as the scaled label, plus 5px clearance on each side.
+
+### Verification:
+Browser state checks covered empty blur, Username focus, Username filled blur, and Password focus. Empty labels center within the 57px input, floated label centers align with the top outline, legend gaps are exactly 10px wider than their labels, and both fields use identical relative positions. `npm run lint` and `npm run build` pass.

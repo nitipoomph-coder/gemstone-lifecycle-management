@@ -214,7 +214,7 @@ export default function SalesDashboard() {
 
   return (
     <>
-      <Topbar breadcrumb={[{ label: 'JEWELRY FACTORY SYSTEM', path: '/' }, { label: 'Sales Analytics' }, { label: 'Sales Dashboard' }]} hideSearch />
+      <Topbar breadcrumb={[{ label: 'JEWELRY FACTORY SYSTEM', path: '/' }, { label: 'Sales Analytics' }, { label: 'Sales Dashboard' }]} hideSearch contentLayout="workspace" />
       <div className="content-scrollbar flex-1 overflow-y-auto" style={workspace}>
         <main style={pageShell}>
           <section style={commandBar}>

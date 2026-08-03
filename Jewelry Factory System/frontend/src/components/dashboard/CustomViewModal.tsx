@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { X, Search, Check, Layers, Filter } from 'lucide-react';
-import { MASTER_COLS, COLUMN_GROUPS } from './OrderTable';
+import { MASTER_COLS, COLUMN_GROUPS } from './orderTableConfig';
 
 interface CustomViewModalProps {
   isOpen: boolean;
@@ -11,6 +11,22 @@ interface CustomViewModalProps {
 }
 
 export default function CustomViewModal({ isOpen, onClose, initialVisibleKeys, initialGroup, onApply }: CustomViewModalProps) {
+  if (!isOpen) return null;
+
+  const resetKey = `${initialGroup}:${initialVisibleKeys.join('|')}`;
+  return (
+    <CustomViewModalContent
+      key={resetKey}
+      isOpen={isOpen}
+      onClose={onClose}
+      initialVisibleKeys={initialVisibleKeys}
+      initialGroup={initialGroup}
+      onApply={onApply}
+    />
+  );
+}
+
+function CustomViewModalContent({ onClose, initialVisibleKeys, initialGroup, onApply }: CustomViewModalProps) {
   const [activeTab, setActiveTab] = useState<'data' | 'columns'>('columns');
 
   // Data State
@@ -19,17 +35,6 @@ export default function CustomViewModal({ isOpen, onClose, initialVisibleKeys, i
   // Columns State
   const [selectedKeys, setSelectedKeys] = useState<string[]>(initialVisibleKeys);
   const [searchCol, setSearchCol] = useState('');
-
-  useEffect(() => {
-    if (isOpen) {
-      setSelectedGroup(initialGroup);
-      setSelectedKeys(initialVisibleKeys);
-      setSearchCol('');
-      setActiveTab('columns');
-    }
-  }, [isOpen, initialGroup, initialVisibleKeys]);
-
-  if (!isOpen) return null;
 
   const handleToggleKey = (key: string) => {
     setSelectedKeys(prev =>
@@ -50,24 +55,24 @@ export default function CustomViewModal({ isOpen, onClose, initialVisibleKeys, i
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 9999,
-      background: 'rgba(0, 0, 0, 0.4)', backdropFilter: 'blur(4px)',
+      background: 'var(--color-overlay-scrim-soft)',
       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
     }}>
       <div
         className="animate-fade-in-up"
         style={{
           background: 'var(--color-surface-0)',
-          borderRadius: '20px',
+          borderRadius: '8px',
           width: '100%', maxWidth: '800px',
           maxHeight: '90vh',
           display: 'flex', flexDirection: 'column',
-          boxShadow: '0 24px 48px -12px rgba(0,0,0,0.2)'
+          boxShadow: 'var(--shadow-modal)'
         }}
       >
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 24px', borderBottom: '1px solid var(--color-border-light)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: 40, height: 40, borderRadius: '12px', background: 'var(--color-brand-100)', color: 'var(--color-brand-600)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: 40, height: 40, borderRadius: '8px', background: 'var(--color-brand-100)', color: 'var(--color-brand-600)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Layers size={20} />
             </div>
             <div>
@@ -88,11 +93,11 @@ export default function CustomViewModal({ isOpen, onClose, initialVisibleKeys, i
             <button
               onClick={() => setActiveTab('data')}
               style={{
-                display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px', borderRadius: '12px', border: 'none',
-                background: activeTab === 'data' ? 'var(--color-surface-0)' : 'transparent',
+                display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px', borderRadius: '8px', border: 'none',
+                background: activeTab === 'data' ? 'var(--color-brand-50)' : 'transparent',
                 color: activeTab === 'data' ? 'var(--color-brand-600)' : 'var(--color-text-secondary)',
                 fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer', textAlign: 'left',
-                boxShadow: activeTab === 'data' ? '0 2px 8px rgba(0,0,0,0.05)' : 'none'
+                boxShadow: 'none'
               }}
             >
               <Filter size={18} />
@@ -101,11 +106,11 @@ export default function CustomViewModal({ isOpen, onClose, initialVisibleKeys, i
             <button
               onClick={() => setActiveTab('columns')}
               style={{
-                display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px', borderRadius: '12px', border: 'none',
-                background: activeTab === 'columns' ? 'var(--color-surface-0)' : 'transparent',
+                display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px', borderRadius: '8px', border: 'none',
+                background: activeTab === 'columns' ? 'var(--color-brand-50)' : 'transparent',
                 color: activeTab === 'columns' ? 'var(--color-brand-600)' : 'var(--color-text-secondary)',
                 fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer', textAlign: 'left',
-                boxShadow: activeTab === 'columns' ? '0 2px 8px rgba(0,0,0,0.05)' : 'none'
+                boxShadow: 'none'
               }}
             >
               <Layers size={18} />
@@ -125,7 +130,7 @@ export default function CustomViewModal({ isOpen, onClose, initialVisibleKeys, i
                       key={grp}
                       onClick={() => setSelectedGroup(grp)}
                       style={{
-                        padding: '16px', borderRadius: '12px', border: `2px solid ${selectedGroup === grp ? 'var(--color-brand-500)' : 'var(--color-border-light)'}`,
+                        padding: '16px', borderRadius: '8px', border: `1px solid ${selectedGroup === grp ? 'var(--color-brand-500)' : 'var(--color-border-light)'}`,
                         background: selectedGroup === grp ? 'var(--color-brand-50)' : 'var(--color-surface-0)',
                         color: selectedGroup === grp ? 'var(--color-brand-700)' : 'var(--color-text-primary)',
                         fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer', textAlign: 'center',
@@ -134,14 +139,14 @@ export default function CustomViewModal({ isOpen, onClose, initialVisibleKeys, i
                     >
                       {grp === 'ALL' ? 'General' : grp}
                       {selectedGroup === grp && (
-                        <div style={{ position: 'absolute', top: -8, right: -8, background: 'var(--color-brand-500)', color: 'white', borderRadius: '50%', width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <div style={{ position: 'absolute', top: -8, right: -8, background: 'var(--color-brand-500)', color: 'var(--color-ui-on-interactive)', borderRadius: '50%', width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                           <Check size={12} />
                         </div>
                       )}
                     </button>
                   ))}
                 </div>
-                <div style={{ marginTop: '24px', padding: '16px', background: 'var(--color-surface-1)', borderRadius: '12px', fontSize: '0.85rem', color: 'var(--color-text-secondary)' }}>
+                <div style={{ marginTop: '24px', padding: '16px', background: 'var(--color-surface-1)', borderRadius: '8px', fontSize: '0.85rem', color: 'var(--color-text-secondary)' }}>
                   <strong>Tip:</strong> Selecting a specific group (like N008) will filter rows to only show that customer. Selecting <strong>ALL</strong> or <strong>CUSTOM</strong> shows all rows, letting you use other filters freely.
                 </div>
               </div>
@@ -220,20 +225,20 @@ export default function CustomViewModal({ isOpen, onClose, initialVisibleKeys, i
         </div>
 
         {/* Footer */}
-        <div style={{ padding: '20px 24px', borderTop: '1px solid var(--color-border-light)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--color-surface-1)', borderBottomLeftRadius: '20px', borderBottomRightRadius: '20px' }}>
+        <div style={{ padding: '20px 24px', borderTop: '1px solid var(--color-border-light)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--color-surface-1)', borderBottomLeftRadius: '8px', borderBottomRightRadius: '8px' }}>
           <div style={{ fontSize: '0.8rem', color: 'var(--color-text-tertiary)', fontWeight: 600 }}>
             <strong style={{ color: 'var(--color-brand-600)' }}>{selectedKeys.length}</strong> columns selected
           </div>
           <div style={{ display: 'flex', gap: '12px' }}>
             <button
               onClick={onClose}
-              style={{ padding: '10px 20px', borderRadius: '10px', border: '1px solid var(--color-border-strong)', background: 'white', color: 'var(--color-text-secondary)', fontWeight: 800, cursor: 'pointer' }}
+              style={{ padding: '10px 20px', borderRadius: '8px', border: '1px solid var(--color-border-strong)', background: 'var(--color-surface-0)', color: 'var(--color-text-secondary)', fontWeight: 800, cursor: 'pointer' }}
             >
               Cancel
             </button>
             <button
               onClick={handleApply}
-              style={{ padding: '10px 24px', borderRadius: '10px', border: 'none', background: 'var(--color-brand-500)', color: 'white', fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 12px color-mix(in srgb, var(--color-brand-500) 40%, transparent)' }}
+              style={{ padding: '10px 24px', borderRadius: '8px', border: 'none', background: 'var(--color-brand-500)', color: 'var(--color-ui-on-interactive)', fontWeight: 800, cursor: 'pointer' }}
               className="hover:bg-brand-600"
             >
               Apply View

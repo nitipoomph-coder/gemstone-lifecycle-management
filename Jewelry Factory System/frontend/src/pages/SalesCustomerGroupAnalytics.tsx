@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, KeyboardEvent, ReactNode } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, BarChart3, CalendarDays, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, DollarSign, Eye, FilterX, Hash, RefreshCw, Search, SlidersHorizontal, Table2, Users, X } from 'lucide-react';
+import { ArrowRight, BarChart3, CalendarDays, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, DollarSign, FilterX, Hash, RefreshCw, Search, SlidersHorizontal, Table2, Users, X } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import Topbar from '../components/layout/Topbar';
 import '../components/sales/SalesDenseTable.css';
@@ -10,6 +10,7 @@ import { CUSTOMER_GROUPS, getCustomerGroupId } from '../config/customerGroups';
 import { fetchAvailableYears } from '../services/dashboardAPI';
 import { fetchSalesOrders, type SalesOrderRow } from '../services/customerSalesAPI';
 import { ErpButton, ErpIconButton, ErpSegmentedControl } from '../components/ui/ErpButtons';
+import CustomSelect from '../components/ui/CustomSelect';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const MONTH_VALUES = MONTHS.map((_, index) => String(index + 1));
@@ -21,37 +22,34 @@ const QUARTERS = [
 ];
 const PAGE_SIZE = 50;
 const ORDER_DETAIL_COLUMNS = [
-  ['Order No', 124],
-  ['Item No', 126],
-  ['Ord Date', 82],
-  ['Cust Due', 82],
-  ['Customer', 188],
-  ['Group', 120],
-  ['Product Type', 126],
-  ['Item Type', 134],
-  ['Ord Qty', 80],
-  ['Shipped', 80],
-  ['Open Qty', 76],
-  ['Amount', 96],
-  ['Status', 82],
-  ['Market', 82],
-  ['Actions', 70],
+  ['OrdNo', 100],
+  ['OrdDate', 90],
+  ['DueDate', 90],
+  ['CustDate', 90],
+  ['CustCode', 100],
+  ['SalesName', 120],
+  ['PONo', 150],
+  ['PO 2', 150],
+  ['Ship To', 120],
+  ['OrdStamp', 150],
+  ['OrdMaker', 90],
+  ['ItemNo', 90],
+  ['Item SKU', 90],
+  ['Type', 80],
+  ['Cust Item', 130],
+  ['ItemMat', 60],
+  ['ItemSize', 130],
+  ['ItemStone', 160],
+  ['ItemDesc', 180],
+  ['ItemPlate', 190],
+  ['SetType', 80],
+  ['ItemWeight', 110],
+  ['ItemQTY', 90],
+  ['ItemPrice', 90],
+  ['ItemAmt', 90],
+  ['ExportQTY', 100],
+  ['ExportAmt', 100],
 ] as const;
-
-const PRODUCT_TYPE_LABELS: Record<string, string> = {
-  A: 'Mobile Hanging',
-  B: 'Bangle',
-  D: 'Body Jewelry',
-  E: 'Earring',
-  F: 'Anklet',
-  H: 'Brooch',
-  N: 'Necklace',
-  O: 'Other',
-  P: 'Pendant',
-  R: 'Ring',
-  S: 'Stone',
-  T: 'Bracelet',
-};
 
 const SALES_TYPE_OPTIONS = [
   { value: 'BBS', label: 'Bracelet / Bangle' },
@@ -130,8 +128,10 @@ const SALES_TYPE_COLORS: Record<SalesTypeCode, string> = {
 
 const emptyTotals: SalesTotals = { amount: 0, qty: 0, shippedQty: 0, gapQty: 0, orders: 0, late: 0 };
 
-const fmtAmount = (value: number) => `$${value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
-const fmtQty = (value: number) => value.toLocaleString(undefined, { maximumFractionDigits: 0 });
+const fmtAmount = (value: number) => `$${(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const fmtTableAmount = (value: number) => `$${(value || 0).toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 })}`;
+const fmtQty = (value: number) => (value || 0).toLocaleString(undefined, { maximumFractionDigits: 0 });
+const fmtWeight = (value: number) => (value || 0).toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 });
 const fmtMetric = (value: number, metric: Metric) => metric === 'amount' ? fmtAmount(value) : fmtQty(value);
 const fmtSignedMetric = (value: number, metric: Metric) => `${value > 0 ? '+' : value < 0 ? '-' : ''}${fmtMetric(Math.abs(value), metric)}`;
 const fmtPercent = (value: number) => `${value > 0 ? '+' : value < 0 ? '-' : ''}${Math.abs(value).toFixed(1)}%`;
@@ -170,19 +170,7 @@ function initialGroupsFromParams(groups: string[], customers: string[]) {
   ));
 }
 
-function productTypeLabel(type?: string | null, typeName?: string | null) {
-  const fullName = (typeName || '').trim();
-  if (fullName && fullName !== 'Unclassified') return fullName;
-  const code = (type || '').trim().toUpperCase();
-  if (!code) return fullName || '-';
-  return PRODUCT_TYPE_LABELS[code[0]] || fullName || 'Unclassified';
-}
 
-function groupLabel(code?: string | null) {
-  if (!code) return '-';
-  const groupId = getCustomerGroupId(code);
-  return CUSTOMER_GROUPS.find(group => group.id === groupId)?.label || groupId;
-}
 
 function yearFromDate(value?: string | null) {
   if (!value) return '';
@@ -399,8 +387,8 @@ function buildDueOutlookData(rows: SalesOrderRow[], year: string, selectedMonths
   const byMonth = new Map(data.map(point => [String(point.monthNumber), point]));
 
   rows.forEach(row => {
-    if (yearFromDate(row.custDueDate) !== year) return;
-    const point = byMonth.get(monthFromDate(row.custDueDate));
+    if (yearFromDate(row.custDate) !== year) return;
+    const point = byMonth.get(monthFromDate(row.custDate));
     if (!point) return;
 
     const dueQty = Math.max(Number(row.orderQty || 0), 0);
@@ -417,8 +405,8 @@ function buildDueOutlookData(rows: SalesOrderRow[], year: string, selectedMonths
     point.shippedAmount += shippedAmount;
     point.openAmount += openAmount;
 
-    if (openQty <= 0 || !row.orderNo || !row.custDueDate) return;
-    const dueDate = new Date(row.custDueDate);
+    if (openQty <= 0 || !row.orderNo || !row.custDate) return;
+    const dueDate = new Date(row.custDate);
     dueDate.setHours(0, 0, 0, 0);
     if (dueDate < today) point.overdueOrderNos.add(row.orderNo);
     else if (dueDate <= dueSoonCutoff) point.dueSoonOrderNos.add(row.orderNo);
@@ -482,6 +470,9 @@ export default function SalesCustomerGroupAnalytics() {
   const [availableYears, setAvailableYears] = useState<string[]>([]);
   const [selectedYears, setSelectedYears] = useState<string[]>([]);
   const [selectedMonths, setSelectedMonths] = useState<string[]>(requestedMonths.length ? requestedMonths : MONTH_VALUES);
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
+  const [dateMode, setDateMode] = useState<'period' | 'custom'>('period');
   const [monthDropdownOpen, setMonthDropdownOpen] = useState(false);
   const [filtersExpanded, setFiltersExpanded] = useState(true);
   const [selectedGroups, setSelectedGroups] = useState<string[]>(() => initialGroupsFromParams(requestedGroups, requestedCustomers));
@@ -497,7 +488,7 @@ export default function SalesCustomerGroupAnalytics() {
   const [hasResolvedData, setHasResolvedData] = useState(false);
   const [error, setError] = useState('');
   const [dueError, setDueError] = useState('');
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
 
@@ -553,8 +544,8 @@ export default function SalesCustomerGroupAnalytics() {
     setDueError('');
     try {
       const [ordersResult, dueOrdersResult] = await Promise.allSettled([
-        fetchSalesOrders({ years: selectedYears, months: selectedMonths, customers }),
-        fetchSalesOrders({ years: selectedYears, months: selectedMonths, customers, dateView: 'custdate' }),
+        fetchSalesOrders({ years: selectedYears, months: selectedMonths, customers, startDate, endDate }),
+        fetchSalesOrders({ years: selectedYears, months: selectedMonths, customers, dateView: 'custdate', startDate, endDate }),
       ]);
 
       if (requestId !== loadRequestIdRef.current) return;
@@ -573,7 +564,7 @@ export default function SalesCustomerGroupAnalytics() {
 
       if (ordersResult.status === 'fulfilled' || dueOrdersResult.status === 'fulfilled') {
         setHasResolvedData(true);
-        setLastUpdated(new Date());
+
       }
     } catch (err) {
       if (requestId !== loadRequestIdRef.current) return;
@@ -583,7 +574,7 @@ export default function SalesCustomerGroupAnalytics() {
     } finally {
       if (requestId === loadRequestIdRef.current) setLoading(false);
     }
-  }, [yearsLoading, selectedYears, selectedMonths, customers]);
+  }, [yearsLoading, selectedYears, selectedMonths, customers, startDate, endDate]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => { void loadOrders(); }, 0);
@@ -665,8 +656,8 @@ export default function SalesCustomerGroupAnalytics() {
     const detailSource = drilldown?.basis === 'due' ? dueOrders : orders;
     const drilldownRows = drilldown
       ? detailSource.filter(row => (
-        (drilldown.basis === 'due' ? yearFromDate(row.custDueDate) : yearFromOrder(row)) === drilldown.year
-        && (!drilldown.month || (drilldown.basis === 'due' ? monthFromDate(row.custDueDate) : monthFromOrder(row)) === drilldown.month)
+        (drilldown.basis === 'due' ? yearFromDate(row.custDate) : yearFromOrder(row)) === drilldown.year
+        && (!drilldown.month || (drilldown.basis === 'due' ? monthFromDate(row.custDate) : monthFromOrder(row)) === drilldown.month)
         && (!drilldown.week || weekFromOrder(row) === drilldown.week)
         && (!drilldown.type || salesTypeCode(row) === drilldown.type)
       ))
@@ -690,8 +681,8 @@ export default function SalesCustomerGroupAnalytics() {
     return [...rows].sort((a, b) => {
       const detailMetric = drilldown?.metric || metric;
       const metricSort = rowMetricValue(b, detailMetric) - rowMetricValue(a, detailMetric);
-      const leftDate = drilldown?.basis === 'due' ? a.custDueDate : a.ordDate;
-      const rightDate = drilldown?.basis === 'due' ? b.custDueDate : b.ordDate;
+      const leftDate = drilldown?.basis === 'due' ? a.custDate : a.ordDate;
+      const rightDate = drilldown?.basis === 'due' ? b.custDate : b.ordDate;
       const dateSort = (rightDate ? new Date(rightDate).getTime() : 0) - (leftDate ? new Date(leftDate).getTime() : 0);
       return metricSort || dateSort || String(a.orderNo || '').localeCompare(String(b.orderNo || ''));
     });
@@ -707,7 +698,6 @@ export default function SalesCustomerGroupAnalytics() {
   const selectedKpiTypeLabel = kpiTypeLabel(selectedKpiType);
   const collapsedFilterSummary = `${metric === 'amount' ? 'Amount' : 'Quantity'} / ${selectedYearSummary} / ${monthButtonLabel(selectedMonths)} / ${selectedGroupSummary}`;
   const activeScopeSummary = `${selectedYearSummary} / ${monthButtonLabel(selectedMonths)} / ${selectedGroupSummary} / ${metric === 'amount' ? 'Amount' : 'Quantity'}`;
-  const lastUpdatedLabel = lastUpdated ? `Updated ${lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Not updated';
   const loadingScopeSummary = primaryYear ? activeScopeSummary : 'Preparing available reporting periods';
   const loadFailure = !hasResolvedData ? error || dueError : '';
   const orderCountHint = selectedKpiType === 'ALL'
@@ -759,6 +749,9 @@ export default function SalesCustomerGroupAnalytics() {
   const resetFilters = () => {
     setSelectedYears(defaultYearSelection(availableYears));
     setSelectedMonths(MONTH_VALUES);
+    setStartDate('');
+    setEndDate('');
+    setDateMode('period');
     setSelectedGroups([]);
     setSelectedKpiType('ALL');
     setMonthDropdownOpen(false);
@@ -804,21 +797,8 @@ export default function SalesCustomerGroupAnalytics() {
     setActiveView('details');
   };
 
-  const detailParams = (customerCode?: string) => {
-    const params = new URLSearchParams();
-    if (selectedYears.length) params.set('years', selectedYears.join(','));
-    if (selectedMonths.length && selectedMonths.length !== MONTH_VALUES.length) params.set('months', selectedMonths.join(','));
-    if (customerCode) params.set('customers', customerCode);
-    else if (customers.length) params.set('customers', customers.join(','));
-    if (!customerCode && selectedGroups.length) params.set('groups', selectedGroups.join(','));
-    if (metric !== 'amount') params.set('metric', metric);
-    return params.toString().replace(/%2C/g, ',');
-  };
 
-  const openDetail = (customerCode?: string) => {
-    const qs = detailParams(customerCode);
-    navigate(`/dashboard/sales-customer-detail${qs ? `?${qs}` : ''}`);
-  };
+
 
   return (
     <>
@@ -830,30 +810,16 @@ export default function SalesCustomerGroupAnalytics() {
           { label: 'Customer Trends' },
         ]}
         hideSearch
-        contentLayout={activeView === 'overview' ? 'dashboard' : 'workspace'}
+        contentLayout="workspace"
       />
       <div className="content-scrollbar flex-1 overflow-y-auto" style={pageShell}>
-        <div className={`app-content-frame app-content-frame--${activeView === 'overview' ? 'dashboard' : 'workspace'} app-page-content customer-trends-page customer-trends-page--${activeView}`}>
+        <div className={`app-content-frame app-content-frame--workspace app-page-content customer-trends-page customer-trends-page--${activeView}`}>
           <header className="customer-trends-page-header">
             <div>
               <h1>Customer Trends</h1>
-              <p>Customer group performance and supporting order lines</p>
+              <p>Sales Trends by Customer Group with order-line details</p>
             </div>
-            <div className="customer-trends-page-header__actions">
-              <ErpButton
-                variant="secondary"
-                size="sm"
-                icon={<ArrowLeft size={14} />}
-                onClick={() => navigate(metric === 'qty' ? '/dashboard/qty' : '/dashboard/customer')}
-              >
-                Sales &amp; Qty Summary
-              </ErpButton>
-            </div>
-          </header>
-
-          <section className="customer-trends-controlbar" aria-label="Report controls">
-            <div className="customer-trends-controlbar__group">
-              <span className="customer-trends-controlbar__label">Metric</span>
+            <div className="customer-trends-page-header__actions" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
               <ErpSegmentedControl
                 ariaLabel="Metric mode"
                 value={metric}
@@ -863,10 +829,6 @@ export default function SalesCustomerGroupAnalytics() {
                   { value: 'qty', label: 'Qty', icon: <Hash size={13} /> },
                 ]}
               />
-            </div>
-            <div className="customer-trends-controlbar__divider" />
-            <div className="customer-trends-controlbar__group">
-              <span className="customer-trends-controlbar__label">View</span>
               <ErpSegmentedControl
                 ariaLabel="Customer Trends view"
                 value={activeView}
@@ -876,28 +838,12 @@ export default function SalesCustomerGroupAnalytics() {
                   { value: 'details', label: 'Order Details', icon: <Table2 size={13} /> },
                 ]}
               />
+              <div style={{ width: '1px', height: '24px', background: 'var(--color-border)' }} />
+              <ErpIconButton label="Reload data" tone="refresh" onClick={() => void loadOrders()} icon={<RefreshCw size={14} className={loading ? 'animate-spin' : undefined} />} disabled={loading} size="sm" />
             </div>
-            {activeView === 'overview' && (
-              <>
-                <div className="customer-trends-controlbar__divider" />
-                <div className="customer-trends-controlbar__group">
-                  <span className="customer-trends-controlbar__label">Interval</span>
-                  <ErpSegmentedControl
-                    ariaLabel="Trend interval"
-                    value={trendGranularity}
-                    onChange={(value) => {
-                      setTrendGranularity(value);
-                      setDrilldown(null);
-                    }}
-                    options={[
-                      { value: 'monthly', label: 'Monthly', icon: <CalendarDays size={13} /> },
-                      { value: 'weekly', label: 'Weekly', icon: <CalendarDays size={13} /> },
-                    ]}
-                  />
-                </div>
-              </>
-            )}
-          </section>
+          </header>
+
+
 
           <section ref={filterToolbarRef} style={{ ...filterToolbar, zIndex: monthDropdownOpen ? 30 : 1 }} aria-label="View filters">
             {filtersExpanded ? (
@@ -905,20 +851,56 @@ export default function SalesCustomerGroupAnalytics() {
                 <div style={filterPrimaryRow}>
                   <span style={filterSectionLabel}><SlidersHorizontal size={13} />Filters</span>
                   <div style={filterControlDivider} />
-                  <div style={filterBlock}>
-                    <span style={filterLabel}><CalendarDays size={13} />Years</span>
-                    <YearSelectControls availableYears={availableYears} primaryYear={primaryYear} compareYear={compareYear} onChange={updateYearSelection} />
-                  </div>
-                  <div style={filterBlock}>
-                    <span style={filterLabel}><CalendarDays size={13} />Period</span>
-                    <MonthDrillDropdown
-                      open={monthDropdownOpen}
-                      selectedMonths={selectedMonths}
-                      onToggle={() => setMonthDropdownOpen(open => !open)}
-                      onSelect={selectMonths}
-                      onToggleMonth={toggleMonth}
-                    />
-                  </div>
+
+                  <ErpSegmentedControl
+                    value={dateMode}
+                    ariaLabel="Filter date mode"
+                    onChange={(val) => {
+                      setDateMode(val as 'period' | 'custom');
+                      if (val === 'period') {
+                        setStartDate('');
+                        setEndDate('');
+                        setSelectedYears(defaultYearSelection(availableYears));
+                        setSelectedMonths(MONTH_VALUES);
+                      } else {
+                        setSelectedYears([]);
+                        setSelectedMonths([]);
+                      }
+                      setDrilldown(null);
+                    }}
+                    options={[
+                      { value: 'period', label: 'By Period' },
+                      { value: 'custom', label: 'Custom Date' }
+                    ]}
+                  />
+
+                  {dateMode === 'period' ? (
+                    <>
+                      <div style={filterBlock}>
+                        <span style={filterLabel}><CalendarDays size={13} />Years</span>
+                        <YearSelectControls availableYears={availableYears} primaryYear={primaryYear} compareYear={compareYear} onChange={updateYearSelection} />
+                      </div>
+                      <div style={filterBlock}>
+                        <span style={filterLabel}><CalendarDays size={13} />Period</span>
+                        <MonthDrillDropdown
+                          open={monthDropdownOpen}
+                          selectedMonths={selectedMonths}
+                          onToggle={() => setMonthDropdownOpen(open => !open)}
+                          onSelect={selectMonths}
+                          onToggleMonth={toggleMonth}
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <div style={filterBlock}>
+                      <span style={filterLabel}><CalendarDays size={13} />Custom Range</span>
+                      <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                        <input type="date" style={selectStyle} value={startDate} onChange={e => { setStartDate(e.target.value); setDrilldown(null); }} />
+                        <span style={{ color: 'var(--color-text-tertiary)' }}>-</span>
+                        <input type="date" style={selectStyle} value={endDate} onChange={e => { setEndDate(e.target.value); setDrilldown(null); }} />
+                      </div>
+                    </div>
+                  )}
                   <ErpButton variant="ghost" size="sm" icon={<FilterX size={13} />} onClick={resetFilters} className="customer-trends-filter-reset">Clear filters</ErpButton>
                   <ErpIconButton label="Collapse filters" onClick={toggleFilters} icon={<ChevronUp size={14} />} aria-expanded size="sm" />
                 </div>
@@ -956,195 +938,207 @@ export default function SalesCustomerGroupAnalytics() {
             </div>
           ) : (
             <>
-          <section className="customer-trends-summary" aria-label="Selected period summary">
-            <SummaryMetric label={`${metric === 'amount' ? 'Sales' : 'Ordered Qty'} ${primaryYear || '-'}`} value={fmtMetric(primaryMetric, metric)} hint="Primary year" />
-            <SummaryMetric label={`${metric === 'amount' ? 'Sales' : 'Ordered Qty'} ${hasCompareYear ? compareYear : '-'}`} value={hasCompareYear ? fmtMetric(compareMetric, metric) : '-'} hint="Compare year" muted={!hasCompareYear} />
-            <SummaryMetric label={hasCompareYear ? `Change vs ${compareYear}` : 'Change'} value={hasCompareYear ? fmtSignedMetric(changeAmount, metric) : '-'} hint={growthRate === null ? 'No comparison baseline' : fmtPercent(growthRate)} tone={!hasCompareYear || changeAmount === 0 ? undefined : changeAmount < 0 ? 'down' : 'up'} muted={!hasCompareYear} />
-            <SummaryMetric
-              label="Order Count"
-              value={fmtQty(kpiOrderStats.orders)}
-              hint={orderCountHint}
-              control={<KpiTypeSelect value={selectedKpiType} onChange={setSelectedKpiType} />}
-            />
-            <SummaryMetric label="Delivery Rate" value={`${deliveryRate.toFixed(1)}%`} hint={`${fmtQty(primaryTotals.shippedQty)} / ${fmtQty(primaryTotals.qty)} qty`} tone={deliveryRate >= 100 ? 'up' : undefined} />
-            <SummaryMetric label="Outstanding Qty" value={fmtQty(primaryTotals.gapQty)} hint={`${fmtQty(primaryTotals.late)} late orders`} tone={primaryTotals.late > 0 ? 'down' : undefined} />
-          </section>
+              {activeView === 'overview' && (
+                <section className="customer-trends-summary" aria-label="Selected period summary">
+                  <SummaryMetric label={`${metric === 'amount' ? 'Sales' : 'Ordered Qty'} ${primaryYear || '-'}`} value={fmtMetric(primaryMetric, metric)} hint="Primary year" />
+                  <SummaryMetric label={`${metric === 'amount' ? 'Sales' : 'Ordered Qty'} ${hasCompareYear ? compareYear : '-'}`} value={hasCompareYear ? fmtMetric(compareMetric, metric) : '-'} hint="Compare year" muted={!hasCompareYear} />
+                  <SummaryMetric label={hasCompareYear ? `Change vs ${compareYear}` : 'Change'} value={hasCompareYear ? fmtSignedMetric(changeAmount, metric) : '-'} hint={growthRate === null ? 'No comparison baseline' : fmtPercent(growthRate)} tone={!hasCompareYear || changeAmount === 0 ? undefined : changeAmount < 0 ? 'down' : 'up'} muted={!hasCompareYear} />
+                  <SummaryMetric
+                    label="Order Count"
+                    value={fmtQty(kpiOrderStats.orders)}
+                    hint={orderCountHint}
+                    control={<KpiTypeSelect value={selectedKpiType} onChange={setSelectedKpiType} />}
+                  />
+                  <SummaryMetric label="Delivery Rate" value={`${deliveryRate.toFixed(1)}%`} hint={`${fmtQty(primaryTotals.shippedQty)} / ${fmtQty(primaryTotals.qty)} qty`} tone={deliveryRate >= 100 ? 'up' : undefined} />
+                  <SummaryMetric label="Outstanding Qty" value={fmtQty(primaryTotals.gapQty)} hint={`${fmtQty(primaryTotals.late)} late orders`} tone={primaryTotals.late > 0 ? 'down' : undefined} />
+                </section>
+              )}
 
-          <div className="customer-trends-viewbar">
-            <div className="customer-trends-viewbar__title">
-              {activeView === 'overview' ? <BarChart3 size={14} /> : <Table2 size={14} />}
-              <strong>{activeView === 'overview' ? 'Overview' : 'Order Details'}</strong>
-            </div>
-            <div className="customer-trends-viewbar__meta" title={activeScopeSummary}>
-              <span>{activeScopeSummary}</span>
-              <span>{lastUpdatedLabel}</span>
-              <ErpIconButton label="Reload data" tone="refresh" onClick={() => void loadOrders()} icon={<RefreshCw size={14} className={loading ? 'animate-spin' : undefined} />} disabled={loading} size="sm" />
-            </div>
-          </div>
-
-          {error && (
-            <div role="alert" className="customer-trends-error">
-              <span>{error}</span>
-              <button type="button" onClick={() => void loadOrders()}><RefreshCw size={13} />Retry</button>
-            </div>
-          )}
-
-          {activeView === 'overview' && (
-            <section id="customer-trends-overview-panel" className={`customer-trends-overview customer-trends-overview--${trendGranularity}`}>
-              <div className="customer-trends-overview__header">
-                <div>
-                  <h2>{trendGranularity === 'monthly' ? 'Monthly Comparison' : 'Weekly Comparison'}</h2>
-                  <span>{monthButtonLabel(selectedMonths)} / {metric === 'amount' ? 'Sales amount' : 'Ordered quantity'}</span>
+              {error && (
+                <div role="alert" className="customer-trends-error">
+                  <span>{error}</span>
+                  <button type="button" onClick={() => void loadOrders()}><RefreshCw size={13} />Retry</button>
                 </div>
-              </div>
-              {orders.length === 0 && dueOrders.length === 0 && !dueError ? (
-                <div className="customer-trends-empty">
-                  <strong>No data for the current scope</strong>
-                  <button type="button" onClick={resetFilters}><FilterX size={14} />Clear filters</button>
-                </div>
-              ) : (
-                <>
-                  {orders.length === 0 ? (
-                    <div className="customer-trends-empty customer-trends-empty--section">
-                      <strong>No order-date data for the current scope</strong>
+              )}
+
+              {activeView === 'overview' && (
+                <section id="customer-trends-overview-panel" className={`customer-trends-overview customer-trends-overview--${trendGranularity}`}>
+                  <div className="customer-trends-overview__header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div>
+                      <h2>{trendGranularity === 'monthly' ? 'Monthly Comparison' : 'Weekly Comparison'}</h2>
+                      <span>{monthButtonLabel(selectedMonths)} / {metric === 'amount' ? 'Sales amount' : 'Ordered quantity'}</span>
+                    </div>
+                    <ErpSegmentedControl
+                      ariaLabel="Trend interval"
+                      value={trendGranularity}
+                      onChange={(value) => {
+                        setTrendGranularity(value);
+                        setDrilldown(null);
+                      }}
+                      options={[
+                        { value: 'monthly', label: 'Monthly', icon: <CalendarDays size={13} /> },
+                        { value: 'weekly', label: 'Weekly', icon: <CalendarDays size={13} /> },
+                      ]}
+                    />
+                  </div>
+                  {orders.length === 0 && dueOrders.length === 0 && !dueError ? (
+                    <div className="customer-trends-empty">
+                      <strong>No data for the current scope</strong>
+                      <button type="button" onClick={resetFilters}><FilterX size={14} />Clear filters</button>
                     </div>
                   ) : (
-                    <div className={`customer-trends-overview__body customer-trends-overview__body--${trendGranularity}`}>
-                      <div className={`customer-trends-chart-area customer-trends-chart-area--${trendGranularity}`}>
-                        {trendGranularity === 'monthly' ? (
-                          <TrendComparisonChart
-                            data={monthlyComparisonData}
-                            reportYear={primaryYear}
-                            compareYear={hasCompareYear ? compareYear : undefined}
+                    <>
+                      {orders.length === 0 ? (
+                        <div className="customer-trends-empty customer-trends-empty--section">
+                          <strong>No order-date data for the current scope</strong>
+                        </div>
+                      ) : (
+                        <div className={`customer-trends-overview__body customer-trends-overview__body--${trendGranularity}`}>
+                          <div className={`customer-trends-chart-area customer-trends-chart-area--${trendGranularity}`}>
+                            {trendGranularity === 'monthly' ? (
+                              <TrendComparisonChart
+                                data={monthlyComparisonData}
+                                reportYear={primaryYear}
+                                compareYear={hasCompareYear ? compareYear : undefined}
+                                metric={metric}
+                                granularity="monthly"
+                                onDrilldown={openChartDetail}
+                              />
+                            ) : (
+                              <WeeklyComparisonList
+                                key={`weekly-${selectedMonths.join('-')}`}
+                                groups={weeklyComparisonGroups}
+                                reportYear={primaryYear}
+                                compareYear={hasCompareYear ? compareYear : undefined}
+                                metric={metric}
+                                onDrilldown={openChartDetail}
+                              />
+                            )}
+                          </div>
+                          <TypeContribution
+                            rows={typeContribution}
                             metric={metric}
-                            granularity="monthly"
+                            year={primaryYear}
+                            compareYear={hasCompareYear ? compareYear : undefined}
+                            total={primaryMetric}
                             onDrilldown={openChartDetail}
                           />
-                        ) : (
-                          <WeeklyComparisonList
-                            key={`weekly-${selectedMonths.join('-')}`}
-                            groups={weeklyComparisonGroups}
-                            reportYear={primaryYear}
-                            compareYear={hasCompareYear ? compareYear : undefined}
-                            metric={metric}
-                            onDrilldown={openChartDetail}
-                          />
-                        )}
-                      </div>
-                      <TypeContribution
-                        rows={typeContribution}
-                        metric={metric}
+                        </div>
+                      )}
+                      <DueDateOutlook
+                        rows={dueOutlookData}
                         year={primaryYear}
-                        compareYear={hasCompareYear ? compareYear : undefined}
-                        total={primaryMetric}
-                        onDrilldown={openChartDetail}
+                        metric={metric}
+                        loading={loading}
+                        error={dueError}
+                        onDrilldown={openDueDetail}
+                        onRetry={() => void loadOrders()}
                       />
+                    </>
+                  )}
+                </section>
+              )}
+
+              {activeView === 'details' && (
+                <>
+                  {drilldown && (
+                    <div className="customer-trends-drilldown" role="status">
+                      <span>Drill-down</span>
+                      {drilldown.basis === 'due' && <strong>Customer Due</strong>}
+                      <strong>{drilldown.year}</strong>
+                      <strong>
+                        {drilldown.week
+                          ? `W${String(drilldown.week).padStart(2, '0')}`
+                          : drilldown.month
+                            ? MONTHS[Number(drilldown.month) - 1]
+                            : monthButtonLabel(selectedMonths)}
+                      </strong>
+                      {drilldown.type && <strong>{drilldown.type}</strong>}
+                      {drilldown.basis === 'due' && <strong>{drilldown.metric === 'amount' ? 'Amount' : 'Quantity'}</strong>}
+                      <button type="button" onClick={() => setDrilldown(null)}><X size={13} />Clear</button>
                     </div>
                   )}
-                  <DueDateOutlook
-                    rows={dueOutlookData}
-                    year={primaryYear}
-                    metric={metric}
-                    loading={loading}
-                    error={dueError}
-                    onDrilldown={openDueDetail}
-                    onRetry={() => void loadOrders()}
-                  />
+                  <section id="customer-trends-details-panel" className={['sales-dense-panel', filteredOrderRows.length > PAGE_SIZE ? 'sales-dense-panel--static-rows' : ''].filter(Boolean).join(' ')} style={orderPanel}>
+                    <div className="sales-dense-panel__header customer-trends-order-header">
+                      <h2 style={panelTitle}>Order Details</h2>
+                      <div className="customer-trends-order-actions" style={panelHeaderRight}>
+                        <div className="customer-trends-order-search">
+                          <SearchBox
+                            value={search}
+                            onChange={value => setSearch(value.toUpperCase())}
+                            onKeyDown={handleSearchKeyDown}
+                            onClear={clearSearch}
+                          />
+                        </div>
+                        <span style={panelMeta}>Showing {filteredOrderRows.length === 0 ? 0 : pageStart + 1}-{pageEnd} of {fmtQty(filteredOrderRows.length)} rows</span>
+                      </div>
+                    </div>
+                    <div className="content-scrollbar sales-dense-scroll" style={tableScroll}>
+                      <table className="sales-dense-table sales-dense-table--sticky-first" style={{ width: '100%', minWidth: 1536 }}>
+                        <thead>
+                          <tr>
+                            {ORDER_DETAIL_COLUMNS.map(([head, width], index) => (
+                              <th
+                                key={head}
+                                className={index >= 21 ? 'sales-dense-table__number' : undefined}
+                                style={{ width: Number(width) }}
+                              >
+                                {head}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredOrderRows.length === 0 && <EmptyRow colSpan={15} label="No order item lines match the current filters." />}
+                          {pageRows.map(row => {
+                            return (
+                              <tr key={`${row.orderNo}-${row.itemNo}-${row.ordDate}`}>
+                                <td style={tdStrongCenter}>{row.orderNo}</td>
+                                <td style={tdStrongCenter}>{fmtDate(row.ordDate)}</td>
+                                <td style={tdStrongCenter}>{fmtDate(row.dueDate)}</td>
+                                <td style={tdStrongCenter}>{fmtDate(row.custDate)}</td>
+                                <td style={tdStrongCenter}>{row.customerCode}</td>
+                                <td style={tdStrong}>{row.salesName}</td>
+                                <td style={tdStrong}>{row.poNo || '-'}</td>
+                                <td style={tdStrong}>{row.po2 || '-'}</td>
+                                <td style={tdStrong}>{row.shipT || '-'}</td>
+                                <td style={tdStrong}>{row.ordStamp || '-'}</td>
+                                <td style={tdStrongCenter}>{row.ordMaker || '-'}</td>
+                                <td style={tdStrongCenter}><button onClick={() => navigate(`/item-detail/${encodeURIComponent(row.itemNo)}`)} style={linkButton}>{row.itemNo}</button></td>
+                                <td style={tdStrongCenter}>{row.itemSku || '-'}</td>
+                                <td style={tdStrongCenter}>{row.productTypeCode || '-'}</td>
+                                <td style={tdStrongCenter}>{row.custItem || '-'}</td>
+                                <td style={tdCenter}>{row.itemMat || '-'}</td>
+                                <td style={td}>{row.itemSize || '-'}</td>
+                                <td style={td}>{row.itemStone || '-'}</td>
+                                <td style={td}>{row.itemDesc || '-'}</td>
+                                <td style={tdStrongRight}>{row.itemPlate || '-'}</td>
+                                <td style={td}>{row.setType || '-'}</td>
+                                <td style={tdStrongRight}>{fmtWeight(row.itemWeight || 0)}</td>
+                                <td style={tdStrongRight}>{fmtQty(row.orderQty)}</td>
+                                <td style={tdStrongRight}>{fmtTableAmount(row.itemPrice || 0)}</td>
+                                <td style={tdStrongRight}>{fmtTableAmount(row.amount)}</td>
+                                <td style={tdStrongRight}>{fmtQty(row.shippedQty)}</td>
+                                <td style={tdStrongRight}>{fmtTableAmount(row.shippedAmount)}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                    {filteredOrderRows.length > PAGE_SIZE && (
+                      <div className="sales-dense-pagination" style={paginationBar}>
+                        <div style={paginationText}>Showing {filteredOrderRows.length === 0 ? 0 : pageStart + 1}-{pageEnd} of {fmtQty(filteredOrderRows.length)}</div>
+                        <div style={paginationButtons}>
+                          <button type="button" disabled={currentPage <= 1} onClick={() => setPage(currentPage - 1)} title="Previous page" style={{ ...pageButton, ...(currentPage <= 1 ? pageButtonDisabled : null) }}><ChevronLeft size={14} /></button>
+                          <span style={pageText}>Page {currentPage} / {totalPages}</span>
+                          <button type="button" disabled={currentPage >= totalPages} onClick={() => setPage(currentPage + 1)} title="Next page" style={{ ...pageButton, ...(currentPage >= totalPages ? pageButtonDisabled : null) }}><ChevronRight size={14} /></button>
+                        </div>
+                      </div>
+                    )}
+                  </section>
                 </>
               )}
-            </section>
-          )}
-
-          {activeView === 'details' && (
-            <>
-              {drilldown && (
-                <div className="customer-trends-drilldown" role="status">
-                  <span>Drill-down</span>
-                  {drilldown.basis === 'due' && <strong>Customer Due</strong>}
-                  <strong>{drilldown.year}</strong>
-                  <strong>
-                    {drilldown.week
-                      ? `W${String(drilldown.week).padStart(2, '0')}`
-                      : drilldown.month
-                        ? MONTHS[Number(drilldown.month) - 1]
-                        : monthButtonLabel(selectedMonths)}
-                  </strong>
-                  {drilldown.type && <strong>{drilldown.type}</strong>}
-                  {drilldown.basis === 'due' && <strong>{drilldown.metric === 'amount' ? 'Amount' : 'Quantity'}</strong>}
-                  <button type="button" onClick={() => setDrilldown(null)}><X size={13} />Clear</button>
-                </div>
-              )}
-              <section id="customer-trends-details-panel" className={['sales-dense-panel', filteredOrderRows.length > PAGE_SIZE ? 'sales-dense-panel--static-rows' : ''].filter(Boolean).join(' ')} style={orderPanel}>
-                <div className="sales-dense-panel__header customer-trends-order-header">
-                  <h2 style={panelTitle}>Order Details</h2>
-                  <div className="customer-trends-order-actions" style={panelHeaderRight}>
-                    <div className="customer-trends-order-search">
-                      <SearchBox
-                        value={search}
-                        onChange={value => setSearch(value.toUpperCase())}
-                        onKeyDown={handleSearchKeyDown}
-                        onClear={clearSearch}
-                      />
-                    </div>
-                    <span style={panelMeta}>Showing {filteredOrderRows.length === 0 ? 0 : pageStart + 1}-{pageEnd} of {fmtQty(filteredOrderRows.length)} rows</span>
-                  </div>
-                </div>
-                <div className="content-scrollbar sales-dense-scroll" style={tableScroll}>
-                  <table className="sales-dense-table sales-dense-table--sticky-first" style={{ width: '100%', minWidth: 1536 }}>
-                    <thead>
-                      <tr>
-                        {ORDER_DETAIL_COLUMNS.map(([head, width], index) => (
-                          <th
-                            key={head}
-                            className={index >= 8 && index <= 11 ? 'sales-dense-table__number' : index === 14 ? 'sales-dense-table__center' : undefined}
-                            style={{ width: Number(width) }}
-                          >
-                            {head}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredOrderRows.length === 0 && <EmptyRow colSpan={15} label="No order item lines match the current filters." />}
-                      {pageRows.map(row => {
-                        const gapQty = Math.max(Number(row.orderQty || 0) - Number(row.shippedQty || 0), 0);
-                        const rowSalesType = salesTypeCode(row);
-                        return (
-                          <tr key={`${row.orderNo}-${row.itemNo}-${row.ordDate}`}>
-                            <td style={tdCode}>{row.orderNo}<span style={subText}>{row.poNo || '-'}</span></td>
-                            <td style={tdCode}><button type="button" onClick={() => navigate(`/item-detail/${encodeURIComponent(row.itemNo)}`)} style={linkButton}>{row.itemNo || '-'}</button></td>
-                            <td style={td}>{fmtDate(row.ordDate)}</td>
-                            <td style={{ ...td, ...(row.status === 'Late' ? lateDateCell : null) }}>{fmtDate(row.custDueDate)}</td>
-                            <td style={tdStrong}>{row.customerName || '-'}<span style={subText}>{row.customerCode || '-'}</span></td>
-                            <td style={tdStrong}>{groupLabel(row.customerCode)}</td>
-                            <td style={tdCode}>{rowSalesType}<span style={subText}>{kpiTypeLabel(rowSalesType)}</span></td>
-                            <td style={td}>{productTypeLabel(row.itemType, row.itemTypeName)}</td>
-                            <td style={tdRight}>{fmtQty(Number(row.orderQty || 0))}</td>
-                            <td style={tdRight}>{fmtQty(Number(row.shippedQty || 0))}</td>
-                            <td style={tdRight}>{fmtQty(gapQty)}</td>
-                            <td style={tdRight}>{fmtAmount(Number(row.amount || 0))}</td>
-                            <td style={td}><StatusBadge status={row.status} /></td>
-                            <td style={td}>{row.market || '-'}</td>
-                            <td style={tdCenter}><button type="button" onClick={() => openDetail(row.customerCode)} title="Open customer order list" className="sales-dense-action"><Eye size={14} /></button></td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-                {filteredOrderRows.length > PAGE_SIZE && (
-                  <div className="sales-dense-pagination" style={paginationBar}>
-                    <div style={paginationText}>Showing {filteredOrderRows.length === 0 ? 0 : pageStart + 1}-{pageEnd} of {fmtQty(filteredOrderRows.length)}</div>
-                    <div style={paginationButtons}>
-                      <button type="button" disabled={currentPage <= 1} onClick={() => setPage(currentPage - 1)} title="Previous page" style={{ ...pageButton, ...(currentPage <= 1 ? pageButtonDisabled : null) }}><ChevronLeft size={14} /></button>
-                      <span style={pageText}>Page {currentPage} / {totalPages}</span>
-                      <button type="button" disabled={currentPage >= totalPages} onClick={() => setPage(currentPage + 1)} title="Next page" style={{ ...pageButton, ...(currentPage >= totalPages ? pageButtonDisabled : null) }}><ChevronRight size={14} /></button>
-                    </div>
-                  </div>
-                )}
-              </section>
-            </>
-          )}
             </>
           )}
         </div>
@@ -1174,15 +1168,17 @@ function CustomerTrendsLoadingState({
         </span>
       </div>
 
-      <section className="customer-trends-summary customer-trends-summary--loading" aria-hidden="true">
-        {Array.from({ length: 6 }, (_, index) => (
-          <div key={index} className="customer-trends-summary__item customer-trends-loading-metric">
-            <span className="customer-trends-skeleton customer-trends-skeleton--label" style={{ width: `${38 + (index % 3) * 8}%` }} />
-            <span className="customer-trends-skeleton customer-trends-skeleton--value" style={{ width: `${58 + (index % 2) * 12}%` }} />
-            <span className="customer-trends-skeleton customer-trends-skeleton--hint" style={{ width: `${46 + (index % 3) * 9}%` }} />
-          </div>
-        ))}
-      </section>
+      {activeView === 'overview' && (
+        <section className="customer-trends-summary customer-trends-summary--loading" aria-hidden="true">
+          {Array.from({ length: 6 }, (_, index) => (
+            <div key={index} className="customer-trends-summary__item customer-trends-loading-metric">
+              <span className="customer-trends-skeleton customer-trends-skeleton--label" style={{ width: `${38 + (index % 3) * 8}%` }} />
+              <span className="customer-trends-skeleton customer-trends-skeleton--value" style={{ width: `${58 + (index % 2) * 12}%` }} />
+              <span className="customer-trends-skeleton customer-trends-skeleton--hint" style={{ width: `${46 + (index % 3) * 9}%` }} />
+            </div>
+          ))}
+        </section>
+      )}
 
       <div className="customer-trends-viewbar customer-trends-loading-viewbar" aria-hidden="true">
         <span className="customer-trends-skeleton customer-trends-skeleton--label" style={{ width: 86 }} />
@@ -1235,13 +1231,13 @@ function CustomerTrendsLoadingState({
             <span className="customer-trends-skeleton customer-trends-skeleton--label" style={{ width: 180 }} />
           </div>
           <div className="content-scrollbar sales-dense-scroll">
-            <table className="sales-dense-table sales-dense-table--sticky-first" style={{ width: '100%', minWidth: 1536 }}>
+            <table className="sales-dense-table" style={{ width: '100%', minWidth: 1536 }}>
               <thead>
                 <tr>
                   {ORDER_DETAIL_COLUMNS.map(([head, width], index) => (
                     <th
                       key={head}
-                      className={index >= 8 && index <= 11 ? 'sales-dense-table__number' : index === 14 ? 'sales-dense-table__center' : undefined}
+                      className={index >= 21 ? 'sales-dense-table__number' : undefined}
                       style={{ width: Number(width) }}
                     >
                       {head}
@@ -1606,17 +1602,19 @@ function SummaryMetric({ label, value, hint, tone, muted, control }: { label: st
 }
 
 function KpiTypeSelect({ value, onChange }: { value: KpiTypeSelection; onChange: (value: KpiTypeSelection) => void }) {
+  const options = [
+    { value: 'ALL', label: 'All Types' },
+    ...SALES_TYPE_OPTIONS.map(opt => ({ value: opt.value, label: opt.label }))
+  ];
   return (
-    <select
-      value={value}
-      onChange={event => onChange(event.target.value as KpiTypeSelection)}
-      style={kpiTypeSelect}
-      aria-label="Order count product type"
-      title={kpiTypeLabel(value)}
-    >
-      <option value="ALL">All Types</option>
-      {SALES_TYPE_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
-    </select>
+    <div style={{ width: 125 }}>
+      <CustomSelect
+        value={value}
+        onChange={(val) => onChange(val as KpiTypeSelection)}
+        options={options}
+        ariaLabel="Order count product type"
+      />
+    </div>
   );
 }
 
@@ -1625,16 +1623,27 @@ function YearSelectControls({ availableYears, primaryYear, compareYear, onChange
     <div style={yearControls}>
       <label style={yearField}>
         <span style={yearFieldLabel}>Report year</span>
-        <select value={primaryYear} onChange={(event) => onChange(event.target.value, compareYear)} style={selectStyle} aria-label="Primary year">
-          {availableYears.map(year => <option key={year} value={year}>{year}</option>)}
-        </select>
+        <div style={{ minWidth: 100 }}>
+          <CustomSelect
+            value={primaryYear}
+            onChange={(val) => onChange(val, compareYear)}
+            options={availableYears.map(year => ({ value: year, label: year }))}
+            ariaLabel="Primary year"
+            width="100%"
+          />
+        </div>
       </label>
       <label style={yearField}>
         <span style={yearFieldLabel}>Compare with</span>
-        <select value={compareYear} onChange={(event) => onChange(primaryYear, event.target.value)} style={selectStyle} aria-label="Compare year">
-          <option value="none">None</option>
-          {availableYears.filter(year => year !== primaryYear).map(year => <option key={year} value={year}>{year}</option>)}
-        </select>
+        <div style={{ minWidth: 100 }}>
+          <CustomSelect
+            value={compareYear}
+            onChange={(val) => onChange(primaryYear, val)}
+            options={[{ value: 'none', label: 'None' }, ...availableYears.filter(year => year !== primaryYear).map(year => ({ value: year, label: year }))]}
+            ariaLabel="Compare year"
+            width="100%"
+          />
+        </div>
       </label>
     </div>
   );
@@ -1680,10 +1689,6 @@ function EmptyRow({ colSpan, label }: { colSpan: number; label: string }) {
   return <tr><td colSpan={colSpan} className="sales-dense-empty">{label}</td></tr>;
 }
 
-function StatusBadge({ status }: { status: SalesOrderRow['status'] }) {
-  const tone = status === 'Shipped' ? 'success' : status === 'Late' ? 'danger' : status === 'Partial' ? 'warning' : 'info';
-  return <span className={`sales-dense-badge sales-dense-badge--${tone}`}>{status}</span>;
-}
 
 function TableSkeletonRows({ columns, rows = 8 }: { columns: number; rows?: number }) {
   const widths = [72, 46, 58, 64, 54, 76, 66, 50, 60];
@@ -1713,7 +1718,6 @@ const summaryValue: CSSProperties = { color: 'var(--color-text-primary)', fontSi
 const summaryHint: CSSProperties = { color: 'var(--color-text-tertiary)', fontSize: 'var(--erp-text-meta)', fontWeight: 750, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
 const summaryHintUp: CSSProperties = { color: 'var(--color-success-500)' };
 const summaryHintDown: CSSProperties = { color: 'var(--color-danger-500)' };
-const kpiTypeSelect: CSSProperties = { width: 96, minWidth: 0, height: 24, borderWidth: 1, borderStyle: 'solid', borderColor: 'var(--color-border-light)', borderRadius: 5, background: 'var(--color-surface-1)', color: 'var(--color-text-primary)', padding: '0 4px', fontSize: 'var(--erp-text-meta)', fontWeight: 850, fontFamily: 'var(--font-body)', cursor: 'pointer' };
 const filterToolbar: CSSProperties = { position: 'relative', display: 'grid', overflow: 'visible', background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)', borderRadius: 8 };
 const filterPrimaryRow: CSSProperties = { display: 'flex', alignItems: 'center', columnGap: 10, rowGap: 8, minHeight: 52, padding: '8px 12px', flexWrap: 'wrap' };
 const filterCollapsedRow: CSSProperties = { display: 'flex', alignItems: 'center', gap: 8, minHeight: 42, padding: '6px 12px' };
@@ -1744,13 +1748,11 @@ const panelTitle: CSSProperties = { margin: 0, color: 'var(--color-text-primary)
 const panelHeaderRight: CSSProperties = { display: 'inline-flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8 };
 const panelMeta: CSSProperties = { color: 'var(--color-text-tertiary)', fontSize: 'var(--erp-text-dense)', fontWeight: 900 };
 const tableScroll: CSSProperties = { width: '100%', minHeight: 0 };
-const td: CSSProperties = { height: 46, padding: '6px 8px', color: 'var(--color-text-primary)', fontSize: 'var(--erp-text-dense)', fontWeight: 800, verticalAlign: 'middle', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
-const tdStrong: CSSProperties = { ...td, fontWeight: 900 };
-const tdCode: CSSProperties = { ...tdStrong, fontVariantNumeric: 'tabular-nums' };
-const tdRight: CSSProperties = { ...td, textAlign: 'right', fontVariantNumeric: 'tabular-nums' };
+const td: CSSProperties = { height: 46, padding: '6px 8px', color: 'var(--color-text-primary)', fontSize: 'var(--erp-text-dense)', fontWeight: 500, verticalAlign: 'middle', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
+const tdStrongCenter: CSSProperties = { ...td, fontWeight: 900, textAlign: 'center' };
 const tdCenter: CSSProperties = { ...td, textAlign: 'center' };
-const lateDateCell: CSSProperties = { color: 'var(--color-danger-500)', fontWeight: 900 };
-const subText: CSSProperties = { display: 'block', color: 'var(--color-text-tertiary)', fontSize: 'var(--erp-text-meta)', fontWeight: 750, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' };
+const tdStrong: CSSProperties = { ...td, fontWeight: 900 };
+const tdStrongRight: CSSProperties = { ...td, fontWeight: 900, textAlign: 'right', fontVariantNumeric: 'tabular-nums' };
 const linkButton: CSSProperties = { background: 'none', border: 'none', color: 'var(--color-brand-600)', fontSize: 'var(--erp-text-dense)', fontWeight: 900, cursor: 'pointer', padding: 0, fontFamily: 'var(--font-body)' };
 const paginationBar: CSSProperties = { minHeight: 38, padding: '6px 10px' };
 const paginationText: CSSProperties = { color: 'var(--color-text-tertiary)', fontSize: 'var(--erp-text-dense)', fontWeight: 850 };

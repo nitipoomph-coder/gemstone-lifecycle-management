@@ -4,27 +4,16 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, ChevronLeft, ChevronRight, DollarSign, Hash, Search } from 'lucide-react';
 import Topbar from '../components/layout/Topbar';
 import '../components/sales/SalesDenseTable.css';
+import './SalesResponsive.css';
 import { CUSTOMER_GROUPS } from '../config/customerGroups';
 import { fetchSalesOrders, type SalesOrderRow } from '../services/customerSalesAPI';
 import { ErpSegmentedControl } from '../components/ui/ErpButtons';
+import { buildCustomerTrendsPath, CUSTOMER_TRENDS_PATH } from '../utils/customerTrendsUrl';
+import { Download } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const PAGE_SIZE = 30;
-const PRODUCT_TYPE_LABELS: Record<string, string> = {
-  A: 'Mobile Hanging',
-  B: 'Bangle',
-  D: 'Body Jewelry',
-  E: 'Earring',
-  F: 'Anklet',
-  H: 'Brooch',
-  N: 'Necklace',
-  O: 'Other',
-  P: 'Pendant',
-  R: 'Ring',
-  S: 'Stone',
-  T: 'Bracelet',
-};
-
 const configuredCustomers = Array.from(new Set(CUSTOMER_GROUPS.flatMap(group => group.prefixes))).sort();
 
 const fmtDate = (value: string | null) => {
@@ -33,19 +22,12 @@ const fmtDate = (value: string | null) => {
   if (Number.isNaN(date.getTime())) return '-';
   return date.toLocaleDateString('en-GB');
 };
-const fmtQty = (value: number) => value.toLocaleString(undefined, { maximumFractionDigits: 0 });
-const fmtAmount = (value: number) => `$${value.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+const fmtQty = (value: number) => (value || 0).toLocaleString(undefined, { maximumFractionDigits: 0 });
+const fmtAmount = (value: number) => `$${(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const fmtTableAmount = (value: number) => `$${(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 function csv(value: string | null) {
   return String(value || '').split(',').map(item => item.trim()).filter(Boolean);
-}
-
-function productTypeLabel(type?: string | null, typeName?: string | null) {
-  const fullName = (typeName || '').trim();
-  if (fullName && fullName !== 'Unclassified') return fullName;
-  const code = (type || '').trim().toUpperCase();
-  if (!code) return fullName || '-';
-  return PRODUCT_TYPE_LABELS[code[0]] || fullName || 'Unclassified';
 }
 
 function monthSummary(months: string[]) {
@@ -62,10 +44,19 @@ export default function SalesCustomerGroupDetail() {
   const groups = useMemo(() => csv(searchParams.get('groups')), [searchParams]);
   const types = useMemo(() => csv(searchParams.get('types')), [searchParams]);
   const customersFromUrl = useMemo(() => csv(searchParams.get('customers')), [searchParams]);
+  const groupCustomers = useMemo(() => Array.from(new Set(
+    CUSTOMER_GROUPS
+      .filter(group => groups.includes(group.id))
+      .flatMap(group => group.prefixes),
+  )).sort(), [groups]);
+  const requestedCustomers = useMemo(
+    () => customersFromUrl.length > 0 ? customersFromUrl : groupCustomers,
+    [customersFromUrl, groupCustomers],
+  );
   const metric = searchParams.get('metric') === 'qty' ? 'qty' : 'amount';
-  const customersKey = customersFromUrl.join('|');
+  const customersKey = requestedCustomers.join('|');
 
-  const [selectedCustomers, setSelectedCustomers] = useState<string[]>(customersFromUrl);
+  const [selectedCustomers, setSelectedCustomers] = useState<string[]>(requestedCustomers);
   const [rows, setRows] = useState<SalesOrderRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -75,11 +66,11 @@ export default function SalesCustomerGroupDetail() {
 
   useEffect(() => {
     const syncTimer = window.setTimeout(() => {
-      setSelectedCustomers(customersFromUrl);
+      setSelectedCustomers(requestedCustomers);
       setPage(1);
     }, 0);
     return () => window.clearTimeout(syncTimer);
-  }, [customersKey, customersFromUrl]);
+  }, [customersKey, requestedCustomers]);
 
   const loadSalesOrders = useCallback(async () => {
     setLoading(true);
@@ -137,14 +128,13 @@ export default function SalesCustomerGroupDetail() {
   }), [filteredRows]);
 
   const overviewPath = useMemo(() => {
-    const next = new URLSearchParams();
-    if (years.length) next.set('years', years.join(','));
-    if (months.length) next.set('months', months.join(','));
-    if (groups.length) next.set('groups', groups.join(','));
-    else if (selectedCustomers.length) next.set('customers', selectedCustomers.join(','));
-    next.set('metric', metric);
-    const query = next.toString();
-    return `/dashboard/sales-customer-groups${query ? `?${query}` : ''}`;
+    return buildCustomerTrendsPath({
+      years,
+      months,
+      groups,
+      customers: selectedCustomers,
+      metric,
+    });
   }, [years, months, groups, selectedCustomers, metric]);
 
   const applyCustomers = (nextCustomers: string[]) => {
@@ -170,11 +160,50 @@ export default function SalesCustomerGroupDetail() {
     setPage(1);
   };
 
+  const exportToExcel = () => {
+    const exportData = filteredRows.map(row => ({
+      'OrdNo': row.orderNo || '',
+      'OrdDate': fmtDate(row.ordDate),
+      'DueDate': fmtDate(row.dueDate),
+      'CustDate': fmtDate(row.custDate),
+      'CustCode': row.customerCode || '',
+      'SalesName': row.salesName || '',
+      'PONo': row.poNo || '',
+      'PO2': row.po2 || '',
+      'Ship T': row.shipT || '',
+      'OrdStamp': row.ordStamp || '',
+      'OrdMaker': row.ordMaker || '',
+      'ItemNo': row.itemNo || '',
+      'Item SKU': row.itemSku || '',
+      'Type': row.productTypeCode || '-',
+      'Cust Item': row.custItem || '',
+      'ItemMat': row.itemMat || '',
+      'ItemSize': row.itemSize || '',
+      'ItemStone': row.itemStone || '',
+      'ItemDesc': row.itemDesc || '',
+      'Itemplate': row.itemPlate || '',
+      'SetType': row.setType || '',
+      'ItemWeight': row.itemWeight || 0,
+      'ItemQTY': row.orderQty || 0,
+      'ItemPrice': row.itemPrice || 0,
+      'ItemAmt': row.amount || 0,
+      'ExportQTY': row.shippedQty || 0,
+      'ExportAmt': row.shippedAmount || 0,
+    }));
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Order Detail");
+
+    // Attempt to format filename as Order Detail For xxxx-xxxx
+    const periodString = years.length > 0 ? years.join('-') : 'All';
+    XLSX.writeFile(wb, `Order Detail For ${periodString}.xlsx`);
+  };
+
   return (
     <>
-      <Topbar breadcrumb={[{ label: 'JEWELRY FACTORY SYSTEM', path: '/' }, { label: 'Sales Analytics' }, { label: 'Sales & Qty Summary', path: '/dashboard/customer' }, { label: 'Customer Trends', path: '/dashboard/sales-customer-groups' }, { label: 'Order List' }]} contentLayout="workspace" />
+      <Topbar breadcrumb={[{ label: 'JEWELRY FACTORY SYSTEM', path: '/' }, { label: 'Sales Analytics' }, { label: 'Sales & Qty Summary', path: '/dashboard/customer' }, { label: 'Customer Trends', path: CUSTOMER_TRENDS_PATH }, { label: 'Order List' }]} contentLayout="workspace" />
       <div className="content-scrollbar flex-1 overflow-y-auto" style={{ background: 'var(--color-surface-1)' }}>
-        <div className="app-content-frame app-content-frame--workspace app-page-content flex flex-col gap-4" style={{ minHeight: '100%' }}>
+        <div className="app-content-frame app-content-frame--workspace app-page-content sales-order-detail-frame flex flex-col gap-4">
           <div style={pageHeader}>
             <div>
               <button onClick={() => navigate(overviewPath)} style={backButton}><ArrowLeft size={14} /> Sales Overview</button>
@@ -207,9 +236,18 @@ export default function SalesCustomerGroupDetail() {
               <FilterChip active={selectedCustomers.length === 0} onClick={() => applyCustomers([])} label="All" />
               {customerOptions.map(code => <FilterChip key={code} active={selectedCustomers.includes(code)} onClick={() => toggleCustomer(code)} label={code} />)}
             </div>
-            <div style={searchWrap}>
-              <Search size={14} style={searchIcon} />
-              <input value={searchDraft} onChange={event => setSearchDraft(event.target.value.toUpperCase())} onKeyDown={handleSearchKeyDown} placeholder="Search order, item, customer..." style={searchInput} />
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+              <div style={searchWrap}>
+                <Search size={14} style={searchIcon} />
+                <input value={searchDraft} onChange={event => setSearchDraft(event.target.value.toUpperCase())} onKeyDown={handleSearchKeyDown} placeholder="Search order, item, customer..." style={searchInput} />
+              </div>
+              <button
+                type="button"
+                onClick={exportToExcel}
+                style={{ ...chipButton, display: 'flex', alignItems: 'center', gap: 6, background: 'var(--color-success-500)', color: 'white', borderColor: 'var(--color-success-600)' }}
+              >
+                <Download size={14} /> Export Excel
+              </button>
             </div>
           </section>
 
@@ -217,31 +255,45 @@ export default function SalesCustomerGroupDetail() {
 
           <section className={['sales-dense-panel', searchDraft.trim() ? 'sales-dense-panel--searching' : ''].filter(Boolean).join(' ')} style={tablePanel}>
             <div className="content-scrollbar sales-dense-scroll">
-              <table className="sales-dense-table sales-dense-table--sticky-first" style={tableBase}>
+              <table className="sales-dense-table" style={tableBase}>
                 <thead>
                   <tr>
-                    {['Order No', 'Item No', 'Ord Date', 'Cust Due', 'Customer', 'Brand', 'Type', 'Ord Qty', 'Shipped', 'Amount', 'Status', 'Market'].map((head, index) => <th key={head} className={index >= 7 && index <= 9 ? 'sales-dense-table__number' : undefined}>{head}</th>)}
+                    {['OrdNo', 'OrdDate', 'DueDate', 'CustDate', 'CustCode', 'SalesName', 'PONo', 'PO2', 'Ship T', 'OrdStamp', 'OrdMaker', 'ItemNo', 'Item SKU', 'Type', 'Cust Item', 'ItemMat', 'ItemSize', 'ItemStone', 'ItemDesc', 'Itemplate', 'SetType', 'ItemWeight', 'ItemQTY', 'ItemPrice', 'ItemAmt', 'ExportQTY', 'ExportAmt'].map((head, index) => <th key={head} className={(index >= 21) ? 'sales-dense-table__number' : undefined}>{head}</th>)}
                   </tr>
                 </thead>
                 <tbody>
-                  {loading && <DetailSkeletonRows columns={12} />}
-                  {!loading && pageRows.length === 0 && <tr><td colSpan={12} className="sales-dense-empty">No orders match the current filter.</td></tr>}
+                  {loading && <DetailSkeletonRows columns={27} />}
+                  {!loading && pageRows.length === 0 && <tr><td colSpan={27} className="sales-dense-empty">No orders match the current filter.</td></tr>}
                   {!loading && pageRows.map(row => {
-                    const shippedPct = row.orderQty > 0 ? Math.min(100, Math.round((row.shippedQty / row.orderQty) * 100)) : 0;
                     return (
                       <tr key={`${row.orderNo}-${row.itemNo}`}>
-                        <td style={tdStrong}>{row.orderNo}<div style={subText}>{row.poNo || '-'}</div></td>
-                        <td style={tdStrong}><button onClick={() => navigate(`/item-detail/${encodeURIComponent(row.itemNo)}`)} style={linkButton}>{row.itemNo}</button></td>
+                        <td style={tdStrong}>{row.orderNo}</td>
                         <td style={td}>{fmtDate(row.ordDate)}</td>
-                        <td style={{ ...td, color: row.status === 'Late' ? 'var(--color-danger-500)' : 'var(--color-text-primary)', fontWeight: row.status === 'Late' ? 900 : 800 }}>{fmtDate(row.custDueDate)}</td>
-                        <td style={tdStrong}>{row.customerName}<div style={subText}>{row.customerCode}</div></td>
-                        <td style={td}>{row.brand || '-'}</td>
-                        <td style={tdStrong}>{productTypeLabel(row.itemType, row.itemTypeName)}</td>
+                        <td style={td}>{fmtDate(row.dueDate)}</td>
+                        <td style={td}>{fmtDate(row.custDate)}</td>
+                        <td style={tdStrong}>{row.customerCode}</td>
+                        <td style={td}>{row.salesName}</td>
+                        <td style={td}>{row.poNo || '-'}</td>
+                        <td style={td}>{row.po2 || '-'}</td>
+                        <td style={td}>{row.shipT || '-'}</td>
+                        <td style={td}>{row.ordStamp || '-'}</td>
+                        <td style={td}>{row.ordMaker || '-'}</td>
+                        <td style={tdStrong}><button onClick={() => navigate(`/item-detail/${encodeURIComponent(row.itemNo)}`)} style={linkButton}>{row.itemNo}</button></td>
+                        <td style={td}>{row.itemSku || '-'}</td>
+                        <td style={tdStrong}>{row.productTypeCode || '-'}</td>
+                        <td style={td}>{row.custItem || '-'}</td>
+                        <td style={td}>{row.itemMat || '-'}</td>
+                        <td style={td}>{row.itemSize || '-'}</td>
+                        <td style={td}>{row.itemStone || '-'}</td>
+                        <td style={td}>{row.itemDesc || '-'}</td>
+                        <td style={td}>{row.itemPlate || '-'}</td>
+                        <td style={td}>{row.setType || '-'}</td>
+                        <td style={tdRight}>{fmtQty(row.itemWeight || 0)}</td>
                         <td style={tdRight}>{fmtQty(row.orderQty)}</td>
-                        <td style={tdRight}><div style={shippedCell}><span style={progressTrack}><span style={{ ...progressFill, width: `${shippedPct}%`, background: row.status === 'Shipped' ? 'var(--color-success-500)' : 'var(--color-brand-500)' }} /></span>{fmtQty(row.shippedQty)}/{fmtQty(row.orderQty)}</div></td>
-                        <td style={tdRight}>{fmtAmount(row.amount)}</td>
-                        <td style={td}><StatusBadge status={row.status} /></td>
-                        <td style={td}>{row.market || '-'}</td>
+                        <td style={tdRight}>{fmtTableAmount(row.itemPrice || 0)}</td>
+                        <td style={tdRight}>{fmtTableAmount(row.amount)}</td>
+                        <td style={tdRight}>{fmtQty(row.shippedQty)}</td>
+                        <td style={tdRight}>{fmtTableAmount(row.shippedAmount)}</td>
                       </tr>
                     );
                   })}
@@ -271,11 +323,6 @@ function Kpi({ label, value }: { label: string; value: string }) {
 
 function FilterChip({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) {
   return <button onClick={onClick} style={{ ...chipButton, ...(active ? chipActive : null) }}>{label}</button>;
-}
-
-function StatusBadge({ status }: { status: SalesOrderRow['status'] }) {
-  const tone = status === 'Shipped' ? 'success' : status === 'Late' ? 'danger' : status === 'Partial' ? 'warning' : 'info';
-  return <span className={`sales-dense-badge sales-dense-badge--${tone}`}>{status}</span>;
 }
 
 function DetailSkeletonRows({ columns, rows = 10 }: { columns: number; rows?: number }) {
@@ -317,11 +364,11 @@ const tableBase: CSSProperties = { minWidth: 1220 };
 const td: CSSProperties = { height: 48, padding: '6px 8px', color: 'var(--color-text-primary)', fontSize: 'var(--erp-text-dense)', fontWeight: 800, verticalAlign: 'middle', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
 const tdStrong: CSSProperties = { ...td, fontWeight: 900 };
 const tdRight: CSSProperties = { ...td, textAlign: 'right', fontVariantNumeric: 'tabular-nums' };
-const subText: CSSProperties = { color: 'var(--color-text-tertiary)', fontSize: 'var(--erp-text-dense)', fontWeight: 700, marginTop: 2 };
+
 const linkButton: CSSProperties = { background: 'none', border: 'none', color: 'var(--color-brand-600)', fontWeight: 900, cursor: 'pointer', padding: 0, fontFamily: 'var(--font-body)' };
-const shippedCell: CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8 };
-const progressTrack: CSSProperties = { width: 64, height: 6, background: 'var(--color-surface-2)', borderRadius: 999, overflow: 'hidden' };
-const progressFill: CSSProperties = { display: 'block', height: '100%' };
+
+
+
 
 const paginationBar: CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '12px 16px', borderTop: '1px solid var(--color-border-light)', flexWrap: 'wrap' };
 const paginationText: CSSProperties = { color: 'var(--color-text-tertiary)', fontSize: 'var(--erp-text-control)', fontWeight: 800 };

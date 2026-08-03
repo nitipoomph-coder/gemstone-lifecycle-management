@@ -1,53 +1,58 @@
-import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import AppLayout from './components/layout/AppLayout';
 import Dashboard from './pages/Dashboard';
 import DashboardDetail from './pages/DashboardDetail';
+import CustomerDashboard from './pages/CustomerDashboard';
+import CustomerReportPage from './pages/CustomerReportPage';
+import ItemDetailPage from './pages/ItemDetailPage';
+import LoginPage from './pages/login/LoginPage';
+import OrderDetailPage from './pages/OrderDetailPage';
+import PlaceholderPage from './pages/PlaceholderPage';
+import POTrackerAdvanced from './pages/POTrackerAdvanced';
+import SalesCustomerGroupAnalytics from './pages/SalesCustomerGroupAnalytics';
+import SalesCustomerGroupDetail from './pages/SalesCustomerGroupDetail';
+import SalesDashboard from './pages/SalesDashboard';
+import TopOrdersAnalyticsPage from './pages/TopOrdersAnalyticsPage';
+import TopOrdersGalleryPage from './pages/TopOrdersGalleryPage';
 import ProcurementDocPage from './pages/document/ProcurementDocPage';
 import RequisitionDocPage from './pages/document/RequisitionDocPage';
 import SampleDocPage from './pages/document/SampleDocPage';
-import POTrackerAdvanced from './pages/POTrackerAdvanced';
-import OrderDetailPage from './pages/OrderDetailPage';
-import ItemDetailPage from './pages/ItemDetailPage';
-import PlaceholderPage from './pages/PlaceholderPage';
 import VendorPerformanceDashboardPage from './pages/subcontract/VendorPerformanceDashboardPage';
-import SalesDashboard from './pages/SalesDashboard';
-import CustomerDashboard from './pages/CustomerDashboard';
-import CustomerReportPage from './pages/CustomerReportPage';
-import TopOrdersGalleryPage from './pages/TopOrdersGalleryPage';
-import TopOrdersAnalyticsPage from './pages/TopOrdersAnalyticsPage';
-import SalesCustomerGroupAnalytics from './pages/SalesCustomerGroupAnalytics';
-import SalesCustomerGroupDetail from './pages/SalesCustomerGroupDetail';
-import LoginPage from './pages/LoginPage';
+import {
+  CUSTOMER_TRENDS_PATH,
+  customerTrendsPathFromSearch,
+  LEGACY_CUSTOMER_TRENDS_PATH,
+} from './utils/customerTrendsUrl';
 
-import { useLocation } from 'react-router-dom';
-
-const ProtectedRoute = () => {
+function ProtectedRoute() {
   const token = localStorage.getItem('auth_token');
   const role = localStorage.getItem('auth_role');
-  const isAuthenticated = token !== null && role !== null;
   const location = useLocation();
 
-  if (!isAuthenticated) {
+  if (!token || !role) {
     return <Navigate to="/login" replace />;
   }
 
-  // Prevent sales from accessing root Production Dashboard
   if (role === 'sales' && location.pathname === '/') {
     return <Navigate to="/dashboard/customer" replace />;
   }
 
   return <Outlet />;
-};
+}
+
+function LegacyCustomerTrendsRedirect() {
+  const location = useLocation();
+  return <Navigate to={customerTrendsPathFromSearch(location.search)} replace />;
+}
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Full screen routes (no layout) */}
         <Route path="/login" element={<LoginPage />} />
+
         <Route element={<ProtectedRoute />}>
           <Route element={<AppLayout />}>
-            {/* Dashboard */}
             <Route path="/" element={<Dashboard />} />
             <Route path="/dashboard/detail" element={<DashboardDetail />} />
             <Route path="/dashboard/sales" element={<SalesDashboard />} />
@@ -59,28 +64,24 @@ export default function App() {
             <Route path="/dashboard/top-Orders" element={<Navigate to="/dashboard/top-orders" replace />} />
             <Route path="/dashboard/top-order-lines" element={<Navigate to="/dashboard/top-orders" replace />} />
             <Route path="/dashboard/Top-Order Lines" element={<Navigate to="/dashboard/top-orders" replace />} />
-            <Route path="/dashboard/sales-customer-groups" element={<SalesCustomerGroupAnalytics />} />
+            <Route path={CUSTOMER_TRENDS_PATH} element={<SalesCustomerGroupAnalytics />} />
+            <Route path={LEGACY_CUSTOMER_TRENDS_PATH} element={<LegacyCustomerTrendsRedirect />} />
             <Route path="/dashboard/sales-customer-detail" element={<SalesCustomerGroupDetail />} />
 
-
-            {/* 1. จัดซื้อและรับเข้า — SPA, SRA, SRB, SIR */}
             <Route path="/procurement/purchase" element={<ProcurementDocPage />} />
             <Route path="/procurement/receive" element={<ProcurementDocPage />} />
             <Route path="/procurement/receive-b" element={<ProcurementDocPage />} />
             <Route path="/procurement/return" element={<ProcurementDocPage />} />
 
-            {/* 2. ออเดอร์และการเบิก — SOA, SIA, SIB, SIP, SIS */}
             <Route path="/orders/create" element={<RequisitionDocPage />} />
             <Route path="/orders/issue" element={<RequisitionDocPage />} />
             <Route path="/orders/issue-b" element={<RequisitionDocPage />} />
             <Route path="/orders/repair" element={<RequisitionDocPage />} />
             <Route path="/orders/dispatch-order" element={<RequisitionDocPage />} />
 
-            {/* 3. ห้องตัวอย่าง — SSA, SIM */}
             <Route path="/sample/order" element={<SampleDocPage />} />
             <Route path="/sample/dispatch" element={<SampleDocPage />} />
 
-            {/* 4. ตรวจสอบและนับสต็อก (ตาม DFD) */}
             <Route path="/inventory/check-dispatch" element={<PlaceholderPage />} />
             <Route path="/inventory/check-sample" element={<PlaceholderPage />} />
             <Route path="/inventory/check-purchase" element={<PlaceholderPage />} />
@@ -88,7 +89,6 @@ export default function App() {
             <Route path="/inventory/check-stock" element={<PlaceholderPage />} />
             <Route path="/inventory/check-status" element={<PlaceholderPage />} />
 
-            {/* 5. สต็อกอะไหล่ */}
             <Route path="/spare-parts/order" element={<PlaceholderPage />} />
             <Route path="/spare-parts/issue" element={<PlaceholderPage />} />
             <Route path="/spare-parts/receive" element={<PlaceholderPage />} />
@@ -100,22 +100,17 @@ export default function App() {
             <Route path="/spare-parts/check-item" element={<PlaceholderPage />} />
             <Route path="/spare-parts/check-status" element={<PlaceholderPage />} />
 
-            {/* 6. งานเหมา (Subcontract Management) — Vendor Performance Dashboard has a static layout-only
-                preview (no backend yet); the other two stay on the generic Placeholder for now */}
             <Route path="/subcontract/vendor-performance" element={<VendorPerformanceDashboardPage />} />
             <Route path="/subcontract/vendor-price-history" element={<PlaceholderPage />} />
             <Route path="/subcontract/aging-report" element={<PlaceholderPage />} />
 
-            {/* PO Tracker */}
             <Route path="/po-tracker" element={<POTrackerAdvanced />} />
             <Route path="/po-tracker/group/:cust/:addr/:kind/:mat/:duedate" element={<OrderDetailPage />} />
             <Route path="/po-tracker/po/:poNo" element={<OrderDetailPage />} />
             <Route path="/po-tracker/ord/:ordNo" element={<OrderDetailPage />} />
-            {/* Fallback route */}
             <Route path="/po-tracker/:ordNo" element={<OrderDetailPage />} />
             <Route path="/item-detail/:id" element={<ItemDetailPage />} />
 
-            {/* Fallback */}
             <Route path="*" element={<PlaceholderPage />} />
           </Route>
         </Route>
@@ -123,4 +118,3 @@ export default function App() {
     </BrowserRouter>
   );
 }
-

@@ -195,6 +195,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
               isOpen={openGroupId === group.id}
               onToggle={() => handleGroupToggle(group.id)}
               collapsed={false}
+              onNavigate={() => { if (isOpen) onToggle(); }}
             />
           ))}
           {/* Spacer for bottom padding */}

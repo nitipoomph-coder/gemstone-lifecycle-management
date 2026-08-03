@@ -84,8 +84,15 @@ export interface FetchParams {
   search?: string;
 }
 
+export interface ProcDocListResponse {
+  data: ProcDocListItem[];
+  total: number;
+  page: number;
+  totalPages: number;
+}
+
 /** Fetch document list for a document type */
-export async function fetchDocumentList(docType: string, params?: FetchParams) {
+export async function fetchDocumentList(docType: string, params?: FetchParams): Promise<ProcDocListResponse> {
   const query = new URLSearchParams();
   if (params?.page) query.append('page', String(params.page));
   if (params?.limit) query.append('limit', String(params.limit));
@@ -94,7 +101,7 @@ export async function fetchDocumentList(docType: string, params?: FetchParams) {
   const res = await fetchWithAuth(`${API_BASE}/documents/${docType}?${query.toString()}`);
   const json = await res.json();
   if (!json.ok) throw new Error(json.error || 'Failed to fetch document list');
-  return { data: json.data, total: json.total, page: json.page, totalPages: json.totalPages };
+  return { data: json.data, total: json.total, page: json.page, totalPages: json.totalPages } as ProcDocListResponse;
 }
 
 /** Fetch document detail by docNo */

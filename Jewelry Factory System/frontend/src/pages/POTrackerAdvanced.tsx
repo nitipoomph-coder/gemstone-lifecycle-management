@@ -1,12 +1,32 @@
 // src/pages/POTrackerAdvanced.tsx
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Topbar from '../components/layout/Topbar';
-import OrderTable, { GROUP_PRESETS } from '../components/dashboard/OrderTable';
+import OrderTable from '../components/dashboard/OrderTable';
+import { GROUP_PRESETS } from '../components/dashboard/orderTableConfig';
 import CustomViewModal from '../components/dashboard/CustomViewModal';
 import CustomSelect from '../components/ui/CustomSelect';
 import { fetchOrders, type OrderSummary } from '../services/orderAPI';
 import { RefreshCw, AlertTriangle, Package, LayoutGrid, DollarSign, Filter, X, Layers } from 'lucide-react';
+import { getErrorMessage } from '../utils/errors';
+
+type StatusFilter = 'pending' | 'finish' | 'all';
+const EMPTY_ORDERS: OrderSummary[] = [];
+
+const parseStatusFilter = (value: string | null): StatusFilter =>
+  value === 'finish' || value === 'all' ? value : 'pending';
+
+const getSavedColumns = (group: string): string[] => {
+  if (group !== 'CUSTOM') return GROUP_PRESETS[group] || GROUP_PRESETS.ALL;
+  const saved = localStorage.getItem('poTrackerCustomCols');
+  if (!saved) return GROUP_PRESETS.ALL;
+  try {
+    const parsed: unknown = JSON.parse(saved);
+    return Array.isArray(parsed) && parsed.every(key => typeof key === 'string') ? parsed : GROUP_PRESETS.ALL;
+  } catch {
+    return GROUP_PRESETS.ALL;
+  }
+};
 
 const getDefaultDateRange = () => {
   const from = new Date();
@@ -16,19 +36,14 @@ const getDefaultDateRange = () => {
 
 export default function POTrackerAdvanced() {
   const navigate = useNavigate();
-  const [orders, setOrders] = useState<OrderSummary[]>([]);
-  const [filtered, setFiltered] = useState<OrderSummary[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
-  const initialSearch = searchParams.get('search') || '';
-  const [search, setSearch] = useState(initialSearch);
+  const search = searchParams.get('search') || '';
 
-  const [statusFilter, setStatusFilter] = useState<'pending' | 'finish' | 'all'>(() => (searchParams.get('status') as any) || 'pending');
-  const [groupFilter, setGroupFilter] = useState<string>(() => searchParams.get('group') || 'N008');
+  const [selectedStatusFilter, setStatusFilter] = useState<StatusFilter>(() => parseStatusFilter(searchParams.get('status')));
+  const [selectedGroupFilter, setGroupFilter] = useState<string>(() => searchParams.get('group') || 'N008');
   const [dateType, setDateType] = useState(() => searchParams.get('dateType') || 'Order Date');
-  const [page, setPage] = useState(() => parseInt(searchParams.get('page') || '1'));
+  const [requestedPage, setPage] = useState(() => parseInt(searchParams.get('page') || '1'));
   const [pageSize, setPageSize] = useState(() => parseInt(searchParams.get('pageSize') || '20'));
 
   const [filterType, setFilterType] = useState(() => searchParams.get('fType') || '');
@@ -40,11 +55,49 @@ export default function POTrackerAdvanced() {
   const [showFiltersPopover, setShowFiltersPopover] = useState(false);
 
   // ⭐️ Column Picker state (lifted from OrderTable)
-  const [visibleKeys, setVisibleKeys] = useState<string[]>(GROUP_PRESETS[groupFilter] || GROUP_PRESETS.ALL);
-  const lastGroupRef = useRef(groupFilter);
-
   const [dateFrom, setDateFrom] = useState(() => searchParams.get('dateFrom') || getDefaultDateRange().from);
   const [dateTo, setDateTo] = useState(() => searchParams.get('dateTo') || getDefaultDateRange().to);
+
+  const smartFilters = useMemo(() => {
+    const keywords = search.toLowerCase().split(' ').filter(Boolean);
+    let status: StatusFilter | undefined;
+    let group: string | undefined;
+
+    if (keywords.some(k => ['pending', 'ค้าง', 'p'].includes(k))) status = 'pending';
+    else if (keywords.some(k => ['finish', 'เสร็จ', 'f', 'complete'].includes(k))) status = 'finish';
+    else if (keywords.some(k => ['all', 'ทั้งหมด'].includes(k))) status = 'all';
+
+    if (keywords.some(k => k.includes('n098'))) group = 'N098';
+    else if (keywords.some(k => k.includes('n083'))) group = 'N083';
+    else if (keywords.some(k => k.includes('n051'))) group = 'N051';
+    else if (keywords.some(k => k.includes('n044'))) group = 'N044';
+    else if (keywords.some(k => k.includes('mlt') || k.startsWith('u'))) group = 'MLT';
+    else {
+      const n008List = ['n008', 'n048', 'n066', 'n067', 'n068', 'n069', 'n070', 'n071', 'n072', 'n073', 'n074', 'n075'];
+      if (keywords.some(k => n008List.some(code => k.includes(code)))) group = 'N008';
+    }
+
+    return { status, group };
+  }, [search]);
+
+  const statusFilter = smartFilters.status ?? selectedStatusFilter;
+  const groupFilter = smartFilters.group ?? selectedGroupFilter;
+
+  const [columnState, setColumnState] = useState(() => ({ group: groupFilter, keys: getSavedColumns(groupFilter) }));
+  const visibleKeys = columnState.group === groupFilter ? columnState.keys : getSavedColumns(groupFilter);
+  const setVisibleKeys = (keys: string[]) => setColumnState({ group: groupFilter, keys });
+
+  const [refreshVersion, setRefreshVersion] = useState(0);
+  const ordersKey = `${statusFilter}:${dateType}:${dateFrom}:${dateTo}:${refreshVersion}`;
+  const [ordersState, setOrdersState] = useState<{
+    key: string;
+    orders: OrderSummary[];
+    error: string | null;
+  }>({ key: '', orders: [], error: null });
+  const hasCurrentOrders = ordersState.key === ordersKey;
+  const orders = hasCurrentOrders ? ordersState.orders : EMPTY_ORDERS;
+  const error = hasCurrentOrders ? ordersState.error : null;
+  const loading = !hasCurrentOrders;
 
   // Sync state back to URL automatically
   useEffect(() => {
@@ -53,7 +106,7 @@ export default function POTrackerAdvanced() {
     if (statusFilter !== 'pending') params.set('status', statusFilter);
     if (groupFilter !== 'N008') params.set('group', groupFilter);
     if (dateType !== 'Order Date') params.set('dateType', dateType);
-    if (page !== 1) params.set('page', page.toString());
+    if (requestedPage !== 1) params.set('page', requestedPage.toString());
     if (pageSize !== 20) params.set('pageSize', pageSize.toString());
     if (filterType) params.set('fType', filterType);
     if (filterWeek) params.set('fWeek', filterWeek);
@@ -66,62 +119,35 @@ export default function POTrackerAdvanced() {
     if (dateTo !== defaultRange.to) params.set('dateTo', dateTo);
 
     navigate({ search: params.toString() }, { replace: true });
-  }, [search, statusFilter, groupFilter, dateType, page, pageSize, dateFrom, dateTo, filterType, filterWeek, filterCust, filterPO, filterShipTo, navigate]);
+  }, [search, statusFilter, groupFilter, dateType, requestedPage, pageSize, dateFrom, dateTo, filterType, filterWeek, filterCust, filterPO, filterShipTo, navigate]);
 
-  // Sync search state if URL changes (e.g. from Topbar global search)
   useEffect(() => {
-    const s = new URLSearchParams(location.search).get('search');
-    if (s !== null && s !== search) {
-      setSearch(s);
-    }
-  }, [location.search, search]);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await fetchOrders({
+    let cancelled = false;
+    fetchOrders({
         status: statusFilter as 'pending' | 'all' | 'finish',
         dateType: dateType,
         dateFrom: dateFrom,
         dateTo: dateTo
+      })
+      .then(result => {
+        if (cancelled) return;
+        if (result.ok) {
+          setOrdersState({ key: ordersKey, orders: result.data, error: null });
+        } else {
+          setOrdersState({ key: ordersKey, orders: [], error: result.error || 'Failed to load data from API' });
+        }
+      })
+      .catch((requestError: unknown) => {
+        if (!cancelled) {
+          setOrdersState({ key: ordersKey, orders: [], error: getErrorMessage(requestError, 'Failed to load data') });
+        }
       });
+    return () => { cancelled = true; };
+  }, [statusFilter, dateType, dateFrom, dateTo, ordersKey]);
 
-      if (result.ok) {
-        setOrders(result.data);
-      } else {
-        setError(result.error || 'Failed to load data from API');
-      }
-    } catch (e: any) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
-  }, [statusFilter, dateType, dateFrom, dateTo]);
-
-  useEffect(() => { load(); }, [load]);
+  const load = () => setRefreshVersion(version => version + 1);
 
   // ⭐️ Smart Selection Locking: reset columns when group changes
-  useEffect(() => {
-    if (lastGroupRef.current !== groupFilter) {
-      if (groupFilter === 'CUSTOM') {
-        const saved = localStorage.getItem('poTrackerCustomCols');
-        if (saved) {
-          try {
-            setVisibleKeys(JSON.parse(saved));
-          } catch (e) {
-            setVisibleKeys(GROUP_PRESETS.ALL);
-          }
-        } else {
-          setVisibleKeys(GROUP_PRESETS.ALL);
-        }
-      } else {
-        setVisibleKeys(GROUP_PRESETS[groupFilter] || GROUP_PRESETS.ALL);
-      }
-      lastGroupRef.current = groupFilter;
-    }
-  }, [groupFilter]);
-
   // Save to localStorage when visibleKeys change in CUSTOM mode
   useEffect(() => {
     if (groupFilter === 'CUSTOM') {
@@ -131,30 +157,7 @@ export default function POTrackerAdvanced() {
 
   const [showCustomViewModal, setShowCustomViewModal] = useState(false);
 
-  // --- SMART SEARCH INTELLIGENCE ---
-  useEffect(() => {
-    if (!search.trim()) return;
-    const q = search.toLowerCase();
-    const keywords = q.split(' ').filter(k => k.length > 0);
-
-    // 1. ตรวจจับสถานะ (Status Detection)
-    if (keywords.some(k => ['pending', 'ค้าง', 'p'].includes(k))) setStatusFilter('pending');
-    else if (keywords.some(k => ['finish', 'เสร็จ', 'f', 'complete'].includes(k))) setStatusFilter('finish');
-    else if (keywords.some(k => ['all', 'ทั้งหมด'].includes(k))) setStatusFilter('all');
-
-    // 2. ตรวจจับกลุ่ม (Group Detection)
-    if (keywords.some(k => k.includes('n098'))) setGroupFilter('N098');
-    else if (keywords.some(k => k.includes('n083'))) setGroupFilter('N083');
-    else if (keywords.some(k => k.includes('n051'))) setGroupFilter('N051');
-    else if (keywords.some(k => k.includes('n044'))) setGroupFilter('N044');
-    else if (keywords.some(k => k.includes('mlt') || k.startsWith('u'))) setGroupFilter('MLT');
-    else {
-      const n008List = ['n008', 'n048', 'n066', 'n067', 'n068', 'n069', 'n070', 'n071', 'n072', 'n073', 'n074', 'n075'];
-      if (keywords.some(k => n008List.some(code => k.includes(code)))) setGroupFilter('N008');
-    }
-  }, [search]);
-
-  useEffect(() => {
+  const filtered = useMemo(() => {
     let filteredList = orders;
 
     // Group Filter
@@ -243,9 +246,8 @@ export default function POTrackerAdvanced() {
       });
     }
 
-    setFiltered(filteredList);
-    setPage(1);
-  }, [search, orders, statusFilter, groupFilter, filterType, filterWeek, filterCust, filterPO, filterShipTo]);
+    return filteredList;
+  }, [search, orders, groupFilter, filterType, filterWeek, filterCust, filterPO, filterShipTo]);
 
   const totalQty = filtered.reduce((s, o) => s + (o.TotalQty || 0), 0);
   const totalAmount = filtered.reduce((s, o) => s + (o.Amount || 0), 0);
@@ -261,7 +263,8 @@ export default function POTrackerAdvanced() {
     return Array.from(types).sort();
   }, [orders]);
 
-  const totalPages = Math.ceil(filtered.length / pageSize);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const page = Math.min(Math.max(1, requestedPage), totalPages);
   const pageStart = (page - 1) * pageSize;
   const paged = filtered.slice(pageStart, pageStart + pageSize);
 
@@ -285,24 +288,24 @@ export default function POTrackerAdvanced() {
   const activeFilterCount = activeChips.length;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--color-surface-1)', fontFamily: 'var(--font-body)' }}>
-      <Topbar breadcrumb={[{ label: 'JEWELRY FACTORY SYSTEM', path: '/' }, { label: 'PO TRACKER' }]} />
+    <div className="app-page font-body">
+      <Topbar breadcrumb={[{ label: 'JEWELRY FACTORY SYSTEM', path: '/' }, { label: 'PO TRACKER' }]} contentLayout="dashboard-wide" />
 
-      <div className="content-scrollbar flex-1 overflow-y-auto" style={{ padding: '24px', display: 'flex', flexDirection: 'column', minHeight: 0, zoom: '0.85' }}>
+      <div className="app-page-scroll content-scrollbar">
+      <div className="app-content-frame app-content-frame--dashboard-wide app-page-content po-tracker-page flex min-h-full flex-col">
 
         {/* ─── FILTERS: compact toolbar + popover + active chips ─── */}
-        <div style={{
+        <div className="po-toolbar app-panel" style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px',
-          background: 'var(--color-surface-0)', borderRadius: '16px', border: '1px solid var(--color-border-light)',
+          background: 'var(--color-surface-0)',
           padding: '14px 20px', marginBottom: activeChips.length > 0 ? '12px' : '24px',
-          boxShadow: '0 8px 32px -8px color-mix(in srgb, var(--color-surface-900) 5%, transparent)'
         }}>
           {/* Left: Group + Status pill toggles */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
+          <div className="po-toolbar__modes" style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
             {/* Group Toggle */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--color-text-tertiary)', textTransform: 'capitalize', letterSpacing: '0.05em' }}>Group</span>
-              <div style={{ display: 'flex', background: 'var(--color-surface-1)', padding: '4px', borderRadius: '12px', border: '1px solid var(--color-border-light)' }}>
+              <div className="po-segmented" style={{ display: 'flex', background: 'var(--color-surface-1)', padding: '4px', borderRadius: '8px', border: '1px solid var(--color-border-light)' }}>
                 {['N008', 'N044', 'N098', 'N051', 'N083', 'MLT', 'ALL'].map(grp => (
                   <button
                     key={grp}
@@ -322,7 +325,7 @@ export default function POTrackerAdvanced() {
             {/* Status Toggle — SP ทั้ง 5 dateType รับ @Status แล้ว */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--color-text-tertiary)', textTransform: 'capitalize', letterSpacing: '0.05em' }}>Status</span>
-              <div style={{ display: 'flex', background: 'var(--color-surface-1)', padding: '4px', borderRadius: '12px', border: '1px solid var(--color-border-light)' }}>
+              <div className="po-segmented" style={{ display: 'flex', background: 'var(--color-surface-1)', padding: '4px', borderRadius: '8px', border: '1px solid var(--color-border-light)' }}>
                 {['pending', 'finish', 'all'].map(st => {
                   const isActive = statusFilter === st;
                   return (
@@ -343,16 +346,15 @@ export default function POTrackerAdvanced() {
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div className="po-toolbar__actions" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <button
               onClick={(e) => { e.stopPropagation(); setShowCustomViewModal(true); }}
               style={{
-                display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: '12px',
-                background: 'linear-gradient(135deg, var(--color-brand-600) 0%, var(--color-brand-500) 100%)',
-                border: 'none', color: 'white', fontSize: '0.8rem', fontWeight: 900, cursor: 'pointer', transition: 'all 0.2s',
-                boxShadow: '0 4px 12px color-mix(in srgb, var(--color-brand-500) 40%, transparent)'
+                display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: '8px',
+                background: 'var(--color-brand-500)',
+                border: 'none', color: 'var(--color-ui-on-interactive)', fontSize: '0.8rem', fontWeight: 900, cursor: 'pointer', transition: 'background-color 0.2s ease'
               }}
-              className="hover:scale-105 active:scale-95"
+              className="hover:bg-[var(--color-brand-600)]"
             >
               <Layers size={16} />
               Custom View
@@ -361,7 +363,7 @@ export default function POTrackerAdvanced() {
               <button
                 onClick={(e) => { e.stopPropagation(); setShowFiltersPopover(!showFiltersPopover); }}
                 style={{
-                  display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: '12px',
+                  display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: '8px',
                   background: showFiltersPopover ? 'var(--color-surface-2)' : 'var(--color-surface-1)', border: '1px solid var(--color-border-light)',
                   color: 'var(--color-text-secondary)', fontSize: '0.8rem', fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s'
                 }}
@@ -370,7 +372,7 @@ export default function POTrackerAdvanced() {
                 <Filter size={16} />
                 Filters
                 {activeFilterCount > 0 && (
-                  <span style={{ background: 'var(--color-brand-500)', color: 'white', padding: '2px 6px', borderRadius: '10px', fontSize: '0.65rem' }}>
+                  <span style={{ background: 'var(--color-brand-500)', color: 'var(--color-ui-on-interactive)', padding: '2px 6px', borderRadius: '10px', fontSize: '0.65rem' }}>
                     {activeFilterCount}
                   </span>
                 )}
@@ -384,11 +386,11 @@ export default function POTrackerAdvanced() {
                   />
                   <div
                     onClick={(e) => e.stopPropagation()}
-                    className="animate-fade-in-up"
+                    className="po-filter-popover"
                     style={{
                       position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 101,
-                      background: 'var(--color-surface-1)', borderRadius: '16px',
-                      boxShadow: '0 10px 40px -10px color-mix(in srgb, var(--color-surface-900) 25%, transparent), 0 0 0 1px var(--color-border-light)',
+                      background: 'var(--color-ui-surface)', borderRadius: '8px',
+                      boxShadow: 'var(--shadow-dropdown)', border: '1px solid var(--color-border-light)',
                       padding: '20px', width: '640px', maxWidth: '92vw',
                       display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'flex-end'
                     }}
@@ -422,9 +424,9 @@ export default function POTrackerAdvanced() {
                       <input type="text" value={filterShipTo} onChange={e => setFilterShipTo(e.target.value)} placeholder="Filter ShipTo..." style={{ width: '150px', padding: '10px 14px', borderRadius: '10px', border: '1px solid var(--color-border-strong)', background: 'var(--color-surface-0)', fontSize: '0.8rem', fontWeight: 600, outline: 'none' }} className="focus:border-brand-400" />
                     </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1, minWidth: '300px' }}>
+                    <div className="po-filter-date-field" style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1, minWidth: '300px' }}>
                       <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--color-text-tertiary)', textTransform: 'capitalize', letterSpacing: '0.05em' }}>Date Range</label>
-                      <div style={{ display: 'flex', alignItems: 'center', borderRadius: '10px', gap: '8px' }}>
+                      <div className="po-date-range" style={{ display: 'flex', alignItems: 'center', borderRadius: '8px', gap: '8px' }}>
                         <CustomSelect
                           value={dateType}
                           onChange={setDateType}
@@ -437,7 +439,7 @@ export default function POTrackerAdvanced() {
                           ]}
                           width="140px"
                         />
-                        <div style={{ display: 'flex', alignItems: 'center', padding: '6px 12px', gap: '8px', flex: 1, border: '1px solid var(--color-border-strong)', borderRadius: '10px', background: 'var(--color-surface-0)' }}>
+                        <div className="po-date-inputs" style={{ display: 'flex', alignItems: 'center', padding: '6px 12px', gap: '8px', flex: 1, border: '1px solid var(--color-border-strong)', borderRadius: '8px', background: 'var(--color-surface-0)' }}>
                           <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} style={{ flex: 1, background: 'transparent', border: 'none', fontSize: '0.8rem', color: 'var(--color-text-primary)', outline: 'none', fontWeight: 600 }} />
                           <span style={{ color: 'var(--color-text-tertiary)', fontSize: '0.65rem', fontWeight: 800 }}>TO</span>
                           <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} style={{ flex: 1, background: 'transparent', border: 'none', fontSize: '0.8rem', color: 'var(--color-text-primary)', outline: 'none', fontWeight: 600 }} />
@@ -473,9 +475,9 @@ export default function POTrackerAdvanced() {
               onClick={load}
               disabled={loading}
               style={{
-                padding: '10px 18px', borderRadius: '12px', background: 'var(--color-brand-500)', color: 'white',
+                padding: '10px 18px', borderRadius: '8px', background: 'var(--color-brand-500)', color: 'var(--color-ui-on-interactive)',
                 border: 'none', fontSize: '0.8rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px',
-                cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 4px 12px color-mix(in srgb, var(--color-brand-500) 40%, transparent)'
+                cursor: 'pointer', transition: 'background-color 0.2s ease'
               }}
               className="hover:bg-brand-600 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
             >
@@ -514,27 +516,25 @@ export default function POTrackerAdvanced() {
         )}
 
         {/* ─── KPI TILES (Flat icon-circle, static display — consistent with PCC Subcontract Management) ─── */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+        <div className="po-kpi-grid">
           {[
             { id: 'total', label: 'ACTIVE ORDERS', value: filtered.length.toLocaleString(), color: 'var(--color-brand-500)', icon: <Package size={20} /> },
             { id: 'qty', label: 'TOTAL QTY', value: totalQty.toLocaleString(), color: 'var(--color-brand-500)', icon: <LayoutGrid size={20} /> },
-            { id: 'amount', label: 'TOTAL AMOUNT', value: `$${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, color: 'var(--color-accent-600)', icon: <DollarSign size={20} /> },
+            { id: 'amount', label: 'TOTAL AMOUNT', value: `$${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, color: 'var(--color-brand-500)', icon: <DollarSign size={20} /> },
             { id: 'pending', label: 'PENDING', value: pendingCount.toLocaleString(), color: 'var(--color-warning-600)', icon: <AlertTriangle size={20} /> },
             { id: 'late', label: 'LATE', value: delayedCount.toLocaleString(), color: 'var(--color-danger-600)', icon: <RefreshCw size={20} /> },
-          ].map((stat, i) => (
+          ].map((stat) => (
             <div
               key={stat.id}
-              className="animate-fade-in-up"
               style={{
                 background: 'var(--color-surface-0)',
-                padding: '20px', borderRadius: '16px',
+                padding: '16px', borderRadius: '8px',
                 border: '1px solid var(--color-border-light)',
                 display: 'flex', alignItems: 'center', gap: '14px',
                 boxShadow: '0 2px 8px color-mix(in srgb, var(--color-surface-900) 4%, transparent)',
-                animationDelay: `${i * 0.05}s`
               }}
             >
-              <div style={{ width: 44, height: 44, borderRadius: '50%', flexShrink: 0, background: `color-mix(in srgb, ${stat.color} 16%, var(--color-surface-1))`, color: stat.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ width: 38, height: 38, borderRadius: '8px', flexShrink: 0, background: `color-mix(in srgb, ${stat.color} 14%, var(--color-surface-1))`, color: stat.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {stat.icon}
               </div>
               <div>
@@ -549,8 +549,8 @@ export default function POTrackerAdvanced() {
              inner card shrinks to its actual content and only grows up to that budget when the
              table is long enough to need it, so a short result set doesn't leave an empty box ─── */}
         <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-        <div style={{ background: 'var(--color-surface-0)', borderRadius: '24px', border: '1px solid var(--color-border-light)', boxShadow: '0 12px 40px -12px color-mix(in srgb, var(--color-surface-900) 8%, transparent)', overflow: 'hidden', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-          {error && <div style={{ padding: '16px', background: '#fff5f5', borderBottom: '1px solid #ffc9c9', display: 'flex', alignItems: 'center', gap: '8px' }}><AlertTriangle size={16} style={{ color: '#e03131' }} /> <span style={{ fontSize: '0.85rem', color: '#c92a2a' }}>{error}</span></div>}
+        <div style={{ background: 'var(--color-surface-0)', borderRadius: '8px', border: '1px solid var(--color-border-light)', boxShadow: 'var(--shadow-panel)', overflow: 'hidden', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+          {error && <div style={{ padding: '16px', background: 'var(--color-danger-50)', borderBottom: '1px solid var(--color-danger-500)', display: 'flex', alignItems: 'center', gap: '8px' }}><AlertTriangle size={16} style={{ color: 'var(--color-danger-600)' }} /> <span style={{ fontSize: '0.85rem', color: 'var(--color-danger-600)' }}>{error}</span></div>}
 
           <OrderTable
             data={paged}
@@ -561,7 +561,7 @@ export default function POTrackerAdvanced() {
 
           {/* Single Pagination Bar — record count, page size, and page nav together */}
           {!loading && filtered.length > 0 && (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', padding: '16px 24px', borderTop: '1px solid var(--color-border-strong)', background: 'var(--color-surface-0)', gap: '16px', flexShrink: 0 }}>
+            <div className="po-pagination" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', padding: '12px 16px', borderTop: '1px solid var(--color-border-strong)', background: 'var(--color-surface-0)', gap: '12px', flexShrink: 0 }}>
               <span style={{ fontSize: '0.8rem', color: 'var(--color-text-tertiary)', fontWeight: 600 }}>
                 Showing <strong style={{ color: 'var(--color-text-primary)' }}>{pageStart + 1}</strong>–<strong style={{ color: 'var(--color-text-primary)' }}>{Math.min(pageStart + pageSize, filtered.length)}</strong> of <strong style={{ color: 'var(--color-brand-600)' }}>{filtered.length.toLocaleString()}</strong>
               </span>
@@ -570,7 +570,7 @@ export default function POTrackerAdvanced() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} style={{ padding: '6px 16px', borderRadius: '10px', border: '1px solid var(--color-border-light)', background: page === 1 ? 'transparent' : 'var(--color-surface-1)', color: page === 1 ? 'var(--color-text-quaternary)' : 'var(--color-text-secondary)', cursor: page === 1 ? 'default' : 'pointer', fontSize: '0.8rem', fontWeight: 700, transition: 'all 0.2s' }} className="hover:bg-surface-2 active:scale-95">Prev</button>
                   {pageNumbers.map((p, i) => p === '...' ? <span key={i} style={{ color: 'var(--color-text-quaternary)', padding: '0 8px' }}>...</span> : (
-                    <button key={i} onClick={() => setPage(p as number)} style={{ padding: '6px 14px', borderRadius: '10px', border: `1px solid ${page === p ? 'var(--color-brand-500)' : 'var(--color-border-light)'}`, background: page === p ? 'var(--color-brand-500)' : 'transparent', color: page === p ? '#fff' : 'var(--color-text-secondary)', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 900, minWidth: '38px', transition: 'all 0.2s' }} className="hover:bg-surface-1 active:scale-95">{p}</button>
+                    <button key={i} onClick={() => setPage(p as number)} style={{ padding: '6px 14px', borderRadius: '8px', border: `1px solid ${page === p ? 'var(--color-brand-500)' : 'var(--color-border-light)'}`, background: page === p ? 'var(--color-brand-500)' : 'transparent', color: page === p ? 'var(--color-ui-on-interactive)' : 'var(--color-text-secondary)', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 900, minWidth: '38px', transition: 'all 0.2s' }} className="hover:bg-surface-1 active:scale-95">{p}</button>
                   ))}
                   <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} style={{ padding: '6px 16px', borderRadius: '10px', border: '1px solid var(--color-border-light)', background: page === totalPages ? 'transparent' : 'var(--color-surface-1)', color: page === totalPages ? 'var(--color-text-quaternary)' : 'var(--color-text-secondary)', cursor: page === totalPages ? 'default' : 'pointer', fontSize: '0.8rem', fontWeight: 700, transition: 'all 0.2s' }} className="hover:bg-surface-2 active:scale-95">Next</button>
                 </div>
@@ -596,6 +596,7 @@ export default function POTrackerAdvanced() {
           )}
         </div>
         </div>
+      </div>
       </div>
       <style>{`
         @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}

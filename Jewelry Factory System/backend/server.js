@@ -119,7 +119,7 @@ app.get('/api/photos/cad/:itemNo', (req, res) => {
 
 
 // Routes
-const authMiddleware = require('./middleware/authMiddleware');
+const { authMiddleware, requireRole } = require('./middleware/authMiddleware');
 
 app.use('/api/auth', require('./routes/auth'));                // Login API
 app.use('/api/orders', authMiddleware, require('./routes/poTracker'));
@@ -128,9 +128,9 @@ app.use('/api/dashboard', authMiddleware, require('./routes/customerReportMatrix
 app.use('/api/dashboard', authMiddleware, require('./routes/salesAnalytics'));
 app.use('/api/items', authMiddleware, require('./routes/topOrdersGallery'));
 app.use('/api/search', authMiddleware, require('./routes/search'));
-app.use('/api/procurement', authMiddleware, require('./routes/procurementReceiving'));
-app.use('/api/requisition', authMiddleware, require('./routes/orderLinesIssues')); // Requisition routes (SOA, SIA, SIB, SIP, SIS)
-app.use('/api/sample', authMiddleware, require('./routes/sampleDepartment'));            // Sample Room routes (SSA, SIM)
+app.use('/api/procurement', authMiddleware, requireRole('admin'), require('./routes/procurementReceiving'));
+app.use('/api/requisition', authMiddleware, requireRole('admin'), require('./routes/orderLinesIssues')); // Requisition routes (SOA, SIA, SIB, SIP, SIS)
+app.use('/api/sample', authMiddleware, requireRole('admin'), require('./routes/sampleDepartment'));            // Sample Room routes (SSA, SIM)
 app.use('/api/lock', authMiddleware, require('./routes/lock'));                // Document locking
 
 // Global error handler

@@ -1,7 +1,8 @@
 // src/components/dashboard/CardDetailPanel.tsx
 import { useState, useEffect, type ReactNode } from 'react';
 import { X, TrendingUp, TrendingDown, Minus, Calendar, Users, Loader2, AlertTriangle, Package, CheckCircle2, Settings, CalendarDays } from 'lucide-react';
-import { fetchCardDetail, fetchAvailableYears, type CardDetailData, type CardType } from '../../services/dashboardAPI';
+import { fetchCardDetail, fetchAvailableYears, type CardDetailData, type CardType, type MonthlyData } from '../../services/dashboardAPI';
+import { getErrorMessage } from '../../utils/errors';
 
 // ─── Icon wrapper ────────────────────────────────────────────────────────────
 function CardIcon({ color, children }: { color: string; children: ReactNode }) {
@@ -45,13 +46,15 @@ function SVGLineChart({
   cardType,
   showLabels
 }: {
-  monthly: any[];
+  monthly: MonthlyData[];
   accentColor: string;
   year1: number;
   year2: number;
   cardType: string;
   showLabels: boolean;
 }) {
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const N = monthly.length;
   if (N <= 1) return null;
 
@@ -111,10 +114,6 @@ function SVGLineChart({
       points2.push({ x, y, val: m.year2, label: m.label });
     }
   });
-
-  // Mouse Tracking state for Interactive Hover Tooltip
-  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
   const handleMouseMove = (e: React.MouseEvent<SVGSVGElement, MouseEvent>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -395,30 +394,29 @@ function SVGLineChart({
           top: mousePos.y - 48,
           pointerEvents: 'none',
           zIndex: 100,
-          background: 'rgba(23, 28, 41, 0.95)',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          borderRadius: '14px',
+          background: 'var(--color-tooltip-surface)',
+          border: '1px solid var(--color-overlay-border)',
+          borderRadius: '8px',
           padding: '12px 16px',
-          boxShadow: '0 12px 30px -6px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.05)',
-          backdropFilter: 'blur(12px)',
+          boxShadow: 'var(--shadow-dropdown)',
           display: 'flex',
           flexDirection: 'column',
           gap: '8px',
-          color: '#fff',
+          color: 'var(--color-overlay-text)',
           fontSize: '0.75rem',
           minWidth: '170px',
           transform: mousePos.x > 750 ? 'translateX(-112%)' : 'none',
           transition: 'transform 0.05s ease-out',
         }}>
           {/* Header (Month Name) */}
-          <div style={{ fontWeight: 900, color: '#fff', fontSize: '0.8rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '6px', marginBottom: '2px', fontFamily: 'var(--font-display)', letterSpacing: '0.04em' }}>
+          <div style={{ fontWeight: 900, color: 'var(--color-overlay-text)', fontSize: '0.8rem', borderBottom: '1px solid var(--color-overlay-border)', paddingBottom: '6px', marginBottom: '2px', fontFamily: 'var(--font-display)', letterSpacing: '0.04em' }}>
             {monthly[hoveredIdx].labelTh || monthly[hoveredIdx].label || 'Month'}
           </div>
 
           {/* Series 1 Value (Solid Line / Current Year or Actual) */}
           {hoveredPoint1 && (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, color: 'rgba(255, 255, 255, 0.7)' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, color: 'var(--color-overlay-text-muted)' }}>
                 <span style={{ width: 8, height: 8, borderRadius: '50%', background: accentColor, display: 'inline-block' }} />
                 {cardType === 'today' ? 'Daily Actual' : `ปี ${year1}`}
               </span>
@@ -431,11 +429,11 @@ function SVGLineChart({
           {/* Series 2 Value (Dashed Line / Comparison Year or Baseline) */}
           {hoveredPoint2 && (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, color: 'rgba(255, 255, 255, 0.7)' }}>
-                <span style={{ width: 8, height: 8, borderRadius: '50%', border: `1.5px dashed color-mix(in srgb, ${accentColor} 60%, white)`, display: 'inline-block', background: 'rgba(255,255,255,0.1)' }} />
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, color: 'var(--color-overlay-text-muted)' }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', border: `1.5px dashed color-mix(in srgb, ${accentColor} 60%, var(--color-overlay-text))`, display: 'inline-block', background: 'var(--color-overlay-control)' }} />
                 {cardType === 'today' ? '7d Average' : `ปี ${year2}`}
               </span>
-              <span style={{ fontWeight: 900, color: 'rgba(255, 255, 255, 0.95)', fontFamily: 'var(--font-sans)', fontSize: '0.85rem' }}>
+              <span style={{ fontWeight: 900, color: 'var(--color-overlay-text)', fontFamily: 'var(--font-sans)', fontSize: '0.85rem' }}>
                 {hoveredPoint2.val.toLocaleString()}
               </span>
             </div>
@@ -443,15 +441,15 @@ function SVGLineChart({
 
           {/* Comparison / Difference if both points are valid */}
           {hoveredPoint1 && hoveredPoint2 && (
-            <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '6px', marginTop: '2px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontWeight: 700, color: 'rgba(255, 255, 255, 0.45)', fontSize: '0.68rem' }}>ผลต่าง (Diff)</span>
+            <div style={{ borderTop: '1px solid var(--color-overlay-border)', paddingTop: '6px', marginTop: '2px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontWeight: 700, color: 'var(--color-overlay-text-muted)', fontSize: '0.68rem' }}>ผลต่าง (Diff)</span>
               {(() => {
                 const diffVal = hoveredPoint1.val - hoveredPoint2.val;
                 const pct = hoveredPoint2.val > 0 ? +((diffVal / hoveredPoint2.val) * 100).toFixed(1) : 0;
                 const isPos = pct > 0;
                 const isNeg = pct < 0;
                 const isGood = cardType === 'overdue' ? isNeg : isPos;
-                const badgeColor = isGood ? 'rgb(34, 197, 94)' : isNeg ? 'rgb(239, 68, 68)' : 'rgba(255,255,255,0.5)';
+                const badgeColor = isGood ? 'var(--color-success-500)' : isNeg ? 'var(--color-danger-500)' : 'var(--color-overlay-text-muted)';
                 return (
                   <span style={{ fontWeight: 900, color: badgeColor, fontSize: '0.72rem', display: 'inline-flex', alignItems: 'center', gap: 2 }}>
                     {pct > 0 ? '+' : ''}{pct}%
@@ -475,43 +473,50 @@ export default function CardDetailPanel({ cardType, selectedYear, onClose }: { c
   const extYear = (selectedYear && selectedYear !== 'all') ? parseInt(selectedYear) : curYear;
 
   // 2. Local state for the internal comparison year (initialized to extYear - 1)
-  const [compareYear, setCompareYear] = useState(extYear - 1);
+  const [compareSelection, setCompareSelection] = useState({ baseYear: extYear, year: extYear - 1 });
   const [years, setYears] = useState<number[]>([]);
-  const [data, setData] = useState<CardDetailData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [detailState, setDetailState] = useState<{
+    key: string;
+    data: CardDetailData | null;
+    error: string | null;
+  }>({ key: '', data: null, error: null });
   const [showLabels, setShowLabels] = useState(false);
 
+  const compareYear = compareSelection.baseYear === extYear ? compareSelection.year : extYear - 1;
   const year1 = extYear;
   const year2 = compareYear;
+  const detailKey = `${cardType}:${extYear}:${compareYear}`;
+  const hasCurrentDetail = detailState.key === detailKey;
+  const data = hasCurrentDetail ? detailState.data : null;
+  const error = hasCurrentDetail ? detailState.error : null;
+  const loading = !hasCurrentDetail;
 
   useEffect(() => {
     fetchAvailableYears().then(y => { setYears(y); }).catch(() => {});
   }, []);
 
-  // Sync compareYear when the external selectedYear changes
-  useEffect(() => {
-    if (selectedYear && selectedYear !== 'all') {
-      const parsed = parseInt(selectedYear);
-      setCompareYear(parsed - 1);
-    }
-  }, [selectedYear]);
-
   // Load detail when cardType, extYear, or compareYear change
   useEffect(() => {
-    setLoading(true); setError(null);
+    let cancelled = false;
     fetchCardDetail(cardType, extYear, compareYear)
-      .then(d => { setData(d); setLoading(false); })
-      .catch(e => { setError(e.message); setLoading(false); });
-  }, [cardType, extYear, compareYear]);
+      .then(d => {
+        if (!cancelled) setDetailState({ key: detailKey, data: d, error: null });
+      })
+      .catch((requestError: unknown) => {
+        if (!cancelled) {
+          setDetailState({ key: detailKey, data: null, error: getErrorMessage(requestError, 'Failed to load comparison data') });
+        }
+      });
+    return () => { cancelled = true; };
+  }, [cardType, extYear, compareYear, detailKey]);
 
   const isInverse = cardType === 'overdue';
 
   return (
     <div style={{
-      background: 'var(--color-surface-0)', borderRadius: 24,
+      background: 'var(--color-surface-0)', borderRadius: 8,
       border: '1px solid var(--color-border-light)',
-      boxShadow: '0 12px 40px -12px rgba(0,0,0,0.1)',
+      boxShadow: 'var(--shadow-panel)',
       overflow: 'hidden',
       animation: 'panelSlideDown 0.45s cubic-bezier(0.16,1,0.3,1) forwards',
     }}>
@@ -520,7 +525,7 @@ export default function CardDetailPanel({ cardType, selectedYear, onClose }: { c
       <div style={{
         display:'flex', alignItems:'center', justifyContent:'space-between',
         padding:'20px 28px', borderBottom:'1px solid var(--color-border-light)',
-        background: `linear-gradient(135deg, color-mix(in oklch, ${meta.accent}, transparent 95%), transparent)`,
+        background: 'var(--color-surface-0)',
       }}>
         <div style={{ display:'flex', alignItems:'center', gap:16 }}>
           {meta.icon}
@@ -554,13 +559,13 @@ export default function CardDetailPanel({ cardType, selectedYear, onClose }: { c
             <div style={{ display:'flex', alignItems:'center', gap:8, padding:'6px 12px', borderRadius:14, background:'var(--color-surface-1)', border:'1px solid var(--color-border-light)' }}>
               <Calendar size={14} style={{ color:'var(--color-text-tertiary)' }}/>
               <span style={{ fontSize:'0.72rem', fontWeight:800, color:'var(--color-text-secondary)' }}>เปรียบเทียบกับปี:</span>
-              <select value={compareYear} onChange={e => setCompareYear(+e.target.value)} style={{ border:'none', background:'transparent', fontSize:'0.8rem', fontWeight:800, color: meta.accent, outline:'none', cursor:'pointer' }}>
+              <select value={compareYear} onChange={e => setCompareSelection({ baseYear: extYear, year: +e.target.value })} style={{ border:'none', background:'transparent', fontSize:'0.8rem', fontWeight:800, color: meta.accent, outline:'none', cursor:'pointer' }}>
                 {years.map(y => <option key={y} value={y}>{y}</option>)}
               </select>
             </div>
           )}
           <button onClick={onClose} style={{ width:36, height:36, borderRadius:10, background:'var(--color-surface-2)', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'var(--color-text-tertiary)', transition:'all 0.2s' }}
-            onMouseEnter={e => { e.currentTarget.style.background='var(--color-danger-500)'; e.currentTarget.style.color='#fff'; }}
+            onMouseEnter={e => { e.currentTarget.style.background='var(--color-danger-500)'; e.currentTarget.style.color='var(--color-overlay-text)'; }}
             onMouseLeave={e => { e.currentTarget.style.background='var(--color-surface-2)'; e.currentTarget.style.color='var(--color-text-tertiary)'; }}
           ><X size={18}/></button>
         </div>
@@ -631,7 +636,7 @@ export default function CardDetailPanel({ cardType, selectedYear, onClose }: { c
               ];
 
               return summaryCards.map((s, i) => (
-                <div key={i} style={{ padding:'16px 20px', borderRadius:16, background:'var(--color-surface-1)', border:'1px solid var(--color-border-light)', display:'flex', flexDirection:'column', justifyContent:'center' }}>
+                <div key={i} style={{ padding:'16px 20px', borderRadius:8, background:'var(--color-surface-1)', border:'1px solid var(--color-border-light)', display:'flex', flexDirection:'column', justifyContent:'center' }}>
                   <div style={{ fontSize:'0.6rem', fontWeight:800, color:'var(--color-text-tertiary)', textTransform: 'capitalize', letterSpacing:'0.08em', marginBottom:6 }}>{s.label}</div>
                   <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:8 }}>
                     <div style={{ fontSize:'1.4rem', fontWeight:900, color: s.color, fontFamily:'var(--font-display)', letterSpacing:'-0.02em' }}>
@@ -647,7 +652,7 @@ export default function CardDetailPanel({ cardType, selectedYear, onClose }: { c
           </div>
 
           {/* ─── SVG Line Chart (Stock Style) ─── */}
-          <div style={{ borderRadius:20, border:'1px solid var(--color-border-light)', overflow:'hidden', background:'var(--color-surface-0)' }}>
+          <div style={{ borderRadius:8, border:'1px solid var(--color-border-light)', overflow:'hidden', background:'var(--color-surface-0)' }}>
             <div style={{ padding:'14px 20px', borderBottom:'1px solid var(--color-border-light)', display:'flex', alignItems:'center', justifyContent:'space-between', gap: 16 }}>
               <span style={{ fontSize:'0.65rem', fontWeight:800, color:'var(--color-text-tertiary)', textTransform: 'capitalize', letterSpacing:'0.08em' }}>
                 {cardType === 'today' ? 'Daily Actual vs Moving Average' : 'Monthly Trend comparison'}
@@ -667,7 +672,7 @@ export default function CardDetailPanel({ cardType, selectedYear, onClose }: { c
                       width: 34,
                       height: 18,
                       borderRadius: 10,
-                      background: showLabels ? meta.accent : 'var(--color-surface-3)',
+                      background: showLabels ? 'var(--color-brand-500)' : 'var(--color-surface-2)',
                       border: '1px solid var(--color-border-light)',
                       transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
                     }} />
@@ -678,8 +683,8 @@ export default function CardDetailPanel({ cardType, selectedYear, onClose }: { c
                       width: 12,
                       height: 12,
                       borderRadius: '50%',
-                      background: '#fff',
-                      boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                      background: 'var(--color-product-canvas)',
+                      boxShadow: 'var(--shadow-panel)',
                       transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
                     }} />
                   </div>
@@ -735,7 +740,7 @@ export default function CardDetailPanel({ cardType, selectedYear, onClose }: { c
 
           {/* ─── Customer / Daily Breakdown Table ─── */}
           {data.breakdown.length > 0 && (
-            <div style={{ borderRadius:20, border:'1px solid var(--color-border-light)', overflow:'hidden' }}>
+            <div style={{ borderRadius:8, border:'1px solid var(--color-border-light)', overflow:'hidden' }}>
               <div style={{ padding:'14px 20px', borderBottom:'1px solid var(--color-border-light)', display:'flex', alignItems:'center', gap:8 }}>
                 <Users size={14} style={{ color:'var(--color-text-tertiary)' }}/>
                 <span style={{ fontSize:'0.65rem', fontWeight:800, color:'var(--color-text-tertiary)', textTransform: 'capitalize', letterSpacing:'0.08em' }}>

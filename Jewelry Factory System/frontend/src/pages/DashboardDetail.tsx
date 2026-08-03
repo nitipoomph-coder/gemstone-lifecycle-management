@@ -1,147 +1,119 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
+import { AlertTriangle, RefreshCw } from 'lucide-react';
 import Topbar from '../components/layout/Topbar';
 import { fetchDashboardData } from '../services/dashboardAPI';
-import { AlertTriangle, RefreshCw } from 'lucide-react';
-
-const shimmerStyle: React.CSSProperties = {
-  background: 'linear-gradient(90deg, var(--color-surface-1) 25%, var(--color-surface-2) 50%, var(--color-surface-1) 75%)',
-  backgroundSize: '400% 100%',
-  animation: 'skeletonShimmer 1.6s ease-in-out infinite',
-  borderRadius: '2px',
-};
 
 export default function DashboardDetail() {
-  
   const location = useLocation();
   const { category, value } = (location.state as { category?: string; value?: string | number }) || {};
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [currentDate, setCurrentDate] = useState<string>('');
+  const [currentDate, setCurrentDate] = useState('');
 
   const loadData = () => {
     setLoading(true);
     setError(null);
-
     fetchDashboardData()
-      .then(() => {
-        setLoading(false);
-      })
+      .then(() => setLoading(false))
       .catch(() => {
-        setError('ไม่สามารถเชื่อมต่อฐานข้อมูลได้ กรุณาลองใหม่อีกครั้ง');
+        setError('Unable to connect to the dashboard data source.');
         setLoading(false);
       });
   };
 
   useEffect(() => {
-    loadData();
-    const timer = setInterval(() => {
-      const now = new Date();
-      const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
-      setCurrentDate(
-        `${now.getDate().toString().padStart(2, '0')} ${months[now.getMonth()]} ${now.getFullYear()} | ` +
-        `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`
-      );
-    }, 1000);
-    return () => clearInterval(timer);
+    let active = true;
+    fetchDashboardData()
+      .then(() => {
+        if (active) setLoading(false);
+      })
+      .catch(() => {
+        if (!active) return;
+        setError('Unable to connect to the dashboard data source.');
+        setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
-  if (loading) {
-    return (
-      <div
-        className="flex h-full w-full flex-col p-6"
-        style={{ background: 'var(--color-surface-0)' }}
-      >
-        <div className="mx-auto w-full max-w-[1400px]">
-          <div className="mb-6 flex items-end justify-between border-b-[3px] border-[var(--color-border-light)] pb-4">
-            <div>
-              <div style={{ height: '36px', width: '300px', ...shimmerStyle }} className="mb-2" />
-              <div style={{ height: '20px', width: '150px', ...shimmerStyle }} />
-            </div>
-            <div className="flex flex-col items-end gap-2">
-              <div style={{ height: '16px', width: '120px', ...shimmerStyle }} />
-              <div style={{ height: '26px', width: '200px', ...shimmerStyle }} />
-            </div>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: '1rem', marginBottom: '1rem' }}>
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} style={{ height: '96px', ...shimmerStyle }} />
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
+  useEffect(() => {
+    const updateClock = () => setCurrentDate(new Date().toLocaleString('en-GB', { hour12: false }));
+    updateClock();
+    const timer = window.setInterval(updateClock, 1000);
+    return () => window.clearInterval(timer);
+  }, []);
 
-  if (error) {
-    return (
-      <div
-        className="flex h-full w-full flex-col items-center justify-center gap-6"
-        style={{ background: 'var(--color-surface-0)' }}
-      >
-        <div className="flex flex-col items-center gap-4 text-center">
-          <div
-            className="flex h-14 w-14 items-center justify-center rounded-full"
-            style={{ background: 'var(--color-danger-50)' }}
-          >
-            <AlertTriangle size={26} className="text-[var(--color-danger-500)]" />
-          </div>
-          <div style={{ fontFamily: 'var(--font-logo)', fontSize: '0.8rem', letterSpacing: '0.2em' }} className="text-[var(--color-danger-500)]">
-            CONNECTION ERROR
-          </div>
-          <p className="text-[0.85rem] text-[var(--color-text-secondary)] max-w-[320px] leading-relaxed">
-            {error}
-          </p>
-        </div>
-        <button
-          onClick={loadData}
-          className="flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold transition-all hover:opacity-80 active:scale-95 bg-[var(--color-brand-600)] text-[var(--color-text-inverse)]"
-          style={{ fontFamily: 'var(--font-display)' }}
-        >
-          <RefreshCw size={14} />
-          ลองใหม่อีกครั้ง
-        </button>
-      </div>
-    );
-  }
+  const pageTitle = category || 'Dashboard Detail';
 
   return (
-    <>
-      <Topbar breadcrumb={[
-        { label: 'JEWELRY FACTORY SYSTEM', path: '/' },
-        { label: 'DASHBOARD', path: '/' },
-        { label: category || 'DETAIL VIEW' }
-      ]} />
-      <div className="content-scrollbar flex-1 overflow-y-auto bg-[var(--color-surface-0)] p-6">
-        <div className="mx-auto flex flex-col gap-4 max-w-[1400px]">
+    <div className="app-page">
+      <Topbar
+        breadcrumb={[
+          { label: 'JEWELRY FACTORY SYSTEM', path: '/' },
+          { label: 'DASHBOARD', path: '/' },
+          { label: pageTitle },
+        ]}
+        contentLayout="dashboard"
+      />
 
-
-
-          {/* Header */}
-          <div className="flex items-end justify-between border-b-[3px] border-[var(--color-brand-600)] pb-4">
-            <div>
-              <h1 className="text-3xl font-bold tracking-widest text-[var(--color-text-primary)]" style={{ fontFamily: 'var(--font-logo)' }}>
-                {category || 'DETAIL DASHBOARD'}
-              </h1>
-              <p className="mt-1 text-sm text-[var(--color-text-tertiary)]">
-                {category ? `แสดงรายละเอียดสำหรับ ${category} (ค่าปัจจุบัน: ${value})` : 'หน้ารายละเอียดเชิงลึก (Mockup)'}
-              </p>
-            </div>
-            <div className="text-right">
-              <div className="text-xs font-mono text-[var(--color-text-tertiary)] mb-1">{currentDate}</div>
-              <div className="text-[26px] font-bold tracking-[0.15em] text-[var(--color-brand-500)] leading-none" style={{ fontFamily: 'var(--font-logo)' }}>
-                JEWELRY <span className="text-[12px] font-sans tracking-[0.25em] text-[var(--color-text-secondary)] align-middle">SMART FACTORY</span>
+      <div className="app-page-scroll content-scrollbar">
+        <div className="app-content-frame app-content-frame--dashboard app-page-content flex flex-col gap-4">
+          {loading ? (
+            <div className="dashboard-detail-loading" aria-busy="true" aria-label="Loading dashboard detail">
+              <div className="app-skeleton h-20" />
+              <div className="dashboard-stat-grid">
+                {Array.from({ length: 5 }).map((_, index) => (
+                  <div key={index} className="app-skeleton h-24" />
+                ))}
               </div>
+              <div className="app-skeleton h-64" />
             </div>
-          </div>
+          ) : error ? (
+            <section className="app-panel flex min-h-64 flex-col items-center justify-center gap-4 p-8 text-center" role="alert">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-danger-50)] text-[var(--color-danger-600)]">
+                <AlertTriangle size={22} />
+              </div>
+              <div>
+                <h2 className="text-[length:var(--erp-text-section)] font-bold text-[var(--color-text-primary)]">Data connection failed</h2>
+                <p className="mt-1 text-[length:var(--erp-text-body)] text-[var(--color-text-secondary)]">{error}</p>
+              </div>
+              <button
+                type="button"
+                onClick={loadData}
+                className="flex items-center gap-2 rounded-lg bg-[var(--color-brand-500)] px-4 py-2 text-[length:var(--erp-text-control)] font-bold text-[var(--color-ui-on-interactive)] hover:bg-[var(--color-brand-600)]"
+              >
+                <RefreshCw size={14} /> Retry
+              </button>
+            </section>
+          ) : (
+            <>
+              <section className="app-panel dashboard-detail-summary">
+                <div>
+                  <span className="text-[length:var(--erp-text-meta)] font-bold text-[var(--color-text-tertiary)]">SELECTED METRIC</span>
+                  <h2 className="mt-1 text-[length:var(--erp-text-page)] font-extrabold text-[var(--color-text-primary)]">{pageTitle}</h2>
+                </div>
+                <div>
+                  <span className="text-[length:var(--erp-text-meta)] font-bold text-[var(--color-text-tertiary)]">CURRENT VALUE</span>
+                  <div className="mt-1 text-[length:var(--erp-text-kpi)] font-extrabold text-[var(--color-brand-600)]">{value ?? '-'}</div>
+                </div>
+                <div>
+                  <span className="text-[length:var(--erp-text-meta)] font-bold text-[var(--color-text-tertiary)]">AS OF</span>
+                  <div className="mt-1 text-[length:var(--erp-text-body)] font-semibold text-[var(--color-text-secondary)]">{currentDate}</div>
+                </div>
+              </section>
 
-          <div className="flex flex-col items-center justify-center p-20 border border-dashed border-[var(--color-border-strong)] rounded-lg text-[var(--color-text-tertiary)] bg-[var(--color-surface-1)]">
-            <h2 className="text-2xl font-bold text-[var(--color-text-secondary)] mb-2" style={{ fontFamily: 'var(--font-display)' }}>พื้นที่จำลอง (Drill-down Concept)</h2>
-            <p>หน้าจอนี้จำลองการกดมาจากการ์ดในหน้าแรก เพื่อแสดงรายละเอียดเชิงลึก</p>
-          </div>
-
+              <section className="app-panel flex min-h-48 flex-col justify-center p-6">
+                <h2 className="text-[length:var(--erp-text-section)] font-bold text-[var(--color-text-primary)]">Record-level detail is not configured</h2>
+                <p className="mt-2 max-w-2xl text-[length:var(--erp-text-body)] leading-6 text-[var(--color-text-secondary)]">
+                  This metric currently has summary data only. A record-level endpoint is required before orders can be listed here.
+                </p>
+              </section>
+            </>
+          )}
         </div>
       </div>
-    </>
+    </div>
   );
 }

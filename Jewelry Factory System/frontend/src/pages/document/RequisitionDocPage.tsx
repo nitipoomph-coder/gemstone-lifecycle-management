@@ -8,8 +8,10 @@ import {
   fetchRequisitionDocument,
   fetchOrderForRequisition,
   saveRequisitionDocument,
-  generateNextDocumentNumber
+  generateNextDocumentNumber,
+  type RequisitionDocument,
 } from '../../services/requisitionAPI';
+import { getErrorMessage } from '../../utils/errors';
 
 const routeToDocType: Record<string, string> = {
   '/orders/create': 'SOA',
@@ -22,20 +24,29 @@ const routeToDocType: Record<string, string> = {
 export default function RequisitionDocPage() {
   const location = useLocation();
   const docType = routeToDocType[location.pathname] || 'SOA';
+  return <RequisitionDocWorkspace key={docType} docType={docType} />;
+}
+
+function RequisitionDocWorkspace({ docType }: { docType: string }) {
   const formConfig = formConfigMap[docType];
 
   const [docList, setDocList] = useState<DocListItem[]>([]);
   const [selectedDocNo, setSelectedDocNo] = useState('');
-  const [docDetail, setDocDetail] = useState<any | null>(null);
+  const [docDetail, setDocDetail] = useState<RequisitionDocument | null>(null);
   const [isEditing, setIsEditing] = useState(false);
 
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState('');
 
-  const [loading, setLoading] = useState(true);
-  const [detailLoading, setDetailLoading] = useState(false);
+  const [listRefreshVersion, setListRefreshVersion] = useState(0);
+  const [loadedListKey, setLoadedListKey] = useState('');
+  const [loadedDetailNo, setLoadedDetailNo] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const listKey = `${docType}:${page}:${search}:${listRefreshVersion}`;
+  const loading = formConfig?.apiType === 'none' ? false : loadedListKey !== listKey;
+  const detailLoading = actionLoading || Boolean(selectedDocNo && loadedDetailNo !== selectedDocNo);
 
   const groupLabel = formConfig?.groupLabel || 'ออเดอร์และการเบิก';
   const itemLabel = formConfig?.titleTh || docType;
@@ -48,77 +59,60 @@ export default function RequisitionDocPage() {
 
   const hasPhoto = formConfig?.hasPhoto;
 
-  const loadDocList = async () => {
-    setLoading(true);
-    setError(null);
-    setDocList([]);
+  useEffect(() => {
+    if (formConfig?.apiType === 'none') return;
+    let cancelled = false;
+    fetchRequisitionDocuments(docType, { page, limit: 50, search })
+      .then(response => {
+        if (cancelled) return;
+        const mappedList = response.data.map(d => ({
+          no: d.DocuNo,
+          date: d.DocuDate ? new Date(d.DocuDate).toLocaleDateString('th-TH') : '',
+          status: d.DocuStatus,
+        }));
+        setDocList(mappedList);
+        setTotalPages(response.totalPages || 1);
+        setSelectedDocNo(current => current || mappedList[0]?.no || '');
+        setError(null);
+      })
+      .catch((requestError: unknown) => {
+        if (cancelled) return;
+        const message = getErrorMessage(requestError, 'Failed to load document list');
+        console.warn(`Failed to load list for ${docType}:`, requestError);
+        if (!message.includes('404')) setError(message);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadedListKey(listKey);
+      });
+    return () => { cancelled = true; };
+  }, [docType, page, search, listKey, formConfig?.apiType]);
 
-    // For UI Only modules, just show empty
-    if (formConfig?.apiType === 'none') {
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const response = await fetchRequisitionDocuments(docType, { page, limit: 50, search });
-      const mappedList = response.data.map((d: any) => ({
-        no: d.DocuNo,
-        date: d.DocuDate ? new Date(d.DocuDate).toLocaleDateString('th-TH') : '',
-        status: d.DocuStatus
-      }));
-      setDocList(mappedList);
-      setTotalPages(response.totalPages || 1);
-
-      if (mappedList.length > 0 && !selectedDocNo) {
-        setSelectedDocNo(mappedList[0].no);
-      }
-    } catch (err: any) {
-      console.warn(`Failed to load list for ${docType}:`, err);
-      // Don't show blocking error for UI-only/WIP endpoints
-      if (err.message && !err.message.includes('404')) {
-        setError(err.message);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
+  const loadDocList = () => setListRefreshVersion(version => version + 1);
 
   useEffect(() => {
-    handleClear();
-    setPage(1);
-    setSearch('');
-  }, [docType]);
-
-  useEffect(() => {
-    loadDocList();
-  }, [docType, page, search]);
-
-  useEffect(() => {
-    if (selectedDocNo) {
-      handleSearchDoc(selectedDocNo);
-    } else {
-      setDocDetail(null);
-    }
+    if (!selectedDocNo) return;
+    let cancelled = false;
+    fetchRequisitionDocument(selectedDocNo)
+      .then(nextDetail => {
+        if (cancelled) return;
+        setDocDetail(nextDetail);
+        setLoadedDetailNo(selectedDocNo);
+        setError(null);
+      })
+      .catch((requestError: unknown) => {
+        if (cancelled) return;
+        setError(getErrorMessage(requestError, 'Failed to fetch Document'));
+        setDocDetail(null);
+        setLoadedDetailNo(selectedDocNo);
+      });
+    return () => { cancelled = true; };
   }, [selectedDocNo]);
 
-  const handleSearchDoc = async (docNo: string) => {
-    if (!docNo.trim()) return;
-    setDetailLoading(true);
-    setError(null);
-    try {
-      const data = await fetchRequisitionDocument(docNo);
-      setDocDetail(data);
-    } catch (err: any) {
-      setError(err.message || 'Failed to fetch Document');
-      setDocDetail(null);
-    } finally {
-      setDetailLoading(false);
-    }
-  };
+  const handleSelectDoc = (docNo: string) => setSelectedDocNo(docNo);
 
   const handleFetchRef = async (refNo: string) => {
     if (!refNo.trim()) return;
-    setDetailLoading(true);
+    setActionLoading(true);
     setError(null);
     try {
       const data = await fetchOrderForRequisition(refNo);
@@ -128,16 +122,16 @@ export default function RequisitionDocPage() {
           DocuDate: new Date().toISOString(),
           DocuNo: 'NEW',
         },
-        lines: data.lines.map((l: any, i: number) => ({
-          ...l,
-          ListNo: i + 1,
-          GoodQty: l.ItemQty || 0,
+        lines: data.lines.map((line, index) => ({
+          ...line,
+          ListNo: index + 1,
+          GoodQty: Number(line.ItemQty ?? 0),
         }))
       });
-    } catch (err: any) {
-      setError(err.message || 'Failed to fetch reference');
+    } catch (requestError: unknown) {
+      setError(getErrorMessage(requestError, 'Failed to fetch reference'));
     } finally {
-      setDetailLoading(false);
+      setActionLoading(false);
     }
   };
 
@@ -156,7 +150,7 @@ export default function RequisitionDocPage() {
   };
 
   const handleNew = async () => {
-    setDetailLoading(true);
+    setActionLoading(true);
     try {
       const nextNo = await generateNextDocumentNumber(docType);
       setSelectedDocNo('');
@@ -168,16 +162,16 @@ export default function RequisitionDocPage() {
         },
         lines: []
       });
-    } catch (err: any) {
-      setError(err.message || 'Failed to generate new document');
+    } catch (requestError: unknown) {
+      setError(getErrorMessage(requestError, 'Failed to generate new document'));
     } finally {
-      setDetailLoading(false);
+      setActionLoading(false);
     }
   };
 
   const handleEdit = async () => {
     if (!selectedDocNo) return;
-    setDetailLoading(true);
+    setActionLoading(true);
     try {
       const res = await fetch('/api/lock/acquire', {
         method: 'POST',
@@ -190,10 +184,10 @@ export default function RequisitionDocPage() {
         return;
       }
       setIsEditing(true);
-    } catch (err: any) {
-      alert('Failed to acquire lock: ' + err.message);
+    } catch (requestError: unknown) {
+      alert('Failed to acquire lock: ' + getErrorMessage(requestError, 'Unknown error'));
     } finally {
-      setDetailLoading(false);
+      setActionLoading(false);
     }
   };
 
@@ -205,7 +199,7 @@ export default function RequisitionDocPage() {
       return;
     }
 
-    setDetailLoading(true);
+    setActionLoading(true);
     try {
       const payload = {
         docType: docType,
@@ -216,10 +210,10 @@ export default function RequisitionDocPage() {
       alert('บันทึกเอกสารสำเร็จ!');
       handleClear();
       loadDocList();
-    } catch (err: any) {
-      setError(err.message || 'Failed to save document');
+    } catch (requestError: unknown) {
+      setError(getErrorMessage(requestError, 'Failed to save document'));
     } finally {
-      setDetailLoading(false);
+      setActionLoading(false);
     }
   };
 
@@ -230,14 +224,14 @@ export default function RequisitionDocPage() {
       breadcrumb={breadcrumb}
       docList={docList}
       selectedDocNo={selectedDocNo}
-      onSelectDoc={setSelectedDocNo}
+      onSelectDoc={handleSelectDoc}
       onSearchList={(text) => {
         setSearch(text);
         setPage(1);
       }}
       onSearchSubmit={(text) => {
         if (text.trim()) {
-          setSelectedDocNo(text.trim());
+          handleSelectDoc(text.trim());
         }
       }}
       page={page}

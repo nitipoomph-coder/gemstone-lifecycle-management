@@ -1,5 +1,6 @@
 import { API_BASE_URL } from '../config/api';
 import { fetchWithAuth } from '../utils/fetchWithAuth';
+import { getErrorMessage } from '../utils/errors';
 // src/services/orderAPI.ts
 
 export interface OrderSummary {
@@ -90,6 +91,8 @@ const num = (v: number | string | null | undefined): number | null => {
   return isNaN(x) ? null : x;
 };
 
+type RawOrderSummary = Record<string, string | null | undefined>;
+
 export const fetchOrders = async (params: { status?: 'pending' | 'finish' | 'all', dateType?: string, dateFrom?: string, dateTo?: string }): Promise<{ ok: boolean; data: OrderSummary[]; error?: string }> => {
   try {
     const baseUrl = `${API_BASE_URL}/orders`;
@@ -110,7 +113,7 @@ export const fetchOrders = async (params: { status?: 'pending' | 'finish' | 'all
     const rawData = Array.isArray(result) ? result : (Array.isArray(result.data) ? result.data : []);
 
     // ⭐️ DATA MAPPING: ดักจับชื่อ Key เผื่อ Backend (C#) ส่งมาเป็นตัวพิมพ์เล็ก
-    const mappedData: OrderSummary[] = rawData.map((item: any) => ({
+    const mappedData: OrderSummary[] = (rawData as RawOrderSummary[]).map((item) => ({
       Week: item.OrdWeek || item.Week || item.week || '-',
       OrdNo: item.OrdNo || item.ordNo || item.ord_no || '-',
       CustCode: item.CustCode || item.custCode || '-',
@@ -194,8 +197,8 @@ export const fetchOrders = async (params: { status?: 'pending' | 'finish' | 'all
 
     return { ok: true, data: mappedData };
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error fetching orders:", error);
-    return { ok: false, data: [], error: error.message || 'Failed to fetch' };
+    return { ok: false, data: [], error: getErrorMessage(error, 'Failed to fetch') };
   }
 };

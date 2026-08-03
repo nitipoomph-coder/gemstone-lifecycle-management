@@ -99,6 +99,7 @@ export const fetchDashboardData = async (year?: number | string): Promise<Dashbo
 export interface MonthlyData {
   month: number;
   label: string;
+  labelTh?: string;
   isFuture: boolean;
   year1: number | null;
   year1Qty: number | null;
@@ -161,7 +162,7 @@ export const fetchAvailableYears = async (): Promise<number[]> => {
   return years;
 };
 
-export const fetchSalesSummary = async (years: string[]): Promise<any[]> => {
+export const fetchSalesSummary = async (years: string[]): Promise<Record<string, unknown>[]> => {
   const yearsParam = years.join(',');
   const res = await fetchWithAuth(`${BASE_URL}/dashboard/sales-summary?years=${yearsParam}`);
   if (!res.ok) throw new Error(`Sales summary API error: ${res.status}`);

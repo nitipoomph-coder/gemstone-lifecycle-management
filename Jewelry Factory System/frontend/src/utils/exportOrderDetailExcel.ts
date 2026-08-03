@@ -5,6 +5,21 @@ import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 import { ORDER_DETAIL_COLUMNS } from '../config/orderDetailColumns';
 
+interface SaveFileHandle {
+  name: string;
+  createWritable: () => Promise<{
+    write: (data: BlobPart) => Promise<void>;
+    close: () => Promise<void>;
+  }>;
+}
+
+interface SaveFilePickerWindow extends Window {
+  showSaveFilePicker?: (options: {
+    suggestedName: string;
+    types: { description: string; accept: Record<string, string[]> }[];
+  }) => Promise<SaveFileHandle>;
+}
+
 // Synthetic UI-only columns (photo thumbnail) are included as empty columns to match legacy CSV structure perfectly.
 // Excluded columns based on user request: FQC, Finish, Export, and trailing sales/remark columns.
 const EXPORT_COLUMNS = ORDER_DETAIL_COLUMNS.filter(c =>
@@ -144,10 +159,11 @@ export async function exportOrderDetailExcel(
             break;
           }
           case 'int':
-          case 'currency':
+          case 'currency': {
             const num = Number(raw);
             cell.value = num === 0 ? "" : num;
             break;
+          }
           case 'text':
             cell.value = String(raw);
             break;
@@ -212,9 +228,10 @@ export async function exportOrderDetailExcel(
   const defaultFilename = `ItemSum_${dateStr}.xlsx`;
 
   // File System Access API for custom save location
-  if ('showSaveFilePicker' in window) {
+  const pickerWindow = window as SaveFilePickerWindow;
+  if (pickerWindow.showSaveFilePicker) {
     try {
-      const handle = await (window as any).showSaveFilePicker({
+      const handle = await pickerWindow.showSaveFilePicker({
         suggestedName: defaultFilename,
         types: [{
           description: 'Excel Workbook',
@@ -229,9 +246,9 @@ export async function exportOrderDetailExcel(
         onSuccess(handle.name);
       }
       return;
-    } catch (err: any) {
+    } catch (err: unknown) {
       // User cancelled the picker, don't fallback to standard download
-      if (err.name === 'AbortError') return;
+      if (err instanceof Error && err.name === 'AbortError') return;
       console.warn("File System Access API failed, falling back to standard download", err);
     }
   }

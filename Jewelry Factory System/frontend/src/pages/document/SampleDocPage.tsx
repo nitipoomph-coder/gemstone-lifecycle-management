@@ -6,7 +6,9 @@ import { formConfigMap } from '../../config/formConfigs';
 import {
   fetchSampleDocuments,
   fetchSampleDocument,
+  type SampleDocument,
 } from '../../services/sampleAPI';
+import { getErrorMessage } from '../../utils/errors';
 
 // ─── Route → docType mapping ──────────────────
 const routeToDocType: Record<string, string> = {
@@ -17,19 +19,26 @@ const routeToDocType: Record<string, string> = {
 export default function SampleDocPage() {
   const location = useLocation();
   const docType = routeToDocType[location.pathname] || 'SSA';
+  return <SampleDocWorkspace key={docType} docType={docType} />;
+}
+
+function SampleDocWorkspace({ docType }: { docType: string }) {
   const formConfig = formConfigMap[docType];
 
   const [docList, setDocList] = useState<DocListItem[]>([]);
   const [selectedDocNo, setSelectedDocNo] = useState('');
-  const [docDetail, setDocDetail] = useState<any | null>(null);
+  const [docDetail, setDocDetail] = useState<SampleDocument | null>(null);
 
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState('');
 
-  const [loading, setLoading] = useState(true);
-  const [detailLoading, setDetailLoading] = useState(false);
+  const [loadedListKey, setLoadedListKey] = useState('');
+  const [loadedDetailNo, setLoadedDetailNo] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const listKey = `${docType}:${page}:${search}`;
+  const loading = loadedListKey !== listKey;
+  const detailLoading = Boolean(selectedDocNo && loadedDetailNo !== selectedDocNo);
 
   const groupLabel = formConfig?.groupLabel || 'ห้องตัวอย่าง';
   const itemLabel = formConfig?.titleTh || docType;
@@ -41,67 +50,52 @@ export default function SampleDocPage() {
   ];
 
   // ─── Load document list ─────────────────────
-  async function loadDocList() {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetchSampleDocuments(docType, { page, limit: 50, search });
-      const mappedList = response.data.map((d: any) => ({
-        no: d.DocuNo,
-        date: d.DocuDate ? new Date(d.DocuDate).toLocaleDateString('th-TH') : ''
-      }));
-      setDocList(mappedList);
-      setTotalPages(response.totalPages || 1);
-
-      if (mappedList.length > 0 && !selectedDocNo) {
-        setSelectedDocNo(mappedList[0].no);
-      }
-    } catch (err: any) {
-      console.warn(`Failed to load list for ${docType}:`, err);
-      if (err.message && !err.message.includes('404')) {
-        setError(err.message);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // เมื่อเปลี่ยน docType → รีเซ็ตหน้าแล้วโหลดใหม่
   useEffect(() => {
-    handleClear();
-    setPage(1);
-    setSearch('');
-  }, [docType]);
+    let cancelled = false;
+    fetchSampleDocuments(docType, { page, limit: 50, search })
+      .then(response => {
+        if (cancelled) return;
+        const mappedList = response.data.map(d => ({
+          no: d.DocuNo,
+          date: d.DocuDate ? new Date(d.DocuDate).toLocaleDateString('th-TH') : '',
+        }));
+        setDocList(mappedList);
+        setTotalPages(response.totalPages || 1);
+        setSelectedDocNo(current => current || mappedList[0]?.no || '');
+        setError(null);
+      })
+      .catch((requestError: unknown) => {
+        if (cancelled) return;
+        const message = getErrorMessage(requestError, 'Failed to load document list');
+        console.warn(`Failed to load list for ${docType}:`, requestError);
+        if (!message.includes('404')) setError(message);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadedListKey(listKey);
+      });
+    return () => { cancelled = true; };
+  }, [docType, page, search, listKey]);
 
   useEffect(() => {
-    loadDocList();
-  }, [docType, page, search]);
-
-  // เมื่อเลือกเอกสาร → โหลดรายละเอียด
-  useEffect(() => {
-    if (selectedDocNo) {
-      handleSearchDoc(selectedDocNo);
-    } else {
-      setDocDetail(null);
-    }
+    if (!selectedDocNo) return;
+    let cancelled = false;
+    fetchSampleDocument(selectedDocNo)
+      .then(nextDetail => {
+        if (cancelled) return;
+        setDocDetail(nextDetail);
+        setLoadedDetailNo(selectedDocNo);
+        setError(null);
+      })
+      .catch((requestError: unknown) => {
+        if (cancelled) return;
+        setError(getErrorMessage(requestError, 'Failed to fetch Document'));
+        setDocDetail(null);
+        setLoadedDetailNo(selectedDocNo);
+      });
+    return () => { cancelled = true; };
   }, [selectedDocNo]);
 
-  // ─── Load document detail ───────────────────
-  async function handleSearchDoc(docNo: string) {
-    if (!docNo.trim()) return;
-    setDetailLoading(true);
-    setError(null);
-    try {
-      const data = await fetchSampleDocument(docNo);
-      setDocDetail(data);
-    } catch (err: any) {
-      setError(err.message || 'Failed to fetch Document');
-      setDocDetail(null);
-    } finally {
-      setDetailLoading(false);
-    }
-  };
+  const handleSelectDoc = (docNo: string) => setSelectedDocNo(docNo);
 
   function handleClear() {
     setSelectedDocNo('');
@@ -120,14 +114,14 @@ export default function SampleDocPage() {
       breadcrumb={breadcrumb}
       docList={docList}
       selectedDocNo={selectedDocNo}
-      onSelectDoc={setSelectedDocNo}
+      onSelectDoc={handleSelectDoc}
       onSearchList={(text) => {
         setSearch(text);
         setPage(1);
       }}
       onSearchSubmit={(text) => {
         if (text.trim()) {
-          setSelectedDocNo(text.trim());
+          handleSelectDoc(text.trim());
         }
       }}
       page={page}

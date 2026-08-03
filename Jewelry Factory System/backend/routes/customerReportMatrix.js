@@ -42,25 +42,29 @@ router.get('/customer-summary', async (req, res) => {
     if (years.length === 0) years.push(new Date().getFullYear());
     const months = req.query.months ? req.query.months.split(',').map(m => parseInt(m)).filter(m => !isNaN(m)) : [];
 
-    // สร้าง parameterized IN clause สำหรับปีที่ต้องการ
-    const yearParams = years.map((_, i) => `@y${i}`).join(',');
     const request = pool.request();
-    years.forEach((y, i) => request.input(`y${i}`, sql.Int, y));
-
-    // Month filter affects both customer totals and top-item ranking.
-    let monthWhereClause = '';
-    let topItemMonthWhereClause = '';
-    if (months.length > 0) {
-      const monthParams = months.map((_, i) => `@m${i}`).join(',');
-      months.forEach((m, i) => request.input(`m${i}`, sql.Int, m));
-      monthWhereClause = `AND MONTH(h.OrdDate) IN (${monthParams})`;
-      topItemMonthWhereClause = `AND MONTH(oh.OrdDate) IN (${monthParams})`;
+    // SARGable date range helper
+    function buildDateRangeCondition(col, yearList, monthList) {
+      if (!yearList || yearList.length === 0) return '1=1';
+      if (!monthList || monthList.length === 0) {
+        return '(' + yearList.map(y => `(${col} >= '${y}-01-01' AND ${col} < '${y + 1}-01-01')`).join(' OR ') + ')';
+      }
+      const conditions = [];
+      for (const y of yearList) {
+        for (const m of monthList) {
+          const sM = m.toString().padStart(2, '0');
+          const eM_val = m + 1;
+          const eY = eM_val > 12 ? y + 1 : y;
+          const eM = (eM_val > 12 ? 1 : eM_val).toString().padStart(2, '0');
+          conditions.push(`(${col} >= '${y}-${sM}-01' AND ${col} < '${eY}-${eM}-01')`);
+        }
+      }
+      return '(' + conditions.join(' OR ') + ')';
     }
 
-    // Query ตาม Logic เดิมของ FrmSalesYear_SumCust.vb:
-    //   - ใช้ NOT IN blocklist แทน IN allowlist
-    //   - กรองเฉพาะ CustStatus = 'Y' (Active customers)
-    //   - ดึง SumOrdExchAmnt (ยอดแลกเปลี่ยนเงินตรา)
+    const sargableDateCondition = buildDateRangeCondition('h.OrdDate', years, months);
+    const sargableTopItemDateCondition = buildDateRangeCondition('oh.OrdDate', years, months);
+
     const query = `
       SELECT
         h.CustCode AS id,
@@ -73,8 +77,7 @@ router.get('/customer-summary', async (req, res) => {
         SUM(ISNULL(h.SumOrdQty, 0)) AS totalQty
       FROM OrdHD h
       LEFT JOIN GMCust c ON h.CustCode = c.CustCode
-      WHERE YEAR(h.OrdDate) IN (${yearParams})
-        ${monthWhereClause}
+      WHERE ${sargableDateCondition}
         AND SUBSTRING(h.OrdNo, 1, 3) NOT IN ('BBP','BBK','BBS','BBL','BBT','BBD')
         AND c.CustStatus = 'Y'
       GROUP BY h.CustCode, YEAR(h.OrdDate), MONTH(h.OrdDate)
@@ -90,8 +93,7 @@ router.get('/customer-summary', async (req, res) => {
         FROM OrdHD oh
         JOIN OrdDT od ON oh.OrdNo = od.OrdNo
         LEFT JOIN GMCust c ON c.CustCode = oh.CustCode
-        WHERE YEAR(oh.OrdDate) IN (${yearParams})
-          ${topItemMonthWhereClause}
+        WHERE ${sargableTopItemDateCondition}
           AND SUBSTRING(oh.OrdNo, 1, 3) NOT IN ('BBP','BBK','BBS','BBL','BBT','BBD')
           AND (oh.PONo IS NULL OR UPPER(oh.PONo) NOT LIKE '%SAMPLE%')
           AND ISNULL(c.CustStatus, 'Y') = 'Y'
@@ -121,8 +123,7 @@ router.get('/customer-summary', async (req, res) => {
         FROM OrdHD oh
         JOIN OrdDT od ON oh.OrdNo = od.OrdNo
         LEFT JOIN GMCust c ON c.CustCode = oh.CustCode
-        WHERE YEAR(oh.OrdDate) IN (${yearParams})
-          ${topItemMonthWhereClause}
+        WHERE ${sargableTopItemDateCondition}
           AND SUBSTRING(oh.OrdNo, 1, 3) NOT IN ('BBP','BBK','BBS','BBL','BBT','BBD')
           AND (oh.PONo IS NULL OR UPPER(oh.PONo) NOT LIKE '%SAMPLE%')
           AND ISNULL(c.CustStatus, 'Y') = 'Y'
@@ -162,8 +163,7 @@ router.get('/customer-summary', async (req, res) => {
         FROM OrdHD oh
         JOIN OrdDT od ON oh.OrdNo = od.OrdNo
         LEFT JOIN GMCust c ON c.CustCode = oh.CustCode
-        WHERE YEAR(oh.OrdDate) IN (${yearParams})
-          ${topItemMonthWhereClause}
+        WHERE ${sargableTopItemDateCondition}
           AND SUBSTRING(oh.OrdNo, 1, 3) NOT IN ('BBP','BBK','BBS','BBL','BBT','BBD')
           AND (oh.PONo IS NULL OR UPPER(oh.PONo) NOT LIKE '%SAMPLE%')
           AND ISNULL(c.CustStatus, 'Y') = 'Y'

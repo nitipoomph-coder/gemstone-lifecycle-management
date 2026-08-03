@@ -8,6 +8,7 @@ import { fetchCustomerSummary } from '../services/customerSummaryAPI';
 import { ALL_GROUPS, getCustomerGroupId } from '../config/customerGroups';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList } from 'recharts';
 import { ErpSegmentedControl } from '../components/ui/ErpButtons';
+import { buildCustomerTrendsPath } from '../utils/customerTrendsUrl';
 import './CustomerDashboard.css';
 
 
@@ -39,7 +40,7 @@ function defaultYearSelection(years: string[]) {
 const CustomTooltip = ({ active, payload, label, metric }: CustomTooltipProps) => {
   if (active && payload && payload.length) {
     return (
-      <div className="glass-panel" style={{ padding: '12px 16px', borderRadius: 12, border: '1px solid var(--color-border-light)', minWidth: 200 }}>
+      <div style={{ padding: '12px 16px', borderRadius: 8, border: '1px solid var(--color-border-light)', minWidth: 200, background: 'var(--color-ui-surface)', boxShadow: 'var(--shadow-dropdown)' }}>
         <p style={{ fontSize: 'var(--erp-text-panel)', fontWeight: 900, color: 'var(--color-text-primary)', marginBottom: 8, borderBottom: '1px solid var(--color-border-light)', paddingBottom: 6 }}>
           {label}
         </p>
@@ -245,13 +246,13 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: Metr
   }, [sortedSel, activeYears, selectedMonths, RAW]);
 
   const openCustomerSalesAnalysis = () => {
-    const params = new URLSearchParams();
-    if (activeYears.length) params.set('years', activeYears.join(','));
-    if (selectedMonths.length) params.set('months', selectedMonths.join(','));
     const salesGroups = sortedSel.filter(groupId => groupId !== 'General');
-    if (salesGroups.length) params.set('groups', salesGroups.join(','));
-    params.set('metric', metric);
-    navigate(`/dashboard/sales-customer-groups?${params.toString()}`);
+    navigate(buildCustomerTrendsPath({
+      years: activeYears,
+      months: selectedMonths,
+      groups: salesGroups,
+      metric,
+    }));
   };
   const openCustomerMatrix = () => {
     const params = new URLSearchParams();
@@ -373,32 +374,34 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: Metr
   if (loading) {
     return (
       <>
-        <Topbar breadcrumb={summaryBreadcrumb} contentLayout="dashboard-wide" />
-        <div className="app-content-frame app-content-frame--dashboard-wide app-page-content sales-summary-page sales-summary-page--loading" style={{ background: 'var(--color-surface-1)' }}>
+        <Topbar breadcrumb={summaryBreadcrumb} contentLayout="dashboard-wide" hideSearch />
+        <div className="app-page-scroll content-scrollbar">
+        <div className="app-content-frame app-content-frame--dashboard-wide app-page-content sales-summary-page sales-summary-page--loading">
           {/* Header Skeleton */}
           <div className="sales-summary-header" style={{ display: 'flex', justifyContent: 'space-between' }}>
             <div className="flex flex-col gap-2">
-              <div className="animate-pulse rounded-lg" style={{ width: 300, height: 32, background: 'var(--color-surface-2)' }} />
-              <div className="animate-pulse rounded-md" style={{ width: 200, height: 16, background: 'var(--color-surface-2)' }} />
+              <div className="app-skeleton h-8 w-[300px] max-w-full" />
+              <div className="app-skeleton h-4 w-[200px] max-w-full" />
             </div>
-            <div className="animate-pulse rounded-2xl" style={{ width: 300, height: 48, background: 'var(--color-surface-2)' }} />
+            <div className="app-skeleton rounded-lg" style={{ width: 300, height: 48 }} />
           </div>
 
           {/* Filters Skeleton */}
           <div className="sales-summary-filters" style={{ display: 'flex', gap: 16 }}>
-            <div className="animate-pulse rounded-2xl" style={{ width: 250, height: 80, background: 'var(--color-surface-2)' }} />
-            <div className="animate-pulse rounded-2xl flex-1" style={{ height: 80, background: 'var(--color-surface-2)' }} />
+            <div className="app-skeleton rounded-lg" style={{ width: 250, height: 80 }} />
+            <div className="app-skeleton flex-1 rounded-lg" style={{ height: 80 }} />
           </div>
 
           {/* Cards Skeleton */}
           <div className="sales-summary-cards">
             {[1, 2, 3, 4].map(i => (
-              <div key={i} className="animate-pulse rounded-2xl" style={{ height: 180, background: 'var(--color-surface-2)' }} />
+              <div key={i} className="app-skeleton rounded-lg" style={{ height: 180 }} />
             ))}
           </div>
 
           {/* Chart Skeleton */}
-          <div className="sales-summary-chart sales-summary-chart--loading animate-pulse rounded-3xl" style={{ background: 'var(--color-surface-2)' }} />
+          <div className="app-skeleton sales-summary-chart sales-summary-chart--loading rounded-lg" />
+        </div>
         </div>
       </>
     );
@@ -406,7 +409,7 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: Metr
 
   return (
     <>
-      <Topbar breadcrumb={summaryBreadcrumb} contentLayout="dashboard-wide" />
+      <Topbar breadcrumb={summaryBreadcrumb} contentLayout="dashboard-wide" hideSearch />
       <div className="content-scrollbar flex-1 overflow-y-auto" style={{ background: 'var(--color-surface-1)' }}>
         <div className="app-content-frame app-content-frame--dashboard-wide app-page-content sales-summary-page">
 
@@ -414,12 +417,9 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: Metr
           <div className="sales-summary-header" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
               <div>
-                <h1 style={{ fontSize: 'var(--erp-text-page)', fontWeight: 900, color: 'var(--color-text-primary)', fontFamily: 'var(--font-display)', letterSpacing: 0, lineHeight: 1.1, margin: 0 }}>
+                <h2 style={{ fontSize: 'var(--erp-text-page)', fontWeight: 900, color: 'var(--color-text-primary)', fontFamily: 'var(--font-display)', letterSpacing: 0, lineHeight: 1.1, margin: 0 }}>
                   {summaryTitle}
-                </h1>
-                <p style={{ fontSize: 'var(--erp-text-control)', fontWeight: 800, color: 'var(--color-text-tertiary)', marginTop: 4 }}>
-                  First view is chart focused, filtered by year, month, and customer group.
-                </p>
+                </h2>
               </div>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                 <button onClick={openCustomerSalesAnalysis} style={compactSecondaryButton}><Users size={14} /> Customer Trends</button>
@@ -495,11 +495,11 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: Metr
                 {availableYears.map(y => {
                   const on = selectedYears.includes(y);
                   return (
-                    <button key={y} onClick={() => toggleYear(y)} className="transition-all hover:-translate-y-0.5 active:scale-95" style={{
+                    <button key={y} onClick={() => toggleYear(y)} className="transition-colors" style={{
                       padding: '6px 12px', borderRadius: 8, fontSize: 'var(--erp-text-control)', fontWeight: 800,
-                      border: `1.5px solid ${on ? 'var(--color-proc-polishing)' : 'var(--color-border-light)'}`,
-                      background: on ? 'color-mix(in srgb, var(--color-proc-polishing) 12%, transparent)' : 'var(--color-surface-1)',
-                      color: on ? 'var(--color-proc-polishing)' : 'var(--color-text-tertiary)',
+                      border: `1px solid ${on ? 'var(--color-ui-interactive)' : 'var(--color-border-light)'}`,
+                      background: on ? 'var(--color-ui-selected)' : 'var(--color-ui-surface)',
+                      color: on ? 'var(--color-ui-interactive)' : 'var(--color-text-tertiary)',
                       cursor: 'pointer'
                     }}>{y}</button>
                   );
@@ -532,7 +532,7 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: Metr
                   <div style={{
                     position: 'absolute', top: '100%', left: 0, marginTop: 8, width: 280,
                     background: 'var(--color-surface-0)', border: '1px solid var(--color-border-strong)',
-                    borderRadius: 12, padding: 16, zIndex: 50, boxShadow: '0 12px 40px rgba(0,0,0,0.15)'
+                    borderRadius: 8, padding: 16, zIndex: 50, boxShadow: 'var(--shadow-dropdown)'
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12, alignItems: 'center' }}>
                       <span style={{ fontSize: 'var(--erp-text-dense)', fontWeight: 800, color: 'var(--color-text-tertiary)', textTransform: 'capitalize' }}>Select Months</span>
@@ -541,7 +541,7 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: Metr
                         disabled={selectedMonths.length === 12}
                         style={{
                           fontSize: 'var(--erp-text-meta)', fontWeight: 800, background: 'none', border: 'none',
-                          color: selectedMonths.length === 12 ? 'var(--color-text-quaternary)' : 'var(--color-proc-polishing)',
+                          color: selectedMonths.length === 12 ? 'var(--color-text-quaternary)' : 'var(--color-ui-interactive)',
                           cursor: selectedMonths.length === 12 ? 'not-allowed' : 'pointer'
                         }}>
                         Select All
@@ -552,11 +552,11 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: Metr
                         const mStr = String(i + 1);
                         const on = selectedMonths.includes(mStr);
                         return (
-                          <button key={m} onClick={() => toggleMonth(mStr)} className="transition-all hover:-translate-y-0.5 active:scale-95" style={{
+                          <button key={m} onClick={() => toggleMonth(mStr)} className="transition-colors" style={{
                             padding: '6px 0', fontSize: 'var(--erp-text-dense)', fontWeight: 800, borderRadius: 6,
-                            border: `1px solid ${on ? 'var(--color-proc-polishing)' : 'var(--color-border-light)'}`,
-                            background: on ? 'color-mix(in srgb, var(--color-proc-polishing) 12%, transparent)' : 'var(--color-surface-1)',
-                            color: on ? 'var(--color-proc-polishing)' : 'var(--color-text-tertiary)',
+                            border: `1px solid ${on ? 'var(--color-ui-interactive)' : 'var(--color-border-light)'}`,
+                            background: on ? 'var(--color-ui-selected)' : 'var(--color-ui-surface)',
+                            color: on ? 'var(--color-ui-interactive)' : 'var(--color-text-tertiary)',
                             cursor: 'pointer'
                           }}>
                             {m}
@@ -580,17 +580,17 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: Metr
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 {ALL_GROUPS.map(g => {
                   const on = selGroups.includes(g.id);
-                  const groupAccent = usesGroupSeriesColors ? g.color : 'var(--color-brand-500)';
                   return (
-                    <button key={g.id} onClick={() => toggleGroup(g.id)} className="transition-all hover:-translate-y-0.5 active:scale-95" style={{
+                    <button key={g.id} onClick={() => toggleGroup(g.id)} className="transition-colors" style={{
                       display: 'flex', alignItems: 'center', gap: 6,
-                      padding: '6px 14px', borderRadius: 20, fontSize: 'var(--erp-text-control)', fontWeight: 800,
-                      border: `1.5px solid ${on ? `color-mix(in srgb, ${groupAccent} 50%, transparent)` : 'var(--color-border-light)'}`,
-                      background: on ? `color-mix(in srgb, ${groupAccent} 8%, transparent)` : 'var(--color-surface-1)',
-                      color: on ? groupAccent : 'var(--color-text-tertiary)',
+                      padding: '6px 12px', borderRadius: 6, fontSize: 'var(--erp-text-control)', fontWeight: 800,
+                      borderWidth: 1,
+                      borderStyle: 'solid',
+                      borderColor: on ? 'var(--color-brand-500)' : 'var(--color-border-light)',
+                      background: on ? 'var(--color-brand-50)' : 'var(--color-surface-1)',
+                      color: on ? 'var(--color-brand-600)' : 'var(--color-text-tertiary)',
                       cursor: 'pointer'
                     }}>
-                      {usesGroupSeriesColors && <span style={{ width: 10, height: 10, borderRadius: 3, background: on ? g.color : 'var(--color-border-light)' }} />}
                       {g.label}
                     </button>
                   );
@@ -602,12 +602,10 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: Metr
 
           {/* Summary Cards */}
           <div className="sales-summary-cards">
-            {summaries.map((g, idx) => {
-              const groupCardBorderTop = usesGroupSeriesColors ? `4px solid ${g.color}` : '1px solid var(--color-border-light)';
+            {summaries.map((g) => {
               return (
-                <div key={g.id} style={{ background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)', borderRadius: 16, padding: '20px', borderTop: groupCardBorderTop, boxShadow: '0 4px 16px -4px rgba(0,0,0,0.04)', transition: 'all 0.3s ease', animation: 'fadeInUp 0.4s ease-out both', animationDelay: `${idx * 0.05}s` }}>
+                <div key={g.id} style={{ background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)', borderRadius: 8, padding: '20px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                    {usesGroupSeriesColors && <span style={{ width: 10, height: 10, borderRadius: 3, background: g.color }} />}
                     <span style={{ fontSize: 'var(--erp-text-control)', color: 'var(--color-text-tertiary)', fontWeight: 800, textTransform: 'capitalize' }}>{g.label}</span>
                   </div>
 
@@ -671,10 +669,10 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: Metr
 
                 {/* Chart Mode Toggles */}
                 <div style={{ display: 'none', gap: 8, marginTop: 12 }}>
-                  <button onClick={() => setMonthlySeries('year')} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 12px', borderRadius: 16, fontSize: 'var(--erp-text-dense)', fontWeight: 800, background: monthlySeries === 'year' ? 'color-mix(in srgb, var(--color-brand-500) 9%, var(--color-surface-0))' : 'var(--color-surface-1)', color: monthlySeries === 'year' ? 'var(--color-brand-600)' : 'var(--color-text-secondary)', border: '1px solid var(--color-border-light)', cursor: 'pointer', transition: 'all 0.2s' }}>
+                  <button onClick={() => setMonthlySeries('year')} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 12px', borderRadius: 8, fontSize: 'var(--erp-text-dense)', fontWeight: 800, background: monthlySeries === 'year' ? 'color-mix(in srgb, var(--color-brand-500) 9%, var(--color-surface-0))' : 'var(--color-surface-1)', color: monthlySeries === 'year' ? 'var(--color-brand-600)' : 'var(--color-text-secondary)', border: '1px solid var(--color-border-light)', cursor: 'pointer', transition: 'all 0.2s' }}>
                     <CalendarDays size={14} /> Compare by Year
                   </button>
-                  <button onClick={() => setMonthlySeries('group')} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 12px', borderRadius: 16, fontSize: 'var(--erp-text-dense)', fontWeight: 800, background: monthlySeries === 'group' ? 'color-mix(in srgb, var(--color-brand-500) 9%, var(--color-surface-0))' : 'var(--color-surface-1)', color: monthlySeries === 'group' ? 'var(--color-brand-600)' : 'var(--color-text-secondary)', border: '1px solid var(--color-border-light)', cursor: 'pointer', transition: 'all 0.2s' }}>
+                  <button onClick={() => setMonthlySeries('group')} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 12px', borderRadius: 8, fontSize: 'var(--erp-text-dense)', fontWeight: 800, background: monthlySeries === 'group' ? 'color-mix(in srgb, var(--color-brand-500) 9%, var(--color-surface-0))' : 'var(--color-surface-1)', color: monthlySeries === 'group' ? 'var(--color-brand-600)' : 'var(--color-text-secondary)', border: '1px solid var(--color-border-light)', cursor: 'pointer', transition: 'all 0.2s' }}>
                     <Users size={14} /> Compare by Group
                   </button>
                 </div>

@@ -12,7 +12,17 @@ import { psPhotoUrl, attachPhotoFallback } from '../../utils/photoUrl';
 
 const PRODUCTION_COLS = ORDER_DETAIL_COLUMNS.filter((c) => c.group === 'production');
 
-const REMARK_FIELDS: { key: string; label: string }[] = [
+interface Remarks {
+  RecRemark: string;
+  EnaRemark: string;
+  CryRemark: string;
+  AsmRemark: string;
+  ShfRemark: string;
+  PkRemark: string;
+  ProdRemark: string;
+}
+
+const REMARK_FIELDS: { key: keyof Remarks; label: string }[] = [
   { key: 'RecRemark', label: 'Receive (รับงาน)' },
   { key: 'EnaRemark', label: 'Enamel (ทาสี)' },
   { key: 'CryRemark', label: 'Crystal (ติดคริสตัล)' },
@@ -31,7 +41,7 @@ interface LineDetailDrawerProps {
 
 export default function LineDetailDrawer({ line, index, onClose, onSaved }: LineDetailDrawerProps) {
   const [isEditing, setIsEditing] = useState(false);
-  const [remarks, setRemarks] = useState({
+  const [remarks, setRemarks] = useState<Remarks>({
     RecRemark: (line.RecRemark as string) || '',
     EnaRemark: (line.EnaRemark as string) || '',
     CryRemark: (line.CryRemark as string) || '',
@@ -101,15 +111,15 @@ export default function LineDetailDrawer({ line, index, onClose, onSaved }: Line
       <div
         onClick={onClose}
         style={{
-          position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.45)',
-          backdropFilter: 'blur(4px)', zIndex: 9000, animation: 'fadeIn 0.2s ease-out forwards',
+          position: 'fixed', inset: 0, background: 'var(--color-overlay-scrim-soft)',
+          zIndex: 9000, animation: 'fadeIn 0.2s ease-out forwards',
         }}
       />
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
           position: 'fixed', top: 0, right: 0, height: '100vh', width: '520px', maxWidth: '92vw',
-          background: 'var(--color-surface-0)', boxShadow: '-20px 0 50px rgba(0,0,0,0.25)',
+          background: 'var(--color-surface-0)', boxShadow: 'var(--shadow-drawer)',
           zIndex: 9001, display: 'flex', flexDirection: 'column',
           animation: 'slideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards',
           fontFamily: 'var(--font-body, "Prompt", sans-serif)',
@@ -158,8 +168,8 @@ export default function LineDetailDrawer({ line, index, onClose, onSaved }: Line
           <div
             onClick={() => photoUrl && setIsImageOpen(true)}
             style={{
-              width: '100%', height: '180px', borderRadius: '12px', border: '1px solid var(--color-border-light)',
-              background: photoUrl ? '#FFFFFF' : 'var(--color-surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: '100%', height: '180px', borderRadius: '8px', border: '1px solid var(--color-border-light)',
+              background: photoUrl ? 'var(--color-product-canvas)' : 'var(--color-surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center',
               overflow: 'hidden', cursor: photoUrl ? 'pointer' : 'default', marginBottom: '16px',
             }}
             title={photoUrl ? 'Click to enlarge' : ''}
@@ -185,7 +195,7 @@ export default function LineDetailDrawer({ line, index, onClose, onSaved }: Line
           {/* Specs */}
           <div style={{
             display: 'flex', flexWrap: 'wrap', gap: '8px 20px', marginBottom: '16px',
-            padding: '12px 16px', background: 'var(--color-surface-1)', borderRadius: '12px',
+            padding: '12px 16px', background: 'var(--color-surface-1)', borderRadius: '8px',
             border: '1px solid var(--color-border-light)',
           }}>
             <SpecItem label="Size" value={line.ItemSize} />
@@ -203,8 +213,8 @@ export default function LineDetailDrawer({ line, index, onClose, onSaved }: Line
           </div>
 
           {/* Sales & Shipping */}
-          <div style={{ padding: '16px', marginBottom: '16px', background: 'color-mix(in srgb, #1971c2, transparent 94%)', borderRadius: '12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px', color: '#1971c2', fontWeight: 800, fontSize: '0.72rem', textTransform: 'capitalize', letterSpacing: '0.05em' }}>
+          <div style={{ padding: '16px', marginBottom: '16px', background: 'color-mix(in srgb, var(--color-brand-500) 5%, var(--color-surface-0))', borderRadius: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px', color: 'var(--color-brand-600)', fontWeight: 800, fontSize: '0.72rem', textTransform: 'capitalize', letterSpacing: '0.05em' }}>
               <DollarSign size={14} /> Sales &amp; Shipping
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '14px 28px' }}>
@@ -220,8 +230,8 @@ export default function LineDetailDrawer({ line, index, onClose, onSaved }: Line
           </div>
 
           {/* Production pipeline — read-only mini grid, driven by the shared column registry */}
-          <div style={{ padding: '16px', marginBottom: '16px', background: 'color-mix(in srgb, #e67700, transparent 92%)', borderRadius: '12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px', color: '#e67700', fontWeight: 800, fontSize: '0.72rem', textTransform: 'capitalize', letterSpacing: '0.05em' }}>
+          <div style={{ padding: '16px', marginBottom: '16px', background: 'var(--color-surface-1)', borderRadius: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px', color: 'var(--color-brand-600)', fontWeight: 800, fontSize: '0.72rem', textTransform: 'capitalize', letterSpacing: '0.05em' }}>
               <Package size={14} /> Production Pipeline
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px 12px' }}>
@@ -241,26 +251,26 @@ export default function LineDetailDrawer({ line, index, onClose, onSaved }: Line
           </div>
 
           {/* Remarks */}
-          <div style={{ padding: '16px', background: 'color-mix(in srgb, var(--color-success-500), transparent 94%)', borderRadius: '12px' }}>
+          <div style={{ padding: '16px', background: 'var(--color-surface-1)', borderRadius: '8px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-success-700)', fontWeight: 800, fontSize: '0.72rem', textTransform: 'capitalize', letterSpacing: '0.05em' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-brand-600)', fontWeight: 800, fontSize: '0.72rem', textTransform: 'capitalize', letterSpacing: '0.05em' }}>
                 <ClipboardList size={14} /> Remarks (Sales &amp; Production)
               </div>
               {!isEditing ? (
-                <button onClick={() => setIsEditing(true)} style={{ padding: '6px 12px', borderRadius: '6px', background: 'transparent', border: '1px solid var(--color-success-500)', color: 'var(--color-success-500)', fontSize: '0.68rem', fontWeight: 800, cursor: 'pointer' }}>
+                <button onClick={() => setIsEditing(true)} style={{ padding: '6px 12px', borderRadius: '6px', background: 'transparent', border: '1px solid var(--color-brand-500)', color: 'var(--color-brand-600)', fontSize: '0.68rem', fontWeight: 800, cursor: 'pointer' }}>
                   EDIT REMARKS
                 </button>
               ) : (
                 <div style={{ display: 'flex', gap: '8px' }}>
-                  <button onClick={handleCancel} style={{ padding: '6px 12px', borderRadius: '6px', background: 'transparent', border: '1px solid var(--color-border-dark)', color: 'var(--color-text-secondary)', fontSize: '0.68rem', fontWeight: 800, cursor: 'pointer' }}>
+                  <button onClick={handleCancel} style={{ padding: '6px 12px', borderRadius: '6px', background: 'transparent', border: '1px solid var(--color-border-default)', color: 'var(--color-text-secondary)', fontSize: '0.68rem', fontWeight: 800, cursor: 'pointer' }}>
                     CANCEL
                   </button>
                   <button
                     onClick={handleSave}
                     disabled={!hasChanges}
                     style={{
-                      padding: '6px 12px', borderRadius: '6px', background: 'var(--color-success-500)',
-                      border: 'none', color: '#fff', fontSize: '0.68rem', fontWeight: 800,
+                      padding: '6px 12px', borderRadius: '6px', background: 'var(--color-brand-500)',
+                      border: 'none', color: 'var(--color-ui-on-interactive)', fontSize: '0.68rem', fontWeight: 800,
                       cursor: hasChanges ? 'pointer' : 'not-allowed', opacity: hasChanges ? 1 : 0.5,
                     }}
                   >
@@ -288,7 +298,7 @@ export default function LineDetailDrawer({ line, index, onClose, onSaved }: Line
                     <label style={{ fontSize: '0.65rem', color: 'var(--color-text-tertiary)', fontWeight: 700, textTransform: 'capitalize' }}>{field.label}</label>
                     <input
                       type="text"
-                      value={(remarks as any)[field.key]}
+                      value={remarks[field.key]}
                       onChange={(e) => setRemarks((prev) => ({ ...prev, [field.key]: e.target.value }))}
                       placeholder={`Enter ${field.label}...`}
                       style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--color-border-light)', background: 'var(--color-surface-0)', fontSize: '0.75rem', color: 'var(--color-text-primary)', outline: 'none' }}
@@ -307,7 +317,7 @@ export default function LineDetailDrawer({ line, index, onClose, onSaved }: Line
         <div
           onClick={() => setIsImageOpen(false)}
           style={{
-            position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(8px)',
+            position: 'fixed', inset: 0, background: 'var(--color-overlay-scrim)',
             zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center',
             animation: 'fadeIn 0.2s ease-out forwards',
           }}
@@ -316,18 +326,16 @@ export default function LineDetailDrawer({ line, index, onClose, onSaved }: Line
           <button
             onClick={() => setIsImageOpen(false)}
             style={{
-              position: 'absolute', top: 32, right: 32, background: 'rgba(255, 255, 255, 0.1)',
-              border: '1px solid rgba(255, 255, 255, 0.2)', borderRadius: '50%', cursor: 'pointer',
-              padding: 12, color: '#fff', display: 'flex', transition: 'all 0.2s cubic-bezier(0.25, 1, 0.5, 1)',
+              position: 'absolute', top: 32, right: 32, background: 'var(--color-overlay-control)',
+              border: '1px solid var(--color-overlay-border)', borderRadius: '50%', cursor: 'pointer',
+              padding: 12, color: 'var(--color-overlay-text)', display: 'flex', transition: 'background-color 0.2s ease',
               zIndex: 10001,
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
-              e.currentTarget.style.transform = 'scale(1.1)';
+              e.currentTarget.style.background = 'var(--color-overlay-border)';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-              e.currentTarget.style.transform = 'scale(1)';
+              e.currentTarget.style.background = 'var(--color-overlay-control)';
             }}
           >
             <X size={28} />
@@ -342,7 +350,7 @@ export default function LineDetailDrawer({ line, index, onClose, onSaved }: Line
             onError={(e) => attachPhotoFallback(e, itemNo)}
             style={{
               maxWidth: '90vw', maxHeight: '90vh', objectFit: 'contain',
-              filter: 'drop-shadow(0 20px 40px rgba(0,0,0,0.5))',
+              filter: 'drop-shadow(var(--shadow-modal))',
               animation: 'zoomIn 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
             }}
           />
@@ -353,8 +361,8 @@ export default function LineDetailDrawer({ line, index, onClose, onSaved }: Line
       {showToast && (
         <div style={{
           position: 'fixed', bottom: '32px', right: '32px', background: 'var(--color-surface-0)',
-          border: '1px solid var(--color-success-500)', borderRadius: '12px', padding: '16px 24px',
-          boxShadow: '0 8px 30px rgba(0,0,0,0.12)', zIndex: 10002, display: 'flex', alignItems: 'center', gap: '16px',
+          border: '1px solid var(--color-success-500)', borderRadius: '8px', padding: '16px 24px',
+          boxShadow: 'var(--shadow-floating)', zIndex: 10002, display: 'flex', alignItems: 'center', gap: '16px',
           animation: 'slideUpFade 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards', color: 'var(--color-text-primary)',
         }}>
           <div style={{ background: 'var(--color-success-100)', color: 'var(--color-success-700)', borderRadius: '50%', padding: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

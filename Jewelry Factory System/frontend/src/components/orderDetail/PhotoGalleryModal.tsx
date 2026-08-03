@@ -5,7 +5,7 @@ import { psPhotoUrl, attachPhotoFallback } from '../../utils/photoUrl';
 
 // ─── Photo Gallery Modal ─────────────────────────────────────────────────────
 // รูปดึงจาก network path อย่างเดียว (ps ก่อน, onError fallback ไป cad)
-function GalleryItemCard({ line, onClick }: { line: any, onClick: () => void }) {
+function GalleryItemCard({ line, onClick }: { line: Record<string, unknown>, onClick: () => void }) {
   const itemNo = line.ItemNo as string | undefined;
   const photoUrl = psPhotoUrl(itemNo);
 
@@ -14,28 +14,24 @@ function GalleryItemCard({ line, onClick }: { line: any, onClick: () => void }) 
       onClick={() => photoUrl && onClick()}
       style={{
         cursor: photoUrl ? 'pointer' : 'default',
-        borderRadius: '14px',
+        borderRadius: '8px',
         overflow: 'hidden',
         background: 'var(--color-surface-0)',
         border: '1px solid var(--color-border-light)',
-        transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
+        transition: 'border-color 0.2s ease',
+        boxShadow: 'var(--shadow-panel)',
         position: 'relative',
         display: 'flex',
         flexDirection: 'column',
       }}
       onMouseEnter={e => {
         if (photoUrl) {
-          e.currentTarget.style.transform = 'translateY(-4px)';
           e.currentTarget.style.borderColor = 'var(--color-brand-500)';
-          e.currentTarget.style.boxShadow = '0 12px 24px rgba(0,0,0,0.08)';
         }
       }}
       onMouseLeave={e => {
         if (photoUrl) {
-          e.currentTarget.style.transform = 'translateY(0)';
           e.currentTarget.style.borderColor = 'var(--color-border-light)';
-          e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.03)';
         }
       }}
     >
@@ -46,15 +42,14 @@ function GalleryItemCard({ line, onClick }: { line: any, onClick: () => void }) 
           display: 'flex', alignItems: 'center', gap: '4px',
           padding: '4px 8px', borderRadius: '20px',
           fontSize: '0.62rem', fontWeight: 800,
-          backdropFilter: 'blur(6px)',
-          background: 'rgba(47, 158, 68, 0.85)',
-          color: '#fff',
-          border: '1px solid rgba(255,255,255,0.2)',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+          background: 'var(--color-success-500)',
+          color: 'var(--color-overlay-text)',
+          border: '1px solid var(--color-overlay-border)',
+          boxShadow: 'var(--shadow-panel)'
         }}>
           <span style={{
             width: '4px', height: '4px', borderRadius: '50%',
-            background: '#fff',
+            background: 'var(--color-overlay-text)',
             display: 'inline-block'
           }} />
           🌐 REAL
@@ -73,11 +68,11 @@ function GalleryItemCard({ line, onClick }: { line: any, onClick: () => void }) 
           {String(line.ItemNo)}
         </div>
         <div style={{ fontSize: '0.72rem', color: 'var(--color-text-secondary)', fontWeight: 600, marginTop: '4px', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-          {line.ItemDesc || 'No Description'}
+          {String(line.ItemDesc || 'No Description')}
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
           <span style={{ fontSize: '0.68rem', color: 'var(--color-text-tertiary)', fontWeight: 700 }}>QTY: {line.Qty != null ? Number(line.Qty).toLocaleString() : '—'}</span>
-          <span style={{ fontSize: '0.62rem', color: 'var(--color-text-tertiary)', fontWeight: 700, fontFamily: 'monospace' }}>#{line.LineNo}</span>
+          <span style={{ fontSize: '0.62rem', color: 'var(--color-text-tertiary)', fontWeight: 700, fontFamily: 'monospace' }}>#{String(line.LineNo ?? '')}</span>
         </div>
       </div>
     </div>
@@ -87,7 +82,7 @@ function GalleryItemCard({ line, onClick }: { line: any, onClick: () => void }) 
 interface ActiveWindow {
   id: string;
   idx: number;
-  line: any;
+  line: Record<string, unknown>;
   photoUrl: string;
   isZoomed: boolean;
   zoomPos: { x: number; y: number };
@@ -106,19 +101,19 @@ export function PhotoGalleryModal({ lines, onClose }: { lines: Record<string, un
   if (photosLines.length === 0) {
     return (
       <div onClick={onClose} style={{
-        position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.85)', zIndex: 10000,
-        display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(10px)'
+        position: 'fixed', inset: 0, background: 'var(--color-overlay-scrim)', zIndex: 10000,
+        display: 'flex', alignItems: 'center', justifyContent: 'center'
       }}>
         <div onClick={e => e.stopPropagation()} style={{
-          background: 'var(--color-surface-0)', borderRadius: '20px', padding: '48px', textAlign: 'center',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)', maxWidth: '400px', border: '1px solid var(--color-border-light)'
+          background: 'var(--color-surface-0)', borderRadius: '8px', padding: '48px', textAlign: 'center',
+          boxShadow: 'var(--shadow-modal)', maxWidth: '400px', border: '1px solid var(--color-border-light)'
         }}>
-          <div style={{ fontSize: '3rem', marginBottom: '16px', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.15))' }}>📷</div>
+          <div style={{ fontSize: '3rem', marginBottom: '16px' }}>📷</div>
           <div style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--color-text-primary)', marginBottom: '8px', fontFamily: 'var(--font-display)' }}>NO PHOTOS FOUND</div>
           <div style={{ fontSize: '0.85rem', color: 'var(--color-text-tertiary)', marginBottom: '24px', fontFamily: 'var(--font-body)' }}>ไม่พบรูปภาพสินค้าหรือรหัสสินค้าในเอกสารฉบับนี้</div>
           <button onClick={onClose} style={{
-            padding: '10px 28px', borderRadius: '10px', background: 'var(--color-brand-500)', color: '#fff',
-            border: 'none', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer', boxShadow: '0 4px 12px rgba(25, 113, 194, 0.3)'
+            padding: '10px 28px', borderRadius: '8px', background: 'var(--color-brand-500)', color: 'var(--color-ui-on-interactive)',
+            border: 'none', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer'
           }}>Close Gallery</button>
         </div>
       </div>
@@ -226,8 +221,8 @@ export function PhotoGalleryModal({ lines, onClose }: { lines: Record<string, un
       onMouseUp={stopGlobalDrag}
       style={{
         position: 'fixed', inset: 0,
-        background: 'rgba(15, 23, 42, 0.85)',
-        backdropFilter: 'blur(12px)',
+        background: 'var(--color-overlay-scrim)',
+
         zIndex: 10000,
         display: 'flex', flexDirection: 'column',
         fontFamily: 'var(--font-body, "Prompt", sans-serif)',
@@ -242,7 +237,7 @@ export function PhotoGalleryModal({ lines, onClose }: { lines: Record<string, un
         padding: '18px 28px',
         borderBottom: '1px solid var(--color-border-light)',
         background: 'var(--color-surface-0)',
-        boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+        boxShadow: 'var(--shadow-panel)',
         zIndex: 10002
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
@@ -310,9 +305,9 @@ export function PhotoGalleryModal({ lines, onClose }: { lines: Record<string, un
               width: '450px',
               height: '520px',
               background: 'var(--color-surface-0)',
-              borderRadius: '16px',
+              borderRadius: '8px',
               border: '1px solid var(--color-border-light)',
-              boxShadow: '0 25px 60px rgba(0,0,0,0.3)',
+              boxShadow: 'var(--shadow-modal)',
               display: 'flex',
               flexDirection: 'column',
               overflow: 'hidden',
@@ -453,19 +448,19 @@ export function PhotoGalleryModal({ lines, onClose }: { lines: Record<string, un
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                   <span style={{ fontSize: '0.58rem', color: 'var(--color-text-tertiary)', fontWeight: 800, textTransform: 'capitalize' }}>SIZE / ขนาดชิ้นงาน</span>
-                  <span style={{ fontWeight: 700, color: 'var(--color-text-primary)' }}>{win.line.ItemSize || '—'}</span>
+                  <span style={{ fontWeight: 700, color: 'var(--color-text-primary)' }}>{String(win.line.ItemSize || '—')}</span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                   <span style={{ fontSize: '0.58rem', color: 'var(--color-text-tertiary)', fontWeight: 800, textTransform: 'capitalize' }}>METAL / ตัวเรือน</span>
-                  <span style={{ fontWeight: 700, color: 'var(--color-text-primary)' }}>{win.line.ItemMat || '—'}</span>
+                  <span style={{ fontWeight: 700, color: 'var(--color-text-primary)' }}>{String(win.line.ItemMat || '—')}</span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                   <span style={{ fontSize: '0.58rem', color: 'var(--color-text-tertiary)', fontWeight: 800, textTransform: 'capitalize' }}>STONE / ข้อมูลพลอย</span>
-                  <span style={{ fontWeight: 700, color: 'var(--color-text-primary)' }}>{win.line.Stone || '—'}</span>
+                  <span style={{ fontWeight: 700, color: 'var(--color-text-primary)' }}>{String(win.line.Stone || '—')}</span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', gridColumn: 'span 2' }}>
                   <span style={{ fontSize: '0.58rem', color: 'var(--color-text-tertiary)', fontWeight: 800, textTransform: 'capitalize' }}>DESCRIPTION / รายละเอียด</span>
-                  <span style={{ fontWeight: 700, color: 'var(--color-text-secondary)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{win.line.ItemDesc || '—'}</span>
+                  <span style={{ fontWeight: 700, color: 'var(--color-text-secondary)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{String(win.line.ItemDesc || '—')}</span>
                 </div>
               </div>
 

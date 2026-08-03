@@ -18,7 +18,7 @@ export const menuConfig: NavMenuGroup[] = [
     id: 'sales-dashboard',
     label: 'Sales Analytics',
     icon: 'trending-up',
-    accentColor: 'var(--color-success-500)',
+    accentColor: 'var(--color-brand-500)',
     roles: ['admin', 'sales'],
     items: [
       { id: 'dash-cust', label: 'Sales & Qty Summary', path: '/dashboard/customer' },
@@ -34,7 +34,7 @@ export const menuConfig: NavMenuGroup[] = [
     id: 'subcontract',
     label: 'Subcontract Management',
     icon: 'handshake',
-    accentColor: 'var(--color-proc-casting)',
+    accentColor: 'var(--color-brand-500)',
     roles: ['admin'],
     items: [
       { id: 'sub-vendor-performance', label: 'Vendor Performance Dashboard', path: '/subcontract/vendor-performance' },
@@ -48,7 +48,7 @@ export const menuConfig: NavMenuGroup[] = [
     id: 'order-tracker',
     label: 'Production',
     icon: 'layout-list',
-    accentColor: 'var(--color-brand-600)',
+    accentColor: 'var(--color-brand-500)',
     roles: ['admin'],
     items: [
       { id: 'po-tracker', label: 'PO Tracker', path: '/po-tracker' },
@@ -60,7 +60,7 @@ export const menuConfig: NavMenuGroup[] = [
     id: 'procurement',
     label: 'Procurement & Receiving',
     icon: 'package-check',
-    accentColor: 'var(--color-accent-500)',
+    accentColor: 'var(--color-brand-500)',
     roles: ['admin'],
     items: [
       { id: 'spa', label: 'Gem Purchase Order', code: 'SPA', path: '/procurement/purchase' },
@@ -75,7 +75,7 @@ export const menuConfig: NavMenuGroup[] = [
     id: 'orders',
     label: 'Order Lines & Issues',
     icon: 'clipboard-list',
-    accentColor: 'var(--color-info-500)',
+    accentColor: 'var(--color-brand-500)',
     roles: ['admin'],
     items: [
       { id: 'soa', label: 'Gem Order', code: 'SOA', path: '/orders/create' },
@@ -91,7 +91,7 @@ export const menuConfig: NavMenuGroup[] = [
     id: 'sample',
     label: 'Sample Department',
     icon: 'flask-conical',
-    accentColor: 'var(--color-success-500)',
+    accentColor: 'var(--color-brand-500)',
     roles: ['admin'],
     items: [
       { id: 'ssa', label: 'Sample Request', code: 'SSA', path: '/sample/order' },
@@ -104,7 +104,7 @@ export const menuConfig: NavMenuGroup[] = [
     id: 'inventory',
     label: 'Inventory Control',
     icon: 'bar-chart-3',
-    accentColor: 'var(--color-danger-500)',
+    accentColor: 'var(--color-brand-500)',
     roles: ['admin'],
     items: [
       { id: 'check-dispatch', label: 'Check Dispatch for Order', path: '/inventory/check-dispatch' },
@@ -121,7 +121,7 @@ export const menuConfig: NavMenuGroup[] = [
     id: 'spare-parts',
     label: 'Spare Parts',
     icon: 'wrench',
-    accentColor: 'var(--color-proc-plating)',
+    accentColor: 'var(--color-brand-500)',
     roles: ['admin'],
     items: [
       { id: 'sp-order', label: 'Spare Parts Order', path: '/spare-parts/order' },

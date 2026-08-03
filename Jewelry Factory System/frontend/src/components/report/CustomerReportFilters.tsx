@@ -414,11 +414,11 @@ const filterRowStyle: React.CSSProperties = {
 };
 
 const blockSizeStyle: Record<'years' | 'growth' | 'months' | 'groups' | 'customers', React.CSSProperties> = {
-  years: { flex: '1 1 560px', minWidth: 460, maxWidth: 760 },
-  growth: { flex: '1 1 360px', minWidth: 320, maxWidth: '100%' },
-  months: { flex: '1 1 360px', minWidth: 340, maxWidth: 460 },
-  groups: { flex: '1 1 390px', minWidth: 360, maxWidth: 520 },
-  customers: { flex: '2 1 500px', minWidth: 390, maxWidth: '100%' },
+  years: { flex: '1 1 560px', minWidth: 0, maxWidth: 760 },
+  growth: { flex: '1 1 360px', minWidth: 0, maxWidth: '100%' },
+  months: { flex: '1 1 360px', minWidth: 0, maxWidth: 460 },
+  groups: { flex: '1 1 390px', minWidth: 0, maxWidth: 520 },
+  customers: { flex: '2 1 500px', minWidth: 0, maxWidth: '100%' },
 };
 
 const blockStyle: React.CSSProperties = {

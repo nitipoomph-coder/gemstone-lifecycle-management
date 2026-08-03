@@ -1,87 +1,76 @@
-# Jewelry Factory System — Design System & UI Guidelines
+# Jewelry Factory System Design Standard
 
-This document outlines the design system, theming architecture, and UI/UX guidelines for the Jewelry Factory System (PO Tracker) frontend. The design is tailored for a modern, high-fidelity ERP application with a focus on rich aesthetics, premium feel, and dynamic interactions.
+This file is the frontend implementation contract. The canonical product guidance is in the repository root `DESIGN.md`; color tokens live in `src/index.css`.
 
-## 1. Theming Architecture
+## 1. Product Character
 
-The application supports multiple themes using CSS variables (`oklch` color space for smooth gradients and perceptual uniformity). Themes are toggled via CSS classes on the `<body>` element.
+Build a compact, data-dense operational ERP. Prioritize scanning, comparison, exact values, clear state, and repeatable work. Avoid marketing layouts, decorative color, gradients, glass effects, oversized metrics, nested cards, and continuous animation.
 
-### Available Themes
-1. **Modern Dark (Default)**: A sleek, deep grayish-blue (`oklch` hue 250) interface with vibrant blue-indigo brand accents.
-2. **Dark Gold (`.theme-dark-gold`)**: An "Executive" theme featuring warm, rich gold accents against a deep dark background.
-3. **Royal White (`.theme-royal-white`)**: A crisp light mode prioritizing high contrast, using Royal Blue and Gold highlights for a premium enterprise feel.
+## 2. Themes
 
-## 2. Color Palette (Modern Dark Default)
+The same component roles must work in all three themes:
 
-### Core UI Colors
-* **Brand (Blue-Indigo)**: `--color-brand-500` (Main accent color)
-* **Surfaces**: `--color-surface-0` through `--color-surface-900` (Deep grayish-blue for depth and elevation)
-* **Text**: High contrast white/off-white (`--color-text-primary`) down to muted tones (`--color-text-quaternary`) for hierarchy.
-* **Borders**: Subtle light borders (`--color-border-light`) for glassmorphism and clean separation.
+- `modern-dark`
+- `dark-gold`
+- `royal-white` (default)
 
-### Semantic Colors
-* **Success**: Green (`--color-success-500`)
-* **Danger/Error**: Red (`--color-danger-500`)
-* **Warning**: Amber/Yellow (`--color-warning-500`)
-* **Info**: Blue (`--color-info-500`)
+Components never branch on theme to choose ordinary UI colors. Theme classes override palette tokens; components consume role tokens.
 
-### Factory Production Process Stages
-Specific colors are assigned to production stages to provide immediate visual context across tables and charts:
-* **Casting**: Soft Slate Blue (`--color-proc-casting`)
-* **Grinding**: Soft Amethyst Violet (`--color-proc-grinding`)
-* **Polishing**: Vibrant Mint Green (`--color-proc-polishing`)
-* **Plating**: Rich Gold Plating (`--color-proc-plating`)
-* **QC**: Alert Orange (`--color-proc-qc`)
-* **Packing**: Forest Green (`--color-proc-packing`)
+## 3. System-Wide 60-30-10 Color Roles
 
-### Chart & Data Visualization
-Chart series use a 6-color sequential palette:
-1. Warm Amber (`--color-chart-1`)
-2. Emerald (`--color-chart-2`)
-3. Violet (`--color-chart-3`)
-4. Pink (`--color-chart-4`)
-5. Rose Red (`--color-chart-5`)
-6. Cyan (`--color-chart-6`)
+The ratio is a visual hierarchy target for each screen, not literal pixel accounting.
 
-*(Note: Customer Groups like N008, N044, MLT are mapped directly to these chart colors for consistency across analytics).*
+- **60% Canvas:** `--color-ui-canvas` for the workspace and page background.
+- **30% Surfaces:** `--color-ui-surface` for panels, tables, filters, and forms; `--color-ui-raised` for menus, hover, and raised areas.
+- **10% Interaction:** `--color-ui-interactive` and related role tokens for primary actions, links, active navigation, selected controls, and keyboard focus.
 
-## 3. Typography
+Brand is the only generic interaction color. Do not use green for selected, amber for active, or chart/customer-group colors for controls.
 
-The application utilizes Google Fonts for a modern, readable typography stack:
-* **Logo/Branding**: `Cinzel` (Serif, elegant and premium)
-* **Display & Headings**: `Roboto` (Clean, geometric sans-serif)
-* **Body Text**: `Roboto` (Highly readable for data-dense tables)
-* **Additional/Fallback**: `Outfit`, `Kanit`, `Inter`.
+### Allowed Exceptions
 
-## 4. UI Components & Micro-interactions
+- Status and severity: success, warning, danger, and info only when they report actual state.
+- Production stages: only where the stage itself is data.
+- Chart series and customer groups: only inside a visualization or matching legend.
+- Ranked data: `--color-rank-*` only for rank meaning.
+- Product photography: `--color-product-canvas` gives images a stable inspection background.
+- Print output: fixed black and white are allowed in print-only files or `@media print`.
 
-### Inputs (Floating Labels)
-Forms use a Material Design-inspired "Floating Label" pattern.
-* Inputs have a transparent background with a rounded border (`12px` radius).
-* On focus, the border highlights in the brand color (`--color-brand-500`) and the label scales down and floats to the top edge.
+Every exception must include a second cue such as text, icon, value, ordering, or shape.
 
-### Modals & Galleries (e.g., PhotoGalleryModal)
-* **Glassmorphism**: Modals use surface colors with subtle borders (`1px solid var(--color-border-light)`) and soft rounded corners (`10px`).
-* **Interactive Viewports**: Image galleries feature symmetrical magnifier frames and zoomable viewports with dynamic background contrasts (`--color-surface-2`).
+## 4. Component Rules
 
-### Animations & Dynamics
-Micro-animations are used extensively to make the interface feel responsive and alive:
-* **`fadeInUp`**: Used for staging lists and cards entering the viewport.
-* **`skeletonShimmer`**: Smooth loading states for data fetching.
-* **`pulseGlow`**: Used on active indicators (like the Sidebar active dot) to draw attention softly.
-* **`accentShimmer`**: A continuous shimmer effect on brand accent lines.
-* **Staggered Delays**: CSS utility classes (`.stagger-1` through `.stagger-5`) are used to cascade animations smoothly on list items.
+- Use 8px or less border radius for operational panels, cards, buttons, inputs, and dialogs.
+- Separate resting sections with surface contrast and a 1px border. Use shadows only for actual elevation.
+- Use `--shadow-panel`, `--shadow-dropdown`, `--shadow-floating`, or `--shadow-modal`; do not hardcode shadow colors.
+- Selected tabs, filters, and chips use brand border/text with `--color-ui-selected` or `--color-ui-interactive-soft`.
+- Focus uses `--color-ui-focus-ring` and must remain visible in every theme.
+- Tables remain compact, align numbers right, and use sticky headers when useful.
+- Loading skeletons must match the final content footprint and cover only the content outlet, not the app shell.
+- Use Lucide icons for commands; pair unfamiliar icons with tooltips.
 
-## 5. Layout & Navigation (Sidebar)
+## 5. Responsive Layout And Loading
 
-* **Scroll Dynamics**: The sidebar uses scroll-aware fade gradients (`.scroll-fade-container`) to indicate overflow elegantly without harsh cutoffs.
-* **Hero Backgrounds**: Subtle background images (`.sidebar-hero-bg`) with heavy desaturation and low opacity (`0.08`) provide texture without compromising readability.
-* **Custom Scrollbars**: Slimmer, highly customized scrollbars (`.custom-scrollbar`, `.content-scrollbar`) that match the dark theme aesthetics instead of native browser styles.
+- The app shell uses `100dvh`; the sidebar and topbar remain available while only the page outlet scrolls.
+- Use the shared `app-content-frame` variants. Dashboard content may stop at 1860px, wide analytics at 2400px, and document/table workspaces may use the full available width.
+- Container breakpoints are based on usable content width: 1200px for medium layouts, 1120px for constrained layouts, and 620px for mobile stacking. The sidebar becomes an overlay below 820px viewport width.
+- Never use CSS `zoom` or viewport-based font scaling to make a page fit. Reflow grids, wrap controls, or add local table/toolbar scrolling instead.
+- Keep the compact ERP type scale fixed. Larger screens gain columns and working area, not oversized text; smaller screens stack content without shrinking labels below the defined tokens.
+- Tables may scroll horizontally inside their own region. The document itself must not overflow horizontally.
+- Loading keeps the real sidebar and topbar visible and replaces only data-dependent content with footprint-matched skeletons. Theme changes never show a loading screen.
+- Verify representative screens at 390x844, 1440x900, and 2560x1440 in all three themes.
 
-## 6. Print Styles (High Fidelity ERP)
+## 6. Data Visualization
 
-The application includes a robust A4 Print Stylesheet (`@media print`):
-* Automatically inverts the theme to a crisp black-and-white (`#ffffff` background, `#000000` text) to save ink and ensure legibility on paper.
-* Hides all interactive UI elements (sidebars, buttons, toast notifications).
-* Uses `page-break-inside: avoid` on table rows (`<tr>`) to prevent data splitting across pages.
-* Enforces `Kanit`/`Inter` fonts for optimal print clarity.
+Use charts only when they answer a specific business question. Use `--color-chart-1` through `--color-chart-6` consistently and keep legends, filters, tooltips, and tables synchronized. Customer group colors do not appear in filter chips unless those chips are acting as a chart legend.
+
+## 7. Enforcement
+
+- Never hardcode hex, RGB, HSL, OKLCH, named colors, or Tailwind palette classes in `src` components.
+- Add or change colors only in `src/index.css`.
+- Run `npm run lint:colors` after color work.
+- `npm run lint` includes the color-token check and must pass before merge.
+- A print-only file may opt out with `color-lint-ignore-file` and a reason on the first line.
+
+## 8. Print
+
+Print styles use a high-contrast black-and-white A4 layout, hide interactive controls, avoid splitting table rows, and prioritize ink-safe legibility.

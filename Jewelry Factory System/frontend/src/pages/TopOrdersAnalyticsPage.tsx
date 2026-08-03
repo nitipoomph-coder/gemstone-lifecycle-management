@@ -336,7 +336,7 @@ export default function TopOrdersAnalyticsPage() {
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-[var(--color-surface-1)]">
       <Topbar
-        breadcrumb={[{ label: "JEWELRY FACTORY SYSTEM", path: "/" }, { label: "Top Items Qty" }]}
+        breadcrumb={[{ label: "JEWELRY FACTORY SYSTEM", path: "/" }, { label: "Sales Analytics" }, { label: "Top Item Gallery", path: "/dashboard/top-orders" }, { label: "Top Items Qty" }]}
         icon={<BarChart3 size={22} />}
         hideSearch
         rightContent={

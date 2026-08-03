@@ -1,7 +1,7 @@
 // src/pages/OrderDetailPage.tsx
-import { useState, useEffect, useCallback, useRef, type CSSProperties, type ReactNode } from 'react';
+import { useState, useEffect, useRef, type CSSProperties, type ReactNode } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
-import { RefreshCw, AlertTriangle, Search, Package, DollarSign, FileSpreadsheet, Image, X, Layers } from 'lucide-react';
+import { RefreshCw, AlertTriangle, ChevronDown, Search, Package, DollarSign, FileSpreadsheet, Image, X, Layers } from 'lucide-react';
 import Topbar from '../components/layout/Topbar';
 import { fetchOrderDetail, fetchOrderByPo, fetchOrderByGroup, type OrderDetail } from '../services/poTrackerAPI';
 import { PhotoGalleryModal } from '../components/orderDetail/PhotoGalleryModal';
@@ -28,16 +28,15 @@ const VIEW_PARAM_TO_PRESET: Record<string, ColumnPreset> = { sales: 'Sales', pro
 
 // ── Shared flat styles (theme-variable, no gradients/hardcoded hex) ──
 const LBL: CSSProperties = { fontSize: '0.7rem', fontWeight: 800, color: 'var(--color-text-tertiary)', textTransform: 'capitalize', letterSpacing: '0.05em' };
-const ACT_ICON: CSSProperties = { width: 40, height: 40, borderRadius: '10px', border: '1px solid var(--color-border-light)', background: 'var(--color-surface-1)', color: 'var(--color-text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s' };
-const ACT_BTN: CSSProperties = { display: 'flex', alignItems: 'center', gap: '6px', padding: '9px 16px', borderRadius: '10px', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s', letterSpacing: '0.02em' };
-const ACT_SUCCESS: CSSProperties = { border: '1px solid color-mix(in srgb, var(--color-success-500) 35%, transparent)', background: 'color-mix(in srgb, var(--color-success-500) 12%, var(--color-surface-0))', color: 'var(--color-success-600)' };
+const ACT_ICON: CSSProperties = { width: 36, height: 36, borderRadius: '8px', border: '1px solid var(--color-border-light)', background: 'var(--color-surface-1)', color: 'var(--color-text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease' };
+const ACT_BTN: CSSProperties = { display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 12px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer', transition: 'color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease', letterSpacing: 0 };
 const ACT_NEUTRAL: CSSProperties = { border: '1px solid var(--color-border-strong)', background: 'var(--color-surface-0)', color: 'var(--color-text-primary)' };
 const ACT_DANGER: CSSProperties = { border: '1px solid color-mix(in srgb, var(--color-danger-500) 35%, transparent)', background: 'color-mix(in srgb, var(--color-danger-500) 10%, var(--color-surface-0))', color: 'var(--color-danger-600)' };
 
 // ── Segmented pill toggle (เข้าชุดกับ PO Tracker list) ──
 function Segmented({ options, value, onChange }: { options: { value: string; label: string }[]; value: string; onChange: (v: string) => void }) {
   return (
-    <div style={{ display: 'flex', background: 'var(--color-surface-1)', padding: '4px', borderRadius: '12px', border: '1px solid var(--color-border-light)' }}>
+    <div className="order-detail-segmented" style={{ display: 'flex', background: 'var(--color-surface-1)', padding: '4px', borderRadius: '8px', border: '1px solid var(--color-border-light)' }}>
       {options.map((o) => {
         const active = value.toLowerCase() === o.value.toLowerCase();
         return (
@@ -68,6 +67,21 @@ function Stat({ label, value, color }: { label: string; value: ReactNode; color?
   );
 }
 
+function OrderDetailLoading() {
+  return (
+    <div className="order-detail-loading" aria-busy="true" aria-label="Loading order details">
+      <div className="order-detail-loading__row order-detail-loading__row--header">
+        {Array.from({ length: 8 }).map((_, index) => <div key={index} className="app-skeleton" />)}
+      </div>
+      {Array.from({ length: 10 }).map((_, rowIndex) => (
+        <div key={rowIndex} className="order-detail-loading__row">
+          {Array.from({ length: 8 }).map((__, cellIndex) => <div key={cellIndex} className="app-skeleton" />)}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ── Unified Filter (Status + Group in one bar) ──
 function UnifiedFilter({
   status, prefix, onChange
@@ -93,7 +107,7 @@ function UnifiedFilter({
   const activeIsGroup = prefix !== 'ALL';
 
   return (
-    <div style={{ display: 'flex', background: 'var(--color-surface-1)', padding: '4px', borderRadius: '12px', border: '1px solid var(--color-border-light)' }}>
+    <div className="order-detail-segmented" style={{ display: 'flex', background: 'var(--color-surface-1)', padding: '4px', borderRadius: '8px', border: '1px solid var(--color-border-light)' }}>
       {mainOpts.map(o => {
         const active = (prefix === 'ALL' && status.toLowerCase() === o.toLowerCase());
         return (
@@ -125,15 +139,11 @@ function UnifiedFilter({
           }}
         >
           {activeIsGroup ? prefix : 'Groups'}
-          <div style={{ transform: isOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)", display: 'flex' }}>
-            <svg width="10" height="6" viewBox="0 0 12 7" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M1 1L6 6L11 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </div>
+          <ChevronDown size={13} style={{ transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s ease' }} />
         </button>
 
         {isOpen && (
-          <div className="absolute right-0 mt-2 w-32 rounded-xl border border-[var(--color-border-light)] bg-[var(--color-surface-1)] p-1.5 shadow-xl animate-fade-in-up" style={{ zIndex: 9999 }}>
+          <div className="absolute right-0 mt-2 w-32 rounded-lg border border-[var(--color-border-light)] bg-[var(--color-ui-surface)] p-1.5" style={{ zIndex: 9999, boxShadow: 'var(--shadow-dropdown)' }}>
             {groupOpts.map(o => (
               <button
                 key={o}
@@ -142,7 +152,7 @@ function UnifiedFilter({
                 style={{ border: 'none', cursor: 'pointer', textAlign: 'left' }}
               >
                 {o}
-                {prefix === o && <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-brand-500)] shadow-[0_0_8px_rgba(var(--color-brand-500),0.6)] ml-2 flex-shrink-0" />}
+                {prefix === o && <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-brand-500)] ml-2 flex-shrink-0" />}
               </button>
             ))}
           </div>
@@ -169,9 +179,12 @@ export default function OrderDetailPage() {
   const [colSearch, setColSearch] = useState('');
   const [selectedLine, setSelectedLine] = useState<{ line: Record<string, unknown>; index: number } | null>(null);
 
-  const [detail, setDetail] = useState<OrderDetail | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [refreshVersion, setRefreshVersion] = useState(0);
+  const [detailState, setDetailState] = useState<{
+    key: string;
+    detail: OrderDetail | null;
+    error: string | null;
+  }>({ key: '', detail: null, error: null });
   const [searchTerm, setSearchTerm] = useState('');
   const [showPhotoGallery, setShowPhotoGallery] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -181,6 +194,12 @@ export default function OrderDetailPage() {
   const dateTo = searchParams.get('dateTo');
   const statusFilter = searchParams.get('status') || 'ALL';
   const prefixFilter = searchParams.get('prefix') || 'ALL';
+  const queryKey = searchParams.toString();
+  const detailKey = `${rawKey}:${queryKey}:${refreshVersion}`;
+  const hasCurrentDetail = detailState.key === detailKey;
+  const detail = hasCurrentDetail ? detailState.detail : null;
+  const error = hasCurrentDetail ? detailState.error : null;
+  const loading = !hasCurrentDetail;
 
   const updateCombinedFilter = (s: string, p: string) => {
     const params = new URLSearchParams(searchParams);
@@ -199,29 +218,33 @@ export default function OrderDetailPage() {
     setVisibleKeys((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
   };
 
-  const load = useCallback(async () => {
+  useEffect(() => {
     if (!rawKey) return;
-    setLoading(true); setError(null);
-    try {
-      let data: OrderDetail;
-      if (isGroup) {
-        data = await fetchOrderByGroup(cust!, decodeURIComponent(addr!), kind!, mat!, duedate!, searchParams) as unknown as OrderDetail;
-      } else if (isPo) {
-        data = await fetchOrderByPo(decodeURIComponent(rawKey), searchParams) as unknown as OrderDetail;
-      } else {
-        data = await fetchOrderDetail(decodeURIComponent(rawKey), searchParams);
-      }
-      setDetail(data);
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Failed to load data');
-    } finally {
-      setLoading(false);
-    }
-  }, [rawKey, isGroup, isPo, cust, addr, kind, mat, duedate, searchParams]);
+    let cancelled = false;
+    const requestParams = new URLSearchParams(queryKey);
+    const request = isGroup
+      ? fetchOrderByGroup(cust!, decodeURIComponent(addr!), kind!, mat!, duedate!, requestParams) as unknown as Promise<OrderDetail>
+      : isPo
+        ? fetchOrderByPo(decodeURIComponent(rawKey), requestParams) as unknown as Promise<OrderDetail>
+        : fetchOrderDetail(decodeURIComponent(rawKey), requestParams);
 
-  useEffect(() => { load(); }, [load]);
+    request
+      .then(nextDetail => {
+        if (!cancelled) setDetailState({ key: detailKey, detail: nextDetail, error: null });
+      })
+      .catch((requestError: unknown) => {
+        if (!cancelled) {
+          setDetailState({
+            key: detailKey,
+            detail: null,
+            error: requestError instanceof Error ? requestError.message : 'Failed to load data',
+          });
+        }
+      });
+    return () => { cancelled = true; };
+  }, [rawKey, isGroup, isPo, cust, addr, kind, mat, duedate, queryKey, detailKey]);
 
-  const h = detail?.header;
+  const h = (detail?.header ?? {}) as unknown as Record<string, unknown>;
   const rawLines = (detail?.lines ?? []) as unknown as Record<string, unknown>[];
 
   // High-fidelity statistics calculations
@@ -229,7 +252,10 @@ export default function OrderDetailPage() {
   const ordersCount = uniqueOrders.size;
   const totalQtySum = rawLines.reduce((sum, l) => sum + Number(l.TotalQty || l.Qty || 0), 0);
   const totalAmountSum = rawLines.reduce((sum, l) => sum + Number(l.Amount || l.SumAmnt || 0), 0);
-  const displayAmount = (h as any)?.TotalAmount || (h as any)?.SumAmnt || totalAmountSum;
+  const headerTotalQty = typeof h.TotalQty === 'number' || typeof h.TotalQty === 'string' ? h.TotalQty : totalQtySum;
+  const displayAmount = typeof h.TotalAmount === 'number' || typeof h.TotalAmount === 'string'
+    ? h.TotalAmount
+    : typeof h.SumAmnt === 'number' || typeof h.SumAmnt === 'string' ? h.SumAmnt : totalAmountSum;
 
   // Filter lines locally
   const lines = rawLines.filter(line => {
@@ -239,11 +265,11 @@ export default function OrderDetailPage() {
   });
 
   const pageTitle = isGroup
-    ? ((h as any)?.PONo || 'Group Detail')
-    : (isPo ? (h as any)?.PONo || decodeURIComponent(rawKey) : decodeURIComponent(rawKey));
+    ? String(h.PONo || 'Group Detail')
+    : (isPo ? String(h.PONo || decodeURIComponent(rawKey)) : decodeURIComponent(rawKey));
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--color-surface-1)' }}>
+    <div className="app-page order-detail-page">
       <Topbar
         hideSearch
         breadcrumb={[
@@ -251,14 +277,15 @@ export default function OrderDetailPage() {
           { label: 'PO TRACKER', path: '/po-tracker' },
           { label: pageTitle },
         ]}
+        contentLayout="workspace"
       />
 
       {/* ══ Toolbar Row 1 — identity · KPIs · actions ══ */}
-      <div style={{
+      <div className="order-detail-summarybar" style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px',
         padding: '14px 24px', background: 'var(--color-surface-0)', borderBottom: '1px solid var(--color-border-light)',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '28px', flexWrap: 'wrap' }}>
+        <div className="order-detail-summarybar__identity" style={{ display: 'flex', alignItems: 'center', gap: '28px', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
             <div style={{ fontSize: '0.62rem', fontWeight: 900, color: 'var(--color-text-tertiary)', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
               {isGroup ? (searchParams.get('po') ? 'Purchase Order' : 'Grouped Orders') : (isPo ? 'Purchase Order' : 'Order Document')}
@@ -271,16 +298,16 @@ export default function OrderDetailPage() {
           {h && (
             <>
               <div style={{ width: '1px', height: '34px', background: 'var(--color-border-light)' }} />
-              <Stat label="Customer" value={h.CustCode} />
-              <Stat label="Total Qty" value={<>{fQty(h.TotalQty || totalQtySum)} <span style={{ fontSize: '0.75rem', opacity: 0.6 }}>pcs</span></>} color="var(--color-brand-600)" />
+              <Stat label="Customer" value={String(h.CustCode ?? '')} />
+              <Stat label="Total Qty" value={<>{fQty(headerTotalQty)} <span style={{ fontSize: '0.75rem', opacity: 0.6 }}>pcs</span></>} />
               <Stat label="Orders" value={<>{ordersCount.toLocaleString()} <span style={{ fontSize: '0.75rem', opacity: 0.6 }}>docs</span></>} />
-              <Stat label="Amount (USD)" value={`$${fAmt(displayAmount)}`} color="var(--color-success-600)" />
+              <Stat label="Amount (USD)" value={`$${fAmt(displayAmount)}`} />
             </>
           )}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <button onClick={load} title="Refresh Data" style={ACT_ICON}>
+        <div className="order-detail-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <button onClick={() => setRefreshVersion(version => version + 1)} title="Refresh Data" style={ACT_ICON}>
             <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
           </button>
           <button
@@ -290,7 +317,7 @@ export default function OrderDetailPage() {
             })}
             disabled={loading || lines.length === 0}
             title="Export to Excel"
-            style={{ ...ACT_BTN, ...ACT_SUCCESS, cursor: loading || lines.length === 0 ? 'not-allowed' : 'pointer', opacity: loading || lines.length === 0 ? 0.5 : 1 }}
+            style={{ ...ACT_BTN, ...ACT_NEUTRAL, cursor: loading || lines.length === 0 ? 'not-allowed' : 'pointer', opacity: loading || lines.length === 0 ? 0.5 : 1 }}
           >
             <FileSpreadsheet size={16} /> Excel
           </button>
@@ -313,11 +340,11 @@ export default function OrderDetailPage() {
       </div>
 
       {/* ══ Toolbar Row 2 — view mode · status · search · columns ══ */}
-      <div style={{
+      <div className="order-detail-filterbar" style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px',
         padding: '12px 24px', background: 'var(--color-surface-0)', borderBottom: '1px solid var(--color-border-light)', zIndex: 50,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
+        <div className="order-detail-filterbar__left" style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <span style={LBL}>View</span>
             <Segmented
@@ -341,20 +368,20 @@ export default function OrderDetailPage() {
           )}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div className="order-detail-filterbar__right" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           {/* Internal Search */}
-          <div style={{ position: 'relative', width: '280px' }}>
+          <div className="order-detail-search" style={{ position: 'relative', width: '280px' }}>
             <input
               type="text"
               placeholder="Search items, metals, plating..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               style={{
-                width: '100%', padding: '9px 14px 9px 38px', borderRadius: '12px',
+                width: '100%', padding: '8px 12px 8px 36px', borderRadius: '8px',
                 background: 'var(--color-surface-1)', border: '1px solid var(--color-border-light)',
                 fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-primary)', outline: 'none', transition: 'all 0.2s',
               }}
-              onFocus={e => { e.currentTarget.style.borderColor = 'var(--color-brand-500)'; e.currentTarget.style.boxShadow = '0 0 0 4px color-mix(in srgb, var(--color-brand-500), transparent 90%)'; }}
+              onFocus={e => { e.currentTarget.style.borderColor = 'var(--color-brand-500)'; e.currentTarget.style.boxShadow = '0 0 0 3px var(--color-ui-focus-ring)'; }}
               onBlur={e => { e.currentTarget.style.borderColor = 'var(--color-border-light)'; e.currentTarget.style.boxShadow = 'none'; }}
             />
             <div style={{ position: 'absolute', left: '13px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-tertiary)' }}>
@@ -367,7 +394,7 @@ export default function OrderDetailPage() {
             <button
               onClick={(e) => { e.stopPropagation(); setShowColPicker(!showColPicker); }}
               style={{
-                padding: '9px 14px', borderRadius: 10,
+                padding: '8px 12px', borderRadius: 8,
                 border: '1px solid var(--color-border-strong)', background: 'var(--color-surface-0)',
                 color: 'var(--color-text-primary)', fontSize: '0.75rem', fontWeight: 700,
                 outline: 'none', cursor: 'pointer',
@@ -376,11 +403,7 @@ export default function OrderDetailPage() {
             >
               <Layers size={16} style={{ color: 'var(--color-text-tertiary)' }} />
               <span>View Columns</span>
-              <div style={{ transform: showColPicker ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)' }}>
-                <svg width="10" height="6" viewBox="0 0 12 7" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M1 1L6 6L11 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </div>
+              <ChevronDown size={13} style={{ transform: showColPicker ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s ease' }} />
             </button>
 
             {showColPicker && (
@@ -393,8 +416,8 @@ export default function OrderDetailPage() {
                   onClick={(e) => e.stopPropagation()}
                   style={{
                     position: 'absolute', top: 'calc(100% + 8px)', right: 0,
-                    background: 'var(--color-surface-1)', borderRadius: '12px',
-                    boxShadow: '0 10px 40px -10px rgba(0,0,0,0.25), 0 0 0 1px var(--color-border-light)',
+                    background: 'var(--color-ui-surface)', borderRadius: '8px',
+                    boxShadow: 'var(--shadow-dropdown)',
                     padding: '8px', zIndex: 101,
                     width: '260px', display: 'flex', flexDirection: 'column', gap: '8px',
                   }}
@@ -459,15 +482,12 @@ export default function OrderDetailPage() {
       )}
 
       {/* -- Main Content: Excel-style grid table -- */}
-      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', position: 'relative' }}>
+      <div className="order-detail-table-region" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'auto' }}>
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '100px', color: 'var(--color-text-tertiary)' }}>
-            <RefreshCw size={32} className="animate-spin" style={{ opacity: 0.2, marginBottom: '16px' }} />
-            <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>Loading order details…</div>
-          </div>
+          <OrderDetailLoading />
         ) : lines.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '100px', color: 'var(--color-text-tertiary)' }}>
-            <div style={{ fontSize: '3rem', marginBottom: '16px', opacity: 0.2 }}>📦</div>
+          <div style={{ textAlign: 'center', padding: '64px 24px', color: 'var(--color-text-tertiary)' }}>
+            <Package size={28} style={{ margin: '0 auto 14px', opacity: 0.35 }} />
             <div style={{ fontSize: '1rem', fontWeight: 700 }}>No item data available</div>
             <div style={{ fontSize: '0.75rem', marginTop: '4px', opacity: 0.6 }}>Try adjusting the status filter or search keywords</div>
           </div>

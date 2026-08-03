@@ -2,13 +2,14 @@ import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Users, DollarSign } from 'lucide-react';
 import Topbar from '../components/layout/Topbar';
+import './SalesResponsive.css';
 import { fetchAvailableYearsMeta } from '../services/dashboardAPI';
 import { fetchCustomerSummary } from '../services/customerSummaryAPI';
 import { ALL_GROUPS, getCustomerGroupId } from '../config/customerGroups';
 
 import CustomerReportTable from '../components/report/CustomerReportTable';
 import CustomerReportFilters from '../components/report/CustomerReportFilters';
-import { useTheme } from '../contexts/ThemeContext';
+import { useTheme } from '../contexts/useTheme';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const ALL_GROUP_IDS = ALL_GROUPS.map(group => group.id);
@@ -397,6 +398,7 @@ export default function CustomerReportPage() {
           { label: metric === 'qty' ? 'Quantity Matrix' : 'Sales Matrix' }
         ]}
         hideSearch
+        contentLayout="dashboard-wide"
         bottomContent={(
           <CustomerReportFilters
             isFilterOpen={isFilterOpen}
@@ -426,11 +428,11 @@ export default function CustomerReportPage() {
       />
 
       <div className="content-scrollbar flex-1 overflow-y-auto" style={{ background: 'var(--color-surface-1)' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 0, minHeight: '100%', paddingBottom: 40 }}>
+        <div className="app-content-frame app-content-frame--dashboard-wide sales-report-page">
           {(!loading && !isFiltering) && (
-            <div style={{ padding: '16px 28px', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+            <div className="sales-report-kpis">
               {displayYears.map((yr, yIdx) => (
-                <div key={yr} style={{ background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)', borderRadius: 10, padding: '12px 18px', flex: '1 1 min-content', minWidth: 200, boxShadow: '0 10px 24px -20px color-mix(in srgb, var(--color-surface-900) 36%, transparent)' }}>
+                <div key={yr} style={{ background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)', borderRadius: 8, padding: '12px 18px', flex: '1 1 min-content', minWidth: 200, boxShadow: '0 10px 24px -20px color-mix(in srgb, var(--color-surface-900) 36%, transparent)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--color-text-tertiary)', marginBottom: 4 }}>
                     <DollarSign size={14} />
                     <span style={{ fontSize: 'var(--erp-text-meta)', fontWeight: 800, textTransform: 'capitalize', letterSpacing: 0 }}>Year {yr}</span>
@@ -440,7 +442,7 @@ export default function CustomerReportPage() {
                   </div>
                 </div>
               ))}
-              <div style={{ background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)', borderRadius: 10, padding: '12px 18px', flex: '1 1 min-content', minWidth: 160, boxShadow: '0 10px 24px -20px color-mix(in srgb, var(--color-surface-900) 36%, transparent)' }}>
+              <div style={{ background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)', borderRadius: 8, padding: '12px 18px', flex: '1 1 min-content', minWidth: 160, boxShadow: '0 10px 24px -20px color-mix(in srgb, var(--color-surface-900) 36%, transparent)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--color-text-tertiary)', marginBottom: 4 }}>
                   <Users size={14} />
                   <span style={{ fontSize: 'var(--erp-text-meta)', fontWeight: 800, textTransform: 'capitalize', letterSpacing: 0 }}>Customers</span>
@@ -452,7 +454,7 @@ export default function CustomerReportPage() {
             </div>
           )}
 
-          <div style={{ flex: 1, padding: '0 28px 32px', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+          <div className="sales-report-table-region">
             <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
               <CustomerReportTable
                 loading={loading || isFiltering}

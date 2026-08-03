@@ -27,9 +27,12 @@ const PROC_COLORS = [
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [refreshVersion, setRefreshVersion] = useState(0);
+  const [dashboardState, setDashboardState] = useState<{
+    key: string;
+    data: DashboardData | null;
+    error: string | null;
+  }>({ key: '', data: null, error: null });
   const [clock, setClock] = useState('');
   const [expandedCard, setExpandedCard] = useState<CardType | null>(null);
   
@@ -43,13 +46,12 @@ export default function Dashboard() {
     'Work In Progress': 'wip', 'Overdue': 'overdue', 'This Month': 'month',
   };
 
-  const load = (yr?: string) => {
-    setLoading(true); setError(null);
-    const targetYear = yr !== undefined ? yr : selectedYear;
-    fetchDashboardData(targetYear)
-      .then(d => { setData(d); setLoading(false); })
-      .catch(() => { setError('Cannot connect to database'); setLoading(false); });
-  };
+  const requestKey = `${selectedYear}:${refreshVersion}`;
+  const hasCurrentData = dashboardState.key === requestKey;
+  const data = hasCurrentData ? dashboardState.data : null;
+  const error = hasCurrentData ? dashboardState.error : null;
+  const loading = !hasCurrentData;
+  const load = () => setRefreshVersion(version => version + 1);
 
   // 1) Load available years once on mount
   useEffect(() => {
@@ -69,19 +71,33 @@ export default function Dashboard() {
 
   // 3) Reload data when selectedYear changes, and setup auto-refresh
   useEffect(() => {
-    load(selectedYear);
+    let cancelled = false;
+    fetchDashboardData(selectedYear)
+      .then(nextData => {
+        if (!cancelled) setDashboardState({ key: requestKey, data: nextData, error: null });
+      })
+      .catch(() => {
+        if (!cancelled) setDashboardState({ key: requestKey, data: null, error: 'Cannot connect to database' });
+      });
     const r = setInterval(() => {
-      fetchDashboardData(selectedYear).then(d => setData(d)).catch(() => {});
+      fetchDashboardData(selectedYear)
+        .then(nextData => {
+          if (!cancelled) setDashboardState({ key: requestKey, data: nextData, error: null });
+        })
+        .catch(() => {});
     }, 5 * 60 * 1000);
-    return () => clearInterval(r);
-  }, [selectedYear]);
+    return () => {
+      cancelled = true;
+      clearInterval(r);
+    };
+  }, [selectedYear, requestKey]);
 
   // Loading
   if (loading) return (
     <>
-      <Topbar breadcrumb={[{ label: 'JEWELRY FACTORY SYSTEM', path: '/' }, { label: 'DASHBOARD' }]} />
-      <div className="content-scrollbar flex-1 overflow-y-auto p-5" style={{ background: 'var(--color-surface-1)' }}>
-        <div className="mx-auto flex flex-col gap-4" style={{ maxWidth:'100%' }}>
+      <Topbar breadcrumb={[{ label: 'JEWELRY FACTORY SYSTEM', path: '/' }, { label: 'DASHBOARD' }]} contentLayout="dashboard" />
+      <div className="app-page-scroll content-scrollbar">
+        <div className="app-content-frame app-content-frame--dashboard app-page-content dashboard-page flex flex-col gap-4">
           {/* Header Skeleton */}
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-end', paddingBottom:8 }}>
             <div style={{ width: 220, height: 32, ...shimmerStyle }}/>
@@ -93,16 +109,16 @@ export default function Dashboard() {
           </div>
           
           {/* Row 1: Stat Cards */}
-          <div className="grid grid-cols-5 gap-4">{Array.from({length:5}).map((_,i) => <div key={i} style={{height:120,...shimmerStyle}}/>)}</div>
+          <div className="dashboard-stat-grid">{Array.from({length:5}).map((_,i) => <div key={i} style={{height:120,...shimmerStyle}}/>)}</div>
           
           {/* Row 2: Stone & Finding */}
-          <div className="grid grid-cols-2 gap-4">{Array.from({length:2}).map((_,i) => <div key={i} style={{height:180,...shimmerStyle}}/>)}</div>
+          <div className="dashboard-duo-grid">{Array.from({length:2}).map((_,i) => <div key={i} style={{height:180,...shimmerStyle}}/>)}</div>
           
           {/* Row 3: Trend, Donut, Material */}
-          <div className="grid grid-cols-3 gap-4">{Array.from({length:3}).map((_,i) => <div key={i} style={{height:280,...shimmerStyle}}/>)}</div>
+          <div className="dashboard-triple-grid">{Array.from({length:3}).map((_,i) => <div key={i} style={{height:280,...shimmerStyle}}/>)}</div>
           
           {/* Row 4: Overdue & Customers */}
-          <div className="grid grid-cols-[1fr_1.4fr] gap-4">{Array.from({length:2}).map((_,i) => <div key={i} style={{height:320,...shimmerStyle}}/>)}</div>
+          <div className="dashboard-bottom-grid">{Array.from({length:2}).map((_,i) => <div key={i} style={{height:320,...shimmerStyle}}/>)}</div>
           
           {/* Row 5: Recent Orders */}
           <div style={{height:140,...shimmerStyle}}/>
@@ -114,14 +130,14 @@ export default function Dashboard() {
   // Error
   if (error) return (
     <>
-      <Topbar breadcrumb={[{ label: 'JEWELRY FACTORY SYSTEM', path: '/' }, { label: 'DASHBOARD' }]} />
-      <div className="flex-1 flex items-center justify-center" style={{ background: 'var(--color-surface-0)' }}>
+      <Topbar breadcrumb={[{ label: 'JEWELRY FACTORY SYSTEM', path: '/' }, { label: 'DASHBOARD' }]} contentLayout="dashboard" />
+      <div className="app-page-scroll flex items-center justify-center">
         <div className="flex flex-col items-center gap-4 text-center">
           <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ background: 'var(--color-danger-50)' }}>
             <AlertTriangle size={26} style={{ color: 'var(--color-danger-500)' }} />
           </div>
           <p style={{ fontSize: '0.85rem', color: 'var(--color-text-tertiary)' }}>{error}</p>
-          <button onClick={() => load()} className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold" style={{ background:'var(--color-brand-500)', color:'#fff' }}>
+          <button onClick={() => load()} className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold" style={{ background:'var(--color-brand-500)', color:'var(--color-ui-on-interactive)' }}>
             <RefreshCw size={14}/> Retry
           </button>
         </div>
@@ -143,8 +159,8 @@ export default function Dashboard() {
   });
 
   const cardStyle = (extra?: React.CSSProperties): React.CSSProperties => ({
-    background: 'var(--color-surface-0)', borderRadius: '20px', border: '1px solid var(--color-border-light)',
-    boxShadow: '0 2px 12px -4px rgba(0,0,0,0.04)', overflow: 'hidden', transition: 'all 0.3s', ...extra,
+    background: 'var(--color-surface-0)', borderRadius: '8px', border: '1px solid var(--color-border-light)',
+    boxShadow: 'var(--shadow-panel)', overflow: 'hidden', transition: 'background-color 0.2s ease, border-color 0.2s ease', ...extra,
   });
 
   const sectionTitle = (icon: React.ReactNode, text: string, action?: React.ReactNode) => (
@@ -158,19 +174,19 @@ export default function Dashboard() {
 
   return (
     <>
-      <Topbar breadcrumb={[{ label: 'JEWELRY FACTORY SYSTEM', path: '/' }, { label: 'DASHBOARD' }]} />
-      <div className="content-scrollbar flex-1 overflow-y-auto" style={{ background: 'var(--color-surface-1)' }}>
-        <div className="mx-auto p-5 flex flex-col gap-4" style={{ maxWidth:'100%' }}>
+      <Topbar breadcrumb={[{ label: 'JEWELRY FACTORY SYSTEM', path: '/' }, { label: 'DASHBOARD' }]} contentLayout="dashboard" />
+      <div className="app-page-scroll content-scrollbar">
+        <div className="app-content-frame app-content-frame--dashboard app-page-content dashboard-page flex flex-col gap-4">
 
           {/* Header */}
-          <div style={{ display:'flex', alignItems:'flex-end', justifyContent:'space-between', paddingBottom:8 }}>
+          <div className="dashboard-page-header" style={{ display:'flex', alignItems:'flex-end', justifyContent:'space-between', paddingBottom:8 }}>
             <div>
               <h1 style={{ fontSize:'1.6rem', fontWeight:900, color:'var(--color-text-primary)', fontFamily:'var(--font-display)', letterSpacing:'-0.02em', lineHeight:1 }}>
                 Production <span style={{ color:'var(--color-brand-500)' }}>Dashboard</span>
               </h1>
               <p style={{ fontSize:'0.68rem', fontWeight:700, color:'var(--color-text-tertiary)', marginTop:4, letterSpacing:'0.06em', textTransform: 'capitalize' }}>Real-time manufacturing intelligence</p>
             </div>
-            <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+            <div className="dashboard-page-header__controls" style={{ display:'flex', alignItems:'center', gap:12 }}>
               <div style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 16px', borderRadius:14, background:'var(--color-surface-0)', border:'1px solid var(--color-border-light)' }}>
                 <Clock size={16} style={{ color:'var(--color-brand-500)' }}/>
                 <span style={{ fontSize:'0.85rem', fontWeight:800, color:'var(--color-text-primary)', fontFamily:'var(--font-display)', letterSpacing:'-0.01em' }}>{clock}</span>
@@ -189,7 +205,7 @@ export default function Dashboard() {
                 />
               </div>
 
-              <button onClick={() => load(selectedYear)} style={{ width:40, height:40, borderRadius:12, border:'1px solid var(--color-border-light)', background:'var(--color-surface-0)', color:'var(--color-text-secondary)', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', transition:'all 0.2s' }}
+              <button onClick={load} style={{ width:40, height:40, borderRadius:12, border:'1px solid var(--color-border-light)', background:'var(--color-surface-0)', color:'var(--color-text-secondary)', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', transition:'all 0.2s' }}
                 onMouseEnter={e => { e.currentTarget.style.borderColor='var(--color-brand-400)'; e.currentTarget.style.color='var(--color-brand-500)'; }}
                 onMouseLeave={e => { e.currentTarget.style.borderColor='var(--color-border-light)'; e.currentTarget.style.color='var(--color-text-secondary)'; }}
               >
@@ -199,7 +215,7 @@ export default function Dashboard() {
           </div>
 
           {/* ═══ Stat Cards ═══ */}
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:16 }}>
+          <div className="dashboard-stat-grid">
             {d.statCards.map((c, i) => {
               const ct = CARD_TYPE_MAP[c.label];
               const isActive = expandedCard === ct;
@@ -207,19 +223,20 @@ export default function Dashboard() {
               return (
                 <div key={i} onClick={() => isClickable && setExpandedCard(isActive ? null : ct)} style={{
                   ...cardStyle(), padding:'22px 24px', cursor: isClickable ? 'pointer' : 'default',
-                  border: isActive ? '2px solid var(--color-brand-500)' : c.isAlert ? '1px solid var(--color-danger-200)' : '1px solid transparent',
-                  boxShadow: isActive ? '0 4px 20px -4px color-mix(in srgb, var(--color-brand-500), transparent 60%)' : '0 2px 12px -4px rgba(0,0,0,0.06)',
+                  border: isActive ? '1px solid var(--color-brand-500)' : c.isAlert ? '1px solid var(--color-danger-200)' : '1px solid var(--color-border-light)',
+                  background: isActive ? 'var(--color-brand-50)' : 'var(--color-surface-0)',
+                  boxShadow: 'var(--shadow-panel)',
                 }}
-                onMouseEnter={e => { if(!isActive && isClickable) { e.currentTarget.style.transform='translateY(-4px)'; e.currentTarget.style.boxShadow='0 8px 24px -8px rgba(0,0,0,0.1)'; }}}
-                onMouseLeave={e => { if(!isActive && isClickable) { e.currentTarget.style.transform=''; e.currentTarget.style.boxShadow='0 2px 12px -4px rgba(0,0,0,0.04)'; }}}
                 >
                   <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12 }}>
                     <span style={{ fontSize:'0.8rem', fontWeight:800, color: isActive ? 'var(--color-brand-600)' : 'var(--color-text-tertiary)', textTransform: 'capitalize', letterSpacing:'0.06em', transition:'color 0.2s' }}>{c.label}</span>
-                    {c.isAlert && <span style={{ width:10, height:10, borderRadius:'50%', background:'var(--color-danger-500)', animation:'pulse 2s infinite' }}/>}
+                    {c.isAlert && (
+                      <span style={{ width:10, height:10, borderRadius:'50%', background:'var(--color-danger-500)' }}/>
+                    )}
                   </div>
                   <div style={{ display:'flex', alignItems:'flex-end', justifyContent:'space-between', gap:8 }}>
                     <div style={{ flex:1 }}>
-                      <div style={{ fontSize:'2.2rem', fontWeight:900, color:'var(--color-text-primary)', fontFamily:'var(--font-display)', letterSpacing:'-0.02em', lineHeight:1 }}>
+                      <div style={{ fontSize:'var(--erp-text-grand)', fontWeight:900, color:'var(--color-text-primary)', fontFamily:'var(--font-display)', lineHeight:1 }}>
                         {typeof c.value === 'number' ? c.value.toLocaleString() : c.value}
                       </div>
                       {c.change && <div style={{ fontSize:'0.78rem', fontWeight:700, marginTop:8, color: c.trend==='bad'?'var(--color-danger-500)': c.trend==='down'?'var(--color-danger-500)':'var(--color-success-500)', fontFamily:'monospace' }}>{c.change}</div>}
@@ -261,14 +278,11 @@ export default function Dashboard() {
               <div style={{
                 ...cardStyle(), padding: 0, display: 'flex', flexDirection: 'column',
                 border: `1px solid ${opts.borderAccent}`,
-              }}
-                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = `0 8px 28px -8px ${opts.borderAccent}`; }}
-                onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '0 2px 12px -4px rgba(0,0,0,0.04)'; }}
-              >
+              }}>
                 {/* Header */}
                 <div style={{ padding: '18px 24px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div style={{ width: 38, height: 38, borderRadius: 12, background: opts.bgAccent, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ width: 38, height: 38, borderRadius: 8, background: opts.bgAccent, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       {opts.icon}
                     </div>
                     <div>
@@ -294,7 +308,7 @@ export default function Dashboard() {
                   {/* Numbers row */}
                   <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12 }}>
                     <div>
-                      <div style={{ fontSize: '2rem', fontWeight: 900, color: opts.accentColor, fontFamily: 'var(--font-display)', letterSpacing: '-0.02em', lineHeight: 1 }}>
+                      <div style={{ fontSize: 'var(--erp-text-grand)', fontWeight: 900, color: opts.accentColor, fontFamily: 'var(--font-display)', lineHeight: 1 }}>
                         {opts.pending.toLocaleString()}
                       </div>
                       <div style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--color-text-tertiary)', marginTop: 4 }}>Items Pending</div>
@@ -309,15 +323,15 @@ export default function Dashboard() {
 
                   {/* Stats row */}
                   <div style={{ display: 'flex', gap: 10 }}>
-                    <div style={{ flex: 1, padding: '10px 14px', borderRadius: 12, background: 'var(--color-surface-1)', border: '1px solid var(--color-border-light)', textAlign: 'center' }}>
+                    <div style={{ flex: 1, padding: '10px 14px', borderRadius: 8, background: 'var(--color-surface-1)', border: '1px solid var(--color-border-light)', textAlign: 'center' }}>
                       <div style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--color-success-500)', fontFamily: 'var(--font-display)' }}>{opts.done.toLocaleString()}</div>
                       <div style={{ fontSize: '0.55rem', fontWeight: 800, color: 'var(--color-text-tertiary)', textTransform: 'capitalize', letterSpacing: '0.05em', marginTop: 2 }}>Done</div>
                     </div>
-                    <div style={{ flex: 1, padding: '10px 14px', borderRadius: 12, background: 'var(--color-surface-1)', border: '1px solid var(--color-border-light)', textAlign: 'center' }}>
+                    <div style={{ flex: 1, padding: '10px 14px', borderRadius: 8, background: 'var(--color-surface-1)', border: '1px solid var(--color-border-light)', textAlign: 'center' }}>
                       <div style={{ fontSize: '1rem', fontWeight: 900, color: opts.accentColor, fontFamily: 'var(--font-display)' }}>{opts.pending.toLocaleString()}</div>
                       <div style={{ fontSize: '0.55rem', fontWeight: 800, color: 'var(--color-text-tertiary)', textTransform: 'capitalize', letterSpacing: '0.05em', marginTop: 2 }}>Pending</div>
                     </div>
-                    <div style={{ flex: 1, padding: '10px 14px', borderRadius: 12, background: 'var(--color-surface-1)', border: '1px solid var(--color-border-light)', textAlign: 'center' }}>
+                    <div style={{ flex: 1, padding: '10px 14px', borderRadius: 8, background: 'var(--color-surface-1)', border: '1px solid var(--color-border-light)', textAlign: 'center' }}>
                       <div style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--color-text-primary)', fontFamily: 'var(--font-display)' }}>{(opts.pending + opts.done).toLocaleString()}</div>
                       <div style={{ fontSize: '0.55rem', fontWeight: 800, color: 'var(--color-text-tertiary)', textTransform: 'capitalize', letterSpacing: '0.05em', marginTop: 2 }}>Total</div>
                     </div>
@@ -327,30 +341,30 @@ export default function Dashboard() {
             );
 
             return (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <div className="dashboard-duo-grid">
                 {sfCard({
-                  icon: <Gem size={18} style={{ color: 'oklch(0.65 0.2 280)' }}/>,
+                  icon: <Gem size={18} style={{ color: 'var(--color-brand-600)' }}/>,
                   title: 'Stone',
                   subtitle: 'Gemstone preparation status',
                   pending: sf.stone.pending,
                   pendingQty: sf.stone.pendingQty,
                   done: sf.stone.done,
-                  accentColor: 'oklch(0.65 0.2 280)',
-                  bgAccent: 'oklch(0.65 0.2 280 / 0.1)',
-                  borderAccent: 'oklch(0.65 0.2 280 / 0.25)',
+                  accentColor: 'var(--color-brand-600)',
+                  bgAccent: 'var(--color-brand-50)',
+                  borderAccent: 'var(--color-border-light)',
                   navPath: '/procurement/purchase',
                   navLabel: 'Purchase Stone',
                 })}
                 {sfCard({
-                  icon: <Wrench size={18} style={{ color: 'oklch(0.7 0.15 55)' }}/>,
+                  icon: <Wrench size={18} style={{ color: 'var(--color-brand-600)' }}/>,
                   title: 'Finding',
                   subtitle: 'Finding preparation status',
                   pending: sf.finding.pending,
                   pendingQty: sf.finding.pendingQty,
                   done: sf.finding.done,
-                  accentColor: 'oklch(0.7 0.15 55)',
-                  bgAccent: 'oklch(0.7 0.15 55 / 0.1)',
-                  borderAccent: 'oklch(0.7 0.15 55 / 0.25)',
+                  accentColor: 'var(--color-brand-600)',
+                  bgAccent: 'var(--color-brand-50)',
+                  borderAccent: 'var(--color-border-light)',
                   navPath: '/spare-parts/order',
                   navLabel: 'Spare Parts',
                 })}
@@ -359,7 +373,7 @@ export default function Dashboard() {
           })()}
 
 
-          <div style={{ display:'grid', gridTemplateColumns:'1.2fr 1fr 1fr', gap:16 }}>
+          <div className="dashboard-triple-grid">
 
             {/* 7-Day Trend */}
             <div style={cardStyle()}>
@@ -385,7 +399,7 @@ export default function Dashboard() {
               {sectionTitle(<BarChart3 size={14}/>, 'Process Distribution')}
               <div style={{ padding:'20px', display:'flex', alignItems:'center', justifyContent:'center', gap:24 }}>
                 <div style={{ position:'relative', width:130, height:130, borderRadius:'50%', background:`conic-gradient(${conicStops})`, flexShrink:0 }}>
-                  <div style={{ position:'absolute', inset:20, borderRadius:'50%', background:'var(--color-surface-0)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', boxShadow:'inset 0 2px 8px rgba(0,0,0,0.05)' }}>
+                  <div style={{ position:'absolute', inset:20, borderRadius:'50%', background:'var(--color-surface-0)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', boxShadow:'var(--shadow-inset-panel)' }}>
                     <span style={{ fontSize:'1.4rem', fontWeight:900, color:'var(--color-text-primary)', fontFamily:'var(--font-display)' }}>{d.processDistribution.total.toLocaleString()}</span>
                     <span style={{ fontSize:'0.55rem', fontWeight:800, color:'var(--color-text-tertiary)', textTransform: 'capitalize', letterSpacing:'0.1em' }}>Items</span>
                   </div>
@@ -433,7 +447,7 @@ export default function Dashboard() {
           </div>
 
           {/* ═══ Bottom Row: Top Customers | Delay Orders ═══ */}
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1.4fr', gap:16 }}>
+          <div className="dashboard-bottom-grid">
 
             {/* Top Customers */}
             <div style={cardStyle()}>
@@ -508,7 +522,7 @@ export default function Dashboard() {
               </span></>,
               'Recent Orders',
             )}
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(6,1fr)', gap:0 }}>
+            <div className="dashboard-recent-grid">
               {d.recentOrders.map((o, i) => (
                 <div key={i} style={{ padding:'16px 20px', borderRight: i<5?'1px solid var(--color-border-light)':'none', cursor:'pointer', transition:'background 0.2s' }}
                   onMouseEnter={e => e.currentTarget.style.background='var(--color-surface-1)'}

@@ -140,19 +140,38 @@ function buildSalesFilters(req, request, viewAlias = 'v', dateExpr = null) {
   const months = parseCsvInts(req.query.months);
   const customers = parseCsvStrings(req.query.customers);
   const types = parseCsvStrings(req.query.types).map(v => v.toUpperCase());
+  const startDate = req.query.startDate;
+  const endDate = req.query.endDate;
   const effectiveDateExpr = dateExpr || salesDateBasis(req, viewAlias).dateExpr;
 
-  const yearParams = addInParams(request, 'sy', years, sql.Int);
+  function buildDateRangeCondition(col, yearList, monthList) {
+    if (startDate && endDate) {
+      return `(${col} >= '${startDate} 00:00:00' AND ${col} <= '${endDate} 23:59:59')`;
+    }
+    if (!yearList || yearList.length === 0) return '1=1';
+    if (!monthList || monthList.length === 0) {
+      return '(' + yearList.map(y => `(${col} >= '${y}-01-01' AND ${col} < '${y + 1}-01-01')`).join(' OR ') + ')';
+    }
+    const conditions = [];
+    for (const y of yearList) {
+      for (const m of monthList) {
+        const sM = m.toString().padStart(2, '0');
+        const eM_val = m + 1;
+        const eY = eM_val > 12 ? y + 1 : y;
+        const eM = (eM_val > 12 ? 1 : eM_val).toString().padStart(2, '0');
+        conditions.push(`(${col} >= '${y}-${sM}-01' AND ${col} < '${eY}-${eM}-01')`);
+      }
+    }
+    return '(' + conditions.join(' OR ') + ')';
+  }
+
+  const sargableDateCondition = buildDateRangeCondition(effectiveDateExpr, years, months);
+
   const filters = [
-    `YEAR(${effectiveDateExpr}) IN (${yearParams})`,
+    sargableDateCondition,
     `SUBSTRING(${viewAlias}.OrderNo, 1, 3) NOT IN ('BBP','BBK','BBS','BBL','BBT','BBD')`,
     `(${viewAlias}.PONo IS NULL OR UPPER(${viewAlias}.PONo) NOT LIKE '%SAMPLE%')`,
   ];
-
-  if (months.length > 0) {
-    const monthParams = addInParams(request, 'sm', months, sql.Int);
-    filters.push(`MONTH(${effectiveDateExpr}) IN (${monthParams})`);
-  }
 
   if (customers.length > 0) {
     const customerParams = addInParams(request, 'sc', customers, sql.NVarChar);
@@ -168,7 +187,6 @@ function buildSalesFilters(req, request, viewAlias = 'v', dateExpr = null) {
 }
 
 // Customer Sales Overview KPI/group rows.
-// [SALES CUSTOMER GROUPS] GET /api/dashboard/sales-customer-groups
 router.get('/sales-customer-groups', async (req, res) => {
   try {
     const pool = await getPool();
@@ -200,6 +218,7 @@ router.get('/sales-customer-groups', async (req, res) => {
     res.status(500).json({ ok: false, error: err.message });
   }
 });
+
 
 // Monthly trend source for Customer Sales Analysis charts.
 // [SALES MONTHLY ANALYTICS] GET /api/dashboard/sales-monthly-analytics
@@ -299,17 +318,32 @@ router.get('/sales-orders', async (req, res) => {
         v.OrderNo AS orderNo,
         v.PONo AS poNo,
         v.OrderDate AS ordDate,
-        v.CustomerDueDate AS custDueDate,
+        v.FactoryDueDate AS dueDate,
+        v.CustomerDueDate AS custDate,
         v.CustomerCode AS customerCode,
         ISNULL(v.CustomerName, v.CustomerCode) AS customerName,
         ISNULL(NULLIF(v.SalesName, ''), 'Unassigned') AS salesName,
         ISNULL(NULLIF(v.Brand, ''), ISNULL(v.CustomerName, v.CustomerCode)) AS brand,
+        v.PO2 AS po2,
+        v.ShipTo AS shipT,
+        v.OrderStamp AS ordStamp,
+        v.OrderMaker AS ordMaker,
         v.ItemNo AS itemNo,
+        v.ItemSKU AS itemSku,
         ISNULL(NULLIF(v.ItemType, ''), LEFT(ISNULL(v.ItemNo, ''), 3)) AS itemType,
         ${itemTypeNameSql('v.ItemType', 'v.ItemNo', 'gt.GoodTypeNameEng', 'gt.GoodTypeName')} AS itemTypeName,
         UPPER(ISNULL(v.ProductType, 'OTHERS')) AS productTypeCode,
+        v.CustomerItem AS custItem,
+        v.ItemMaterial AS itemMat,
+        v.ItemSize AS itemSize,
+        v.ItemStone AS itemStone,
+        v.ItemDescription AS itemDesc,
+        v.ItemPlate AS itemPlate,
+        v.SetType AS setType,
+        v.ItemWeight AS itemWeight,
         v.OrderQty AS orderQty,
         v.ShippedQty AS shippedQty,
+        v.ItemPrice AS itemPrice,
         v.OrderAmount AS amount,
         v.ShippedAmount AS shippedAmount,
         ${salesStatusSql('v.OrderQty', 'v.ShippedQty', 'v.CustomerDueDate')} AS status,
@@ -402,6 +436,89 @@ router.get('/top-items', async (req, res) => {
     res.json({ ok: true, data: result.recordset });
   } catch (err) {
     console.error('[API ERROR] /api/dashboard/top-items:', err.message);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// Weekly trend source for Customer Sales Analysis charts.
+// [SALES WEEKLY ANALYTICS] GET /api/dashboard/sales-weekly-analytics
+router.get('/sales-weekly-analytics', async (req, res) => {
+  try {
+    const pool = await getPool();
+    const request = pool.request();
+    const { dateExpr } = salesDateBasis(req, 'v');
+    const { whereSql } = buildSalesFilters(req, request, 'v', dateExpr);
+
+    const result = await request.query(`
+      SELECT
+        YEAR(${dateExpr}) AS year,
+        DATEPART(iso_week, ${dateExpr}) AS week,
+        COUNT(DISTINCT v.OrderNo) AS orderCount,
+        SUM(v.OrderQty) AS qty,
+        SUM(v.ShippedQty) AS shippedQty,
+        SUM(v.OpenQty) AS gapQty,
+        SUM(v.OrderAmount) AS amount,
+        SUM(v.ShippedAmount) AS shippedAmount
+      FROM ${SALES_ANALYTICS_VIEW} v
+      WHERE ${whereSql}
+        AND ISNULL(v.CustomerStatus, 'Y') = 'Y'
+      GROUP BY YEAR(${dateExpr}), DATEPART(iso_week, ${dateExpr})
+      ORDER BY year, week
+    `);
+
+    res.json({ ok: true, data: result.recordset });
+  } catch (err) {
+    console.error('[API ERROR] /api/dashboard/sales-weekly-analytics:', err.message);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// Due Outlook for Customer Sales Analysis charts.
+// [SALES DUE OUTLOOK] GET /api/dashboard/sales-due-outlook
+router.get('/sales-due-outlook', async (req, res) => {
+  try {
+    const pool = await getPool();
+    const request = pool.request();
+    // For Due Outlook, we base the dateExpr on CustomerDueDate, unless otherwise requested
+    const { dateExpr } = { dateExpr: 'v.CustomerDueDate' };
+    const { whereSql } = buildSalesFilters(req, request, 'v', dateExpr);
+
+    const result = await request.query(`
+      WITH BaseData AS (
+        SELECT
+          v.OrderNo,
+          YEAR(${dateExpr}) AS year,
+          MONTH(${dateExpr}) AS month,
+          MAX(CASE WHEN v.OpenQty > 0 AND CAST(${dateExpr} AS DATE) < CAST(GETDATE() AS DATE) THEN 1 ELSE 0 END) AS isOverdue,
+          MAX(CASE WHEN v.OpenQty > 0 AND CAST(${dateExpr} AS DATE) >= CAST(GETDATE() AS DATE) AND CAST(${dateExpr} AS DATE) <= CAST(DATEADD(day, 14, GETDATE()) AS DATE) THEN 1 ELSE 0 END) AS isDueSoon,
+          SUM(v.OrderQty) AS dueQty,
+          SUM(CASE WHEN v.ShippedQty > v.OrderQty THEN v.OrderQty ELSE v.ShippedQty END) AS shippedQty,
+          SUM(v.OrderAmount) AS dueAmount,
+          SUM(CASE WHEN v.ShippedAmount > v.OrderAmount THEN v.OrderAmount ELSE v.ShippedAmount END) AS shippedAmount
+        FROM ${SALES_ANALYTICS_VIEW} v
+        WHERE ${whereSql}
+          AND ISNULL(v.CustomerStatus, 'Y') = 'Y'
+        GROUP BY v.OrderNo, YEAR(${dateExpr}), MONTH(${dateExpr})
+      )
+      SELECT
+        year,
+        month,
+        SUM(dueQty) AS dueQty,
+        SUM(shippedQty) AS shippedQty,
+        SUM(CASE WHEN dueQty > shippedQty THEN dueQty - shippedQty ELSE 0 END) AS openQty,
+        SUM(dueAmount) AS dueAmount,
+        SUM(shippedAmount) AS shippedAmount,
+        SUM(CASE WHEN dueAmount > shippedAmount THEN dueAmount - shippedAmount ELSE 0 END) AS openAmount,
+        SUM(isOverdue) AS overdueOrders,
+        SUM(isDueSoon) AS dueSoonOrders
+      FROM BaseData
+      GROUP BY year, month
+      ORDER BY year, month
+    `);
+
+    res.json({ ok: true, data: result.recordset });
+  } catch (err) {
+    console.error('[API ERROR] /api/dashboard/sales-due-outlook:', err.message);
     res.status(500).json({ ok: false, error: err.message });
   }
 });

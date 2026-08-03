@@ -32,62 +32,63 @@ export default function VendorPerformanceDashboardPage() {
   const [itemGroup, setItemGroup] = useState('');
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--color-surface-1)', fontFamily: 'var(--font-body)' }}>
+    <div className="app-page font-body">
       <Topbar breadcrumb={[
         { label: 'JEWELRY FACTORY SYSTEM', path: '/' },
         { label: 'SUBCONTRACT MANAGEMENT', path: '/subcontract/vendor-performance' },
         { label: 'VENDOR PERFORMANCE DASHBOARD' },
-      ]} />
+      ]} contentLayout="dashboard-wide" />
 
-      <div className="content-scrollbar flex-1 overflow-y-auto" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      <div className="app-page-scroll content-scrollbar">
+      <div className="app-content-frame app-content-frame--dashboard-wide app-page-content vendor-page flex flex-col gap-4">
 
         {/* ─── Not-connected notice ─── */}
         <div style={{
-          display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '14px 18px', borderRadius: '14px',
+          display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '14px 18px', borderRadius: '8px',
           background: 'var(--color-warning-50)', border: '1px solid var(--color-warning-100)'
         }}>
           <AlertTriangle size={18} style={{ color: 'var(--color-warning-600)', flexShrink: 0, marginTop: '2px' }} />
           <div style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>
-            <strong style={{ color: 'var(--color-warning-600)' }}>ยังไม่เชื่อมต่อข้อมูลจริง — </strong>
-            หน้านี้แสดงโครงหน้าจอ (Layout) ต้นแบบตามที่ออกแบบไว้เท่านั้น ระบบหลังบ้าน (Stored Procedure) สำหรับข้อมูลผลงาน Vendor/Subcontract ยังไม่ถูกพัฒนา ตัวเลข กราฟ และตารางด้านล่างจึงยังไม่แสดงข้อมูลจริง
+            <strong style={{ color: 'var(--color-warning-600)' }}>ยังไม่เชื่อมต่อข้อมูลจริง: </strong>
+            ตัวกรอง KPI กราฟ และตารางจะแสดงผลได้เมื่อมี Stored Procedure สำหรับข้อมูล Vendor/Subcontract
           </div>
         </div>
 
         {/* ─── Filters ─── */}
-        <div style={{
+        <div className="vendor-filter-bar" style={{
           display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'flex-end',
-          background: 'var(--color-surface-0)', borderRadius: '16px', border: '1px solid var(--color-border-light)',
-          padding: '18px 20px', boxShadow: '0 8px 32px -8px rgba(0,0,0,0.05)'
+          background: 'var(--color-ui-surface)', borderRadius: '8px', border: '1px solid var(--color-border-light)',
+          padding: '18px 20px', boxShadow: 'var(--shadow-panel)'
         }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '260px' }}>
             <label style={labelStyle}>Date Range</label>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 12px', border: '1px solid var(--color-border-strong)', borderRadius: '10px', background: 'var(--color-surface-0)' }}>
-              <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} style={{ flex: 1, background: 'transparent', border: 'none', fontSize: '0.8rem', color: 'var(--color-text-primary)', outline: 'none', fontWeight: 600 }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 12px', border: '1px solid var(--color-border-strong)', borderRadius: '8px', background: 'var(--color-surface-0)' }}>
+              <input disabled type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} style={{ flex: 1, background: 'transparent', border: 'none', fontSize: '0.8rem', color: 'var(--color-text-primary)', outline: 'none', fontWeight: 600 }} />
               <span style={{ color: 'var(--color-text-tertiary)', fontSize: '0.65rem', fontWeight: 800 }}>TO</span>
-              <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} style={{ flex: 1, background: 'transparent', border: 'none', fontSize: '0.8rem', color: 'var(--color-text-primary)', outline: 'none', fontWeight: 600 }} />
+              <input disabled type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} style={{ flex: 1, background: 'transparent', border: 'none', fontSize: '0.8rem', color: 'var(--color-text-primary)', outline: 'none', fontWeight: 600 }} />
             </div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             <label style={labelStyle}>Subcontract</label>
-            <CustomSelect value={subcontract} onChange={setSubcontract} options={[{ value: '', label: 'All' }]} width="140px" />
+            <CustomSelect disabled value={subcontract} onChange={setSubcontract} options={[{ value: '', label: 'All' }]} width="140px" />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             <label style={labelStyle}>Department</label>
-            <CustomSelect value={department} onChange={setDepartment} options={[{ value: '', label: 'All' }]} width="140px" />
+            <CustomSelect disabled value={department} onChange={setDepartment} options={[{ value: '', label: 'All' }]} width="140px" />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             <label style={labelStyle}>Process</label>
-            <CustomSelect value={process} onChange={setProcess} options={[{ value: '', label: 'All' }]} width="140px" />
+            <CustomSelect disabled value={process} onChange={setProcess} options={[{ value: '', label: 'All' }]} width="140px" />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             <label style={labelStyle}>Item Group</label>
-            <CustomSelect value={itemGroup} onChange={setItemGroup} options={[{ value: '', label: 'All' }]} width="140px" />
+            <CustomSelect disabled value={itemGroup} onChange={setItemGroup} options={[{ value: '', label: 'All' }]} width="140px" />
           </div>
           <button
             disabled
             title="ยังไม่เชื่อมต่อข้อมูลจริง"
             style={{
-              display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', borderRadius: '10px',
+              display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', borderRadius: '8px',
               background: 'var(--color-surface-2)', color: 'var(--color-text-quaternary)', border: 'none',
               fontSize: '0.8rem', fontWeight: 800, cursor: 'not-allowed'
             }}
@@ -98,14 +99,14 @@ export default function VendorPerformanceDashboardPage() {
         </div>
 
         {/* ─── KPI Tiles (flat icon-circle — same convention as PO Tracker) ─── */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px' }}>
+        <div className="vendor-kpi-grid">
           {KPI_TILES.map((tile) => (
             <div
               key={tile.id}
               style={{
-                background: 'var(--color-surface-0)', padding: '20px', borderRadius: '16px',
+                background: 'var(--color-ui-surface)', padding: '20px', borderRadius: '8px',
                 border: '1px solid var(--color-border-light)', display: 'flex', alignItems: 'center', gap: '14px',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
+                boxShadow: 'var(--shadow-panel)'
               }}
             >
               <div style={{ width: 44, height: 44, borderRadius: '50%', flexShrink: 0, background: `color-mix(in srgb, ${NOT_CONNECTED_COLOR} 16%, var(--color-surface-1))`, color: NOT_CONNECTED_COLOR, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -120,9 +121,9 @@ export default function VendorPerformanceDashboardPage() {
         </div>
 
         {/* ─── Chart Cards (empty state — no fabricated numbers) ─── */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+        <div className="vendor-chart-grid">
           {CHART_CARDS.map((chart) => (
-            <div key={chart.id} style={{ background: 'var(--color-surface-0)', borderRadius: '16px', border: '1px solid var(--color-border-light)', padding: '18px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+            <div key={chart.id} style={{ background: 'var(--color-ui-surface)', borderRadius: '8px', border: '1px solid var(--color-border-light)', padding: '18px', boxShadow: 'var(--shadow-panel)' }}>
               <h3 style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--color-text-primary)', margin: '0 0 16px', fontFamily: 'var(--font-display)' }}>{chart.title}</h3>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '40px 16px', color: 'var(--color-text-quaternary)' }}>
                 <BarChart3 size={28} style={{ opacity: 0.4 }} />
@@ -133,7 +134,7 @@ export default function VendorPerformanceDashboardPage() {
         </div>
 
         {/* ─── Vendor Performance Detail (grouped headers + empty state + Grand Total) ─── */}
-        <div style={{ background: 'var(--color-surface-0)', borderRadius: '16px', border: '1px solid var(--color-border-light)', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+        <div style={{ background: 'var(--color-ui-surface)', borderRadius: '8px', border: '1px solid var(--color-border-light)', overflow: 'hidden', boxShadow: 'var(--shadow-panel)' }}>
           <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--color-border-light)' }}>
             <h3 style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--color-text-primary)', margin: 0, fontFamily: 'var(--font-display)' }}>Vendor Performance Detail</h3>
           </div>
@@ -160,7 +161,7 @@ export default function VendorPerformanceDashboardPage() {
               <tbody>
                 <tr>
                   <td colSpan={11} style={{ padding: '80px 24px', textAlign: 'center', color: 'var(--color-text-quaternary)', fontSize: '0.85rem', borderBottom: '1px solid var(--color-border-strong)' }}>
-                    <div style={{ fontSize: '2.5rem', marginBottom: '12px', opacity: 0.2 }}>📋</div>
+                    <ClipboardList size={28} style={{ margin: '0 auto 12px', opacity: 0.35 }} />
                     <div style={{ fontWeight: 800 }}>No vendor performance data available</div>
                     <div style={{ fontSize: '0.75rem', marginTop: '4px', opacity: 0.7 }}>ยังไม่เชื่อมต่อกับฐานข้อมูลจริง</div>
                   </td>
@@ -177,6 +178,7 @@ export default function VendorPerformanceDashboardPage() {
             </table>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

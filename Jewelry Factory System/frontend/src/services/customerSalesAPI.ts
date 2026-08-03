@@ -46,21 +46,37 @@ export interface SalesOrderRow {
   orderNo: string;
   poNo: string | null;
   ordDate: string | null;
-  custDueDate: string | null;
+  dueDate: string | null;
+  custDate: string | null;
   customerCode: string;
   customerName: string;
+  salesName: string | null;
   brand: string;
+  po2: string | null;
+  shipT: string | null;
+  ordStamp: string | null;
+  ordMaker: string | null;
   itemNo: string;
+  itemSku: string | null;
   itemType: string;
   itemTypeName: string;
   productTypeCode?: string;
+  custItem: string | null;
+  itemMat: string | null;
+  itemSize: string | null;
+  itemStone: string | null;
+  itemDesc: string | null;
+  itemPlate: string | null;
+  setType: string | null;
+  itemWeight: number | null;
   orderQty: number;
   shippedQty: number;
+  itemPrice: number | null;
   amount: number;
   shippedAmount: number;
   status: 'Open' | 'Partial' | 'Shipped' | 'Late';
   market: string;
-  salesName?: string;
+
 }
 
 export interface TopItemRow {
@@ -85,6 +101,8 @@ interface SalesAnalyticsParams {
   customers?: string[];
   types?: string[];
   dateView?: SalesDateView;
+  startDate?: string;
+  endDate?: string;
 }
 
 // Builds the query string used by every Customer Trends endpoint.
@@ -95,6 +113,8 @@ const salesAnalyticsQuery = (params: SalesAnalyticsParams = {}) => {
   if (params.customers?.length) qs.set('customers', params.customers.join(','));
   if (params.types?.length) qs.set('types', params.types.join(','));
   if (params.dateView) qs.set('dateView', params.dateView);
+  if (params.startDate) qs.set('startDate', params.startDate);
+  if (params.endDate) qs.set('endDate', params.endDate);
   return qs;
 };
 
@@ -139,6 +159,46 @@ export const fetchTopItems = async (params: SalesAnalyticsParams & { metric?: Sa
   if (params.limit) qs.set('limit', String(params.limit));
   const res = await fetchWithAuth(`${BASE_URL}/dashboard/top-items?${qs.toString()}`);
   if (!res.ok) throw new Error(`Top items API error: ${res.status}`);
+  const json = await res.json();
+  return json.data || [];
+};
+
+export interface SalesWeeklyPoint {
+  year: number;
+  week: number;
+  orderCount: number;
+  qty: number;
+  shippedQty: number;
+  gapQty: number;
+  amount: number;
+  shippedAmount: number;
+}
+
+export const fetchSalesWeeklyAnalytics = async (params: SalesAnalyticsParams = {}): Promise<SalesWeeklyPoint[]> => {
+  const qs = salesAnalyticsQuery(params);
+  const res = await fetchWithAuth(`${BASE_URL}/dashboard/sales-weekly-analytics?${qs.toString()}`);
+  if (!res.ok) throw new Error(`Sales weekly analytics API error: ${res.status}`);
+  const json = await res.json();
+  return json.data || [];
+};
+
+export interface SalesDueOutlookPoint {
+  year: number;
+  month: number;
+  dueQty: number;
+  shippedQty: number;
+  openQty: number;
+  dueAmount: number;
+  shippedAmount: number;
+  openAmount: number;
+  overdueOrders: number;
+  dueSoonOrders: number;
+}
+
+export const fetchSalesDueOutlook = async (params: SalesAnalyticsParams = {}): Promise<SalesDueOutlookPoint[]> => {
+  const qs = salesAnalyticsQuery(params);
+  const res = await fetchWithAuth(`${BASE_URL}/dashboard/sales-due-outlook?${qs.toString()}`);
+  if (!res.ok) throw new Error(`Sales due outlook API error: ${res.status}`);
   const json = await res.json();
   return json.data || [];
 };

@@ -26,9 +26,9 @@ router.post('/acquire', (req, res) => {
       locks.set(docNo, { user, timestamp: now });
       return res.json({ ok: true, message: 'Lock extended' });
     }
-    return res.status(409).json({ 
-      ok: false, 
-      error: 'Locked by another user', 
+    return res.status(409).json({
+      ok: false,
+      error: 'Locked by another user',
       lockedBy: lockInfo.user,
       lockedAt: new Date(lockInfo.timestamp).toISOString()
     });

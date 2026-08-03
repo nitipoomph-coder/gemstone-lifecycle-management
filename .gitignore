@@ -37,4 +37,7 @@ Jewelry Factory System/frontend/temp_*.tsx
 Jewelry Factory System/frontend/parse.cjs
 Jewelry Factory System/backend/check-*.js
 Jewelry Factory System/backend/get-*.js
+rewrite-*.js
+temp_*.js
+*.xlsx
 

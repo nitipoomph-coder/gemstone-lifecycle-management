@@ -225,25 +225,36 @@ function monthFromOrder(row: SalesOrderRow) {
   return monthFromDate(row.ordDate);
 }
 
-function buildMonthlyTypeData(rows: SalesOrderRow[], year: string, selectedMonths: string[], metric: Metric): MonthlyTypeDatum[] {
-  const data = selectedMonths
-    .map(Number)
-    .sort((a, b) => a - b)
-    .map(monthNumber => ({
-      month: MONTHS[monthNumber - 1],
-      monthNumber,
-      total: 0,
-      BBS: 0,
-      BES: 0,
-      BNS: 0,
-      BRS: 0,
-      OTHERS: 0,
-    }));
-  const byMonth = new Map(data.map(point => [String(point.monthNumber), point]));
+function buildMonthlyTypeData(rows: SalesOrderRow[], metric: Metric): MonthlyTypeDatum[] {
+  const monthKeys = new Set<string>();
+  rows.forEach(row => {
+    if (!row.ordDate) return;
+    const date = new Date(row.ordDate);
+    if (Number.isNaN(date.getTime())) return;
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    monthKeys.add(`${yyyy}-${mm}`);
+  });
+
+  const sortedKeys = Array.from(monthKeys).sort();
+  const data = sortedKeys.map(key => {
+    const [yyyy, mm] = key.split('-');
+    return {
+      monthKey: key, 
+      month: `${MONTHS[Number(mm) - 1]} '${yyyy.slice(2)}`, 
+      monthNumber: Number(mm),
+      total: 0, BBS: 0, BES: 0, BNS: 0, BRS: 0, OTHERS: 0,
+    };
+  });
+  
+  const byMonth = new Map(data.map(point => [point.monthKey, point]));
 
   rows.forEach(row => {
-    if (yearFromOrder(row) !== year) return;
-    const point = byMonth.get(monthFromOrder(row));
+    if (!row.ordDate) return;
+    const date = new Date(row.ordDate);
+    if (Number.isNaN(date.getTime())) return;
+    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    const point = byMonth.get(key);
     if (!point) return;
     const value = rowMetricValue(row, metric);
     point[salesTypeCode(row)] += value;
@@ -269,38 +280,43 @@ function weekFromOrder(row: SalesOrderRow) {
   return calendarWeekNumber(date);
 }
 
-function weeksForMonths(year: string, selectedMonths: string[]) {
-  const numericYear = Number(year);
-  if (!numericYear) return [];
-  const weeks = new Set<number>();
 
-  selectedMonths.forEach(month => {
-    const numericMonth = Number(month);
-    const daysInMonth = new Date(Date.UTC(numericYear, numericMonth, 0)).getUTCDate();
-    for (let day = 1; day <= daysInMonth; day += 1) {
-      weeks.add(calendarWeekNumber(new Date(Date.UTC(numericYear, numericMonth - 1, day))));
-    }
+
+function buildWeeklyComparisonData(rows: SalesOrderRow[], metric: Metric): TrendComparisonDatum[] {
+  const weekKeys = new Set<string>();
+  rows.forEach(row => {
+    if (!row.ordDate) return;
+    const date = new Date(row.ordDate);
+    if (Number.isNaN(date.getTime())) return;
+    const yyyy = date.getUTCFullYear();
+    const week = calendarWeekNumber(date);
+    weekKeys.add(`${yyyy}-${String(week).padStart(2, '0')}`);
   });
 
-  return [...weeks];
-}
-
-function buildWeeklyComparisonData(rows: SalesOrderRow[], reportYear: string, compareYear: string | undefined, selectedMonths: string[], metric: Metric): TrendComparisonDatum[] {
-  const weekNumbers = new Set([
-    ...weeksForMonths(reportYear, selectedMonths),
-    ...(compareYear ? weeksForMonths(compareYear, selectedMonths) : []),
-  ]);
-  const data = [...weekNumbers]
-    .sort((a, b) => a - b)
-    .map(week => ({ label: `W${String(week).padStart(2, '0')}`, periodNumber: week, report: 0, compare: 0 }));
-  const byWeek = new Map(data.map(point => [point.periodNumber, point]));
+  const sortedKeys = Array.from(weekKeys).sort();
+  const data = sortedKeys.map(key => {
+    const [yyyy, ww] = key.split('-');
+    return { 
+      label: `${yyyy.slice(2)}-W${ww}`, 
+      periodKey: key, 
+      periodNumber: Number(ww), 
+      report: 0, 
+      compare: 0 
+    };
+  });
+  
+  const byWeek = new Map(data.map(point => [point.periodKey, point]));
 
   rows.forEach(row => {
-    const rowYear = yearFromOrder(row);
-    if (rowYear !== reportYear && rowYear !== compareYear) return;
-    const point = byWeek.get(weekFromOrder(row));
+    if (!row.ordDate) return;
+    const date = new Date(row.ordDate);
+    if (Number.isNaN(date.getTime())) return;
+    const yyyy = date.getUTCFullYear();
+    const week = calendarWeekNumber(date);
+    const key = `${yyyy}-${String(week).padStart(2, '0')}`;
+    const point = byWeek.get(key);
     if (!point) return;
-    point[rowYear === reportYear ? 'report' : 'compare'] += rowMetricValue(row, metric);
+    point.report += rowMetricValue(row, metric);
   });
 
   return data;
@@ -331,7 +347,7 @@ function formatWeekRange(year: string, week: number) {
     : `${startDay} ${startMonth}-${endDay} ${endMonth}`;
 }
 
-function groupWeeklyComparisonData(data: TrendComparisonDatum[], reportYear: string, selectedMonths: string[]): WeeklyComparisonGroup[] {
+function groupWeeklyComparisonData(data: TrendComparisonDatum[], reportYear: string: string[]): WeeklyComparisonGroup[] {
   const groups = new Map<number, WeeklyComparisonGroup>();
   const selectedMonthNumbers = new Set(selectedMonths.map(Number));
 
@@ -361,7 +377,7 @@ function groupWeeklyComparisonData(data: TrendComparisonDatum[], reportYear: str
   return [...groups.values()].sort((a, b) => a.monthNumber - b.monthNumber);
 }
 
-function buildDueOutlookData(rows: SalesOrderRow[], year: string, selectedMonths: string[]): DueOutlookDatum[] {
+function buildDueOutlookData(rows: SalesOrderRow[], year: string: string[]): DueOutlookDatum[] {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const dueSoonCutoff = new Date(today);
@@ -469,12 +485,9 @@ export default function SalesCustomerGroupAnalytics() {
   const requestedGroups = useMemo(() => csv(searchParams.get('groups')).filter(groupId => CUSTOMER_GROUPS.some(group => group.id === groupId)), [searchParams]);
   const [availableYears, setAvailableYears] = useState<string[]>([]);
   const [selectedYears, setSelectedYears] = useState<string[]>([]);
-  const [selectedMonths, setSelectedMonths] = useState<string[]>(requestedMonths.length ? requestedMonths : MONTH_VALUES);
-  const [startDate, setStartDate] = useState<string>('');
+    const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
-  const [dateMode, setDateMode] = useState<'period' | 'custom'>('period');
-  const [monthDropdownOpen, setMonthDropdownOpen] = useState(false);
-  const [filtersExpanded, setFiltersExpanded] = useState(true);
+      const [filtersExpanded, setFiltersExpanded] = useState(true);
   const [selectedGroups, setSelectedGroups] = useState<string[]>(() => initialGroupsFromParams(requestedGroups, requestedCustomers));
   const [selectedKpiType, setSelectedKpiType] = useState<KpiTypeSelection>('ALL');
   const [metric, setMetric] = useState<Metric>(searchParams.get('metric') === 'qty' ? 'qty' : 'amount');
@@ -504,8 +517,7 @@ export default function SalesCustomerGroupAnalytics() {
   useEffect(() => {
     const closeDropdowns = (event: PointerEvent) => {
       if (filterToolbarRef.current?.contains(event.target as Node)) return;
-      setMonthDropdownOpen(false);
-    };
+          };
     document.addEventListener('pointerdown', closeDropdowns);
     return () => document.removeEventListener('pointerdown', closeDropdowns);
   }, []);
@@ -544,8 +556,8 @@ export default function SalesCustomerGroupAnalytics() {
     setDueError('');
     try {
       const [ordersResult, dueOrdersResult] = await Promise.allSettled([
-        fetchSalesOrders({ years: selectedYears, months: selectedMonths, customers, startDate, endDate }),
-        fetchSalesOrders({ years: selectedYears, months: selectedMonths, customers, dateView: 'custdate', startDate, endDate }),
+        fetchSalesOrders({ startDate, endDate, customers }),
+        fetchSalesOrders({ startDate, endDate, customers, dateView: 'custdate' }),
       ]);
 
       if (requestId !== loadRequestIdRef.current) return;
@@ -574,7 +586,7 @@ export default function SalesCustomerGroupAnalytics() {
     } finally {
       if (requestId === loadRequestIdRef.current) setLoading(false);
     }
-  }, [yearsLoading, selectedYears, selectedMonths, customers, startDate, endDate]);
+  }, [customers, startDate, endDate]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => { void loadOrders(); }, 0);
@@ -589,7 +601,7 @@ export default function SalesCustomerGroupAnalytics() {
   const compareYear = selectedYears.find(year => year !== primaryYear) || 'none';
   const hasCompareYear = compareYear !== 'none';
   const primaryTotals = useMemo(() => calcTotals(orders, primaryYear), [orders, primaryYear]);
-  const compareTotals = useMemo(() => hasCompareYear ? calcTotals(orders, compareYear) : emptyTotals, [orders, compareYear, hasCompareYear]);
+  const compareTotals = useMemo(() => hasCompareYear ? calcTotals(orders, compareYear) : emptyTotals, [orders, hasCompareYear]);
   const primaryMetric = metric === 'amount' ? primaryTotals.amount : primaryTotals.qty;
   const compareMetric = metric === 'amount' ? compareTotals.amount : compareTotals.qty;
   const changeAmount = hasCompareYear ? primaryMetric - compareMetric : 0;
@@ -607,12 +619,12 @@ export default function SalesCustomerGroupAnalytics() {
     };
   }, [orders, primaryYear, selectedKpiType]);
   const primaryChartData = useMemo(
-    () => buildMonthlyTypeData(orders, primaryYear, selectedMonths, metric),
-    [orders, primaryYear, selectedMonths, metric],
+    () => buildMonthlyTypeData(orders, primaryYear, metric),
+    [orders, primaryYear, metric],
   );
   const compareChartData = useMemo(
-    () => buildMonthlyTypeData(orders, hasCompareYear ? compareYear : '', selectedMonths, metric),
-    [orders, compareYear, hasCompareYear, selectedMonths, metric],
+    () => buildMonthlyTypeData(orders, metric),
+    [orders, metric],
   );
   const monthlyComparisonData = useMemo<TrendComparisonDatum[]>(() => primaryChartData.map((point, index) => ({
     label: point.month,
@@ -621,16 +633,16 @@ export default function SalesCustomerGroupAnalytics() {
     compare: compareChartData[index]?.total || 0,
   })), [primaryChartData, compareChartData]);
   const weeklyComparisonData = useMemo(
-    () => buildWeeklyComparisonData(orders, primaryYear, hasCompareYear ? compareYear : undefined, selectedMonths, metric),
-    [orders, primaryYear, compareYear, hasCompareYear, selectedMonths, metric],
+    () => buildWeeklyComparisonData(orders, metric),
+    [orders, metric],
   );
   const weeklyComparisonGroups = useMemo(
-    () => groupWeeklyComparisonData(weeklyComparisonData, primaryYear, selectedMonths),
-    [weeklyComparisonData, primaryYear, selectedMonths],
+    () => groupWeeklyComparisonData(weeklyComparisonData, primaryYear),
+    [weeklyComparisonData, primaryYear],
   );
   const dueOutlookData = useMemo(
-    () => buildDueOutlookData(dueOrders, primaryYear, selectedMonths),
-    [dueOrders, primaryYear, selectedMonths],
+    () => buildDueOutlookData(dueOrders, primaryYear),
+    [dueOrders, primaryYear],
   );
   const typeContribution = useMemo<TypeContributionRow[]>(() => SALES_TYPE_OPTIONS.map(option => {
     const current = primaryChartData.reduce((sum, point) => sum + point[option.value], 0);
@@ -718,27 +730,12 @@ export default function SalesCustomerGroupAnalytics() {
 
   const toggleFilters = () => {
     if (filtersExpanded) {
-      setMonthDropdownOpen(false);
-    }
+          }
     setFiltersExpanded(expanded => !expanded);
   };
 
   const handleSearchKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Escape') clearSearch();
-  };
-
-  const updateYearSelection = (primary: string, compare: string) => {
-    const nextCompare = compare !== primary ? compare : 'none';
-    const next = [nextCompare, primary].filter(year => year && year !== 'none');
-    setSelectedYears(Array.from(new Set(next)));
-    setDrilldown(null);
-  };
-
-  const toggleMonth = (month: string) => {
-    setDrilldown(null);
-    setSelectedMonths(prev => prev.includes(month)
-      ? (prev.length > 1 ? prev.filter(item => item !== month) : prev)
-      : [...prev, month].sort((a, b) => Number(a) - Number(b)));
   };
 
   const toggleGroup = (groupId: string) => {
@@ -747,27 +744,15 @@ export default function SalesCustomerGroupAnalytics() {
   };
 
   const resetFilters = () => {
-    setSelectedYears(defaultYearSelection(availableYears));
-    setSelectedMonths(MONTH_VALUES);
-    setStartDate('');
+    setStartDate(`${new Date().getFullYear()}-01-01`);
     setEndDate('');
-    setDateMode('period');
     setSelectedGroups([]);
-    setSelectedKpiType('ALL');
-    setMonthDropdownOpen(false);
-    setMetric('amount');
     setDrilldown(null);
-    setSearch('');
+    setMetric('amount');
   };
 
   const selectAllGroups = () => {
     setSelectedGroups([]);
-    setDrilldown(null);
-  };
-
-  const selectMonths = (months: string[]) => {
-    setSelectedMonths(months);
-    setMonthDropdownOpen(false);
     setDrilldown(null);
   };
 
@@ -845,63 +830,28 @@ export default function SalesCustomerGroupAnalytics() {
 
 
 
-          <section ref={filterToolbarRef} style={{ ...filterToolbar, zIndex: monthDropdownOpen ? 30 : 1 }} aria-label="View filters">
+          <section ref={filterToolbarRef} style={{ ...filterToolbar }} aria-label="View filters">
             {filtersExpanded ? (
               <>
                 <div style={filterPrimaryRow}>
                   <span style={filterSectionLabel}><SlidersHorizontal size={13} />Filters</span>
                   <div style={filterControlDivider} />
 
-                  <ErpSegmentedControl
-                    value={dateMode}
-                    ariaLabel="Filter date mode"
-                    onChange={(val) => {
-                      setDateMode(val as 'period' | 'custom');
-                      if (val === 'period') {
-                        setStartDate('');
-                        setEndDate('');
-                        setSelectedYears(defaultYearSelection(availableYears));
-                        setSelectedMonths(MONTH_VALUES);
-                      } else {
-                        setSelectedYears([]);
-                        setSelectedMonths([]);
-                      }
-                      setDrilldown(null);
-                    }}
-                    options={[
-                      { value: 'period', label: 'By Period' },
-                      { value: 'custom', label: 'Custom Date' }
-                    ]}
-                  />
-
-                  {dateMode === 'period' ? (
-                    <>
-                      <div style={filterBlock}>
-                        <span style={filterLabel}><CalendarDays size={13} />Years</span>
-                        <YearSelectControls availableYears={availableYears} primaryYear={primaryYear} compareYear={compareYear} onChange={updateYearSelection} />
-                      </div>
-                      <div style={filterBlock}>
-                        <span style={filterLabel}><CalendarDays size={13} />Period</span>
-                        <MonthDrillDropdown
-                          open={monthDropdownOpen}
-                          selectedMonths={selectedMonths}
-                          onToggle={() => setMonthDropdownOpen(open => !open)}
-                          onSelect={selectMonths}
-                          onToggleMonth={toggleMonth}
-                        />
-                      </div>
-                    </>
-                  ) : (
-                    <div style={filterBlock}>
-                      <span style={filterLabel}><CalendarDays size={13} />Custom Range</span>
-                      <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                        <input type="date" style={selectStyle} value={startDate} onChange={e => { setStartDate(e.target.value); setDrilldown(null); }} />
-                        <span style={{ color: 'var(--color-text-tertiary)' }}>-</span>
-                        <input type="date" style={selectStyle} value={endDate} onChange={e => { setEndDate(e.target.value); setDrilldown(null); }} />
+                  <div style={filterBlock}>
+                      <span style={filterLabel}><CalendarDays size={13} />Date Range</span>
+                      <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                          <span style={{ fontSize: '10px', color: 'var(--color-text-tertiary)', fontWeight: 600, textTransform: 'uppercase' }}>Start Date</span>
+                          <input type="date" style={selectStyle} value={startDate} onChange={e => { setStartDate(e.target.value); setDrilldown(null); }} />
+                        </div>
+                        <span style={{ color: 'var(--color-text-tertiary)', marginTop: 14 }}>-</span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                          <span style={{ fontSize: '10px', color: 'var(--color-text-tertiary)', fontWeight: 600, textTransform: 'uppercase' }}>End Date</span>
+                          <input type="date" style={selectStyle} value={endDate} onChange={e => { setEndDate(e.target.value); setDrilldown(null); }} />
+                        </div>
                       </div>
                     </div>
-                  )}
-                  <ErpButton variant="ghost" size="sm" icon={<FilterX size={13} />} onClick={resetFilters} className="customer-trends-filter-reset">Clear filters</ErpButton>
+                    <ErpButton variant="ghost" size="sm" icon={<FilterX size={13} />} onClick={resetFilters} className="customer-trends-filter-reset">Clear filters</ErpButton>
                   <ErpIconButton label="Collapse filters" onClick={toggleFilters} icon={<ChevronUp size={14} />} aria-expanded size="sm" />
                 </div>
                 <div style={groupFilterBlock}>
@@ -999,7 +949,7 @@ export default function SalesCustomerGroupAnalytics() {
                               <TrendComparisonChart
                                 data={monthlyComparisonData}
                                 reportYear={primaryYear}
-                                compareYear={hasCompareYear ? compareYear : undefined}
+                                
                                 metric={metric}
                                 granularity="monthly"
                                 onDrilldown={openChartDetail}
@@ -1009,7 +959,7 @@ export default function SalesCustomerGroupAnalytics() {
                                 key={`weekly-${selectedMonths.join('-')}`}
                                 groups={weeklyComparisonGroups}
                                 reportYear={primaryYear}
-                                compareYear={hasCompareYear ? compareYear : undefined}
+                                
                                 metric={metric}
                                 onDrilldown={openChartDetail}
                               />
@@ -1019,7 +969,7 @@ export default function SalesCustomerGroupAnalytics() {
                             rows={typeContribution}
                             metric={metric}
                             year={primaryYear}
-                            compareYear={hasCompareYear ? compareYear : undefined}
+                            
                             total={primaryMetric}
                             onDrilldown={openChartDetail}
                           />
@@ -1319,14 +1269,14 @@ function TrendComparisonTooltip({ active, payload, label, metric, reportYear, co
     <div className="customer-trends-tooltip">
       <div className="customer-trends-tooltip__header">
         <strong>{label}</strong>
-        {compareYear && <span className={delta < 0 ? 'is-down' : delta > 0 ? 'is-up' : undefined}>{fmtSignedMetric(delta, metric)}</span>}
+        {false && <span className={delta < 0 ? 'is-down' : delta > 0 ? 'is-up' : undefined}>{fmtSignedMetric(delta, metric)}</span>}
       </div>
       <div className="customer-trends-tooltip__row">
         <span><i style={{ background: 'var(--color-brand-500)' }} />{reportYear}</span>
         <strong>{fmtMetric(reportValue, metric)}</strong>
         <small>Report</small>
       </div>
-      {compareYear && (
+      {false && (
         <div className="customer-trends-tooltip__row">
           <span><i style={{ background: 'var(--color-accent-500)' }} />{compareYear}</span>
           <strong>{fmtMetric(compareValue, metric)}</strong>
@@ -1337,7 +1287,7 @@ function TrendComparisonTooltip({ active, payload, label, metric, reportYear, co
   );
 }
 
-function WeeklyComparisonList({ groups, reportYear, compareYear, metric, onDrilldown }: { groups: WeeklyComparisonGroup[]; reportYear: string; compareYear?: string; metric: Metric; onDrilldown: (year: string, week: number | undefined, type?: SalesTypeCode) => void }) {
+function WeeklyComparisonList({ groups, reportYear, metric, onDrilldown }: { groups: WeeklyComparisonGroup[]; reportYear: string; metric: Metric; onDrilldown: (year: string, week: number | undefined, type?: SalesTypeCode) => void }) {
   const [expandedMonth, setExpandedMonth] = useState<number | null>(() => groups[0]?.monthNumber ?? null);
 
   if (groups.length === 0) return <div className="customer-trends-chart-empty">No weekly data</div>;
@@ -1347,8 +1297,8 @@ function WeeklyComparisonList({ groups, reportYear, compareYear, metric, onDrill
       <div className="customer-trends-weekly__columns" aria-hidden="true">
         <span>Month / week</span>
         <span>{reportYear || 'Report year'}</span>
-        {compareYear && <span>{compareYear}</span>}
-        {compareYear && <span>Change</span>}
+        {false && <span>{compareYear}</span>}
+        {false && <span>Change</span>}
         <span />
       </div>
       <div className="customer-trends-weekly__months">
@@ -1381,13 +1331,13 @@ function WeeklyComparisonList({ groups, reportYear, compareYear, metric, onDrill
                   <small>{reportYear}</small>
                   <strong>{fmtMetric(reportTotal, metric)}</strong>
                 </span>
-                {compareYear && (
+                {false && (
                   <span className="customer-trends-weekly__metric">
                     <small>{compareYear}</small>
                     <strong>{fmtMetric(compareTotal, metric)}</strong>
                   </span>
                 )}
-                {compareYear && (
+                {false && (
                   <span className="customer-trends-weekly__delta">
                     <strong>{fmtSignedMetric(delta, metric)}</strong>
                     <small>{growth === null ? 'No baseline' : fmtPercent(growth)}</small>
@@ -1412,13 +1362,13 @@ function WeeklyComparisonList({ groups, reportYear, compareYear, metric, onDrill
                           <small>{reportYear}</small>
                           <strong>{fmtMetric(week.report, metric)}</strong>
                         </button>
-                        {compareYear && (
-                          <button type="button" className="customer-trends-weekly__metric" disabled={week.compare <= 0} onClick={() => onDrilldown(compareYear, week.periodNumber)} title={`Open ${compareYear} order details`}>
+                        {false && (
+                          <button type="button" className="customer-trends-weekly__metric" disabled={week.compare <= 0} onClick={() => onDrilldown(week.periodNumber)} title={`Open ${compareYear} order details`}>
                             <small>{compareYear}</small>
                             <strong>{fmtMetric(week.compare, metric)}</strong>
                           </button>
                         )}
-                        {compareYear && (
+                        {false && (
                           <span className="customer-trends-weekly__delta">
                             <strong>{fmtSignedMetric(weekDelta, metric)}</strong>
                             <small>{weekGrowth === null ? 'No baseline' : fmtPercent(weekGrowth)}</small>
@@ -1512,16 +1462,16 @@ function DueDateOutlook({ rows, year, metric, loading, error, onDrilldown, onRet
   );
 }
 
-function TrendComparisonChart({ data, reportYear, compareYear, metric, granularity, onDrilldown }: { data: TrendComparisonDatum[]; reportYear: string; compareYear?: string; metric: Metric; granularity: TrendGranularity; onDrilldown: (year: string, periodNumber: number | undefined, type?: SalesTypeCode) => void }) {
-  const hasData = data.some(point => point.report > 0 || point.compare > 0);
+function TrendComparisonChart({ data, reportYear, metric, granularity, onDrilldown }: { data: TrendComparisonDatum[]; reportYear: string; metric: Metric; granularity: TrendGranularity; onDrilldown: (year: string, periodNumber: number | undefined, type?: SalesTypeCode) => void }) {
+  const hasData = data.some(point => point.report > 0);
   const intervalLabel = granularity === 'monthly' ? 'Monthly' : 'Weekly';
   const canvasWidth = granularity === 'weekly' ? data.length * 44 : '100%';
-
+  const compareYear = undefined;
   return (
     <section className="customer-trends-comparison-chart" aria-label={`${intervalLabel} comparison for ${reportYear}${compareYear ? ` and ${compareYear}` : ''}`}>
       <div className="customer-trends-comparison-chart__legend">
         <span><i style={{ background: 'var(--color-brand-500)' }} /><small>Report</small><strong>{reportYear || '-'}</strong></span>
-        {compareYear && <span><i style={{ background: 'var(--color-accent-500)' }} /><small>Compare</small><strong>{compareYear}</strong></span>}
+        
       </div>
       <div className="customer-trends-comparison-chart__scroll content-scrollbar">
         {!hasData ? (
@@ -1533,9 +1483,9 @@ function TrendComparisonChart({ data, reportYear, compareYear, metric, granulari
                 <CartesianGrid vertical={false} stroke="var(--color-border-light)" strokeDasharray="3 3" opacity={0.7} />
                 <XAxis dataKey="label" axisLine={false} tickLine={false} interval={0} tick={{ fill: 'var(--color-text-tertiary)', fontSize: 10, fontWeight: 800 }} dy={7} />
                 <YAxis axisLine={false} tickLine={false} tickFormatter={(value: number) => fmtAxis(value, metric)} tick={{ fill: 'var(--color-text-tertiary)', fontSize: 10, fontWeight: 750 }} width={58} />
-                <Tooltip content={<TrendComparisonTooltip metric={metric} reportYear={reportYear} compareYear={compareYear} />} cursor={{ fill: 'color-mix(in srgb, var(--color-brand-500) 6%, transparent)' }} />
+                <Tooltip content={<TrendComparisonTooltip metric={metric} reportYear={reportYear}  />} cursor={{ fill: 'color-mix(in srgb, var(--color-brand-500) 6%, transparent)' }} />
                 <Bar dataKey="report" name={reportYear} fill="var(--color-brand-500)" maxBarSize={30} isAnimationActive={false} shape={<InteractiveTrendBar year={reportYear} series="report" metric={metric} fillColor="var(--color-brand-500)" onActivate={onDrilldown} />} />
-                {compareYear && <Bar dataKey="compare" name={compareYear} fill="var(--color-accent-500)" maxBarSize={30} isAnimationActive={false} shape={<InteractiveTrendBar year={compareYear} series="compare" metric={metric} fillColor="var(--color-accent-500)" onActivate={onDrilldown} />} />}
+                {false && <Bar dataKey="compare" name={compareYear} fill="var(--color-accent-500)" maxBarSize={30} isAnimationActive={false} shape={<InteractiveTrendBar year={compareYear} series="compare" metric={metric} fillColor="var(--color-accent-500)" onActivate={onDrilldown} />} />}
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -1545,8 +1495,8 @@ function TrendComparisonChart({ data, reportYear, compareYear, metric, granulari
   );
 }
 
-function TypeContribution({ rows, metric, year, compareYear, total, onDrilldown }: { rows: TypeContributionRow[]; metric: Metric; year: string; compareYear?: string; total: number; onDrilldown: (year: string, month: number | undefined, type: SalesTypeCode) => void }) {
-  const compareTotal = rows.reduce((sum, row) => sum + row.compare, 0);
+function TypeContribution({ rows, metric, year, total, onDrilldown }: { rows: TypeContributionRow[]; metric: Metric; year: string;  total: number; onDrilldown: (year: string, month: number | undefined, type: SalesTypeCode) => void }) {
+  
 
   return (
     <section className="customer-trends-contribution" aria-labelledby="customer-trends-contribution-title">
@@ -1618,59 +1568,6 @@ function KpiTypeSelect({ value, onChange }: { value: KpiTypeSelection; onChange:
   );
 }
 
-function YearSelectControls({ availableYears, primaryYear, compareYear, onChange }: { availableYears: string[]; primaryYear: string; compareYear: string; onChange: (primary: string, compare: string) => void }) {
-  return (
-    <div style={yearControls}>
-      <label style={yearField}>
-        <span style={yearFieldLabel}>Report year</span>
-        <div style={{ minWidth: 100 }}>
-          <CustomSelect
-            value={primaryYear}
-            onChange={(val) => onChange(val, compareYear)}
-            options={availableYears.map(year => ({ value: year, label: year }))}
-            ariaLabel="Primary year"
-            width="100%"
-          />
-        </div>
-      </label>
-      <label style={yearField}>
-        <span style={yearFieldLabel}>Compare with</span>
-        <div style={{ minWidth: 100 }}>
-          <CustomSelect
-            value={compareYear}
-            onChange={(val) => onChange(primaryYear, val)}
-            options={[{ value: 'none', label: 'None' }, ...availableYears.filter(year => year !== primaryYear).map(year => ({ value: year, label: year }))]}
-            ariaLabel="Compare year"
-            width="100%"
-          />
-        </div>
-      </label>
-    </div>
-  );
-}
-
-function MonthDrillDropdown({ open, selectedMonths, onToggle, onSelect, onToggleMonth }: { open: boolean; selectedMonths: string[]; onToggle: () => void; onSelect: (months: string[]) => void; onToggleMonth: (month: string) => void }) {
-  return (
-    <div style={{ position: 'relative', width: 154 }}>
-      <button type="button" onClick={onToggle} style={{ ...dropdownButton, ...(open ? dropdownButtonOpen : null) }} aria-label="Select reporting period" aria-expanded={open} aria-haspopup="listbox">
-        <span>{monthButtonLabel(selectedMonths)}</span><ChevronDown size={13} style={{ ...dropdownChevron, transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }} />
-      </button>
-      {open && (
-        <div style={monthMenu} role="listbox" aria-label="Reporting months" aria-multiselectable="true">
-          <div style={quickMonthGrid}>
-            <MonthOption active={selectedMonths.length === MONTH_VALUES.length} label="All" onClick={() => onSelect(MONTH_VALUES)} />
-            {QUARTERS.map(quarter => <MonthOption key={quarter.label} active={sameMonths(selectedMonths, quarter.months)} label={quarter.label} onClick={() => onSelect(quarter.months)} />)}
-          </div>
-          <div style={monthGrid}>{MONTHS.map((month, index) => <MonthOption key={month} active={selectedMonths.includes(String(index + 1))} label={month} onClick={() => onToggleMonth(String(index + 1))} />)}</div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function MonthOption({ active, label, onClick }: { active: boolean; label: string; onClick: () => void }) {
-  return <button type="button" aria-pressed={active} onClick={onClick} style={{ ...monthOption, ...(active ? optionActive : null) }}>{label}</button>;
-}
 
 function FilterChip({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) {
   return (

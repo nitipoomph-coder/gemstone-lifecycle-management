@@ -13,13 +13,7 @@ import { ErpButton, ErpIconButton, ErpSegmentedControl } from '../components/ui/
 import CustomSelect from '../components/ui/CustomSelect';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const MONTH_VALUES = MONTHS.map((_, index) => String(index + 1));
-const QUARTERS = [
-  { label: 'Q1', months: ['1', '2', '3'] },
-  { label: 'Q2', months: ['4', '5', '6'] },
-  { label: 'Q3', months: ['7', '8', '9'] },
-  { label: 'Q4', months: ['10', '11', '12'] },
-];
+
 const PAGE_SIZE = 50;
 const ORDER_DETAIL_COLUMNS = [
   ['OrdNo', 100],
@@ -31,7 +25,7 @@ const ORDER_DETAIL_COLUMNS = [
   ['PONo', 150],
   ['PO 2', 150],
   ['Ship To', 120],
-  ['OrdStamp', 150],
+  ['OrdStamp', 90],
   ['OrdMaker', 90],
   ['ItemNo', 90],
   ['Item SKU', 90],
@@ -126,7 +120,7 @@ const SALES_TYPE_COLORS: Record<SalesTypeCode, string> = {
   OTHERS: 'var(--color-chart-6)',
 };
 
-const emptyTotals: SalesTotals = { amount: 0, qty: 0, shippedQty: 0, gapQty: 0, orders: 0, late: 0 };
+const emptyTotals: SalesTotals = { amount: 0, qty: 0, shippedQty: 0 as number, gapQty: 0, orders: 0, late: 0 };
 
 const fmtAmount = (value: number) => `$${(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const fmtTableAmount = (value: number) => `$${(value || 0).toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 })}`;
@@ -190,20 +184,9 @@ function yearFromOrder(row: SalesOrderRow) {
   return yearFromDate(row.ordDate);
 }
 
-function sameMonths(a: string[], b: string[]) {
-  if (a.length !== b.length) return false;
-  const left = [...a].sort((x, y) => Number(x) - Number(y));
-  const right = [...b].sort((x, y) => Number(x) - Number(y));
-  return left.every((value, index) => value === right[index]);
-}
 
-function monthButtonLabel(selectedMonths: string[]) {
-  const quarter = QUARTERS.find(item => sameMonths(selectedMonths, item.months));
-  if (selectedMonths.length === MONTH_VALUES.length) return 'All Months';
-  if (quarter) return quarter.label;
-  if (selectedMonths.length <= 3) return selectedMonths.map(month => MONTHS[Number(month) - 1]).join(', ');
-  return `${selectedMonths.length} months`;
-}
+
+
 
 function kpiTypeLabel(selectedType: KpiTypeSelection) {
   if (selectedType === 'ALL') return 'All Types';
@@ -240,13 +223,13 @@ function buildMonthlyTypeData(rows: SalesOrderRow[], metric: Metric): MonthlyTyp
   const data = sortedKeys.map(key => {
     const [yyyy, mm] = key.split('-');
     return {
-      monthKey: key, 
-      month: `${MONTHS[Number(mm) - 1]} '${yyyy.slice(2)}`, 
+      monthKey: key,
+      month: `${MONTHS[Number(mm) - 1]} '${yyyy.slice(2)}`,
       monthNumber: Number(mm),
       total: 0, BBS: 0, BES: 0, BNS: 0, BRS: 0, OTHERS: 0,
     };
   });
-  
+
   const byMonth = new Map(data.map(point => [point.monthKey, point]));
 
   rows.forEach(row => {
@@ -296,15 +279,15 @@ function buildWeeklyComparisonData(rows: SalesOrderRow[], metric: Metric): Trend
   const sortedKeys = Array.from(weekKeys).sort();
   const data = sortedKeys.map(key => {
     const [yyyy, ww] = key.split('-');
-    return { 
-      label: `${yyyy.slice(2)}-W${ww}`, 
-      periodKey: key, 
-      periodNumber: Number(ww), 
-      report: 0, 
-      compare: 0 
+    return {
+      label: `${yyyy.slice(2)}-W${ww}`,
+      periodKey: key,
+      periodNumber: Number(ww),
+      report: 0,
+      compare: 0
     };
   });
-  
+
   const byWeek = new Map(data.map(point => [point.periodKey, point]));
 
   rows.forEach(row => {
@@ -349,22 +332,12 @@ function formatWeekRange(year: string, week: number) {
 
 function groupWeeklyComparisonData(data: TrendComparisonDatum[], reportYear: string): WeeklyComparisonGroup[] {
   const groups = new Map<number, WeeklyComparisonGroup>();
-  const selectedMonthNumbers = new Set(selectedMonths.map(Number));
 
   data
     .filter(point => point.report > 0 || point.compare > 0)
     .forEach(point => {
       const range = calendarWeekRange(reportYear, point.periodNumber);
       let monthNumber = range.midpoint.getUTCMonth() + 1;
-      if (!selectedMonthNumbers.has(monthNumber)) {
-        for (let dateValue = range.start.getTime(); dateValue <= range.end.getTime(); dateValue += 86_400_000) {
-          const candidateMonth = new Date(dateValue).getUTCMonth() + 1;
-          if (selectedMonthNumbers.has(candidateMonth)) {
-            monthNumber = candidateMonth;
-            break;
-          }
-        }
-      }
       const group = groups.get(monthNumber) || {
         monthNumber,
         monthLabel: MONTHS[monthNumber - 1],
@@ -383,18 +356,16 @@ function buildDueOutlookData(rows: SalesOrderRow[], year: string): DueOutlookDat
   const dueSoonCutoff = new Date(today);
   dueSoonCutoff.setDate(dueSoonCutoff.getDate() + 14);
 
-  const data = selectedMonths
-    .map(Number)
-    .sort((a, b) => a - b)
+  const data = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
     .map(monthNumber => ({
       monthNumber,
       monthLabel: MONTHS[monthNumber - 1],
-      dueQty: 0,
-      shippedQty: 0,
-      openQty: 0,
-      dueAmount: 0,
-      shippedAmount: 0,
-      openAmount: 0,
+      dueQty: 0 as number,
+      shippedQty: 0 as number,
+      openQty: 0 as number,
+      dueAmount: 0 as number,
+      shippedAmount: 0 as number,
+      openAmount: 0 as number,
       overdueOrders: 0,
       dueSoonOrders: 0,
       overdueOrderNos: new Set<string>(),
@@ -428,11 +399,14 @@ function buildDueOutlookData(rows: SalesOrderRow[], year: string): DueOutlookDat
     else if (dueDate <= dueSoonCutoff) point.dueSoonOrderNos.add(row.orderNo);
   });
 
-  return data.map(({ overdueOrderNos, dueSoonOrderNos, ...point }) => ({
-    ...point,
-    overdueOrders: overdueOrderNos.size,
-    dueSoonOrders: dueSoonOrderNos.size,
-  }));
+  return data.map((point: any) => {
+    const overdueOrderNos = point.overdueOrderNos as Set<string>;
+    const dueSoonOrderNos = point.dueSoonOrderNos as Set<string>;
+    const result = { ...point, overdueOrders: overdueOrderNos.size, dueSoonOrders: dueSoonOrderNos.size };
+    delete result.overdueOrderNos;
+    delete result.dueSoonOrderNos;
+    return result;
+  });
 }
 
 function calcTotals(rows: SalesOrderRow[], year?: string): SalesTotals {
@@ -480,14 +454,13 @@ export default function SalesCustomerGroupAnalytics() {
   const loadRequestIdRef = useRef(0);
   const yearsLoadFailedRef = useRef(false);
   const requestedYears = useMemo(() => csv(searchParams.get('years')), [searchParams]);
-  const requestedMonths = useMemo(() => csv(searchParams.get('months')).filter(month => MONTH_VALUES.includes(month)), [searchParams]);
   const requestedCustomers = useMemo(() => csv(searchParams.get('customers')), [searchParams]);
   const requestedGroups = useMemo(() => csv(searchParams.get('groups')).filter(groupId => CUSTOMER_GROUPS.some(group => group.id === groupId)), [searchParams]);
   const [availableYears, setAvailableYears] = useState<string[]>([]);
   const [selectedYears, setSelectedYears] = useState<string[]>([]);
-    const [startDate, setStartDate] = useState<string>('');
+  const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
-      const [filtersExpanded, setFiltersExpanded] = useState(true);
+  const [filtersExpanded, setFiltersExpanded] = useState(true);
   const [selectedGroups, setSelectedGroups] = useState<string[]>(() => initialGroupsFromParams(requestedGroups, requestedCustomers));
   const [selectedKpiType, setSelectedKpiType] = useState<KpiTypeSelection>('ALL');
   const [metric, setMetric] = useState<Metric>(searchParams.get('metric') === 'qty' ? 'qty' : 'amount');
@@ -507,7 +480,7 @@ export default function SalesCustomerGroupAnalytics() {
 
   const customers = useMemo(() => selectedCustomerCodes(selectedGroups), [selectedGroups]);
   const drilldownKey = drilldown ? `${drilldown.basis || 'order'}|${drilldown.year}|${drilldown.month || 'all'}|${drilldown.week || 'all'}|${drilldown.type || 'all'}|${drilldown.metric || metric}` : 'all';
-  const filterPageKey = `${selectedYears.join('|')}|${selectedMonths.join('|')}|${selectedGroups.join('|')}|${metric}|${search}|${drilldownKey}`;
+  const filterPageKey = `${selectedYears.join('|')}|${selectedGroups.join('|')}|${metric}|${search}|${drilldownKey}`;
 
   useEffect(() => {
     const resetTimer = window.setTimeout(() => setPage(1), 0);
@@ -517,7 +490,7 @@ export default function SalesCustomerGroupAnalytics() {
   useEffect(() => {
     const closeDropdowns = (event: PointerEvent) => {
       if (filterToolbarRef.current?.contains(event.target as Node)) return;
-          };
+    };
     document.addEventListener('pointerdown', closeDropdowns);
     return () => document.removeEventListener('pointerdown', closeDropdowns);
   }, []);
@@ -619,8 +592,8 @@ export default function SalesCustomerGroupAnalytics() {
     };
   }, [orders, primaryYear, selectedKpiType]);
   const primaryChartData = useMemo(
-    () => buildMonthlyTypeData(orders, primaryYear, metric),
-    [orders, primaryYear, metric],
+    () => buildMonthlyTypeData(orders, metric),
+    [orders, metric],
   );
   const compareChartData = useMemo(
     () => buildMonthlyTypeData(orders, metric),
@@ -708,8 +681,8 @@ export default function SalesCustomerGroupAnalytics() {
   const selectedYearSummary = hasCompareYear ? `${primaryYear} vs ${compareYear}` : primaryYear || '-';
   const selectedGroupSummary = selectedGroups.length === 0 ? 'All groups' : `${selectedGroups.length} groups`;
   const selectedKpiTypeLabel = kpiTypeLabel(selectedKpiType);
-  const collapsedFilterSummary = `${metric === 'amount' ? 'Amount' : 'Quantity'} / ${selectedYearSummary} / ${monthButtonLabel(selectedMonths)} / ${selectedGroupSummary}`;
-  const activeScopeSummary = `${selectedYearSummary} / ${monthButtonLabel(selectedMonths)} / ${selectedGroupSummary} / ${metric === 'amount' ? 'Amount' : 'Quantity'}`;
+  const collapsedFilterSummary = `${metric === 'amount' ? 'Amount' : 'Quantity'} / ${selectedYearSummary} / ${'Selected Dates'} / ${selectedGroupSummary}`;
+  const activeScopeSummary = `${selectedYearSummary} / ${'Selected Dates'} / ${selectedGroupSummary} / ${metric === 'amount' ? 'Amount' : 'Quantity'}`;
   const loadingScopeSummary = primaryYear ? activeScopeSummary : 'Preparing available reporting periods';
   const loadFailure = !hasResolvedData ? error || dueError : '';
   const orderCountHint = selectedKpiType === 'ALL'
@@ -730,7 +703,7 @@ export default function SalesCustomerGroupAnalytics() {
 
   const toggleFilters = () => {
     if (filtersExpanded) {
-          }
+    }
     setFiltersExpanded(expanded => !expanded);
   };
 
@@ -791,7 +764,7 @@ export default function SalesCustomerGroupAnalytics() {
         breadcrumb={[
           { label: 'JEWELRY FACTORY SYSTEM', path: '/' },
           { label: 'Sales Analytics' },
-          { label: 'Sales & Qty Summary', path: '/dashboard/customer' },
+          { label: 'Sales Summary', path: '/dashboard/customer' },
           { label: 'Customer Trends' },
         ]}
         hideSearch
@@ -808,7 +781,7 @@ export default function SalesCustomerGroupAnalytics() {
               <ErpSegmentedControl
                 ariaLabel="Metric mode"
                 value={metric}
-                onChange={setMetric}
+                onChange={(v) => setMetric(v as Metric)}
                 options={[
                   { value: 'amount', label: 'Sales', icon: <DollarSign size={13} /> },
                   { value: 'qty', label: 'Qty', icon: <Hash size={13} /> },
@@ -817,7 +790,7 @@ export default function SalesCustomerGroupAnalytics() {
               <ErpSegmentedControl
                 ariaLabel="Customer Trends view"
                 value={activeView}
-                onChange={setActiveView}
+                onChange={(v) => setActiveView(v as ViewMode)}
                 options={[
                   { value: 'overview', label: 'Overview', icon: <BarChart3 size={13} /> },
                   { value: 'details', label: 'Order Details', icon: <Table2 size={13} /> },
@@ -838,20 +811,20 @@ export default function SalesCustomerGroupAnalytics() {
                   <div style={filterControlDivider} />
 
                   <div style={filterBlock}>
-                      <span style={filterLabel}><CalendarDays size={13} />Date Range</span>
-                      <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                          <span style={{ fontSize: '10px', color: 'var(--color-text-tertiary)', fontWeight: 600, textTransform: 'uppercase' }}>Start Date</span>
-                          <input type="date" style={selectStyle} value={startDate} onChange={e => { setStartDate(e.target.value); setDrilldown(null); }} />
-                        </div>
-                        <span style={{ color: 'var(--color-text-tertiary)', marginTop: 14 }}>-</span>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                          <span style={{ fontSize: '10px', color: 'var(--color-text-tertiary)', fontWeight: 600, textTransform: 'uppercase' }}>End Date</span>
-                          <input type="date" style={selectStyle} value={endDate} onChange={e => { setEndDate(e.target.value); setDrilldown(null); }} />
-                        </div>
+                    <span style={filterLabel}><CalendarDays size={13} />Date Range</span>
+                    <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <span style={{ fontSize: '10px', color: 'var(--color-text-tertiary)', fontWeight: 600, textTransform: 'uppercase' }}>Start Date</span>
+                        <input type="date" style={selectStyle} value={startDate} onChange={e => { setStartDate(e.target.value); setDrilldown(null); }} />
+                      </div>
+                      <span style={{ color: 'var(--color-text-tertiary)', marginTop: 14 }}>-</span>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <span style={{ fontSize: '10px', color: 'var(--color-text-tertiary)', fontWeight: 600, textTransform: 'uppercase' }}>End Date</span>
+                        <input type="date" style={selectStyle} value={endDate} onChange={e => { setEndDate(e.target.value); setDrilldown(null); }} />
                       </div>
                     </div>
-                    <ErpButton variant="ghost" size="sm" icon={<FilterX size={13} />} onClick={resetFilters} className="customer-trends-filter-reset">Clear filters</ErpButton>
+                  </div>
+                  <ErpButton variant="ghost" size="sm" icon={<FilterX size={13} />} onClick={resetFilters} className="customer-trends-filter-reset">Clear filters</ErpButton>
                   <ErpIconButton label="Collapse filters" onClick={toggleFilters} icon={<ChevronUp size={14} />} aria-expanded size="sm" />
                 </div>
                 <div style={groupFilterBlock}>
@@ -916,13 +889,13 @@ export default function SalesCustomerGroupAnalytics() {
                   <div className="customer-trends-overview__header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
                       <h2>{trendGranularity === 'monthly' ? 'Monthly Comparison' : 'Weekly Comparison'}</h2>
-                      <span>{monthButtonLabel(selectedMonths)} / {metric === 'amount' ? 'Sales amount' : 'Ordered quantity'}</span>
+                      <span>{'Selected Dates'} / {metric === 'amount' ? 'Sales amount' : 'Ordered quantity'}</span>
                     </div>
                     <ErpSegmentedControl
                       ariaLabel="Trend interval"
                       value={trendGranularity}
                       onChange={(value) => {
-                        setTrendGranularity(value);
+                        setTrendGranularity(value as TrendGranularity);
                         setDrilldown(null);
                       }}
                       options={[
@@ -949,17 +922,17 @@ export default function SalesCustomerGroupAnalytics() {
                               <TrendComparisonChart
                                 data={monthlyComparisonData}
                                 reportYear={primaryYear}
-                                
+
                                 metric={metric}
                                 granularity="monthly"
                                 onDrilldown={openChartDetail}
                               />
                             ) : (
                               <WeeklyComparisonList
-                                key={`weekly-${selectedMonths.join('-')}`}
+                                key="weekly"
                                 groups={weeklyComparisonGroups}
                                 reportYear={primaryYear}
-                                
+
                                 metric={metric}
                                 onDrilldown={openChartDetail}
                               />
@@ -969,7 +942,7 @@ export default function SalesCustomerGroupAnalytics() {
                             rows={typeContribution}
                             metric={metric}
                             year={primaryYear}
-                            
+
                             total={primaryMetric}
                             onDrilldown={openChartDetail}
                           />
@@ -1001,7 +974,7 @@ export default function SalesCustomerGroupAnalytics() {
                           ? `W${String(drilldown.week).padStart(2, '0')}`
                           : drilldown.month
                             ? MONTHS[Number(drilldown.month) - 1]
-                            : monthButtonLabel(selectedMonths)}
+                            : 'Selected Dates'}
                       </strong>
                       {drilldown.type && <strong>{drilldown.type}</strong>}
                       {drilldown.basis === 'due' && <strong>{drilldown.metric === 'amount' ? 'Amount' : 'Quantity'}</strong>}
@@ -1257,13 +1230,13 @@ function InteractiveTrendBar({
   );
 }
 
-function TrendComparisonTooltip({ active, payload, label, metric, reportYear, compareYear }: { active?: boolean; payload?: TooltipPayloadEntry[]; label?: string | number; metric: Metric; reportYear: string; compareYear?: string }) {
+function TrendComparisonTooltip({ active, payload, label, metric, reportYear }: { active?: boolean; payload?: TooltipPayloadEntry[]; label?: string | number; metric: Metric; reportYear: string; }) {
   if (!active || !payload?.length) return null;
   const point = payload[0]?.payload;
   const reportValue = Number(point?.report || 0);
   const compareValue = Number(point?.compare || 0);
   const delta = reportValue - compareValue;
-  const growth = compareValue > 0 ? (delta / compareValue) * 100 : null;
+
 
   return (
     <div className="customer-trends-tooltip">
@@ -1276,13 +1249,6 @@ function TrendComparisonTooltip({ active, payload, label, metric, reportYear, co
         <strong>{fmtMetric(reportValue, metric)}</strong>
         <small>Report</small>
       </div>
-      {false && (
-        <div className="customer-trends-tooltip__row">
-          <span><i style={{ background: 'var(--color-accent-500)' }} />{compareYear}</span>
-          <strong>{fmtMetric(compareValue, metric)}</strong>
-          <small>{growth === null ? 'No base' : fmtPercent(growth)}</small>
-        </div>
-      )}
     </div>
   );
 }
@@ -1293,22 +1259,17 @@ function WeeklyComparisonList({ groups, reportYear, metric, onDrilldown }: { gro
   if (groups.length === 0) return <div className="customer-trends-chart-empty">No weekly data</div>;
 
   return (
-    <section className="customer-trends-weekly" data-compare={Boolean(compareYear)} aria-label={`Weekly comparison for ${reportYear}${compareYear ? ` and ${compareYear}` : ''}`}>
+    <section className="customer-trends-weekly" data-compare={false} aria-label={`Weekly comparison for ${reportYear}`}>
       <div className="customer-trends-weekly__columns" aria-hidden="true">
         <span>Month / week</span>
         <span>{reportYear || 'Report year'}</span>
-        {false && <span>{compareYear}</span>}
-        {false && <span>Change</span>}
         <span />
       </div>
       <div className="customer-trends-weekly__months">
         {groups.map(group => {
           const isExpanded = expandedMonth === group.monthNumber;
           const reportTotal = group.weeks.reduce((sum, week) => sum + week.report, 0);
-          const compareTotal = group.weeks.reduce((sum, week) => sum + week.compare, 0);
-          const delta = reportTotal - compareTotal;
-          const growth = compareTotal > 0 ? (delta / compareTotal) * 100 : null;
-          const tone = delta > 0 ? 'up' : delta < 0 ? 'down' : 'flat';
+
           const panelId = `weekly-month-panel-${group.monthNumber}`;
           const triggerId = `weekly-month-trigger-${group.monthNumber}`;
 
@@ -1318,7 +1279,7 @@ function WeeklyComparisonList({ groups, reportYear, metric, onDrilldown }: { gro
                 id={triggerId}
                 type="button"
                 className="customer-trends-weekly__month-toggle"
-                data-tone={compareYear ? tone : 'flat'}
+                data-tone={'flat'}
                 aria-expanded={isExpanded}
                 aria-controls={panelId}
                 onClick={() => setExpandedMonth(current => current === group.monthNumber ? null : group.monthNumber)}
@@ -1331,29 +1292,15 @@ function WeeklyComparisonList({ groups, reportYear, metric, onDrilldown }: { gro
                   <small>{reportYear}</small>
                   <strong>{fmtMetric(reportTotal, metric)}</strong>
                 </span>
-                {false && (
-                  <span className="customer-trends-weekly__metric">
-                    <small>{compareYear}</small>
-                    <strong>{fmtMetric(compareTotal, metric)}</strong>
-                  </span>
-                )}
-                {false && (
-                  <span className="customer-trends-weekly__delta">
-                    <strong>{fmtSignedMetric(delta, metric)}</strong>
-                    <small>{growth === null ? 'No baseline' : fmtPercent(growth)}</small>
-                  </span>
-                )}
                 <ChevronDown className="customer-trends-weekly__chevron" size={15} aria-hidden="true" />
               </button>
 
               {isExpanded && (
                 <div id={panelId} className="customer-trends-weekly__week-list" role="region" aria-labelledby={triggerId}>
                   {group.weeks.map(week => {
-                    const weekDelta = week.report - week.compare;
-                    const weekGrowth = week.compare > 0 ? (weekDelta / week.compare) * 100 : null;
-                    const weekTone = weekDelta > 0 ? 'up' : weekDelta < 0 ? 'down' : 'flat';
+
                     return (
-                      <div key={week.periodNumber} className="customer-trends-weekly__week-row" data-tone={compareYear ? weekTone : 'flat'}>
+                      <div key={week.periodNumber} className="customer-trends-weekly__week-row" data-tone={'flat'}>
                         <span className="customer-trends-weekly__period">
                           <strong>{week.label}</strong>
                           <small>{week.dateRange}</small>
@@ -1362,18 +1309,6 @@ function WeeklyComparisonList({ groups, reportYear, metric, onDrilldown }: { gro
                           <small>{reportYear}</small>
                           <strong>{fmtMetric(week.report, metric)}</strong>
                         </button>
-                        {false && (
-                          <button type="button" className="customer-trends-weekly__metric" disabled={week.compare <= 0} onClick={() => onDrilldown(week.periodNumber)} title={`Open ${compareYear} order details`}>
-                            <small>{compareYear}</small>
-                            <strong>{fmtMetric(week.compare, metric)}</strong>
-                          </button>
-                        )}
-                        {false && (
-                          <span className="customer-trends-weekly__delta">
-                            <strong>{fmtSignedMetric(weekDelta, metric)}</strong>
-                            <small>{weekGrowth === null ? 'No baseline' : fmtPercent(weekGrowth)}</small>
-                          </span>
-                        )}
                       </div>
                     );
                   })}
@@ -1466,12 +1401,11 @@ function TrendComparisonChart({ data, reportYear, metric, granularity, onDrilldo
   const hasData = data.some(point => point.report > 0);
   const intervalLabel = granularity === 'monthly' ? 'Monthly' : 'Weekly';
   const canvasWidth = granularity === 'weekly' ? data.length * 44 : '100%';
-  const compareYear = undefined;
   return (
-    <section className="customer-trends-comparison-chart" aria-label={`${intervalLabel} comparison for ${reportYear}${compareYear ? ` and ${compareYear}` : ''}`}>
+    <section className="customer-trends-comparison-chart" aria-label={`${intervalLabel} comparison for ${reportYear}`}>
       <div className="customer-trends-comparison-chart__legend">
         <span><i style={{ background: 'var(--color-brand-500)' }} /><small>Report</small><strong>{reportYear || '-'}</strong></span>
-        
+
       </div>
       <div className="customer-trends-comparison-chart__scroll content-scrollbar">
         {!hasData ? (
@@ -1483,9 +1417,8 @@ function TrendComparisonChart({ data, reportYear, metric, granularity, onDrilldo
                 <CartesianGrid vertical={false} stroke="var(--color-border-light)" strokeDasharray="3 3" opacity={0.7} />
                 <XAxis dataKey="label" axisLine={false} tickLine={false} interval={0} tick={{ fill: 'var(--color-text-tertiary)', fontSize: 10, fontWeight: 800 }} dy={7} />
                 <YAxis axisLine={false} tickLine={false} tickFormatter={(value: number) => fmtAxis(value, metric)} tick={{ fill: 'var(--color-text-tertiary)', fontSize: 10, fontWeight: 750 }} width={58} />
-                <Tooltip content={<TrendComparisonTooltip metric={metric} reportYear={reportYear}  />} cursor={{ fill: 'color-mix(in srgb, var(--color-brand-500) 6%, transparent)' }} />
+                <Tooltip content={<TrendComparisonTooltip metric={metric} reportYear={reportYear} />} cursor={{ fill: 'color-mix(in srgb, var(--color-brand-500) 6%, transparent)' }} />
                 <Bar dataKey="report" name={reportYear} fill="var(--color-brand-500)" maxBarSize={30} isAnimationActive={false} shape={<InteractiveTrendBar year={reportYear} series="report" metric={metric} fillColor="var(--color-brand-500)" onActivate={onDrilldown} />} />
-                {false && <Bar dataKey="compare" name={compareYear} fill="var(--color-accent-500)" maxBarSize={30} isAnimationActive={false} shape={<InteractiveTrendBar year={compareYear} series="compare" metric={metric} fillColor="var(--color-accent-500)" onActivate={onDrilldown} />} />}
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -1495,8 +1428,8 @@ function TrendComparisonChart({ data, reportYear, metric, granularity, onDrilldo
   );
 }
 
-function TypeContribution({ rows, metric, year, total, onDrilldown }: { rows: TypeContributionRow[]; metric: Metric; year: string;  total: number; onDrilldown: (year: string, month: number | undefined, type: SalesTypeCode) => void }) {
-  
+function TypeContribution({ rows, metric, year, total, onDrilldown }: { rows: TypeContributionRow[]; metric: Metric; year: string; total: number; onDrilldown: (year: string, month: number | undefined, type: SalesTypeCode) => void }) {
+
 
   return (
     <section className="customer-trends-contribution" aria-labelledby="customer-trends-contribution-title">
@@ -1505,20 +1438,16 @@ function TypeContribution({ rows, metric, year, total, onDrilldown }: { rows: Ty
         <strong>{fmtMetric(total, metric)}</strong>
       </div>
       <div className="customer-trends-contribution__columns" aria-hidden="true">
-        <span>Type</span><span>{year}</span><span>{compareYear || 'Share'}</span><span>{compareYear ? 'Change' : 'Orders'}</span><span />
+        <span>Type</span><span>{year}</span><span>Share</span><span>Orders</span><span />
       </div>
       <div className="customer-trends-contribution__rows">
         {rows.map(row => {
-          const delta = row.current - row.compare;
-          const tone = delta > 0 ? 'up' : delta < 0 ? 'down' : 'flat';
-          const compareShare = compareTotal > 0 ? (row.compare / compareTotal) * 100 : 0;
-          const growth = row.compare > 0 ? (delta / row.compare) * 100 : null;
+
           return (
             <button key={row.code} type="button" onClick={() => onDrilldown(year, undefined, row.code)} aria-label={`Open ${row.code} order details for ${year}`}>
               <span className="customer-trends-contribution__type"><i style={{ background: SALES_TYPE_COLORS[row.code] }} /><span><strong>{row.code}</strong><small>{row.label}</small></span></span>
               <span className="customer-trends-contribution__value"><strong>{fmtMetric(row.current, metric)}</strong><small>{year} / {row.share.toFixed(1)}%</small></span>
-              <span className="customer-trends-contribution__compare"><strong>{compareYear ? fmtMetric(row.compare, metric) : `${row.share.toFixed(1)}%`}</strong><small>{compareYear ? `${compareYear} / ${compareShare.toFixed(1)}%` : 'share'}</small></span>
-              <span className="customer-trends-contribution__delta" data-tone={compareYear ? tone : 'flat'}><strong>{compareYear ? fmtSignedMetric(delta, metric) : fmtQty(row.orderCount)}</strong><small>{compareYear ? (growth === null ? 'No base' : fmtPercent(growth)) : 'orders'}</small></span>
+              <span className="customer-trends-contribution__delta" data-tone={'flat'}><strong>{fmtQty(row.orderCount)}</strong><small>orders</small></span>
               <ArrowRight size={13} />
             </button>
           );
@@ -1624,19 +1553,8 @@ const groupFilterBlock: CSSProperties = { display: 'flex', alignItems: 'center',
 const filterLabel: CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--color-text-tertiary)', fontSize: 'var(--erp-text-dense)', fontWeight: 900, whiteSpace: 'nowrap' };
 const filterSectionLabel: CSSProperties = { ...filterLabel, color: 'var(--color-text-secondary)' };
 const filterControlDivider: CSSProperties = { width: 1, minHeight: 26, alignSelf: 'stretch', background: 'var(--color-border-light)' };
-const yearControls: CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 5 };
-const yearField: CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 4 };
-const yearFieldLabel: CSSProperties = { color: 'var(--color-text-tertiary)', fontSize: 'var(--erp-text-meta)', fontWeight: 800 };
 const selectStyle: CSSProperties = { height: 32, borderRadius: 6, border: '1px solid var(--color-border-light)', background: 'var(--color-surface-1)', color: 'var(--color-text-primary)', fontSize: 'var(--erp-text-dense)', fontWeight: 900, padding: '0 8px', outline: 'none', fontFamily: 'var(--font-body)' };
-const dropdownButton: CSSProperties = { width: '100%', height: 32, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, borderRadius: 6, border: '1px solid var(--color-border-light)', background: 'var(--color-surface-1)', color: 'var(--color-text-primary)', padding: '0 8px', fontSize: 'var(--erp-text-dense)', fontWeight: 900, cursor: 'pointer', fontFamily: 'var(--font-body)', textAlign: 'left' };
-const dropdownButtonOpen: CSSProperties = { borderColor: 'var(--color-brand-500)', background: 'var(--color-surface-0)', color: 'var(--color-brand-600)' };
-const dropdownChevron: CSSProperties = { flex: '0 0 auto', transition: 'transform 140ms cubic-bezier(0.22, 1, 0.36, 1)' };
-const filterPopoverSurface: CSSProperties = { position: 'absolute', top: 38, zIndex: 60, background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)', borderRadius: 7, boxShadow: '0 14px 32px color-mix(in srgb, var(--color-surface-900) 18%, transparent)', padding: 6 };
-const monthMenu: CSSProperties = { ...filterPopoverSurface, left: 0, width: 'min(310px, calc(100vw - 48px))', padding: 8 };
-const quickMonthGrid: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 5, marginBottom: 7 };
-const monthGrid: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 5 };
-const monthOption: CSSProperties = { height: 26, borderRadius: 5, borderWidth: 1, borderStyle: 'solid', borderColor: 'var(--color-border-light)', background: 'var(--color-surface-1)', color: 'var(--color-text-secondary)', fontSize: 'var(--erp-text-meta)', fontWeight: 900, cursor: 'pointer' };
-const optionActive: CSSProperties = { borderColor: 'var(--color-brand-500)', background: 'color-mix(in srgb, var(--color-brand-500) 10%, var(--color-surface-0))', color: 'var(--color-brand-600)' };
+
 const chipRail: CSSProperties = { display: 'flex', alignItems: 'center', gap: 5, overflowX: 'auto', paddingBottom: 1 };
 const chipButton: CSSProperties = { height: 30, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '0 10px', borderRadius: 6, borderWidth: 1, borderStyle: 'solid', borderColor: 'var(--color-border-light)', background: 'var(--color-surface-1)', color: 'var(--color-text-secondary)', fontSize: 'var(--erp-text-dense)', fontWeight: 900, whiteSpace: 'nowrap', cursor: 'pointer', fontFamily: 'var(--font-body)' };
 const chipActive: CSSProperties = { borderColor: 'var(--color-brand-500)', background: 'color-mix(in srgb, var(--color-brand-500) 10%, var(--color-surface-0))', color: 'var(--color-brand-600)' };

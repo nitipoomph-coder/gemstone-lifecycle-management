@@ -394,7 +394,7 @@ export default function CustomerReportPage() {
         breadcrumb={[
           { label: 'JEWELRY FACTORY SYSTEM', path: '/' },
           { label: 'Sales Analytics' },
-          { label: 'Sales & Qty Summary', path: '/dashboard/customer' },
+          { label: 'Sales Summary', path: '/dashboard/customer' },
           { label: metric === 'qty' ? 'Quantity Matrix' : 'Sales Matrix' }
         ]}
         hideSearch

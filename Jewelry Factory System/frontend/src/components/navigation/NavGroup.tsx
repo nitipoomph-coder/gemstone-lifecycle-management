@@ -53,10 +53,14 @@ export default function NavGroup({ group, isOpen, onToggle, collapsed = false, o
     if (itemPath === '/dashboard/customer') {
       return (
         location.pathname === '/dashboard/qty' ||
+        (location.pathname === '/dashboard/customer-report' && new URLSearchParams(location.search).get('metric') !== 'qty')
+      );
+    }
+    if (itemPath === CUSTOMER_TRENDS_PATH || itemPath === LEGACY_CUSTOMER_TRENDS_PATH || itemPath === '/dashboard/customer-trends') {
+      return (
         location.pathname === CUSTOMER_TRENDS_PATH ||
         location.pathname === LEGACY_CUSTOMER_TRENDS_PATH ||
-        location.pathname === '/dashboard/sales-customer-detail' ||
-        (location.pathname === '/dashboard/customer-report' && new URLSearchParams(location.search).get('metric') !== 'qty')
+        location.pathname === '/dashboard/sales-customer-detail'
       );
     }
     if (itemPath === '/dashboard/qty') {

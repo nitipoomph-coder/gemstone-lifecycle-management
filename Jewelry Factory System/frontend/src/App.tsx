@@ -11,7 +11,6 @@ import PlaceholderPage from './pages/PlaceholderPage';
 import POTrackerAdvanced from './pages/POTrackerAdvanced';
 import SalesCustomerGroupAnalytics from './pages/SalesCustomerGroupAnalytics';
 import SalesCustomerGroupDetail from './pages/SalesCustomerGroupDetail';
-import SalesDashboard from './pages/SalesDashboard';
 import TopOrdersAnalyticsPage from './pages/TopOrdersAnalyticsPage';
 import TopOrdersGalleryPage from './pages/TopOrdersGalleryPage';
 import ProcurementDocPage from './pages/document/ProcurementDocPage';
@@ -55,8 +54,8 @@ export default function App() {
           <Route element={<AppLayout />}>
             <Route path="/" element={<Dashboard />} />
             <Route path="/dashboard/detail" element={<DashboardDetail />} />
-            <Route path="/dashboard/sales" element={<SalesDashboard />} />
             <Route path="/dashboard/customer" element={<CustomerDashboard metric="amount" />} />
+            <Route path="/dashboard/sales" element={<CustomerDashboard metric="amount" />} />
             <Route path="/dashboard/qty" element={<CustomerDashboard metric="qty" />} />
             <Route path="/dashboard/customer-report" element={<CustomerReportPage />} />
             <Route path="/dashboard/top-orders" element={<TopOrdersGalleryPage />} />

@@ -25,9 +25,14 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
     if (path === '/dashboard/customer') {
       return (
         location.pathname === '/dashboard/qty' ||
-        location.pathname === '/dashboard/sales-customer-groups' ||
-        location.pathname === '/dashboard/sales-customer-detail' ||
         (location.pathname === '/dashboard/customer-report' && new URLSearchParams(location.search).get('metric') !== 'qty')
+      );
+    }
+    if (path === '/dashboard/customer-trends' || path === '/dashboard/sales-customer-groups') {
+      return (
+        location.pathname === '/dashboard/customer-trends' ||
+        location.pathname === '/dashboard/sales-customer-groups' ||
+        location.pathname === '/dashboard/sales-customer-detail'
       );
     }
     if (path === '/dashboard/qty') {

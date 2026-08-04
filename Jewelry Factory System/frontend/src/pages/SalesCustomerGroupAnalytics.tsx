@@ -347,7 +347,7 @@ function formatWeekRange(year: string, week: number) {
     : `${startDay} ${startMonth}-${endDay} ${endMonth}`;
 }
 
-function groupWeeklyComparisonData(data: TrendComparisonDatum[], reportYear: string: string[]): WeeklyComparisonGroup[] {
+function groupWeeklyComparisonData(data: TrendComparisonDatum[], reportYear: string): WeeklyComparisonGroup[] {
   const groups = new Map<number, WeeklyComparisonGroup>();
   const selectedMonthNumbers = new Set(selectedMonths.map(Number));
 
@@ -377,7 +377,7 @@ function groupWeeklyComparisonData(data: TrendComparisonDatum[], reportYear: str
   return [...groups.values()].sort((a, b) => a.monthNumber - b.monthNumber);
 }
 
-function buildDueOutlookData(rows: SalesOrderRow[], year: string: string[]): DueOutlookDatum[] {
+function buildDueOutlookData(rows: SalesOrderRow[], year: string): DueOutlookDatum[] {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const dueSoonCutoff = new Date(today);

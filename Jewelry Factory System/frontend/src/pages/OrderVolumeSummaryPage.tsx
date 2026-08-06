@@ -20,9 +20,9 @@ import {
 import { ArrowRight, BarChart3, CalendarDays, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, DollarSign, FilterX, Hash, RefreshCw, Search, SlidersHorizontal, Table2, X } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import '../components/sales/SalesDenseTable.css';
-import './SalesCustomerGroupAnalytics.css';
+import './OrderVolumeSummaryPage.css';
 import { CUSTOMER_GROUPS, getCustomerGroupId } from '../config/customerGroups';
-import { fetchSalesOrders, type SalesOrderRow } from '../services/customerSalesAPI';
+import { fetchSalesOrders, type SalesOrderRow } from '../services/orderVolumeSummaryAPI';
 import { ErpButton, ErpIconButton, ErpSegmentedControl } from '../components/ui/ErpButtons';
 import CustomSelect from '../components/ui/CustomSelect';
 
@@ -461,7 +461,7 @@ function rowMetricValue(row: SalesOrderRow, metric: Metric) {
   return metric === 'amount' ? Number(row.amount || 0) : Number(row.orderQty || 0);
 }
 
-export default function SalesCustomerGroupAnalytics() {
+export default function OrderVolumeSummaryPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { selectedYears, selGroups: selectedGroups, availableYears } = useOutletContext<any>();

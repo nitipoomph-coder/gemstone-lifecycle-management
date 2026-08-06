@@ -177,7 +177,7 @@ export {
   fetchSalesTypeAnalytics,
   fetchSalesOrders,
   fetchTopItems,
-} from './customerSalesAPI';
+} from './orderVolumeSummaryAPI';
 export type {
   SalesMetric,
   SalesDateView,
@@ -186,7 +186,7 @@ export type {
   SalesTypePoint,
   SalesOrderRow,
   TopItemRow,
-} from './customerSalesAPI';
+} from './orderVolumeSummaryAPI';
 export {
   fetchItemYearlySummary,
   fetchItemCustomerYearlySummary,

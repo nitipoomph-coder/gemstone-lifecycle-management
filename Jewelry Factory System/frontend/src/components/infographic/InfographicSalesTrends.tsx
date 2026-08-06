@@ -2,12 +2,12 @@ import { type KeyboardEvent, type ReactNode, type CSSProperties, useState } from
 import { ArrowRight, CalendarDays, Search, RefreshCw, ChevronDown, X } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import CustomSelect from '../ui/CustomSelect';
-import { fmtMetric, fmtQty, fmtPercent, fmtSignedMetric, SALES_TYPE_COLORS, SALES_TYPE_OPTIONS, ORDER_DETAIL_COLUMNS, fmtAxis } from '../../pages/SalesCustomerGroupAnalytics';
+import { fmtMetric, fmtQty, fmtPercent, fmtSignedMetric, SALES_TYPE_COLORS, SALES_TYPE_OPTIONS, ORDER_DETAIL_COLUMNS, fmtAxis } from '../../pages/OrderVolumeSummaryPage';
 import type { 
   Metric, SalesTypeCode, TrendGranularity, 
   TrendComparisonDatum, WeeklyComparisonGroup, TooltipPayloadEntry, 
   DueOutlookDatum, TypeContributionRow, KpiTypeSelection, ViewMode 
-} from '../../pages/SalesCustomerGroupAnalytics';
+} from '../../pages/OrderVolumeSummaryPage';
 
 
 // Constants from original file

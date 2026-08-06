@@ -13,6 +13,8 @@ export interface CustomerGroup {
   color: string;
   /** รหัสลูกค้าที่อยู่ในกลุ่มนี้ (exact match กับ prefix ของ CustCode) */
   prefixes: string[];
+  /** สถานะการแสดงผลเป็น Default (ถ้าเป็น false จะไม่ถูกเลือกเป็นค่าเริ่มต้นและถือเป็นกลุ่มเก่า) */
+  isActive?: boolean;
 }
 
 /**
@@ -25,24 +27,28 @@ export const CUSTOMER_GROUPS: CustomerGroup[] = [
     label: 'N008 Group',
     color: 'var(--color-customer-group-n008)',
     prefixes: ['N008', 'N048', 'N065', 'N066', 'N067', 'N068', 'N069', 'N070', 'N071', 'N072', 'N073', 'N074', 'N075'],
+    isActive: true,
   },
   {
     id: 'N044',
     label: 'N044 Group',
     color: 'var(--color-customer-group-n044)',
     prefixes: ['N044'],
+    isActive: true,
   },
   {
     id: 'N098',
     label: 'N098 Group',
     color: 'var(--color-customer-group-n098)',
     prefixes: ['N098'],
+    isActive: true,
   },
   {
     id: 'N051',
     label: 'N051 Group',
     color: 'var(--color-customer-group-n051)',
     prefixes: ['N051'],
+    isActive: true,
   },
   {
     id: 'N083',
@@ -55,7 +61,6 @@ export const CUSTOMER_GROUPS: CustomerGroup[] = [
     id: 'MLT',
     label: 'MLT Group',
     color: 'var(--color-customer-group-mlt)',
-    // U411 ถึง U426 (16 รหัส)
     prefixes: [
       'U411', 'U412', 'U413', 'U414', 'U415', 'U416',
       'U417', 'U418', 'U419', 'U420', 'U421', 'U422',
@@ -70,10 +75,14 @@ export const GENERAL_GROUP: CustomerGroup = {
   label: 'General',
   color: 'var(--color-customer-group-general)',
   prefixes: [],
+  isActive: false,
 };
 
 /** ALL_GROUPS รวม General — ใช้สำหรับ UI toggle / legend */
 export const ALL_GROUPS: CustomerGroup[] = [...CUSTOMER_GROUPS, GENERAL_GROUP];
+
+/** กลุ่มที่ถูก Active หรือถูกเลือกแสดงผลเป็นค่าเริ่มต้น */
+export const ACTIVE_GROUP_IDS: string[] = ALL_GROUPS.filter(g => g.isActive).map(g => g.id);
 
 /**
  * หาว่าลูกค้ารหัสนี้อยู่ในกลุ่มไหน

@@ -77,6 +77,12 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
   const [monthlySeries, setMonthlySeries] = useState<'year' | 'group'>('year');
   const [showLabels, setShowLabels] = useState(true);
 
+  // Auto-hide labels when switching to Group series due to overlapping
+  useEffect(() => {
+    if (monthlySeries === 'group') {
+      setShowLabels(false);
+    }
+  }, [monthlySeries]);
 
   const navigate = useNavigate();
 
@@ -288,15 +294,30 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
           <div className="app-page-scroll content-scrollbar">
           <div className="app-content-frame app-content-frame--workspace app-page-content sales-summary-page sales-summary-page--loading">
             {/* Header Skeleton */}
-            <div className="sales-summary-header" style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <div className="flex flex-col gap-2">
-                <div className="app-skeleton h-8 w-[300px] max-w-full" />
-                <div className="app-skeleton h-4 w-[200px] max-w-full" />
+            <div className="sales-summary-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 24 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div className="app-skeleton" style={{ width: 280, height: 28, borderRadius: 6 }} />
+                <div className="app-skeleton" style={{ width: 180, height: 16, borderRadius: 4 }} />
               </div>
-              <div className="app-skeleton rounded-lg" style={{ width: 300, height: 48 }} />
+              <div className="app-skeleton" style={{ width: 240, height: 40, borderRadius: 8 }} />
             </div>
 
-            <div className="app-skeleton sales-summary-chart sales-summary-chart--loading rounded-lg" />
+            {/* KPI Cards Skeleton Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20, marginBottom: 24 }}>
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} style={{ background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)', borderRadius: 12, padding: 20, height: 160 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
+                    <div className="app-skeleton" style={{ width: 120, height: 18, borderRadius: 4 }} />
+                    <div className="app-skeleton" style={{ width: 32, height: 32, borderRadius: 8 }} />
+                  </div>
+                  <div className="app-skeleton" style={{ width: '60%', height: 36, marginBottom: 12, borderRadius: 6 }} />
+                  <div className="app-skeleton" style={{ width: '40%', height: 14, borderRadius: 4 }} />
+                </div>
+              ))}
+            </div>
+            
+            {/* Main Chart Skeleton */}
+            <div className="app-skeleton rounded-lg" style={{ width: '100%', height: 400, borderRadius: 12 }} />
           </div>
         </div>
       </>
@@ -322,7 +343,7 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
               <div style={{ width: 1, height: 16, background: 'var(--color-border-light)' }} />
               <ErpSegmentedControl ariaLabel="Series" value={monthlySeries} onChange={(v) => setMonthlySeries(v as 'year' | 'group')} options={[ { value: 'year', label: 'By Year' }, { value: 'group', label: 'By Group' } ]} />
               <div style={{ width: 1, height: 16, background: 'var(--color-border-light)' }} />
-              <ErpSegmentedControl ariaLabel="Labels" value={showLabels ? 'on' : 'off'} onChange={(v) => setShowLabels(v === 'on')} options={[ { value: 'on', label: 'Lbl ON' }, { value: 'off', label: 'Lbl OFF' } ]} />
+              <ErpSegmentedControl ariaLabel="Labels" value={showLabels ? 'on' : 'off'} onChange={(v) => setShowLabels(v === 'on')} options={[ { value: 'on', label: 'Show Labels' }, { value: 'off', label: 'Hide Labels' } ]} />
               <button onClick={resetSummaryView} style={{ background: "none", border: "none", padding: "6px", color: "var(--color-text-tertiary)", cursor: "pointer", marginLeft: 8 }}><RefreshCw size={14} /></button>
             </div>
           </div>
@@ -396,8 +417,8 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={chartData} margin={{ top: 20, right: 24, left: 0, bottom: 5 }}>
                     <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--color-border-light)" opacity={0.5} />
-                    <XAxis dataKey="label" tick={{ fontSize: 11, fill: 'var(--color-text-secondary)', fontWeight: 800 }} axisLine={false} tickLine={false} dy={10} />
-                    <YAxis tickFormatter={(val) => formatAxisValue(val)} tick={{ fontSize: 11, fill: 'var(--color-text-quaternary)', fontWeight: 700 }} axisLine={false} tickLine={false} dx={-5} width={70} />
+                    <XAxis dataKey="label" tick={{ fontSize: 10, fill: 'var(--color-text-secondary)', fontWeight: 800 }} axisLine={false} tickLine={false} dy={10} />
+                    <YAxis tickFormatter={(val) => formatAxisValue(val)} tick={{ fontSize: 10, fill: 'var(--color-text-quaternary)', fontWeight: 700 }} axisLine={false} tickLine={false} dx={-5} width={70} />
                     <Tooltip content={<CustomTooltip metric={metric} />} cursor={{ fill: 'var(--color-surface-1)', opacity: 0.4 }} />
                     {monthlySeries === 'group' ? sortedSel.map((gId) => {
                       const g = ALL_GROUPS.find(x => x.id === gId)!;

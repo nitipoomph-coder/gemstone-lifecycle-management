@@ -78,7 +78,8 @@ router.get('/customer-summary', async (req, res) => {
       FROM OrdHD h
       LEFT JOIN GMCust c ON h.CustCode = c.CustCode
       WHERE ${sargableDateCondition}
-        AND SUBSTRING(h.OrdNo, 1, 3) NOT IN ('BBP','BBK','BBS','BBL','BBT','BBD')
+        AND SUBSTRING(h.OrdNo, 1, 3) IN ('BBC','BBS','BBE','BBL','BBR','BBT','BBP')
+          AND ISNULL(h.PONo, '') NOT IN ('','TOP','Test','Testing','Stock','STOCK')
         AND c.CustStatus = 'Y'
       GROUP BY h.CustCode, YEAR(h.OrdDate), MONTH(h.OrdDate)
     `;
@@ -94,7 +95,8 @@ router.get('/customer-summary', async (req, res) => {
         JOIN OrdDT od ON oh.OrdNo = od.OrdNo
         LEFT JOIN GMCust c ON c.CustCode = oh.CustCode
         WHERE ${sargableTopItemDateCondition}
-          AND SUBSTRING(oh.OrdNo, 1, 3) NOT IN ('BBP','BBK','BBS','BBL','BBT','BBD')
+          AND SUBSTRING(oh.OrdNo, 1, 3) IN ('BBC','BBS','BBE','BBL','BBR','BBT','BBP')
+            AND ISNULL(oh.PONo, '') NOT IN ('','TOP','Test','Testing','Stock','STOCK')
           AND (oh.PONo IS NULL OR UPPER(oh.PONo) NOT LIKE '%SAMPLE%')
           AND ISNULL(c.CustStatus, 'Y') = 'Y'
         GROUP BY oh.CustCode, od.ItemNo
@@ -124,7 +126,8 @@ router.get('/customer-summary', async (req, res) => {
         JOIN OrdDT od ON oh.OrdNo = od.OrdNo
         LEFT JOIN GMCust c ON c.CustCode = oh.CustCode
         WHERE ${sargableTopItemDateCondition}
-          AND SUBSTRING(oh.OrdNo, 1, 3) NOT IN ('BBP','BBK','BBS','BBL','BBT','BBD')
+          AND SUBSTRING(oh.OrdNo, 1, 3) IN ('BBC','BBS','BBE','BBL','BBR','BBT','BBP')
+            AND ISNULL(oh.PONo, '') NOT IN ('','TOP','Test','Testing','Stock','STOCK')
           AND (oh.PONo IS NULL OR UPPER(oh.PONo) NOT LIKE '%SAMPLE%')
           AND ISNULL(c.CustStatus, 'Y') = 'Y'
         GROUP BY oh.CustCode, YEAR(oh.OrdDate), od.ItemNo
@@ -164,7 +167,8 @@ router.get('/customer-summary', async (req, res) => {
         JOIN OrdDT od ON oh.OrdNo = od.OrdNo
         LEFT JOIN GMCust c ON c.CustCode = oh.CustCode
         WHERE ${sargableTopItemDateCondition}
-          AND SUBSTRING(oh.OrdNo, 1, 3) NOT IN ('BBP','BBK','BBS','BBL','BBT','BBD')
+          AND SUBSTRING(oh.OrdNo, 1, 3) IN ('BBC','BBS','BBE','BBL','BBR','BBT','BBP')
+            AND ISNULL(oh.PONo, '') NOT IN ('','TOP','Test','Testing','Stock','STOCK')
           AND (oh.PONo IS NULL OR UPPER(oh.PONo) NOT LIKE '%SAMPLE%')
           AND ISNULL(c.CustStatus, 'Y') = 'Y'
         GROUP BY

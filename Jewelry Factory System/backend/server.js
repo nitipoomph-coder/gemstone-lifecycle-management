@@ -125,7 +125,7 @@ app.use('/api/auth', require('./routes/auth'));                // Login API
 app.use('/api/orders', authMiddleware, require('./routes/poTracker'));
 app.use('/api/dashboard', authMiddleware, require('./routes/productionDashboard'));
 app.use('/api/dashboard', authMiddleware, require('./routes/customerReportMatrix'));
-app.use('/api/dashboard', authMiddleware, require('./routes/salesAnalytics'));
+app.use('/api/dashboard', authMiddleware, require('./routes/orderVolumeSummary'));
 app.use('/api/items', authMiddleware, require('./routes/topOrdersGallery'));
 app.use('/api/search', authMiddleware, require('./routes/search'));
 app.use('/api/procurement', authMiddleware, requireRole('admin'), require('./routes/procurementReceiving'));

@@ -391,6 +391,19 @@ export default function CustomerReportPage() {
     <>
       <div className="content-scrollbar flex-1 overflow-y-auto" style={{ background: 'var(--color-surface-1)' }}>
         <div className="app-content-frame app-content-frame--dashboard-wide sales-report-page">
+          {/* Loading Skeletons for KPIs */}
+          {(loading || isFiltering) && (
+            <div className="sales-report-kpis">
+              {Array.from({ length: displayYears.length || 4 }).map((_, i) => (
+                <div key={`kpi-skeleton-${i}`} style={{ background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)', borderRadius: 8, padding: '12px 18px', flex: '1 1 min-content', minWidth: 200, boxShadow: '0 10px 24px -20px color-mix(in srgb, var(--color-surface-900) 36%, transparent)' }}>
+                  <div className="app-skeleton" style={{ width: 100, height: 16, marginBottom: 12, borderRadius: 4 }} />
+                  <div className="app-skeleton" style={{ width: '80%', height: 32, marginBottom: 8, borderRadius: 6 }} />
+                  <div className="app-skeleton" style={{ width: 140, height: 14, borderRadius: 4 }} />
+                </div>
+              ))}
+            </div>
+          )}
+
           {(!loading && !isFiltering) && (
             <div className="sales-report-kpis">
               {displayYears.map((yr, yIdx) => (

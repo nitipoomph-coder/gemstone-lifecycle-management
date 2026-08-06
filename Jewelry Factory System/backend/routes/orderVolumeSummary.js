@@ -10,7 +10,7 @@ const router = express.Router();
 const { getPool, sql } = require('../db');
 
 // TEST DATABASE source. Production use requires separate review and approval.
-const SALES_ANALYTICS_VIEW = 'dbo.VW_SalesOrderLineAnalytics';
+const SALES_ANALYTICS_VIEW = 'dbo.VW_Web_OrderVolume';
 
 /*
  * =============================================================================
@@ -321,9 +321,9 @@ router.get('/sales-orders', async (req, res) => {
         v.FactoryDueDate AS dueDate,
         v.CustomerDueDate AS custDate,
         v.CustomerCode AS customerCode,
-        ISNULL(v.CustomerName, v.CustomerCode) AS customerName,
+        ISNULL(v.CustomerCode, v.CustomerCode) AS customerName,
         ISNULL(NULLIF(v.SalesName, ''), 'Unassigned') AS salesName,
-        ISNULL(NULLIF(v.Brand, ''), ISNULL(v.CustomerName, v.CustomerCode)) AS brand,
+        ISNULL(NULLIF(v.CustomerCode, ''), ISNULL(v.CustomerCode, v.CustomerCode)) AS brand,
         v.PO2 AS po2,
         v.ShipTo AS shipT,
         v.OrderStamp AS ordStamp,
@@ -382,13 +382,13 @@ router.get('/top-items', async (req, res) => {
         SELECT
           v.ItemNo AS itemNo,
           v.CustomerCode AS customerCode,
-          ISNULL(v.CustomerName, v.CustomerCode) AS customerName,
+          ISNULL(v.CustomerCode, v.CustomerCode) AS customerName,
           SUM(v.OrderQty) AS qty,
           SUM(v.OrderAmount) AS amount
         FROM ${SALES_ANALYTICS_VIEW} v
         WHERE ${whereSql}
           AND ISNULL(v.CustomerStatus, 'Y') = 'Y'
-        GROUP BY v.ItemNo, v.CustomerCode, v.CustomerName
+        GROUP BY v.ItemNo, v.CustomerCode, v.CustomerCode
       ),
       PrimaryCustomer AS (
         SELECT

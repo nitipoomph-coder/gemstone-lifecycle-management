@@ -12,7 +12,7 @@ import {
   type SalesDateView,
   type SalesMonthlyPoint,
   type SalesOrderRow,
-} from '../services/customerSalesAPI';
+} from '../services/orderVolumeSummaryAPI';
 
 const REPORT_YEAR = '2026';
 const PREVIOUS_YEAR = '2025';

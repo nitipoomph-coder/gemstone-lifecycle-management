@@ -3,14 +3,14 @@ import { useNavigate, useLocation, useSearchParams, Outlet } from 'react-router-
 import Topbar from '../components/layout/Topbar';
 import { CalendarDays, ChevronDown, Users, BarChart3, Table2, LineChart } from 'lucide-react';
 import { fetchAvailableYears } from '../services/dashboardAPI';
-import { ALL_GROUPS } from '../config/customerGroups';
+import { fetchCustomerSummary, type CustomerSummaryRecord } from '../services/customerSummaryAPI';
+import { ALL_GROUPS, ACTIVE_GROUP_IDS, getCustomerGroupId } from '../config/customerGroups';
 import { ErpSegmentedControl } from '../components/ui/ErpButtons';
 import './CustomerDashboard.css';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const MONTH_PARAM_IDS = MONTHS.map((_, index) => String(index + 1));
 const ALL_GROUP_IDS = ALL_GROUPS.map(group => group.id);
-const SUMMARY_DEFAULT_GROUP_IDS = ALL_GROUP_IDS.slice(0, 4);
 
 function csv(value: string | null) {
   return String(value || '').split(',').map(item => item.trim()).filter(Boolean);
@@ -52,12 +52,52 @@ export default function CustomerDashboardLayout() {
   const requestedYears = useMemo(() => csv(searchParams.get('years')), [searchParams]);
   const requestedMonths = useMemo(() => parseMonths(searchParams.get('months')), [searchParams]);
   const requestedGroups = useMemo(() => parseGroups(searchParams.get('groups')), [searchParams]);
-  const defaultGroups = source === 'summary' ? SUMMARY_DEFAULT_GROUP_IDS : ALL_GROUP_IDS;
+  const defaultGroups = ACTIVE_GROUP_IDS;
 
   const [availableYears, setAvailableYears] = useState<string[]>([]);
   const [selectedYears, setSelectedYears] = useState<string[]>(requestedYears);
   const [selectedMonths, setSelectedMonths] = useState<string[]>(requestedMonths.length ? requestedMonths : MONTH_PARAM_IDS);
   const [selGroups, setSelGroups] = useState<string[]>(hasGroupsParam ? requestedGroups : defaultGroups);
+  const [custData, setCustData] = useState<CustomerSummaryRecord[]>([]);
+
+  // Calculate dynamic active groups based on data in selectedYears
+  const dynamicActiveGroups = useMemo(() => {
+    if (custData.length === 0) return ACTIVE_GROUP_IDS; // fallback while loading
+    
+    const groupTotals: Record<string, number> = {};
+    ALL_GROUPS.forEach(g => groupTotals[g.id] = 0);
+    
+    custData.forEach(customer => {
+      const gId = getCustomerGroupId(customer.id);
+      selectedYears.forEach(y => {
+        const yData = customer.monthly?.[y];
+        const yQtyData = customer.monthlyQty?.[y];
+        if (yData) {
+          Object.values(yData).forEach(val => {
+            groupTotals[gId] += Number(val);
+          });
+        }
+        if (yQtyData) {
+          Object.values(yQtyData).forEach(val => {
+            groupTotals[gId] += Number(val);
+          });
+        }
+      });
+    });
+    
+    const active = ALL_GROUPS.filter(g => groupTotals[g.id] > 0).map(g => g.id);
+    return active.length > 0 ? active : ACTIVE_GROUP_IDS; // fallback if no data
+  }, [custData, selectedYears]);
+
+  // Update default groups if URL has no groups param
+  useEffect(() => {
+    if (!hasGroupsParam && custData.length > 0) {
+      setSelGroups(dynamicActiveGroups);
+    }
+    // We explicitly don't want this to run every time dynamicActiveGroups changes
+    // if the user has manually interacted with the filter, but since hasGroupsParam 
+    // will be true once they interact, it's safe.
+  }, [hasGroupsParam, custData.length, dynamicActiveGroups]);
 
   // Popover States
   const [showPeriodPopover, setShowPeriodPopover] = useState(false);
@@ -73,6 +113,9 @@ export default function CustomerDashboardLayout() {
       if (selectedYears.length === 0 && stringYears.length > 0) {
         setSelectedYears([stringYears[0]]);
       }
+      
+      // Fetch summary to calculate dynamic active groups
+      fetchCustomerSummary(stringYears).then(setCustData).catch(console.error);
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -214,10 +257,9 @@ export default function CustomerDashboardLayout() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                     <span style={{ fontWeight: 900, fontSize: 'var(--erp-text-control)', color: 'var(--color-text-primary)' }}>Months ({selectedMonths.length}/12)</span>
                     <button
-                      onClick={() => setSelectedMonths(MONTHS.map((_, i) => String(i + 1)))}
-                      disabled={selectedMonths.length === 12}
-                      style={{ fontSize: 'var(--erp-text-meta)', fontWeight: 800, background: 'none', border: 'none', color: selectedMonths.length === 12 ? 'var(--color-text-quaternary)' : 'var(--color-ui-interactive)', cursor: selectedMonths.length === 12 ? 'not-allowed' : 'pointer' }}>
-                      Select All
+                      onClick={() => selectedMonths.length === 12 ? setSelectedMonths([]) : setSelectedMonths(MONTHS.map((_, i) => String(i + 1)))}
+                      style={{ fontSize: 'var(--erp-text-meta)', fontWeight: 800, background: 'none', border: 'none', color: selectedMonths.length === 12 ? 'var(--color-danger-500)' : 'var(--color-ui-interactive)', cursor: 'pointer' }}>
+                      {selectedMonths.length === 12 ? 'None' : 'All'}
                     </button>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 5 }}>
@@ -265,14 +307,14 @@ export default function CustomerDashboardLayout() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                     <span style={{ fontWeight: 900, fontSize: 'var(--erp-text-control)', color: 'var(--color-text-primary)' }}>Customer Groups</span>
                     <button
-                      onClick={() => setSelGroups(ALL_GROUP_IDS)}
-                      disabled={selGroups.length === ALL_GROUPS.length}
-                      style={{ fontSize: 'var(--erp-text-meta)', fontWeight: 800, background: 'none', border: 'none', color: selGroups.length === ALL_GROUPS.length ? 'var(--color-text-quaternary)' : 'var(--color-ui-interactive)', cursor: selGroups.length === ALL_GROUPS.length ? 'not-allowed' : 'pointer' }}>
-                      Select All
+                      onClick={() => selGroups.length === dynamicActiveGroups.length && dynamicActiveGroups.every(id => selGroups.includes(id)) ? setSelGroups([]) : setSelGroups(dynamicActiveGroups)}
+                      style={{ fontSize: 'var(--erp-text-meta)', fontWeight: 800, background: 'none', border: 'none', color: selGroups.length === dynamicActiveGroups.length && dynamicActiveGroups.every(id => selGroups.includes(id)) ? 'var(--color-danger-500)' : 'var(--color-ui-interactive)', cursor: 'pointer' }}>
+                      {selGroups.length === dynamicActiveGroups.length && dynamicActiveGroups.every(id => selGroups.includes(id)) ? 'None' : 'All'}
                     </button>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    {ALL_GROUPS.map(g => {
+                    {/* Active Groups Section */}
+                    {ALL_GROUPS.filter(g => dynamicActiveGroups.includes(g.id)).map(g => {
                       const on = selGroups.includes(g.id);
                       return (
                         <button key={g.id} onClick={() => toggleGroup(g.id)} style={{
@@ -284,6 +326,30 @@ export default function CustomerDashboardLayout() {
                           cursor: 'pointer', textAlign: 'left'
                         }}>
                           <span style={{ width: 8, height: 8, borderRadius: '50%', background: g.color }} />
+                          {g.label}
+                        </button>
+                      );
+                    })}
+                    {/* Inactive Groups Divider */}
+                    <div style={{ marginTop: 8, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ height: 1, flex: 1, background: 'var(--color-border-light)' }} />
+                      <span style={{ fontSize: 'var(--erp-text-meta)', fontWeight: 800, color: 'var(--color-text-tertiary)', textTransform: 'uppercase' }}>Inactive</span>
+                      <div style={{ height: 1, flex: 1, background: 'var(--color-border-light)' }} />
+                    </div>
+                    {/* Inactive Groups Section */}
+                    {ALL_GROUPS.filter(g => !dynamicActiveGroups.includes(g.id)).map(g => {
+                      const on = selGroups.includes(g.id);
+                      return (
+                        <button key={g.id} onClick={() => toggleGroup(g.id)} style={{
+                          display: 'flex', alignItems: 'center', gap: 8,
+                          padding: '6px 10px', borderRadius: 6, fontSize: 'var(--erp-text-control)', fontWeight: 800,
+                          border: `1px solid ${on ? 'var(--color-border-strong)' : 'transparent'}`,
+                          background: on ? 'var(--color-surface-2)' : 'transparent',
+                          color: on ? 'var(--color-text-primary)' : 'var(--color-text-tertiary)',
+                          cursor: 'pointer', textAlign: 'left',
+                          opacity: on ? 1 : 0.7
+                        }}>
+                          <span style={{ width: 8, height: 8, borderRadius: '50%', background: g.color, opacity: 0.5 }} />
                           {g.label}
                         </button>
                       );

@@ -10,7 +10,7 @@ import LoginPage from './pages/login/LoginPage';
 import OrderDetailPage from './pages/OrderDetailPage';
 import PlaceholderPage from './pages/PlaceholderPage';
 import POTrackerAdvanced from './pages/POTrackerAdvanced';
-import SalesCustomerGroupAnalytics from './pages/SalesCustomerGroupAnalytics';
+import OrderVolumeSummaryPage from './pages/OrderVolumeSummaryPage';
 import SalesCustomerGroupDetail from './pages/SalesCustomerGroupDetail';
 import TopOrdersAnalyticsPage from './pages/TopOrdersAnalyticsPage';
 import TopOrdersGalleryPage from './pages/TopOrdersGalleryPage';
@@ -58,7 +58,7 @@ export default function App() {
             <Route path="/dashboard/customer" element={<CustomerDashboardLayout />}>
               <Route index element={<CustomerDashboard metric="amount" />} />
               <Route path="matrix" element={<CustomerReportPage />} />
-              <Route path="trends" element={<SalesCustomerGroupAnalytics />} />
+              <Route path="trends" element={<OrderVolumeSummaryPage />} />
             </Route>
             <Route path="/dashboard/sales" element={<Navigate to="/dashboard/customer" replace />} />
             <Route path="/dashboard/qty" element={<Navigate to="/dashboard/customer?metric=qty" replace />} />

@@ -6,7 +6,7 @@ import Topbar from '../components/layout/Topbar';
 import '../components/sales/SalesDenseTable.css';
 import './SalesResponsive.css';
 import { CUSTOMER_GROUPS } from '../config/customerGroups';
-import { fetchSalesOrders, type SalesOrderRow } from '../services/customerSalesAPI';
+import { fetchSalesOrders, type SalesOrderRow } from '../services/orderVolumeSummaryAPI';
 import { ErpSegmentedControl } from '../components/ui/ErpButtons';
 import { buildCustomerTrendsPath, CUSTOMER_TRENDS_PATH } from '../utils/customerTrendsUrl';
 import { Download } from 'lucide-react';

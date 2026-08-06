@@ -1,0 +1,541 @@
+import { type KeyboardEvent, type ReactNode, type CSSProperties, useState } from 'react';
+import { ArrowRight, CalendarDays, Search, RefreshCw, ChevronDown, X } from 'lucide-react';
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import CustomSelect from '../ui/CustomSelect';
+import { fmtMetric, fmtQty, fmtPercent, fmtSignedMetric, SALES_TYPE_COLORS, SALES_TYPE_OPTIONS, ORDER_DETAIL_COLUMNS, fmtAxis } from '../../pages/SalesCustomerGroupAnalytics';
+import type { 
+  Metric, SalesTypeCode, TrendGranularity, 
+  TrendComparisonDatum, WeeklyComparisonGroup, TooltipPayloadEntry, 
+  DueOutlookDatum, TypeContributionRow, KpiTypeSelection, ViewMode 
+} from '../../pages/SalesCustomerGroupAnalytics';
+
+
+// Constants from original file
+
+
+
+
+
+
+
+
+
+
+
+
+export const summaryHeader: CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 };
+export const summaryLabel: CSSProperties = { fontSize: 'var(--erp-text-meta)', fontWeight: 800, color: 'var(--color-text-secondary)' };
+export const summaryValue: CSSProperties = { fontSize: 'var(--erp-text-kpi)', fontWeight: 900, display: 'block', lineHeight: 1 };
+export const summaryHint: CSSProperties = { fontSize: 'var(--erp-text-micro)', fontWeight: 700, color: 'var(--color-text-tertiary)', display: 'block', marginTop: 8 };
+export const summaryHintUp: CSSProperties = { color: 'var(--color-success-600)' };
+export const summaryHintDown: CSSProperties = { color: 'var(--color-danger-600)' };
+export const searchBox: CSSProperties = { display: 'flex', alignItems: 'center', gap: 8, background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)', borderRadius: 6, padding: '4px 10px' };
+export const searchIcon: CSSProperties = { color: 'var(--color-text-quaternary)' };
+export const searchInput: CSSProperties = { border: 'none', background: 'transparent', outline: 'none', fontSize: 'var(--erp-text-control)', width: 140, fontWeight: 800 };
+export const chipButton: CSSProperties = { background: 'var(--color-surface-1)', border: '1px solid var(--color-border-light)', borderRadius: 20, padding: '4px 12px', fontSize: 'var(--erp-text-meta)', fontWeight: 800, color: 'var(--color-text-secondary)', cursor: 'pointer', whiteSpace: 'nowrap' };
+export const chipActive: CSSProperties = { background: 'var(--color-ui-selected)', border: '1px solid var(--color-ui-interactive)', color: 'var(--color-ui-interactive)' };
+export function CustomerTrendsLoadingState({
+  activeView,
+  granularity,
+  scopeSummary,
+}: {
+  activeView: ViewMode;
+  granularity: TrendGranularity;
+  scopeSummary: string;
+}) {
+  const chartBars = [42, 68, 54, 82, 46, 72, 58, 88, 62, 76, 50, 66];
+
+  return (
+    <div className={`customer-trends-page-loading customer-trends-page-loading--${activeView}`} role="status" aria-live="polite">
+      <div className="customer-trends-loading-status">
+        <RefreshCw size={15} className="animate-spin" aria-hidden="true" />
+        <span>
+          <strong>{activeView === 'overview' ? 'Loading customer trends' : 'Loading order details'}</strong>
+          <small>{scopeSummary}</small>
+        </span>
+      </div>
+
+      {activeView === 'overview' && (
+        <section className="customer-trends-summary customer-trends-summary--loading" aria-hidden="true">
+          {Array.from({ length: 6 }, (_, index) => (
+            <div key={index} className="customer-trends-summary__item customer-trends-loading-metric">
+              <span className="customer-trends-skeleton customer-trends-skeleton--label" style={{ width: `${38 + (index % 3) * 8}%` }} />
+              <span className="customer-trends-skeleton customer-trends-skeleton--value" style={{ width: `${58 + (index % 2) * 12}%` }} />
+              <span className="customer-trends-skeleton customer-trends-skeleton--hint" style={{ width: `${46 + (index % 3) * 9}%` }} />
+            </div>
+          ))}
+        </section>
+      )}
+
+      <div className="customer-trends-viewbar customer-trends-loading-viewbar" aria-hidden="true">
+        <span className="customer-trends-skeleton customer-trends-skeleton--label" style={{ width: 86 }} />
+        <span className="customer-trends-skeleton customer-trends-skeleton--label" style={{ width: 220 }} />
+      </div>
+
+      {activeView === 'overview' ? (
+        <section className={`customer-trends-overview customer-trends-overview--${granularity}`} aria-hidden="true">
+          <div className="customer-trends-overview__header">
+            <div>
+              <h2>{granularity === 'monthly' ? 'Monthly Comparison' : 'Weekly Comparison'}</h2>
+              <span>Preparing selected period data</span>
+            </div>
+          </div>
+          <div className={`customer-trends-overview-loading customer-trends-overview-loading--${granularity}`}>
+            <div className="customer-trends-loading-panel customer-trends-loading-panel--chart">
+              <span className="customer-trends-skeleton customer-trends-skeleton--label" style={{ width: 120 }} />
+              {granularity === 'monthly' ? (
+                <div className="customer-trends-loading-chart" aria-hidden="true">
+                  {chartBars.map((height, index) => <span key={index} style={{ height: `${height}%` }} />)}
+                </div>
+              ) : (
+                <div className="customer-trends-loading-list">
+                  {Array.from({ length: 6 }, (_, index) => (
+                    <span key={index}><i /><i /><i /></span>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="customer-trends-loading-panel customer-trends-loading-panel--contribution">
+              <span className="customer-trends-skeleton customer-trends-skeleton--label" style={{ width: 110 }} />
+              <div className="customer-trends-loading-list">
+                {Array.from({ length: 5 }, (_, index) => (
+                  <span key={index}><i /><i /><i /></span>
+                ))}
+              </div>
+            </div>
+            <div className="customer-trends-loading-panel customer-trends-loading-panel--due">
+              <span className="customer-trends-skeleton customer-trends-skeleton--label" style={{ width: 124 }} />
+              <div className="customer-trends-loading-due-grid">
+                {Array.from({ length: 8 }, (_, index) => <span key={index}><i /><i /></span>)}
+              </div>
+            </div>
+          </div>
+        </section>
+      ) : (
+        <section className="sales-dense-panel customer-trends-loading-details" aria-hidden="true">
+          <div className="sales-dense-panel__header">
+            <span className="customer-trends-skeleton customer-trends-skeleton--label" style={{ width: 96 }} />
+            <span className="customer-trends-skeleton customer-trends-skeleton--label" style={{ width: 180 }} />
+          </div>
+          <div className="content-scrollbar sales-dense-scroll">
+            <table className="sales-dense-table" style={{ width: '100%', minWidth: 1536 }}>
+              <thead>
+                <tr>
+                  {ORDER_DETAIL_COLUMNS.map(([head, width], index) => (
+                    <th
+                      key={head}
+                      className={index >= 21 ? 'sales-dense-table__number' : undefined}
+                      style={{ width: Number(width) }}
+                    >
+                      {head}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody><TableSkeletonRows columns={ORDER_DETAIL_COLUMNS.length} rows={13} /></tbody>
+            </table>
+          </div>
+        </section>
+      )}
+    </div>
+  );
+}
+
+export function InteractiveTrendBar({
+  x = 0,
+  y = 0,
+  width = 0,
+  height = 0,
+  payload,
+  year,
+  series,
+  metric,
+  fillColor,
+  onActivate,
+}: {
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+  payload?: TrendComparisonDatum;
+  year: string;
+  series: 'report' | 'compare';
+  metric: Metric;
+  fillColor: string;
+  onActivate: (year: string, periodNumber: number | undefined, type?: SalesTypeCode) => void;
+}) {
+  const value = Number(payload?.[series] || 0);
+  if (value <= 0 || width <= 0 || height <= 0 || !payload) return <g />;
+  const label = `${payload.label} ${year}, ${fmtMetric(value, metric)}`;
+  const activate = () => onActivate(year, payload.periodNumber);
+
+  return (
+    <rect
+      className="customer-trends-chart-segment"
+      x={x}
+      y={y}
+      width={width}
+      height={height}
+      rx={2}
+      fill={fillColor}
+      role="button"
+      tabIndex={0}
+      aria-label={`${label}. Open order details.`}
+      onClick={activate}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          activate();
+        }
+      }}
+    >
+      <title>{label}</title>
+    </rect>
+  );
+}
+
+export function TrendComparisonTooltip({ active, payload, label, metric, reportYear }: { active?: boolean; payload?: TooltipPayloadEntry[]; label?: string | number; metric: Metric; reportYear: string; }) {
+  if (!active || !payload?.length) return null;
+  const point = payload[0]?.payload;
+  const reportValue = Number(point?.report || 0);
+  const compareValue = Number(point?.compare || 0);
+  const delta = reportValue - compareValue;
+
+
+  return (
+    <div className="customer-trends-tooltip">
+      <div className="customer-trends-tooltip__header">
+        <strong>{label}</strong>
+        {false && <span className={delta < 0 ? 'is-down' : delta > 0 ? 'is-up' : undefined}>{fmtSignedMetric(delta, metric)}</span>}
+      </div>
+      <div className="customer-trends-tooltip__row">
+        <span><i style={{ background: 'var(--color-brand-500)' }} />{reportYear}</span>
+        <strong>{fmtMetric(reportValue, metric)}</strong>
+        <small>Report</small>
+      </div>
+    </div>
+  );
+}
+
+export function WeeklyComparisonList({ groups, reportYear, metric, onDrilldown }: { groups: WeeklyComparisonGroup[]; reportYear: string; metric: Metric; onDrilldown: (year: string, week: number | undefined, type?: SalesTypeCode) => void }) {
+  const [expandedMonth, setExpandedMonth] = useState<number | null>(() => groups[0]?.monthNumber ?? null);
+
+  if (groups.length === 0) return <div className="customer-trends-chart-empty">No weekly data</div>;
+
+  return (
+    <section className="customer-trends-weekly" data-compare={false} aria-label={`Weekly comparison for ${reportYear}`}>
+      <div className="customer-trends-weekly__columns" aria-hidden="true">
+        <span>Month / week</span>
+        <span>{reportYear || 'Report year'}</span>
+        <span />
+      </div>
+      <div className="customer-trends-weekly__months">
+        {groups.map(group => {
+          const isExpanded = expandedMonth === group.monthNumber;
+          const reportTotal = group.weeks.reduce((sum, week) => sum + week.report, 0);
+
+          const panelId = `weekly-month-panel-${group.monthNumber}`;
+          const triggerId = `weekly-month-trigger-${group.monthNumber}`;
+
+          return (
+            <section key={group.monthNumber} className="customer-trends-weekly__month">
+              <button
+                id={triggerId}
+                type="button"
+                className="customer-trends-weekly__month-toggle"
+                data-tone={'flat'}
+                aria-expanded={isExpanded}
+                aria-controls={panelId}
+                onClick={() => setExpandedMonth(current => current === group.monthNumber ? null : group.monthNumber)}
+              >
+                <span className="customer-trends-weekly__period">
+                  <strong>{group.monthLabel}</strong>
+                  <small>{group.weeks.length} {group.weeks.length === 1 ? 'week' : 'weeks'}</small>
+                </span>
+                <span className="customer-trends-weekly__metric">
+                  <small>{reportYear}</small>
+                  <strong>{fmtMetric(reportTotal, metric)}</strong>
+                </span>
+                <ChevronDown className="customer-trends-weekly__chevron" size={15} aria-hidden="true" />
+              </button>
+
+              {isExpanded && (
+                <div id={panelId} className="customer-trends-weekly__week-list" role="region" aria-labelledby={triggerId}>
+                  {group.weeks.map(week => {
+
+                    return (
+                      <div key={week.periodNumber} className="customer-trends-weekly__week-row" data-tone={'flat'}>
+                        <span className="customer-trends-weekly__period">
+                          <strong>{week.label}</strong>
+                          <small>{week.dateRange}</small>
+                        </span>
+                        <button type="button" className="customer-trends-weekly__metric" disabled={week.report <= 0} onClick={() => onDrilldown(reportYear, week.periodNumber)} title={`Open ${reportYear} order details`}>
+                          <small>{reportYear}</small>
+                          <strong>{fmtMetric(week.report, metric)}</strong>
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+export function DueDateOutlook({ rows, year, metric, loading, error, onDrilldown, onRetry }: { rows: DueOutlookDatum[]; year: string; metric: Metric; loading: boolean; error: string; onDrilldown: (monthNumber: number) => void; onRetry: () => void }) {
+  const rawTotals = rows.reduce((sum, row) => ({
+    due: sum.due + (metric === 'amount' ? row.dueAmount : row.dueQty),
+    shipped: sum.shipped + (metric === 'amount' ? row.shippedAmount : row.shippedQty),
+    risk: sum.risk + row.overdueOrders + row.dueSoonOrders,
+  }), { due: 0, shipped: 0, risk: 0 });
+  const totals = {
+    ...rawTotals,
+    open: metric === 'amount'
+      ? Math.max(Math.round(rawTotals.due) - Math.round(rawTotals.shipped), 0)
+      : Math.max(rawTotals.due - rawTotals.shipped, 0),
+  };
+  const hasData = totals.due > 0 || totals.shipped > 0 || totals.open > 0;
+
+  return (
+    <section className="customer-trends-due" aria-labelledby="customer-trends-due-title">
+      <div className="customer-trends-due__header">
+        <div>
+          <h3 id="customer-trends-due-title">Due Date Outlook</h3>
+          <span>Customer due / {year || '-'} / {metric === 'amount' ? 'Amount' : 'Quantity'}</span>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="customer-trends-due__loading" aria-label="Loading due date outlook"><span /><span /></div>
+      ) : error ? (
+        <div role="alert" className="customer-trends-error customer-trends-due__error">
+          <span>{error}</span>
+          <button type="button" onClick={onRetry}><RefreshCw size={13} />Retry</button>
+        </div>
+      ) : !hasData ? (
+        <div className="customer-trends-due__empty">No customer due data for the current scope</div>
+      ) : (
+        <>
+          <div className="customer-trends-due__summary" aria-label="Due date totals">
+            <span><small>Due</small><strong>{fmtMetric(totals.due, metric)}</strong></span>
+            <span><small>Shipped</small><strong>{fmtMetric(totals.shipped, metric)}</strong></span>
+            <span><small>Open</small><strong>{fmtMetric(totals.open, metric)}</strong></span>
+            <span data-tone={totals.risk > 0 ? 'down' : 'flat'}><small>At risk</small><strong>{fmtQty(totals.risk)} orders</strong></span>
+          </div>
+          <div className="customer-trends-due__rows">
+            {rows.map(row => {
+              const due = metric === 'amount' ? row.dueAmount : row.dueQty;
+              const shipped = metric === 'amount' ? row.shippedAmount : row.shippedQty;
+              const open = metric === 'amount' ? row.openAmount : row.openQty;
+              const progress = due > 0 ? Math.min((shipped / due) * 100, 100) : 0;
+              const riskLabel = row.overdueOrders > 0
+                ? `${fmtQty(row.overdueOrders)} overdue`
+                : row.dueSoonOrders > 0
+                  ? `${fmtQty(row.dueSoonOrders)} due soon`
+                  : open > 0
+                    ? 'Scheduled'
+                    : due > 0
+                      ? 'Complete'
+                      : 'No due';
+              const riskTone = row.overdueOrders > 0 ? 'down' : row.dueSoonOrders > 0 ? 'warning' : open > 0 ? 'neutral' : 'up';
+              return (
+                <button key={row.monthNumber} type="button" className="customer-trends-due-row" disabled={due <= 0} onClick={() => onDrilldown(row.monthNumber)} aria-label={`Open customer due order details for ${row.monthLabel} ${year}`}>
+                  <span className="customer-trends-due-row__month"><strong>{row.monthLabel}</strong><small>{year}</small></span>
+                  <span className="customer-trends-due-row__progress"><i style={{ width: `${progress}%` }} /><small>{progress.toFixed(0)}% shipped</small></span>
+                  <span><small>Due</small><strong>{fmtMetric(due, metric)}</strong></span>
+                  <span><small>Shipped</small><strong>{fmtMetric(shipped, metric)}</strong></span>
+                  <span><small>Open</small><strong>{fmtMetric(open, metric)}</strong></span>
+                  <span className="customer-trends-due-row__risk" data-tone={riskTone}><small>Status</small><strong>{riskLabel}</strong></span>
+                  <ArrowRight size={13} />
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </section>
+  );
+}
+
+export function TrendComparisonChart({ data, reportYear, metric, granularity, onDrilldown }: { data: TrendComparisonDatum[]; reportYear: string; metric: Metric; granularity: TrendGranularity; onDrilldown: (year: string, periodNumber: number | undefined, type?: SalesTypeCode) => void }) {
+  const hasData = data.some(point => point.report > 0);
+  const intervalLabel = granularity === 'monthly' ? 'Monthly' : 'Weekly';
+  const canvasWidth = granularity === 'weekly' ? data.length * 44 : '100%';
+  return (
+    <section className="customer-trends-comparison-chart" aria-label={`${intervalLabel} comparison for ${reportYear}`}>
+      <div className="customer-trends-comparison-chart__legend">
+        <span><i style={{ background: 'var(--color-brand-500)' }} /><small>Report</small><strong>{reportYear || '-'}</strong></span>
+
+      </div>
+      <div className="customer-trends-comparison-chart__scroll content-scrollbar">
+        {!hasData ? (
+          <div className="customer-trends-chart-empty">No data</div>
+        ) : (
+          <div className="customer-trends-comparison-chart__canvas" style={{ width: canvasWidth }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={data} barCategoryGap="26%" barGap={4} margin={{ top: 8, right: 10, left: 0, bottom: 2 }}>
+                <CartesianGrid vertical={false} stroke="var(--color-border-light)" strokeDasharray="3 3" opacity={0.7} />
+                <XAxis dataKey="label" axisLine={false} tickLine={false} interval={0} tick={{ fill: 'var(--color-text-tertiary)', fontSize: 10, fontWeight: 800 }} dy={7} />
+                <YAxis axisLine={false} tickLine={false} tickFormatter={(value: number) => fmtAxis(value, metric)} tick={{ fill: 'var(--color-text-tertiary)', fontSize: 10, fontWeight: 750 }} width={58} />
+                <Tooltip content={<TrendComparisonTooltip metric={metric} reportYear={reportYear} />} cursor={{ fill: 'color-mix(in srgb, var(--color-brand-500) 6%, transparent)' }} />
+                <Bar dataKey="report" name={reportYear} fill="var(--color-brand-500)" maxBarSize={30} isAnimationActive={false} shape={<InteractiveTrendBar year={reportYear} series="report" metric={metric} fillColor="var(--color-brand-500)" onActivate={onDrilldown} />} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+export function TypeContribution({ rows, metric, year, total, onDrilldown }: { rows: TypeContributionRow[]; metric: Metric; year: string; total: number; onDrilldown: (year: string, month: number | undefined, type: SalesTypeCode) => void }) {
+
+
+  return (
+    <section className="customer-trends-contribution" aria-labelledby="customer-trends-contribution-title">
+      <div className="customer-trends-contribution__header">
+        <div><h3 id="customer-trends-contribution-title">Type Contribution</h3><span>{year || '-'}</span></div>
+        <strong>{fmtMetric(total, metric)}</strong>
+      </div>
+      <div className="customer-trends-contribution__columns" aria-hidden="true">
+        <span>Type</span><span>{year}</span><span>Share</span><span>Orders</span><span />
+      </div>
+      <div className="customer-trends-contribution__rows">
+        {rows.map(row => {
+
+          return (
+            <button key={row.code} type="button" onClick={() => onDrilldown(year, undefined, row.code)} aria-label={`Open ${row.code} order details for ${year}`}>
+              <span className="customer-trends-contribution__type"><i style={{ background: SALES_TYPE_COLORS[row.code] }} /><span><strong>{row.code}</strong><small>{row.label}</small></span></span>
+              <span className="customer-trends-contribution__value"><strong>{fmtMetric(row.current, metric)}</strong><small>{year} / {row.share.toFixed(1)}%</small></span>
+              <span className="customer-trends-contribution__delta" data-tone={'flat'}><strong>{fmtQty(row.orderCount)}</strong><small>orders</small></span>
+              <ArrowRight size={13} />
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+export function SearchBox({ value, onChange, onKeyDown, onClear }: { value: string; onChange: (value: string) => void; onKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void; onClear: () => void }) {
+  return (
+    <label style={searchBox}>
+      <Search size={14} style={searchIcon} />
+      <input value={value} onChange={event => onChange(event.target.value)} onKeyDown={onKeyDown} placeholder="Search order, item, customer" style={searchInput} />
+      {value && <button type="button" onClick={onClear} title="Clear search" style={searchButton}><X size={13} /></button>}
+    </label>
+  );
+}
+export function SummaryMetric({ label, value, hint, tone, muted, control }: { label: string; value: string; hint: string; tone?: 'up' | 'down'; muted?: boolean; control?: ReactNode }) {
+  const valueColor = muted ? 'var(--color-text-quaternary)' : tone === 'up' ? 'var(--color-success-500)' : tone === 'down' ? 'var(--color-danger-500)' : 'var(--color-text-primary)';
+  return (
+    <div className="customer-trends-summary__item">
+      <div style={summaryHeader}>
+        <span style={summaryLabel}>{label}</span>
+        {control}
+      </div>
+      <strong style={{ ...summaryValue, color: valueColor }}>{value}</strong>
+      <span style={{ ...summaryHint, ...(tone === 'up' ? summaryHintUp : tone === 'down' ? summaryHintDown : null) }}>{hint}</span>
+    </div>
+  );
+}
+
+export function KpiTypeSelect({ value, onChange }: { value: KpiTypeSelection; onChange: (value: KpiTypeSelection) => void }) {
+  const options = [
+    { value: 'ALL', label: 'All Types' },
+    ...SALES_TYPE_OPTIONS.map(opt => ({ value: opt.value, label: opt.label }))
+  ];
+  return (
+    <div style={{ width: 125 }}>
+      <CustomSelect
+        value={value}
+        onChange={(val) => onChange(val as KpiTypeSelection)}
+        options={options}
+        ariaLabel="Order count product type"
+      />
+    </div>
+  );
+}
+
+
+export function FilterChip({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      style={{ ...chipButton, ...(active ? chipActive : null) }}
+    >
+      {label}
+    </button>
+  );
+}
+
+export function EmptyRow({ colSpan, label }: { colSpan: number; label: string }) {
+  return <tr><td colSpan={colSpan} className="sales-dense-empty">{label}</td></tr>;
+}
+
+
+export function TableSkeletonRows({ columns, rows = 8 }: { columns: number; rows?: number }) {
+  const widths = [72, 46, 58, 64, 54, 76, 66, 50, 60];
+  return (
+    <>
+      {Array.from({ length: rows }, (_, rowIndex) => (
+        <tr key={rowIndex}>
+          {Array.from({ length: columns }, (_, columnIndex) => (
+            <td key={columnIndex}>
+              <span className="sales-dense-skeleton" style={{ width: `${widths[(rowIndex + columnIndex) % widths.length]}%` }} />
+            </td>
+          ))}
+        </tr>
+      ))}
+    </>
+  );
+}
+
+export const pageShell: CSSProperties = { minHeight: 0, background: 'var(--color-surface-1)' };
+
+
+
+const searchButton: CSSProperties = { position: 'absolute', right: 4, width: 22, height: 22, display: 'grid', placeItems: 'center', border: '1px solid var(--color-border-light)', borderRadius: 5, background: 'var(--color-surface-1)', color: 'var(--color-text-tertiary)', cursor: 'pointer' };
+
+
+
+
+
+
+export const filterToolbar: CSSProperties = { position: 'relative', display: 'grid', overflow: 'visible', background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)', borderRadius: 8 };
+export const filterPrimaryRow: CSSProperties = { display: 'flex', alignItems: 'center', columnGap: 10, rowGap: 8, minHeight: 52, padding: '8px 12px', flexWrap: 'wrap' };
+export const filterCollapsedRow: CSSProperties = { display: 'flex', alignItems: 'center', gap: 8, minHeight: 42, padding: '6px 12px' };
+export const filterCollapsedSummary: CSSProperties = { minWidth: 0, flex: '1 1 auto', overflow: 'hidden', color: 'var(--color-text-secondary)', fontSize: 'var(--erp-text-dense)', fontWeight: 850, textOverflow: 'ellipsis', whiteSpace: 'nowrap' };
+export const filterBlock: CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 6, minWidth: 0 };
+
+export const filterLabel: CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--color-text-tertiary)', fontSize: 'var(--erp-text-dense)', fontWeight: 900, whiteSpace: 'nowrap' };
+export const filterSectionLabel: CSSProperties = { ...filterLabel, color: 'var(--color-text-secondary)' };
+export const filterControlDivider: CSSProperties = { width: 1, minHeight: 26, alignSelf: 'stretch', background: 'var(--color-border-light)' };
+export const selectStyle: CSSProperties = { height: 32, borderRadius: 6, border: '1px solid var(--color-border-light)', background: 'var(--color-surface-1)', color: 'var(--color-text-primary)', fontSize: 'var(--erp-text-dense)', fontWeight: 900, padding: '0 8px', outline: 'none', fontFamily: 'var(--font-body)' };
+
+
+
+
+export const orderPanel: CSSProperties = { width: '100%', minHeight: 0, flex: '1 1 0' };
+export const panelTitle: CSSProperties = { margin: 0, color: 'var(--color-text-primary)', fontSize: 'var(--erp-text-control)', fontWeight: 900 };
+export const panelHeaderRight: CSSProperties = { display: 'inline-flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8 };
+export const panelMeta: CSSProperties = { color: 'var(--color-text-tertiary)', fontSize: 'var(--erp-text-dense)', fontWeight: 900 };
+export const tableScroll: CSSProperties = { width: '100%', minHeight: 0 };
+export const td: CSSProperties = { height: 46, padding: '6px 8px', color: 'var(--color-text-primary)', fontSize: 'var(--erp-text-dense)', fontWeight: 500, verticalAlign: 'middle', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
+export const tdStrongCenter: CSSProperties = { ...td, fontWeight: 900, textAlign: 'center' };
+export const tdCenter: CSSProperties = { ...td, textAlign: 'center' };
+export const tdStrong: CSSProperties = { ...td, fontWeight: 900 };
+export const tdStrongRight: CSSProperties = { ...td, fontWeight: 900, textAlign: 'right', fontVariantNumeric: 'tabular-nums' };
+export const linkButton: CSSProperties = { background: 'none', border: 'none', color: 'var(--color-brand-600)', fontSize: 'var(--erp-text-dense)', fontWeight: 900, cursor: 'pointer', padding: 0, fontFamily: 'var(--font-body)' };
+export const paginationBar: CSSProperties = { minHeight: 38, padding: '6px 10px' };
+export const paginationText: CSSProperties = { color: 'var(--color-text-tertiary)', fontSize: 'var(--erp-text-dense)', fontWeight: 850 };
+export const paginationButtons: CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 6 };
+export const pageButton: CSSProperties = { width: 28, height: 28, display: 'inline-grid', placeItems: 'center', borderRadius: 6, border: '1px solid var(--color-border-light)', background: 'var(--color-surface-1)', color: 'var(--color-text-primary)', cursor: 'pointer' };
+export const pageButtonDisabled: CSSProperties = { opacity: 0.45, cursor: 'not-allowed' };
+export const pageText: CSSProperties = { color: 'var(--color-text-primary)', fontSize: 'var(--erp-text-dense)', fontWeight: 900, minWidth: 82, textAlign: 'center' };

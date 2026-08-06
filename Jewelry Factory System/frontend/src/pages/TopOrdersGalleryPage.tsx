@@ -1336,6 +1336,7 @@ export default function TopOrdersGalleryPage() {
                       src={`/api/photos/ps/${row.topItem}`}
                       alt={row.topItem}
                       className="gallery-img"
+                      style={{ objectFit: 'cover', width: '100%', height: '100%' }}
                       onError={(event: SyntheticEvent<HTMLImageElement>) => {
                         const image = event.currentTarget;
                         if (!image.dataset.triedCad) {
@@ -1617,6 +1618,7 @@ export default function TopOrdersGalleryPage() {
                     src={`/api/photos/ps/${previewItem.id}`}
                     alt={`${previewItem.id}`}
                     className="gallery-preview-image"
+                    style={{ objectFit: 'cover', width: '100%', height: '100%' }}
                     onError={(event: SyntheticEvent<HTMLImageElement>) => {
                       const container = event.currentTarget.parentElement?.parentElement;
                       if (container) container.style.display = "none";

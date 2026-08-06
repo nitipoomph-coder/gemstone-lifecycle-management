@@ -3,6 +3,7 @@ import AppLayout from './components/layout/AppLayout';
 import Dashboard from './pages/Dashboard';
 import DashboardDetail from './pages/DashboardDetail';
 import CustomerDashboard from './pages/CustomerDashboard';
+import CustomerDashboardLayout from './pages/CustomerDashboardLayout';
 import CustomerReportPage from './pages/CustomerReportPage';
 import ItemDetailPage from './pages/ItemDetailPage';
 import LoginPage from './pages/login/LoginPage';
@@ -54,16 +55,19 @@ export default function App() {
           <Route element={<AppLayout />}>
             <Route path="/" element={<Dashboard />} />
             <Route path="/dashboard/detail" element={<DashboardDetail />} />
-            <Route path="/dashboard/customer" element={<CustomerDashboard metric="amount" />} />
-            <Route path="/dashboard/sales" element={<CustomerDashboard metric="amount" />} />
-            <Route path="/dashboard/qty" element={<CustomerDashboard metric="qty" />} />
-            <Route path="/dashboard/customer-report" element={<CustomerReportPage />} />
+            <Route path="/dashboard/customer" element={<CustomerDashboardLayout />}>
+              <Route index element={<CustomerDashboard metric="amount" />} />
+              <Route path="matrix" element={<CustomerReportPage />} />
+              <Route path="trends" element={<SalesCustomerGroupAnalytics />} />
+            </Route>
+            <Route path="/dashboard/sales" element={<Navigate to="/dashboard/customer" replace />} />
+            <Route path="/dashboard/qty" element={<Navigate to="/dashboard/customer?metric=qty" replace />} />
+            <Route path="/dashboard/customer-report" element={<Navigate to="/dashboard/customer/matrix" replace />} />
             <Route path="/dashboard/top-orders" element={<TopOrdersGalleryPage />} />
             <Route path="/dashboard/top-orders/analytics" element={<TopOrdersAnalyticsPage />} />
             <Route path="/dashboard/top-Orders" element={<Navigate to="/dashboard/top-orders" replace />} />
             <Route path="/dashboard/top-order-lines" element={<Navigate to="/dashboard/top-orders" replace />} />
             <Route path="/dashboard/Top-Order Lines" element={<Navigate to="/dashboard/top-orders" replace />} />
-            <Route path={CUSTOMER_TRENDS_PATH} element={<SalesCustomerGroupAnalytics />} />
             <Route path={LEGACY_CUSTOMER_TRENDS_PATH} element={<LegacyCustomerTrendsRedirect />} />
             <Route path="/dashboard/sales-customer-detail" element={<SalesCustomerGroupDetail />} />
 

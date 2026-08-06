@@ -169,15 +169,15 @@
 }
 
 .parchment-form {
-  --ink: var(--color-text-primary);
-  --ink-soft: var(--color-text-secondary);
-  --gold: var(--color-ui-interactive);
-  --gold-soft: var(--color-ui-interactive-soft);
-  --bronze: var(--color-ui-interactive);
-  --parchment: var(--color-ui-surface);
-  --graphite: var(--color-text-primary);
-  --mist: var(--color-text-tertiary);
-  --line: var(--color-border-default);
+  --ink: var(--color-login-ink);
+  --ink-soft: var(--color-login-ink-soft);
+  --gold: var(--color-login-gold);
+  --gold-soft: var(--color-login-gold-soft);
+  --bronze: var(--color-login-sepia);
+  --parchment: var(--color-login-parchment);
+  --graphite: var(--color-login-ink-deep);
+  --mist: var(--color-login-muted);
+  --line: var(--color-login-sepia-divider);
 
   color: var(--ink);
 }
@@ -294,13 +294,15 @@
 }
 
 .parchment-form .login-input:focus ~ .floating-fieldset .floating-legend,
-.parchment-form .login-input:not(:placeholder-shown) ~ .floating-fieldset .floating-legend {
+.parchment-form .login-input:not(:placeholder-shown) ~ .floating-fieldset .floating-legend,
+.parchment-form .login-input:-webkit-autofill ~ .floating-fieldset .floating-legend {
   max-width: 100%;
   transition: max-width 100ms cubic-bezier(0, 0, 0.2, 1) 50ms;
 }
 
 .parchment-form .login-input:focus ~ .floating-label,
-.parchment-form .login-input:not(:placeholder-shown) ~ .floating-label {
+.parchment-form .login-input:not(:placeholder-shown) ~ .floating-label,
+.parchment-form .login-input:-webkit-autofill ~ .floating-label {
   transform: translate(14px, -9px) scale(0.75);
 }
 
@@ -308,7 +310,8 @@
   color: var(--bronze);
 }
 
-.parchment-form .login-input:not(:focus):not(:placeholder-shown) ~ .floating-label {
+.parchment-form .login-input:not(:focus):not(:placeholder-shown) ~ .floating-label,
+.parchment-form .login-input:-webkit-autofill ~ .floating-label {
   color: var(--mist);
 }
 

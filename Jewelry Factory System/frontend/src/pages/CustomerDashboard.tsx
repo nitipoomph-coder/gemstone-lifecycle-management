@@ -1,9 +1,6 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
-import type { CSSProperties } from 'react';
-import { useNavigate } from 'react-router-dom';
-import Topbar from '../components/layout/Topbar';
-import { CalendarDays, RefreshCw, Users, ChevronDown, Table2 } from 'lucide-react';
-import { fetchAvailableYears } from '../services/dashboardAPI';
+import { useState, useMemo, useEffect } from 'react';
+import { useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
+import { RefreshCw } from 'lucide-react';
 import { fetchCustomerSummary } from '../services/customerSummaryAPI';
 import { ALL_GROUPS, getCustomerGroupId } from '../config/customerGroups';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList } from 'recharts';
@@ -68,39 +65,21 @@ const CustomTooltip = ({ active, payload, label, metric }: CustomTooltipProps) =
   return null;
 };
 
-export default function CustomerDashboard({ metric = 'amount' }: { metric?: Metric }) {
-  const [availableYears, setAvailableYears] = useState<string[]>([]);
+export default function CustomerDashboard({ metric: propMetric = 'amount' }: { metric?: Metric }) {
+  const [searchParams] = useSearchParams();
+  const metric = (searchParams.get('metric') as Metric) || propMetric;
+  const { selectedYears, selectedMonths, selGroups, availableYears } = useOutletContext<any>();
   const [custData, setCustData] = useState<CustomerSummaryRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   // New State mappings
   const [mode, setMode] = useState<'yearly' | 'monthly'>('yearly');
   const [monthlySeries, setMonthlySeries] = useState<'year' | 'group'>('year');
-  const [selectedYears, setSelectedYears] = useState<string[]>([]);
-  const [selectedMonths, setSelectedMonths] = useState<string[]>(MONTHS.map((_, i) => String(i + 1)));
-  const [selGroups, setSelGroups] = useState<string[]>(SUMMARY_DEFAULT_GROUP_IDS);
   const [showLabels, setShowLabels] = useState(true);
 
 
   const navigate = useNavigate();
 
-  // Fetch available years on mount
-  useEffect(() => {
-    fetchAvailableYears()
-      .then(years => {
-        const stringYears = years.map(String).sort((a, b) => parseInt(a) - parseInt(b));
-        setAvailableYears(stringYears);
-        if (stringYears.length > 0) {
-          setSelectedYears(defaultYearSelection(stringYears));
-        } else {
-          setLoading(false);
-        }
-      })
-      .catch(err => {
-        console.error('Error fetching available years:', err);
-        setLoading(false);
-      });
-  }, []);
 
   // Fetch all data for available years
   useEffect(() => {
@@ -236,54 +215,14 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: Metr
     });
   }, [sortedSel, activeYears, selectedMonths, RAW]);
 
-  const openCustomerSalesAnalysis = () => {
-    const salesGroups = sortedSel.filter(groupId => groupId !== 'General');
-    navigate(buildCustomerTrendsPath({
-      years: activeYears,
-      months: selectedMonths,
-      groups: salesGroups,
-      metric,
-    }));
-  };
-  const openCustomerMatrix = () => {
-    const params = new URLSearchParams();
-    const selectedMonthIds = [...selectedMonths].sort((a, b) => Number(a) - Number(b));
-    const isAllMonths = selectedMonthIds.length === MONTH_PARAM_IDS.length && MONTH_PARAM_IDS.every(monthId => selectedMonthIds.includes(monthId));
-    const isSummaryDefaultGroups = sortedSel.length === SUMMARY_DEFAULT_GROUP_IDS.length && SUMMARY_DEFAULT_GROUP_IDS.every((groupId, index) => sortedSel[index] === groupId);
-    const isAllGroups = sortedSel.length === ALL_GROUP_IDS.length && ALL_GROUP_IDS.every((groupId, index) => sortedSel[index] === groupId);
-
-    if (metric !== 'amount') params.set('metric', metric);
-    if (mode === 'monthly') params.set('view', 'monthly');
-    if (activeYears.length) params.set('years', activeYears.join(','));
-    if (!isAllMonths) params.set('months', selectedMonthIds.join(','));
-
-    if (sortedSel.length === 0) {
-      params.set('groups', 'none');
-    } else if (isSummaryDefaultGroups) {
-      params.set('src', 'summary');
-    } else if (isAllGroups) {
-      params.set('groups', 'all');
-    } else {
-      params.set('groups', sortedSel.join(','));
-    }
-
-    const query = params.toString().replaceAll('%2C', ',');
-    navigate(query ? `/dashboard/customer-report?${query}` : '/dashboard/customer-report');
-  };
-
   const switchMetric = (nextMetric: Metric) => {
     if (nextMetric === metric) return;
-    navigate(nextMetric === 'qty' ? '/dashboard/qty' : '/dashboard/customer');
+    navigate(`/dashboard/customer${nextMetric === 'qty' ? '?metric=qty' : ''}`);
   };
 
   const resetSummaryView = () => {
     setMode('yearly');
     setMonthlySeries('year');
-    setSelectedYears(defaultYearSelection(availableYears));
-    setSelectedMonths(MONTH_PARAM_IDS);
-    setSelGroups(SUMMARY_DEFAULT_GROUP_IDS);
-    setShowPeriodPopover(false);
-    setShowGroupPopover(false);
     setShowLabels(true);
   };
 
@@ -325,30 +264,6 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: Metr
     return { grandTotal: gTotal, grandYoy: gYoy, grandLatestYear: latestYear };
   }, [summaries, activeYears]);
 
-  const toggleGroup = (id: string) => {
-    setSelGroups(prev =>
-      prev.includes(id)
-        ? prev.length > 1 ? prev.filter(x => x !== id) : prev
-        : [...prev, id]
-    );
-  };
-
-  const toggleYear = (y: string) => {
-    setSelectedYears(prev =>
-      prev.includes(y)
-        ? prev.length > 1 ? prev.filter(v => v !== y) : prev
-        : [...prev, y]
-    );
-  };
-
-  const toggleMonth = (mStr: string) => {
-    setSelectedMonths(prev =>
-      prev.includes(mStr)
-        ? prev.length > 1 ? prev.filter(v => v !== mStr) : prev
-        : [...prev, mStr]
-    );
-  };
-
   const formatAxisValue = (value: number): string => {
     if (value >= 1000000) return (value / 1000000).toFixed(1) + 'M';
     if (value >= 1000) return (value / 1000).toFixed(1) + 'K';
@@ -357,31 +272,10 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: Metr
   };
 
   const summaryTitle = 'Sales Summary';
-  const summaryBreadcrumb = [
-    { label: 'JEWELRY FACTORY SYSTEM', path: '/' },
-    { label: 'Sales Analytics' },
-    { label: summaryTitle },
-  ];
 
 
 
-  const [showPeriodPopover, setShowPeriodPopover] = useState(false);
-  const [showGroupPopover, setShowGroupPopover] = useState(false);
-  const periodPopoverRef = useRef<HTMLDivElement>(null);
-  const groupPopoverRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (periodPopoverRef.current && !periodPopoverRef.current.contains(event.target as Node)) {
-        setShowPeriodPopover(false);
-      }
-      if (groupPopoverRef.current && !groupPopoverRef.current.contains(event.target as Node)) {
-        setShowGroupPopover(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
   const periodButtonLabel = useMemo(() => {
     const monthText = selectedMonths.length === 12 ? 'All Months' : `${selectedMonths.length} Mths`;
@@ -391,8 +285,7 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: Metr
   if (loading) {
     return (
       <>
-        <Topbar breadcrumb={summaryBreadcrumb} contentLayout="workspace" hideSearch />
-        <div className="app-page-scroll content-scrollbar">
+          <div className="app-page-scroll content-scrollbar">
           <div className="app-content-frame app-content-frame--workspace app-page-content sales-summary-page sales-summary-page--loading">
             {/* Header Skeleton */}
             <div className="sales-summary-header" style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -412,158 +305,27 @@ export default function CustomerDashboard({ metric = 'amount' }: { metric?: Metr
 
   return (
     <>
-      <Topbar 
-        breadcrumb={summaryBreadcrumb} 
-        contentLayout="workspace" 
-        hideSearch 
-        rightContent={
-          <div className="sales-gallery-topbar-tools flex min-w-0 flex-1 items-center justify-end gap-2 pr-2" style={{ overflowX: 'auto', paddingBottom: 2, scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}>
-            <button onClick={openCustomerSalesAnalysis} style={{
-                background: "var(--color-surface-0)", border: "1px solid var(--color-border-light)", borderRadius: 8, padding: "6px 12px",
-                fontSize: "0.85rem", fontWeight: 900, color: "var(--color-text-primary)", cursor: "pointer", display: "flex", alignItems: "center", gap: 6,
-                fontFamily: "var(--font-display)", boxShadow: "0 2px 4px color-mix(in srgb, var(--color-surface-900) 3%, transparent)"
-            }}><Users size={14} /> Trends</button>
-            <button onClick={openCustomerMatrix} style={{
-                background: "var(--color-surface-0)", border: "1px solid var(--color-border-light)", borderRadius: 8, padding: "6px 12px",
-                fontSize: "0.85rem", fontWeight: 900, color: "var(--color-text-primary)", cursor: "pointer", display: "flex", alignItems: "center", gap: 6,
-                fontFamily: "var(--font-display)", boxShadow: "0 2px 4px color-mix(in srgb, var(--color-surface-900) 3%, transparent)"
-            }}><Table2 size={14} /> Matrix</button>
-            <div style={{ width: 1, height: 24, background: 'var(--color-border-light)', margin: '0 4px' }} />
 
-              {/* Period Dropdown Popover */}
-              <div style={{ position: 'relative' }} ref={periodPopoverRef}>
-                <button
-                  type="button"
-                  onClick={() => setShowPeriodPopover(!showPeriodPopover)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px',
-                    background: showPeriodPopover ? 'var(--color-surface-1)' : 'var(--color-surface-0)',
-                    border: '1px solid var(--color-border-light)', borderRadius: 6,
-                    fontSize: 'var(--erp-text-control)', fontWeight: 800, color: 'var(--color-text-primary)',
-                    cursor: 'pointer'
-                  }}
-                >
-                  <CalendarDays size={14} style={{ color: 'var(--color-brand-500)' }} />
-                  <span>Period: <strong>{periodButtonLabel}</strong></span>
-                  <ChevronDown size={14} style={{ color: 'var(--color-text-tertiary)' }} />
-                </button>
 
-                {showPeriodPopover && (
-                  <div className="sales-summary-popover" style={{ width: 320 }}>
-                    <div style={{ fontWeight: 900, fontSize: 'var(--erp-text-control)', marginBottom: 8, color: 'var(--color-text-primary)' }}>Target Years</div>
-                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
-                      {availableYears.map(y => {
-                        const on = selectedYears.includes(y);
-                        return (
-                          <button key={y} onClick={() => toggleYear(y)} style={{
-                            padding: '4px 10px', borderRadius: 6, fontSize: 'var(--erp-text-dense)', fontWeight: 800,
-                            border: `1px solid ${on ? 'var(--color-ui-interactive)' : 'var(--color-border-light)'}`,
-                            background: on ? 'var(--color-ui-selected)' : 'var(--color-ui-surface)',
-                            color: on ? 'var(--color-ui-interactive)' : 'var(--color-text-tertiary)',
-                            cursor: 'pointer'
-                          }}>{y}</button>
-                        );
-                      })}
-                    </div>
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                      <span style={{ fontWeight: 900, fontSize: 'var(--erp-text-control)', color: 'var(--color-text-primary)' }}>Months ({selectedMonths.length}/12)</span>
-                      <button
-                        onClick={() => setSelectedMonths(MONTHS.map((_, i) => String(i + 1)))}
-                        disabled={selectedMonths.length === 12}
-                        style={{ fontSize: 'var(--erp-text-meta)', fontWeight: 800, background: 'none', border: 'none', color: selectedMonths.length === 12 ? 'var(--color-text-quaternary)' : 'var(--color-ui-interactive)', cursor: selectedMonths.length === 12 ? 'not-allowed' : 'pointer' }}>
-                        Select All
-                      </button>
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 5 }}>
-                      {MONTHS.map((m, i) => {
-                        const mStr = String(i + 1);
-                        const on = selectedMonths.includes(mStr);
-                        return (
-                          <button key={m} onClick={() => toggleMonth(mStr)} style={{
-                            padding: '4px 0', fontSize: 'var(--erp-text-meta)', fontWeight: 800, borderRadius: 5,
-                            border: `1px solid ${on ? 'var(--color-ui-interactive)' : 'var(--color-border-light)'}`,
-                            background: on ? 'var(--color-ui-selected)' : 'var(--color-ui-surface)',
-                            color: on ? 'var(--color-ui-interactive)' : 'var(--color-text-tertiary)',
-                            cursor: 'pointer'
-                          }}>
-                            {m}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Customer Groups Dropdown Popover */}
-              <div style={{ position: 'relative' }} ref={groupPopoverRef}>
-                <button
-                  type="button"
-                  onClick={() => setShowGroupPopover(!showGroupPopover)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px',
-                    background: showGroupPopover ? 'var(--color-surface-1)' : 'var(--color-surface-0)',
-                    border: '1px solid var(--color-border-light)', borderRadius: 6,
-                    fontSize: 'var(--erp-text-control)', fontWeight: 800, color: 'var(--color-text-primary)',
-                    cursor: 'pointer'
-                  }}
-                >
-                  <Users size={14} style={{ color: 'var(--color-brand-500)' }} />
-                  <span>Groups: <strong>{selGroups.length}/{ALL_GROUPS.length} Selected</strong></span>
-                  <ChevronDown size={14} style={{ color: 'var(--color-text-tertiary)' }} />
-                </button>
-
-                {showGroupPopover && (
-                  <div className="sales-summary-popover" style={{ width: 280 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                      <span style={{ fontWeight: 900, fontSize: 'var(--erp-text-control)', color: 'var(--color-text-primary)' }}>Customer Groups</span>
-                      <button
-                        onClick={() => setSelGroups(ALL_GROUP_IDS)}
-                        disabled={selGroups.length === ALL_GROUPS.length}
-                        style={{ fontSize: 'var(--erp-text-meta)', fontWeight: 800, background: 'none', border: 'none', color: selGroups.length === ALL_GROUPS.length ? 'var(--color-text-quaternary)' : 'var(--color-ui-interactive)', cursor: selGroups.length === ALL_GROUPS.length ? 'not-allowed' : 'pointer' }}>
-                        Select All
-                      </button>
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                      {ALL_GROUPS.map(g => {
-                        const on = selGroups.includes(g.id);
-                        return (
-                          <button key={g.id} onClick={() => toggleGroup(g.id)} style={{
-                            display: 'flex', alignItems: 'center', gap: 8,
-                            padding: '6px 10px', borderRadius: 6, fontSize: 'var(--erp-text-control)', fontWeight: 800,
-                            border: `1px solid ${on ? 'var(--color-brand-500)' : 'var(--color-border-light)'}`,
-                            background: on ? 'var(--color-brand-50)' : 'var(--color-surface-1)',
-                            color: on ? 'var(--color-brand-600)' : 'var(--color-text-tertiary)',
-                            cursor: 'pointer', textAlign: 'left'
-                          }}>
-                            <span style={{ width: 8, height: 8, borderRadius: '50%', background: g.color }} />
-                            {g.label}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div style={{ width: 1, height: 24, background: 'var(--color-border-light)', margin: '0 4px' }} />
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)', borderRadius: 8, padding: 4 }}>
-                <ErpSegmentedControl ariaLabel="Metric" value={metric} onChange={(v) => switchMetric(v as Metric)} options={[ { value: 'amount', label: 'Sales' }, { value: 'qty', label: 'Qty' } ]} />
-                <div style={{ width: 1, height: 16, background: 'var(--color-border-light)' }} />
-                <ErpSegmentedControl ariaLabel="View" value={mode} onChange={(v) => setMode(v as 'yearly' | 'monthly')} options={[ { value: 'yearly', label: 'Year' }, { value: 'monthly', label: 'Month' } ]} />
-                <div style={{ width: 1, height: 16, background: 'var(--color-border-light)' }} />
-                <ErpSegmentedControl ariaLabel="Series" value={monthlySeries} onChange={(v) => setMonthlySeries(v as 'year' | 'group')} options={[ { value: 'year', label: 'By Year' }, { value: 'group', label: 'By Group' } ]} />
-                <div style={{ width: 1, height: 16, background: 'var(--color-border-light)' }} />
-                <ErpSegmentedControl ariaLabel="Labels" value={showLabels ? 'on' : 'off'} onChange={(v) => setShowLabels(v === 'on')} options={[ { value: 'on', label: 'Lbl ON' }, { value: 'off', label: 'Lbl OFF' } ]} />
-              </div>
-              <button onClick={resetSummaryView} style={{ background: "none", border: "none", padding: "6px", color: "var(--color-text-tertiary)", cursor: "pointer" }}><RefreshCw size={14} /></button>
+      <div className="content-scrollbar flex-1 overflow-y-auto" style={{ background: 'var(--color-surface-1)' }}>
+        <div className="app-content-frame app-content-frame--workspace app-page-content sales-summary-page" style={{ paddingTop: 16 }}>
+          
+          {/* Internal Dashboard Filter Bar */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', background: 'var(--color-surface-0)', borderBottom: '1px solid var(--color-border-light)', borderRadius: '8px 8px 0 0', marginBottom: 16 }}>
+            <h2 style={{ fontSize: 'var(--erp-text-section)', fontWeight: 900, color: 'var(--color-text-primary)', margin: 0 }}>
+              Sales Summary
+            </h2>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <ErpSegmentedControl ariaLabel="Metric" value={metric} onChange={(v) => switchMetric(v as Metric)} options={[ { value: 'amount', label: 'Sales' }, { value: 'qty', label: 'Qty' } ]} />
+              <div style={{ width: 1, height: 16, background: 'var(--color-border-light)' }} />
+              <ErpSegmentedControl ariaLabel="View" value={mode} onChange={(v) => setMode(v as 'yearly' | 'monthly')} options={[ { value: 'yearly', label: 'Year' }, { value: 'monthly', label: 'Month' } ]} />
+              <div style={{ width: 1, height: 16, background: 'var(--color-border-light)' }} />
+              <ErpSegmentedControl ariaLabel="Series" value={monthlySeries} onChange={(v) => setMonthlySeries(v as 'year' | 'group')} options={[ { value: 'year', label: 'By Year' }, { value: 'group', label: 'By Group' } ]} />
+              <div style={{ width: 1, height: 16, background: 'var(--color-border-light)' }} />
+              <ErpSegmentedControl ariaLabel="Labels" value={showLabels ? 'on' : 'off'} onChange={(v) => setShowLabels(v === 'on')} options={[ { value: 'on', label: 'Lbl ON' }, { value: 'off', label: 'Lbl OFF' } ]} />
+              <button onClick={resetSummaryView} style={{ background: "none", border: "none", padding: "6px", color: "var(--color-text-tertiary)", cursor: "pointer", marginLeft: 8 }}><RefreshCw size={14} /></button>
             </div>
-          }
-        />
-        <div className="content-scrollbar flex-1 overflow-y-auto" style={{ background: 'var(--color-surface-1)' }}>
-          <div className="app-content-frame app-content-frame--workspace app-page-content sales-summary-page" style={{ paddingTop: 16 }}>
-
+          </div>
           {/* Main Content Grid: Chart on Left, YoY Cards on Right */}
           <div className="sales-summary-main-grid">
 

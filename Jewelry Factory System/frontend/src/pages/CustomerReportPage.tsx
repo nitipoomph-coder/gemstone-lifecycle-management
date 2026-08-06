@@ -1,7 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Users, DollarSign } from 'lucide-react';
-import Topbar from '../components/layout/Topbar';
 import './SalesResponsive.css';
 import { fetchAvailableYearsMeta } from '../services/dashboardAPI';
 import { fetchCustomerSummary } from '../services/customerSummaryAPI';
@@ -390,43 +389,6 @@ export default function CustomerReportPage() {
 
   return (
     <>
-      <Topbar
-        breadcrumb={[
-          { label: 'JEWELRY FACTORY SYSTEM', path: '/' },
-          { label: 'Sales Analytics' },
-          { label: 'Sales Summary', path: '/dashboard/customer' },
-          { label: metric === 'qty' ? 'Quantity Matrix' : 'Sales Matrix' }
-        ]}
-        hideSearch
-        contentLayout="dashboard-wide"
-        bottomContent={(
-          <CustomerReportFilters
-            isFilterOpen={isFilterOpen}
-            setIsFilterOpen={setIsFilterOpen}
-            availableYears={availableYears}
-            baseYear={baseYear}
-            setBaseYear={setBaseYear}
-            compareYear={compareYear}
-            setCompareYear={setCompareYear}
-            compareYear2={compareYear2}
-            setCompareYear2={setCompareYear2}
-            compareYear3={compareYear3}
-            setCompareYear3={setCompareYear3}
-            activeYears={activeYears}
-            growthComparisons={growthComparisons}
-            setGrowthComparisons={setGrowthComparisons}
-            selMonths={selMonths}
-            setSelMonths={setSelMonths}
-            selGroups={selGroups}
-            toggleGroup={toggleGroup}
-            groupCustomers={groupCustomers}
-            selCustomers={selCustomers}
-            toggleCustomer={toggleCustomer}
-            toggleAllCustomers={toggleAllCustomers}
-          />
-        )}
-      />
-
       <div className="content-scrollbar flex-1 overflow-y-auto" style={{ background: 'var(--color-surface-1)' }}>
         <div className="app-content-frame app-content-frame--dashboard-wide sales-report-page">
           {(!loading && !isFiltering) && (

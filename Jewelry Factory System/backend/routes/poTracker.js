@@ -167,7 +167,7 @@ router.get('/', async (req, res) => {
       // 3) Status -> SP ทั้ง 5 ตัว (_OrdDate/_DueDate/_CustDueDate/_FinDate/_All) รับพารามิเตอร์ @Status แล้ว
       //    เงื่อนไขใน SP: (@Status = 'All' OR (@Status = 'pending' AND CloseStatus <> 'Y') OR (@Status = 'finish' AND CloseStatus = 'Y'))
       //    ⚠️ ต้อง apply สคริปต์ SP รุ่นใหม่ใน backend/sql/stored-procedures/ ลง DB ก่อน มิฉะนั้นตัวที่ยังไม่มี @Status จะ error "too many arguments"
-      request.input('Status', sql.VarChar, statusFilter);
+      // request.input('Status', sql.VarChar, statusFilter); // TEMPORARILY DISABLED to prevent 8144 error
 
       const result = await request.execute(spName);
 

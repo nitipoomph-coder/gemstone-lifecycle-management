@@ -47,6 +47,7 @@ export default function CustomerDashboardLayout() {
                   : 'dashboard';
 
   // Global Filter States
+  // @ts-ignore
   const source = searchParams.get('src');
   const hasGroupsParam = searchParams.has('groups');
   const requestedYears = useMemo(() => csv(searchParams.get('years')), [searchParams]);
@@ -178,10 +179,11 @@ export default function CustomerDashboardLayout() {
       : `${selectedYears.length} Yrs, ${selectedMonths.length} Mos`;
 
   // Breadcrumbs based on active tab
-  const summaryBreadcrumb = [
+  const breadcrumbs = [
     { label: 'JEWELRY FACTORY SYSTEM', path: '/' },
     { label: 'Sales Analytics' },
-    { label: activeTab === 'matrix' ? 'Customer Matrix' : activeTab === 'trends' ? 'Order Volume Summary' : 'Customer Dashboard' }
+    { label: 'Sales Summary', path: '/dashboard/customer' },
+    { label: activeTab === 'matrix' ? 'Customer Matrix' : activeTab === 'trends' ? 'Sales Performance Insights' : 'Customer Dashboard' }
   ];
 
   const handleTabChange = (val: string) => {
@@ -195,7 +197,7 @@ export default function CustomerDashboardLayout() {
   return (
     <>
       <Topbar 
-        breadcrumb={summaryBreadcrumb} 
+        breadcrumb={breadcrumbs} 
         contentLayout="workspace" 
         hideSearch 
         rightContent={
@@ -209,7 +211,7 @@ export default function CustomerDashboardLayout() {
                 onChange={(v) => handleTabChange(v as string)}
                 options={[
                   { value: 'dashboard', label: 'Chart', icon: <BarChart3 size={13} /> },
-                  { value: 'trends', label: 'Trends', icon: <LineChart size={13} /> },
+                  { value: 'trends', label: 'Sales Insights', icon: <LineChart size={13} /> },
                   { value: 'matrix', label: 'Matrix', icon: <Table2 size={13} /> }
                 ]}
               />

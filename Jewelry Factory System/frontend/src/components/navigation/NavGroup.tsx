@@ -56,7 +56,7 @@ export default function NavGroup({ group, isOpen, onToggle, collapsed = false, o
         (location.pathname === '/dashboard/customer-report' && new URLSearchParams(location.search).get('metric') !== 'qty')
       );
     }
-    if (itemPath === CUSTOMER_TRENDS_PATH || itemPath === LEGACY_CUSTOMER_TRENDS_PATH || itemPath === '/dashboard/customer-trends') {
+    if (itemPath === CUSTOMER_TRENDS_PATH || itemPath === LEGACY_CUSTOMER_TRENDS_PATH || itemPath === '/dashboard/customer/trends') {
       return (
         location.pathname === CUSTOMER_TRENDS_PATH ||
         location.pathname === LEGACY_CUSTOMER_TRENDS_PATH ||

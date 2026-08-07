@@ -281,3 +281,25 @@ Removed all global floating-field rules from `src/index.css` and kept one scoped
 
 ### Verification:
 Browser state checks covered empty blur, Username focus, Username filled blur, and Password focus. Empty labels center within the 57px input, floated label centers align with the top outline, legend gaps are exactly 10px wider than their labels, and both fields use identical relative positions. `npm run lint` and `npm run build` pass.
+
+## Issue: Matrix Table Ignored Global Toolbar Filters
+**Date:** 2026-08-07
+**Component:** \CustomerReportPage.tsx\ and \CustomerDashboardLayout.tsx\
+
+### Symptoms:
+The user selected specific filter values (e.g., Months: Jan, Feb) in the global toolbar popover, but the Customer Matrix table still rendered columns for unselected months (Jun, Jul, Aug, Sep).
+
+### Root Cause:
+The \CustomerReportPage.tsx\ component originally had its own local sidebar filter component (\CustomerReportFilters.tsx\). When the local sidebar was removed to comply with UI design rules (Toolbar + Popover + Chips), the local states (\selMonths\, \selGroups\, \aseYear\) in \CustomerReportPage.tsx\ were left initializing from \searchParams\ only once on mount. They were never wired up to the \useOutletContext\ provided by the new \CustomerDashboardLayout.tsx\ which managed the global toolbar state.
+
+### Fix:
+1. Removed all unused local state definitions from \CustomerReportPage.tsx\.
+2. Imported \useOutletContext\ and mapped the global \selectedYears\, \selectedMonths\, and \selGroups\ directly to the active variables used by the Matrix table.
+3. Cleaned up remaining unused imports across the frontend project to ensure \
+pm run build\ completed successfully.
+
+### Prevention & Lessons Learned:
+1. **Context Mapping After UI Refactors:** When moving local component filters to a global layout toolbar, always ensure child Outlets are updated to consume the new \useOutletContext\ instead of relying on stale local state or one-time URL parsing.
+2. **Comprehensive Build Checks:** Always run \
+pm run build\ in addition to \	sc --noEmit\ to catch unused imports and variables across the entire project after deleting files.
+

@@ -5,10 +5,12 @@ This file owns dashboard and report-screen context that used to live inside `cla
 
 Covered surfaces:
 - Main production dashboard: `Dashboard.tsx`, `/`
-- Sales/quantity summary dashboard: `CustomerDashboard.tsx`, `/dashboard/customer`, `/dashboard/qty`
-- Matrix report: `CustomerReportPage.tsx`, `/dashboard/customer-report`
+- Sales/customer dashboard layout: `CustomerDashboardLayout.tsx`, `/dashboard/customer` (with nested routes)
+  - Sales summary: `CustomerDashboard.tsx`, `/dashboard/customer` (index)
+  - Customer matrix: `CustomerReportPage.tsx`, `/dashboard/customer/matrix`
+  - Customer trends: `OrderVolumeSummaryPage.tsx`, `/dashboard/customer/trends`
 - Top item gallery: `TopOrdersGalleryPage.tsx`, `/dashboard/top-orders`
-- Sales dashboard route: `SalesDashboard.tsx`, `/dashboard/sales`
+- Sales dashboard (legacy redirect): `/dashboard/sales` -> `/dashboard/customer`
 
 Sales menu naming and breadcrumb rules live in `sales-menu.md`.
 
@@ -39,9 +41,13 @@ Do not include old inactive prefixes in dashboard totals unless the user explici
 ## CustomerDashboard.tsx, Sales Summary and Quantity Summary
 `CustomerDashboard.tsx` is the chart-first summary surface for customer performance.
 
-Routes:
-- `/dashboard/customer`: `Sales Summary`
-- `/dashboard/qty`: `Quantity Summary`
+Routes (nested under `CustomerDashboardLayout`):
+- `/dashboard/customer`: `Sales Summary` (index route, amount metric by default)
+- Metric is controlled by `?metric=qty` query parameter
+- `/dashboard/customer/matrix`: `Customer Matrix`
+- `/dashboard/customer/trends`: `Order Volume Summary`
+
+Legacy redirect: `/dashboard/qty` -> `/dashboard/customer?metric=qty`
 
 Behavior:
 - Uses one component with a `metric` prop: `amount` or `qty`
@@ -59,9 +65,11 @@ UI expectations:
 ## CustomerReportPage.tsx, Matrix Report
 `CustomerReportPage.tsx` is the full-screen dense matrix report for customer-by-month/year analysis.
 
-Routes:
-- Sales matrix: `/dashboard/customer-report?metric=amount`
-- Quantity matrix: `/dashboard/customer-report?metric=qty`
+Routes (nested under `CustomerDashboardLayout`):
+- Sales matrix: `/dashboard/customer/matrix?metric=amount`
+- Quantity matrix: `/dashboard/customer/matrix?metric=qty`
+
+Legacy redirect: `/dashboard/customer-report` -> `/dashboard/customer/matrix`
 
 View modes:
 - `YTD`: year blocks with months and year total

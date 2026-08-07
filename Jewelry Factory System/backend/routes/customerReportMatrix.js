@@ -62,44 +62,36 @@ router.get('/customer-summary', async (req, res) => {
       return '(' + conditions.join(' OR ') + ')';
     }
 
-    const sargableDateCondition = buildDateRangeCondition('h.OrdDate', years, months);
-    const sargableTopItemDateCondition = buildDateRangeCondition('oh.OrdDate', years, months);
+    const sargableDateCondition = buildDateRangeCondition('OrdDate', years, months);
+    const sargableTopItemDateCondition = buildDateRangeCondition('OrdDate', years, months);
 
     const query = `
       SELECT
-        h.CustCode AS id,
-        ISNULL(MAX(c.CustName), h.CustCode) AS name,
-        MAX(c.CustStatus) AS custStatus,
-        MAX(c.SalesName) AS salesName,
-        YEAR(h.OrdDate) AS yr,
-        MONTH(h.OrdDate) AS mth,
-        SUM(ISNULL(h.SumOrdExchAmnt, 0)) AS totalSales,
-        SUM(ISNULL(h.SumOrdQty, 0)) AS totalQty
-      FROM OrdHD h
-      LEFT JOIN GMCust c ON h.CustCode = c.CustCode
+        CustCode AS id,
+        MAX(CustName) AS name,
+        MAX(CustStatus) AS custStatus,
+        MAX(SalesName) AS salesName,
+        OrdYear AS yr,
+        OrdMonth AS mth,
+        SUM(ItemAmnt) AS totalSales,
+        SUM(ItemQty) AS totalQty
+      FROM VW_Web_SalesDashboard
       WHERE ${sargableDateCondition}
-        AND SUBSTRING(h.OrdNo, 1, 3) IN ('BBC','BBS','BBE','BBL','BBR','BBT','BBP')
-          AND ISNULL(h.PONo, '') NOT IN ('','TOP','Test','Testing','Stock','STOCK')
-        AND c.CustStatus = 'Y'
-      GROUP BY h.CustCode, YEAR(h.OrdDate), MONTH(h.OrdDate)
+        AND ISNULL(CustStatus, 'Y') = 'Y'
+      GROUP BY CustCode, OrdYear, OrdMonth
     `;
     const result = await request.query(query);
 
     const topItemQuery = `
       WITH ItemTotals AS (
         SELECT
-          oh.CustCode,
-          od.ItemNo,
-          SUM(ISNULL(od.ItemQty, 0)) as totalQty
-        FROM OrdHD oh
-        JOIN OrdDT od ON oh.OrdNo = od.OrdNo
-        LEFT JOIN GMCust c ON c.CustCode = oh.CustCode
+          CustCode,
+          ItemNo,
+          SUM(ItemQty) as totalQty
+        FROM VW_Web_SalesDashboard
         WHERE ${sargableTopItemDateCondition}
-          AND SUBSTRING(oh.OrdNo, 1, 3) IN ('BBC','BBS','BBE','BBL','BBR','BBT','BBP')
-            AND ISNULL(oh.PONo, '') NOT IN ('','TOP','Test','Testing','Stock','STOCK')
-          AND (oh.PONo IS NULL OR UPPER(oh.PONo) NOT LIKE '%SAMPLE%')
-          AND ISNULL(c.CustStatus, 'Y') = 'Y'
-        GROUP BY oh.CustCode, od.ItemNo
+          AND ISNULL(CustStatus, 'Y') = 'Y'
+        GROUP BY CustCode, ItemNo
       ),
       RankedItems AS (
         SELECT
@@ -118,19 +110,14 @@ router.get('/customer-summary', async (req, res) => {
     const topItemByYearQuery = `
       WITH ItemTotals AS (
         SELECT
-          oh.CustCode,
-          YEAR(oh.OrdDate) AS yr,
-          od.ItemNo,
-          SUM(ISNULL(od.ItemQty, 0)) as totalQty
-        FROM OrdHD oh
-        JOIN OrdDT od ON oh.OrdNo = od.OrdNo
-        LEFT JOIN GMCust c ON c.CustCode = oh.CustCode
+          CustCode,
+          OrdYear AS yr,
+          ItemNo,
+          SUM(ItemQty) as totalQty
+        FROM VW_Web_SalesDashboard
         WHERE ${sargableTopItemDateCondition}
-          AND SUBSTRING(oh.OrdNo, 1, 3) IN ('BBC','BBS','BBE','BBL','BBR','BBT','BBP')
-            AND ISNULL(oh.PONo, '') NOT IN ('','TOP','Test','Testing','Stock','STOCK')
-          AND (oh.PONo IS NULL OR UPPER(oh.PONo) NOT LIKE '%SAMPLE%')
-          AND ISNULL(c.CustStatus, 'Y') = 'Y'
-        GROUP BY oh.CustCode, YEAR(oh.OrdDate), od.ItemNo
+          AND ISNULL(CustStatus, 'Y') = 'Y'
+        GROUP BY CustCode, OrdYear, ItemNo
       ),
       RankedItems AS (
         SELECT
@@ -150,40 +137,15 @@ router.get('/customer-summary', async (req, res) => {
     const topItemByYearTypeQuery = `
       WITH ItemTotals AS (
         SELECT
-          oh.CustCode,
-          YEAR(oh.OrdDate) AS yr,
-          CASE
-            WHEN UPPER(LEFT(ISNULL(od.ItemNo, ''), 3)) IN ('BBS','BES','BNS','BRS') THEN UPPER(LEFT(ISNULL(od.ItemNo, ''), 3))
-            WHEN UPPER(ISNULL(od.ItemType, '')) IN ('BBS','BES','BNS','BRS') THEN UPPER(od.ItemType)
-            WHEN UPPER(LEFT(ISNULL(od.ItemType, ''), 1)) IN ('B', 'T') THEN 'BBS'
-            WHEN UPPER(LEFT(ISNULL(od.ItemType, ''), 1)) = 'E' THEN 'BES'
-            WHEN UPPER(LEFT(ISNULL(od.ItemType, ''), 1)) = 'N' THEN 'BNS'
-            WHEN UPPER(LEFT(ISNULL(od.ItemType, ''), 1)) = 'R' THEN 'BRS'
-            ELSE 'Others'
-          END AS productType,
-          od.ItemNo,
-          SUM(ISNULL(od.ItemQty, 0)) as totalQty
-        FROM OrdHD oh
-        JOIN OrdDT od ON oh.OrdNo = od.OrdNo
-        LEFT JOIN GMCust c ON c.CustCode = oh.CustCode
+          CustCode,
+          OrdYear AS yr,
+          ProductType AS productType,
+          ItemNo,
+          SUM(ItemQty) as totalQty
+        FROM VW_Web_SalesDashboard
         WHERE ${sargableTopItemDateCondition}
-          AND SUBSTRING(oh.OrdNo, 1, 3) IN ('BBC','BBS','BBE','BBL','BBR','BBT','BBP')
-            AND ISNULL(oh.PONo, '') NOT IN ('','TOP','Test','Testing','Stock','STOCK')
-          AND (oh.PONo IS NULL OR UPPER(oh.PONo) NOT LIKE '%SAMPLE%')
-          AND ISNULL(c.CustStatus, 'Y') = 'Y'
-        GROUP BY
-          oh.CustCode,
-          YEAR(oh.OrdDate),
-          CASE
-            WHEN UPPER(LEFT(ISNULL(od.ItemNo, ''), 3)) IN ('BBS','BES','BNS','BRS') THEN UPPER(LEFT(ISNULL(od.ItemNo, ''), 3))
-            WHEN UPPER(ISNULL(od.ItemType, '')) IN ('BBS','BES','BNS','BRS') THEN UPPER(od.ItemType)
-            WHEN UPPER(LEFT(ISNULL(od.ItemType, ''), 1)) IN ('B', 'T') THEN 'BBS'
-            WHEN UPPER(LEFT(ISNULL(od.ItemType, ''), 1)) = 'E' THEN 'BES'
-            WHEN UPPER(LEFT(ISNULL(od.ItemType, ''), 1)) = 'N' THEN 'BNS'
-            WHEN UPPER(LEFT(ISNULL(od.ItemType, ''), 1)) = 'R' THEN 'BRS'
-            ELSE 'Others'
-          END,
-          od.ItemNo
+          AND ISNULL(CustStatus, 'Y') = 'Y'
+        GROUP BY CustCode, OrdYear, ProductType, ItemNo
       ),
       RankedItems AS (
         SELECT
@@ -243,7 +205,6 @@ router.get('/customer-summary', async (req, res) => {
           data: {},
           monthly: {},
           dataQty: {},
-          monthlyQty: {},
           monthlyQty: {},
           currentMonthSales: 0,
           topItem: topItemMap[row.id]?.topItem || null,

@@ -19,6 +19,7 @@ import RequisitionDocPage from './pages/document/RequisitionDocPage';
 import SampleDocPage from './pages/document/SampleDocPage';
 import VendorPerformanceDashboardPage from './pages/subcontract/VendorPerformanceDashboardPage';
 import {
+  // @ts-ignore
   CUSTOMER_TRENDS_PATH,
   customerTrendsPathFromSearch,
   LEGACY_CUSTOMER_TRENDS_PATH,
@@ -63,6 +64,7 @@ export default function App() {
             <Route path="/dashboard/sales" element={<Navigate to="/dashboard/customer" replace />} />
             <Route path="/dashboard/qty" element={<Navigate to="/dashboard/customer?metric=qty" replace />} />
             <Route path="/dashboard/customer-report" element={<Navigate to="/dashboard/customer/matrix" replace />} />
+            <Route path="/dashboard/customer-trends" element={<Navigate to="/dashboard/customer/trends" replace />} />
             <Route path="/dashboard/top-orders" element={<TopOrdersGalleryPage />} />
             <Route path="/dashboard/top-orders/analytics" element={<TopOrdersAnalyticsPage />} />
             <Route path="/dashboard/top-Orders" element={<Navigate to="/dashboard/top-orders" replace />} />

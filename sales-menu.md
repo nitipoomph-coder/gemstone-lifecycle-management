@@ -9,12 +9,11 @@ Dashboard/report behavior lives in `dashboard.md`.
 Sales Analytics sidebar must stay flat. Do not add a nested `Summary` sub-parent under `Sales Analytics`.
 
 Current `Sales Analytics` sidebar items:
-- `Sales & Qty Summary` -> `/dashboard/customer`
+- `Sales Summary` -> `/dashboard/customer`
 - `Top Item Gallery` -> `/dashboard/top-orders`
-- `Sales Dashboard` -> `/dashboard/sales`
+- `Customer Trends` -> `/dashboard/customer/trends`
 
-
-Customer Trends is not a sidebar item. It is opened from `Sales & Qty Summary`, and the sidebar should keep `Sales & Qty Summary` active while users are on Customer Trends or its Order List detail.
+Customer Trends is now a sidebar item under Sales Analytics. The sidebar keeps `Customer Trends` active while users are on Customer Trends or its Order List detail (`/dashboard/sales-customer-detail`).
 Direct/detail Sales routes may exist without being sidebar items. Do not add them to the sidebar unless the user explicitly asks.
 
 Avoid this confusing hierarchy:
@@ -63,18 +62,24 @@ Required breadcrumb paths:
 Known follow-up: if a page currently shows a shorter breadcrumb such as `JEWELRY FACTORY SYSTEM > Top Items Gallery`, align it to this standard the next time that page is touched.
 
 ## Route Map
-Sales Analytics routes:
-- `/dashboard/customer`: `Sales & Qty Summary`, default amount metric
-- `/dashboard/qty`: `Sales & Qty Summary`, quantity metric variant
-- `/dashboard/customer-report`: `Sales Matrix` or `Quantity Matrix`, depending on `metric`
+Sales Analytics routes (nested under `CustomerDashboardLayout` at `/dashboard/customer`):
+- `/dashboard/customer`: `Sales Summary`, default amount metric (index route)
+- `/dashboard/customer/matrix`: `Customer Matrix` (nested route)
+- `/dashboard/customer/trends`: `Customer Trends` / `Order Volume Summary` (nested route)
+
+Standalone Sales Analytics routes:
 - `/dashboard/top-orders`: `Top Item Gallery`
 - `/dashboard/top-orders/analytics`: `Top Items Qty`
-- `/dashboard/sales`: `Sales Dashboard`
-- `/dashboard/sales-customer-groups`: `Customer Trends`
-- `/dashboard/sales-customer-detail`: `Order List`
+- `/dashboard/sales-customer-detail`: `Order List` (Customer Trends detail)
 
-Legacy/alias routes:
+Legacy/alias routes (redirect):
+- `/dashboard/sales` -> redirect to `/dashboard/customer`
+- `/dashboard/qty` -> redirect to `/dashboard/customer?metric=qty`
+- `/dashboard/customer-report` -> redirect to `/dashboard/customer/matrix`
+- `/dashboard/customer-trends` -> redirect to `/dashboard/customer/trends`
+- `/dashboard/sales-customer-groups` -> redirect to `/dashboard/customer/trends` (via `LegacyCustomerTrendsRedirect`)
 - `/dashboard/top-Orders` -> redirect to `/dashboard/top-orders`
+- `/dashboard/top-order-lines` -> redirect to `/dashboard/top-orders`
 - `/dashboard/Top-Order Lines` -> redirect to `/dashboard/top-orders`
 
 ## Summary To Matrix Flow
@@ -109,7 +114,7 @@ Do not move Matrix state to `sessionStorage` only unless shareable/report URLs a
 `Customer Trends` is the Sales-side customer movement and order evidence page.
 
 Current files:
-- `SalesCustomerGroupAnalytics.tsx`: route `/dashboard/sales-customer-groups`
+- `OrderVolumeSummaryPage.tsx`: nested route `/dashboard/customer/trends` (rendered inside `CustomerDashboardLayout`)
 - `SalesCustomerGroupDetail.tsx`: route `/dashboard/sales-customer-detail`
 
 Purpose:

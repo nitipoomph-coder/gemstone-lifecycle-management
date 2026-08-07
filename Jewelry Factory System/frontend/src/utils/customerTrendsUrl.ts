@@ -1,4 +1,4 @@
-export const CUSTOMER_TRENDS_PATH = '/dashboard/customer-trends';
+export const CUSTOMER_TRENDS_PATH = '/dashboard/customer/trends';
 export const LEGACY_CUSTOMER_TRENDS_PATH = '/dashboard/sales-customer-groups';
 
 const ALL_MONTHS = Array.from({ length: 12 }, (_, index) => String(index + 1));

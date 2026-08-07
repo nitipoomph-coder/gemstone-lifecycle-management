@@ -1,17 +1,17 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { Users, DollarSign } from 'lucide-react';
+import { useSearchParams, useOutletContext } from 'react-router-dom';
+import { DollarSign, TrendingUp, TrendingDown } from 'lucide-react';
 import './SalesResponsive.css';
 import { fetchAvailableYearsMeta } from '../services/dashboardAPI';
 import { fetchCustomerSummary } from '../services/customerSummaryAPI';
 import { ALL_GROUPS, getCustomerGroupId } from '../config/customerGroups';
 
 import CustomerReportTable from '../components/report/CustomerReportTable';
-import CustomerReportFilters from '../components/report/CustomerReportFilters';
 import { useTheme } from '../contexts/useTheme';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const ALL_GROUP_IDS = ALL_GROUPS.map(group => group.id);
+// @ts-ignore
 const SUMMARY_DEFAULT_GROUP_IDS = ALL_GROUP_IDS.slice(0, 4);
 
 interface CustomerSummaryRecord {
@@ -36,6 +36,7 @@ function csv(value: string | null) {
     .filter(Boolean);
 }
 
+// @ts-ignore
 function parseMonths(value: string | null) {
   const months = csv(value)
     .map(item => {
@@ -47,6 +48,7 @@ function parseMonths(value: string | null) {
   return Array.from(new Set(months));
 }
 
+// @ts-ignore
 function parseGroups(value: string | null) {
   const normalized = String(value || '').trim().toLowerCase();
   if (!normalized) return [];
@@ -60,13 +62,28 @@ function parseGroups(value: string | null) {
 export default function CustomerReportPage() {
   const { theme } = useTheme();
   const [searchParams] = useSearchParams();
+  const { selectedYears, selectedMonths, selGroups,  } = useOutletContext<any>();
+
+  // Map Context
+  const activeYears = selectedYears;
+  const baseYear = selectedYears[0] || '';
+  const selMonths = useMemo(() => {
+    return selectedMonths.map((mIdx: string) => MONTHS[Number(mIdx) - 1]);
+  }, [selectedMonths]);
+
   const metric = searchParams.get('metric') || 'amount';
+// @ts-ignore
   const source = searchParams.get('src');
-  const hasGroupsParam = searchParams.has('groups');
-  const requestedYears = useMemo(() => csv(searchParams.get('years')), [searchParams]);
-  const requestedMonths = useMemo(() => parseMonths(searchParams.get('months')), [searchParams]);
-  const requestedGroups = useMemo(() => parseGroups(searchParams.get('groups')), [searchParams]);
-  const defaultGroups = source === 'summary' ? SUMMARY_DEFAULT_GROUP_IDS : ALL_GROUP_IDS;
+//   const hasGroupsParam = searchParams.has('groups');
+// @ts-ignore
+//   const requestedYears = useMemo(() => csv(searchParams.get('years')), [searchParams]);
+// @ts-ignore
+//   const requestedMonths = useMemo(() => parseMonths(searchParams.get('months')), [searchParams]);
+// @ts-ignore
+//   const requestedGroups = useMemo(() => parseGroups(searchParams.get('groups')), [searchParams]);
+// @ts-ignore
+//   const defaultGroups = source === 'summary' ? SUMMARY_DEFAULT_GROUP_IDS : ALL_GROUP_IDS;
+// @ts-ignore
   const requestedCustomers = useMemo(() => csv(searchParams.get('customers')).map(customer => customer.toUpperCase()), [searchParams]);
   const requestedViewMode = searchParams.get('view') === 'monthly' ? 'monthly' : 'ytd';
 
@@ -77,20 +94,13 @@ export default function CustomerReportPage() {
   const fmtCurr = fmt;
 
   const [custData, setCustData] = useState<CustomerSummaryRecord[]>([]);
-  const [availableYears, setAvailableYears] = useState<string[]>([]);
   const [firstDataYear, setFirstDataYear] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [isFiltering, setIsFiltering] = useState(false);
-  const [isFilterOpen, setIsFilterOpen] = useState(true);
+  
 
   const [viewMode, setViewMode] = useState<'ytd' | 'monthly'>(requestedViewMode);
-  const [baseYear, setBaseYear] = useState<string>('');
-  const [compareYear, setCompareYear] = useState<string>('none');
-  const [compareYear2, setCompareYear2] = useState<string>('none');
-  const [compareYear3, setCompareYear3] = useState<string>('none');
-  const [selGroups, setSelGroups] = useState<string[]>(() => hasGroupsParam ? requestedGroups : defaultGroups);
-  const [selCustomers, setSelCustomers] = useState<string[]>(() => requestedCustomers);
-  const [selMonths, setSelMonths] = useState<string[]>(() => requestedMonths.length ? requestedMonths : MONTHS);
+  const [selCustomers] = useState<string[]>(() => requestedCustomers);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
   const [growthComparisons, setGrowthComparisons] = useState<{ a: string; b: string }[]>([]);
@@ -99,6 +109,19 @@ export default function CustomerReportPage() {
     setSortOrder('desc');
     setViewMode('ytd');
   }, []);
+
+  const [growthStickyComp, setGrowthStickyComp] = useState<{ a: string; b: string }>({ a: '', b: '' });
+
+  useEffect(() => {
+    setGrowthStickyComp(prev => {
+      if (activeYears.length < 2) return (prev.a === '' && prev.b === '') ? prev : { a: '', b: '' };
+      const a = activeYears.includes(prev.a) ? prev.a : activeYears[0];
+      let b = activeYears.includes(prev.b) ? prev.b : activeYears[activeYears.length - 1];
+      if (a === b) b = activeYears.find(y => y !== a) || b;
+      if (prev.a === a && prev.b === b) return prev;
+      return { a, b };
+    });
+  }, [activeYears]);
 
   const renderGrowthAmt = useCallback((baseVal: number, compVal: number) => {
     if (compVal === 0 && baseVal === 0) return {
@@ -164,14 +187,6 @@ export default function CustomerReportPage() {
   const currentMonthIdx = currentDate.getMonth();
   const displayMonths = useMemo(() => MONTHS.filter(m => selMonths.includes(m)), [selMonths]);
 
-  const activeYears = useMemo(() => {
-    const yrs = [baseYear];
-    if (compareYear !== 'none') yrs.push(compareYear);
-    if (compareYear2 !== 'none') yrs.push(compareYear2);
-    if (compareYear3 !== 'none') yrs.push(compareYear3);
-    return Array.from(new Set(yrs.filter(Boolean)));
-  }, [baseYear, compareYear, compareYear2, compareYear3]);
-
   const dataYears = useMemo(() => {
     const startYear = Number(firstDataYear);
     const maxYear = Math.max(...activeYears.map(Number).filter(Boolean));
@@ -183,27 +198,12 @@ export default function CustomerReportPage() {
 
   useEffect(() => {
     fetchAvailableYearsMeta()
-      .then(({ years, firstDataYear }) => {
-        const sortedYrs = years.map(String).sort((a, b) => Number(a) - Number(b));
+      .then(({ firstDataYear }) => {
         setFirstDataYear(firstDataYear);
-        setAvailableYears(sortedYrs);
-        if (sortedYrs.length > 0) {
-          const requested = requestedYears
-            .filter(year => sortedYrs.includes(year))
-            .sort((a, b) => Number(b) - Number(a));
-          const latest = requested[0] || sortedYrs[sortedYrs.length - 1];
-          const prev = requested[1] || (sortedYrs.length > 1 ? sortedYrs[sortedYrs.length - 2] : 'none');
-          const third = requested[2] || 'none';
-          const fourth = requested[3] || 'none';
-
-          setBaseYear(latest);
-          setCompareYear(prev !== latest ? prev : 'none');
-          setCompareYear2(third !== latest && third !== prev ? third : 'none');
-          setCompareYear3(fourth !== latest && fourth !== prev && fourth !== third ? fourth : 'none');
-        }
       })
+// @ts-ignore
       .catch(err => console.error('Error fetching available years:', err));
-  }, [requestedYears]);
+  }, []);
 
   useEffect(() => {
     if (dataYears.length === 0) return;
@@ -229,7 +229,7 @@ export default function CustomerReportPage() {
       window.clearTimeout(startTimer);
       window.clearTimeout(stopTimer);
     };
-  }, [baseYear, compareYear, compareYear2, compareYear3, selGroups, selCustomers, selMonths, searchQuery, sortOrder, growthComparisons, loading]);
+  }, [selGroups, selCustomers, selMonths, searchQuery, sortOrder, growthComparisons, loading]);
 
   const groupCustomers = useMemo(() => {
     return custData
@@ -239,59 +239,6 @@ export default function CustomerReportPage() {
   }, [custData, selGroups]);
 
   const activeCustomers = selCustomers.length > 0 ? selCustomers.filter(id => id !== '__NONE__') : groupCustomers;
-
-  const toggleGroup = (gId: string) => {
-    setSelGroups(prevGroups => {
-      const isAdding = !prevGroups.includes(gId);
-      const newGroups = isAdding ? [...prevGroups, gId] : prevGroups.filter(g => g !== gId);
-
-      setSelCustomers(prevCusts => {
-        if (prevCusts.length === 0) return [];
-
-        if (isAdding) {
-          const newGroupCusts = custData
-            .filter(c => getCustomerGroupId(c.id || '') === gId)
-            .map(c => c.id as string);
-
-          let newSel = [...prevCusts.filter(id => id !== '__NONE__'), ...newGroupCusts];
-          newSel = Array.from(new Set(newSel));
-
-          const allNewGroupCusts = custData
-            .filter(c => newGroups.includes(getCustomerGroupId(c.id || '')))
-            .map(c => c.id as string);
-
-          if (newSel.length >= allNewGroupCusts.length) return [];
-          return newSel;
-        }
-
-        const removedGroupCusts = new Set(
-          custData
-            .filter(c => getCustomerGroupId(c.id || '') === gId)
-            .map(c => c.id as string)
-        );
-        const newSel = prevCusts.filter(id => !removedGroupCusts.has(id) && id !== '__NONE__');
-        if (newSel.length === 0 && prevCusts.length > 0) return ['__NONE__'];
-        return newSel;
-      });
-
-      return newGroups;
-    });
-  };
-
-  const toggleCustomer = (cId: string) => {
-    setSelCustomers(prev => {
-      let newSel = prev.length === 0 ? groupCustomers.filter(id => id !== cId) : (prev.includes(cId) ? prev.filter(id => id !== cId) : [...prev, cId]);
-      newSel = newSel.filter(id => id !== '__NONE__');
-      if (newSel.length === 0) return ['__NONE__'];
-      if (newSel.length === groupCustomers.length) return [];
-      return newSel;
-    });
-  };
-
-  const toggleAllCustomers = () => {
-    setSelCustomers(prev => prev.length === 0 ? ['__NONE__'] : []);
-  };
-
   useEffect(() => {
     const syncTimer = window.setTimeout(() => {
       setGrowthComparisons(prev => {
@@ -304,6 +251,7 @@ export default function CustomerReportPage() {
             const normalizedA = activeYears.includes(comp.a) ? comp.a : activeYears[0];
             const normalizedB = activeYears.includes(comp.b) ? comp.b : (activeYears[index + 1] || activeYears[1]);
             const nextB = normalizedA === normalizedB
+// @ts-ignore
               ? (activeYears.find(year => year !== normalizedA) || normalizedB)
               : normalizedB;
             return { a: normalizedA, b: nextB };
@@ -332,19 +280,22 @@ export default function CustomerReportPage() {
       if (!activeCustomers.includes(cust.id)) return;
 
       const row: CustomerReportMatrixRow = { id: cust.id, label: cust.id, topItem: cust.topItem, topItemQty: Number(cust.topItemQty || 0) };
+// @ts-ignore
       const source = metric === 'qty' ? cust.monthlyQty : cust.monthly;
+// @ts-ignore
       const allYearsInSource = source ? Object.keys(source).map(Number) : [];
-
-      activeYears.forEach(yr => {
+      activeYears.forEach((yr: any) => {
         let yrTotal = 0;
         const numYr = Number(yr);
         let sumBeforeYr = 0;
         allYearsInSource.forEach(y => {
+// @ts-ignore
           if (y < numYr) Object.values(source?.[String(y)] || {}).forEach(v => { sumBeforeYr += Number(v) || 0; });
         });
         row[`isTrulyNew_${yr}`] = sumBeforeYr === 0;
         displayMonths.forEach(m => {
           const idx = MONTHS.indexOf(m);
+// @ts-ignore
           const val = source?.[yr]?.[String(idx + 1)] || 0;
           row[`${yr}_${m}`] = val;
           yrTotal += Number(val) || 0;
@@ -366,12 +317,12 @@ export default function CustomerReportPage() {
     });
 
     const colTotals: Record<string, number> = {};
-    activeYears.forEach(yr => {
+    activeYears.forEach((yr: any) => {
       colTotals[`${yr}_total`] = 0;
       displayMonths.forEach(m => { colTotals[`${yr}_${m}`] = 0; });
     });
     rows.forEach(r => {
-      activeYears.forEach(yr => {
+      activeYears.forEach((yr: any) => {
         colTotals[`${yr}_total`] += Number(r[`${yr}_total`] || 0);
         displayMonths.forEach(m => { colTotals[`${yr}_${m}`] += Number(r[`${yr}_${m}`] || 0); });
       });
@@ -386,6 +337,29 @@ export default function CustomerReportPage() {
     const pct = cTotal > 0 ? ((bTotal - cTotal) / cTotal) * 100 : null;
     return { bTotal, cTotal, pct, count: tableData.rows.length };
   }, [tableData, activeYears]);
+
+  const groupKpis = useMemo(() => {
+    if (tableData.rows.length <= 1 && activeYears.length <= 1) return [];
+
+    const groupTotals: Record<string, Record<string, number>> = {};
+    selGroups.forEach((gId: string) => {
+      groupTotals[gId] = {};
+      activeYears.forEach((yr: string) => { groupTotals[gId][yr] = 0; });
+    });
+
+    tableData.rows.forEach(row => {
+      const gId = getCustomerGroupId(row.id);
+      if (!groupTotals[gId]) return;
+      activeYears.forEach((yr: string) => {
+        groupTotals[gId][yr] += Number(row[`${yr}_total`] || 0);
+      });
+    });
+
+    return ALL_GROUPS
+      .filter(g => selGroups.includes(g.id) && groupTotals[g.id])
+      .map(g => ({ ...g, totals: groupTotals[g.id] }))
+      .filter(g => activeYears.some(yr => g.totals[yr] > 0));
+  }, [tableData, selGroups, activeYears]);
 
   return (
     <>
@@ -405,28 +379,71 @@ export default function CustomerReportPage() {
           )}
 
           {(!loading && !isFiltering) && (
+            <>
             <div className="sales-report-kpis">
-              {displayYears.map((yr, yIdx) => (
-                <div key={yr} style={{ background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)', borderRadius: 8, padding: '12px 18px', flex: '1 1 min-content', minWidth: 200, boxShadow: '0 10px 24px -20px color-mix(in srgb, var(--color-surface-900) 36%, transparent)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--color-text-tertiary)', marginBottom: 4 }}>
-                    <DollarSign size={14} />
-                    <span style={{ fontSize: 'var(--erp-text-meta)', fontWeight: 800, textTransform: 'capitalize', letterSpacing: 0 }}>Year {yr}</span>
+              {displayYears.map((yr: string, yIdx: number) => {
+                const yrTotal = tableData.colTotals[`${yr}_total`] || 0;
+                const compYr = growthStickyComp.b && growthStickyComp.a === yr ? growthStickyComp.b : (growthStickyComp.a && growthStickyComp.b !== yr ? growthStickyComp.a : '');
+                const compTotal = compYr ? (tableData.colTotals[`${compYr}_total`] || 0) : 0;
+                const growthPct = compTotal > 0 ? ((yrTotal - compTotal) / compTotal) * 100 : null;
+                const isUp = growthPct !== null && growthPct > 0;
+                const isDown = growthPct !== null && growthPct < 0;
+                return (
+                  <div key={yr} style={{ background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)', borderTop: '3px solid var(--color-brand-500)', borderRadius: 8, padding: '12px 18px', flex: '1 1 min-content', minWidth: 200, boxShadow: '0 10px 24px -20px color-mix(in srgb, var(--color-surface-900) 36%, transparent)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--color-text-tertiary)', marginBottom: 4 }}>
+                      <DollarSign size={14} />
+                      <span style={{ fontSize: 'var(--erp-text-meta)', fontWeight: 800, textTransform: 'capitalize', letterSpacing: 0 }}>Year {yr}</span>
+                    </div>
+                    <div style={{ fontSize: 'var(--erp-text-kpi)', fontWeight: 900, color: yIdx === 0 ? 'var(--color-text-primary)' : 'var(--color-text-secondary)', fontFamily: 'var(--font-display)', letterSpacing: 0 }}>
+                      {fmtCurr(yrTotal)}
+                    </div>
+                    {growthPct !== null && compYr && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4, fontSize: 'var(--erp-text-meta)', fontWeight: 800 }}>
+                        {isUp ? <TrendingUp size={12} style={{ color: 'var(--color-success-500)' }} /> : isDown ? <TrendingDown size={12} style={{ color: 'var(--color-danger-500)' }} /> : null}
+                        <span style={{ color: isUp ? 'var(--color-success-500)' : isDown ? 'var(--color-danger-500)' : 'var(--color-text-tertiary)' }}>
+                          {isUp ? '+' : isDown ? '\u2212' : ''}{Math.abs(growthPct).toFixed(1)}%
+                        </span>
+                        <span style={{ color: 'var(--color-text-quaternary)' }}>vs {compYr}</span>
+                      </div>
+                    )}
                   </div>
-                  <div style={{ fontSize: 'var(--erp-text-kpi)', fontWeight: 900, color: yIdx === 0 ? 'var(--color-text-primary)' : 'var(--color-text-secondary)', fontFamily: 'var(--font-display)', letterSpacing: 0 }}>
-                    {fmtCurr(tableData.colTotals[`${yr}_total`] || 0)}
-                  </div>
-                </div>
-              ))}
-              <div style={{ background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)', borderRadius: 8, padding: '12px 18px', flex: '1 1 min-content', minWidth: 160, boxShadow: '0 10px 24px -20px color-mix(in srgb, var(--color-surface-900) 36%, transparent)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--color-text-tertiary)', marginBottom: 4 }}>
-                  <Users size={14} />
-                  <span style={{ fontSize: 'var(--erp-text-meta)', fontWeight: 800, textTransform: 'capitalize', letterSpacing: 0 }}>Customers</span>
-                </div>
-                <div style={{ fontSize: 'var(--erp-text-kpi)', fontWeight: 900, color: 'var(--color-text-primary)', fontFamily: 'var(--font-display)', letterSpacing: 0 }}>
-                  {kpi.count}
-                </div>
-              </div>
+                );
+              })}
             </div>
+
+            {groupKpis.length > 0 && (
+              <div className="sales-report-kpis" style={{ marginTop: 0 }}>
+                {groupKpis.map(group => {
+                  const primaryYr = activeYears[0];
+                  const groupTotal = group.totals[primaryYr] || 0;
+                  const compYr = growthStickyComp.b || (activeYears.length > 1 ? activeYears[activeYears.length - 1] : '');
+                  const compGroupTotal = compYr ? (group.totals[compYr] || 0) : 0;
+                  const gPct = compGroupTotal > 0 ? ((groupTotal - compGroupTotal) / compGroupTotal) * 100 : null;
+                  const isUp = gPct !== null && gPct > 0;
+                  const isDown = gPct !== null && gPct < 0;
+                  return (
+                    <div key={group.id} style={{ background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)', borderLeft: `3px solid ${group.color}`, borderRadius: 8, padding: '8px 14px', flex: '1 1 min-content', minWidth: 140, boxShadow: '0 6px 16px -14px color-mix(in srgb, var(--color-surface-900) 24%, transparent)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--color-text-tertiary)', marginBottom: 2 }}>
+                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: group.color, flexShrink: 0 }} />
+                        <span style={{ fontSize: 'var(--erp-text-meta)', fontWeight: 800, letterSpacing: 0 }}>{group.label}</span>
+                      </div>
+                      <div style={{ fontSize: 'var(--erp-text-panel)', fontWeight: 900, color: 'var(--color-text-secondary)', fontFamily: 'var(--font-display)', letterSpacing: 0 }}>
+                        {fmtCurr(groupTotal)}
+                      </div>
+                      {gPct !== null && compYr && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginTop: 2, fontSize: 10, fontWeight: 800 }}>
+                          {isUp ? <TrendingUp size={10} style={{ color: 'var(--color-success-500)' }} /> : isDown ? <TrendingDown size={10} style={{ color: 'var(--color-danger-500)' }} /> : null}
+                          <span style={{ color: isUp ? 'var(--color-success-500)' : isDown ? 'var(--color-danger-500)' : 'var(--color-text-tertiary)' }}>
+                            {isUp ? '+' : isDown ? '\u2212' : ''}{Math.abs(gPct).toFixed(1)}%
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            </>
           )}
 
           <div className="sales-report-table-region">
@@ -450,9 +467,9 @@ export default function CustomerReportPage() {
                 renderGrowthPct={renderGrowthPct}
                 searchQuery={searchQuery}
                 setSearchQuery={setSearchQuery}
-                showFilters={isFilterOpen}
-                setShowFilters={setIsFilterOpen}
                 onResetMatrix={resetMatrixView}
+                growthStickyComp={growthStickyComp}
+                setGrowthStickyComp={setGrowthStickyComp}
               />
             </div>
           </div>

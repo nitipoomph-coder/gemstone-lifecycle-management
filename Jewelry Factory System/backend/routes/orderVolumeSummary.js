@@ -10,7 +10,7 @@ const router = express.Router();
 const { getPool, sql } = require('../db');
 
 // TEST DATABASE source. Production use requires separate review and approval.
-const SALES_ANALYTICS_VIEW = 'dbo.VW_Web_OrderVolume';
+const SALES_ANALYTICS_VIEW = 'dbo.VW_Web_SalesDashboard';
 
 /*
  * =============================================================================
@@ -126,10 +126,10 @@ function salesDateBasis(req, viewAlias = 'v') {
   };
   const basis = aliases[raw] || 'orddate';
   const dateExprByBasis = {
-    orddate: viewAlias + '.OrderDate',
-    duedate: viewAlias + '.FactoryDueDate',
-    custdate: viewAlias + '.CustomerDueDate',
-    ordmonth: viewAlias + '.OrderDate',
+    orddate: viewAlias + '.OrdDate',
+    duedate: viewAlias + '.DueDate',
+    custdate: viewAlias + '.CustDue',
+    ordmonth: viewAlias + '.OrdDate',
     shipmonth: viewAlias + '.ShipDate',
   };
   return { basis, dateExpr: dateExprByBasis[basis] };
@@ -169,7 +169,7 @@ function buildSalesFilters(req, request, viewAlias = 'v', dateExpr = null) {
 
   const filters = [
     sargableDateCondition,
-    `SUBSTRING(${viewAlias}.OrderNo, 1, 3) NOT IN ('BBP','BBK','BBS','BBL','BBT','BBD')`,
+    `SUBSTRING(${viewAlias}.OrdNo, 1, 3) NOT IN ('BBP','BBK','BBS','BBL','BBT','BBD')`,
     `(${viewAlias}.PONo IS NULL OR UPPER(${viewAlias}.PONo) NOT LIKE '%SAMPLE%')`,
   ];
 
@@ -201,7 +201,7 @@ router.get('/sales-customer-groups', async (req, res) => {
         ISNULL(NULLIF(v.SalesName, ''), 'Unassigned') AS customerName,
         YEAR(${dateExpr}) AS year,
         MONTH(${dateExpr}) AS month,
-        COUNT(DISTINCT v.OrderNo) AS orderCount,
+        COUNT(DISTINCT v.OrdNo) AS orderCount,
         SUM(v.OrderQty) AS qty,
         SUM(v.ShippedQty) AS shippedQty,
         SUM(v.OrderAmount) AS amount
@@ -233,7 +233,7 @@ router.get('/sales-monthly-analytics', async (req, res) => {
       SELECT
         YEAR(${dateExpr}) AS year,
         MONTH(${dateExpr}) AS month,
-        COUNT(DISTINCT v.OrderNo) AS orderCount,
+        COUNT(DISTINCT v.OrdNo) AS orderCount,
         SUM(v.OrderQty) AS qty,
         SUM(v.ShippedQty) AS shippedQty,
         SUM(v.OpenQty) AS gapQty,
@@ -270,7 +270,7 @@ router.get('/sales-type-analytics', async (req, res) => {
           YEAR(${dateExpr}) AS year,
           MONTH(${dateExpr}) AS month,
           ${typeExpr} AS typeCode,
-          v.OrderNo AS orderNo,
+          v.OrdNo AS orderNo,
           v.OrderQty AS qty,
           v.ShippedQty AS shippedQty,
           v.OpenQty AS gapQty,
@@ -315,11 +315,11 @@ router.get('/sales-orders', async (req, res) => {
 
     const result = await request.query(`
       SELECT
-        v.OrderNo AS orderNo,
+        v.OrdNo AS orderNo,
         v.PONo AS poNo,
-        v.OrderDate AS ordDate,
-        v.FactoryDueDate AS dueDate,
-        v.CustomerDueDate AS custDate,
+        v.OrdDate AS ordDate,
+        v.DueDate AS dueDate,
+        v.CustDue AS custDate,
         v.CustomerCode AS customerCode,
         ISNULL(v.CustomerCode, v.CustomerCode) AS customerName,
         ISNULL(NULLIF(v.SalesName, ''), 'Unassigned') AS salesName,
@@ -334,7 +334,7 @@ router.get('/sales-orders', async (req, res) => {
         ${itemTypeNameSql('v.ItemType', 'v.ItemNo', 'gt.GoodTypeNameEng', 'gt.GoodTypeName')} AS itemTypeName,
         UPPER(ISNULL(v.ProductType, 'OTHERS')) AS productTypeCode,
         v.CustomerItem AS custItem,
-        v.ItemMaterial AS itemMat,
+        v.ItemMat AS itemMat,
         v.ItemSize AS itemSize,
         v.ItemStone AS itemStone,
         v.ItemDescription AS itemDesc,
@@ -346,13 +346,13 @@ router.get('/sales-orders', async (req, res) => {
         v.ItemPrice AS itemPrice,
         v.OrderAmount AS amount,
         v.ShippedAmount AS shippedAmount,
-        ${salesStatusSql('v.OrderQty', 'v.ShippedQty', 'v.CustomerDueDate')} AS status,
+        ${salesStatusSql('v.OrderQty', 'v.ShippedQty', 'v.CustDue')} AS status,
         ISNULL(NULLIF(v.Market, ''), '-') AS market
       FROM ${SALES_ANALYTICS_VIEW} v
       LEFT JOIN GMGoodType gt ON gt.GoodTypeCode = v.ItemType
       WHERE ${whereSql}
         AND ISNULL(v.CustomerStatus, 'Y') = 'Y'
-      ORDER BY v.OrderDate DESC, v.OrderNo, v.OrderLineNo
+      ORDER BY v.OrdDate DESC, v.OrdNo, v.OrdLineNo
     `);
 
     res.json({ ok: true, data: result.recordset });
@@ -408,7 +408,7 @@ router.get('/top-items', async (req, res) => {
           SUM(v.OrderQty) AS qty,
           SUM(v.ShippedQty) AS shippedQty,
           SUM(v.OrderAmount) AS amount,
-          COUNT(DISTINCT v.OrderNo) AS orderCount
+          COUNT(DISTINCT v.OrdNo) AS orderCount
         FROM ${SALES_ANALYTICS_VIEW} v
         LEFT JOIN GMGoodType gt ON gt.GoodTypeCode = v.ItemType
         WHERE ${whereSql}
@@ -453,7 +453,7 @@ router.get('/sales-weekly-analytics', async (req, res) => {
       SELECT
         YEAR(${dateExpr}) AS year,
         DATEPART(iso_week, ${dateExpr}) AS week,
-        COUNT(DISTINCT v.OrderNo) AS orderCount,
+        COUNT(DISTINCT v.OrdNo) AS orderCount,
         SUM(v.OrderQty) AS qty,
         SUM(v.ShippedQty) AS shippedQty,
         SUM(v.OpenQty) AS gapQty,
@@ -480,13 +480,13 @@ router.get('/sales-due-outlook', async (req, res) => {
     const pool = await getPool();
     const request = pool.request();
     // For Due Outlook, we base the dateExpr on CustomerDueDate, unless otherwise requested
-    const { dateExpr } = { dateExpr: 'v.CustomerDueDate' };
+    const { dateExpr } = { dateExpr: 'v.CustDue' };
     const { whereSql } = buildSalesFilters(req, request, 'v', dateExpr);
 
     const result = await request.query(`
       WITH BaseData AS (
         SELECT
-          v.OrderNo,
+          v.OrdNo,
           YEAR(${dateExpr}) AS year,
           MONTH(${dateExpr}) AS month,
           MAX(CASE WHEN v.OpenQty > 0 AND CAST(${dateExpr} AS DATE) < CAST(GETDATE() AS DATE) THEN 1 ELSE 0 END) AS isOverdue,
@@ -498,7 +498,7 @@ router.get('/sales-due-outlook', async (req, res) => {
         FROM ${SALES_ANALYTICS_VIEW} v
         WHERE ${whereSql}
           AND ISNULL(v.CustomerStatus, 'Y') = 'Y'
-        GROUP BY v.OrderNo, YEAR(${dateExpr}), MONTH(${dateExpr})
+        GROUP BY v.OrdNo, YEAR(${dateExpr}), MONTH(${dateExpr})
       )
       SELECT
         year,

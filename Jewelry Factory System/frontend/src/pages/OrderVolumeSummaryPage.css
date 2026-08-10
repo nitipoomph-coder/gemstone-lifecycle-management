@@ -1704,3 +1704,46 @@
     transition: none;
   }
 }
+
+/* KPI Cards unified styling for Trends Page (สอดคล้องกับหน้า Matrix) */
+.customer-trends-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+}
+
+.customer-trends-summary__item {
+  background: var(--color-surface-0) !important;
+  border: 1px solid var(--color-border-light) !important;
+  border-radius: 8px !important;
+  padding: 12px 18px !important;
+  flex: 1 1 min-content;
+  min-width: 180px;
+  box-shadow: 0 10px 24px -20px color-mix(in srgb, var(--color-surface-900) 36%, transparent) !important;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.customer-trends-summary__item > div {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.customer-trends-summary__item strong {
+  font-size: var(--erp-text-kpi) !important;
+  font-weight: 900 !important;
+  font-family: var(--font-display) !important;
+  letter-spacing: 0 !important;
+  line-height: 1.2 !important;
+}
+
+.customer-trends-summary__item span {
+  font-size: var(--erp-text-meta) !important;
+  font-weight: 800 !important;
+  color: var(--color-text-tertiary) !important;
+}

@@ -41,8 +41,6 @@ interface CustomerReportTableProps {
   onResetMatrix?: () => void;
   aggregationMode?: 'group' | 'customer';
   setAggregationMode?: (v: 'group' | 'customer') => void;
-  growthStickyComp?: { a: string; b: string };
-  setGrowthStickyComp?: (comp: { a: string; b: string }) => void;
 }
 
 function saveXlsx(fileName: string, rows: unknown[][]) {
@@ -93,58 +91,8 @@ export default function CustomerReportTable({
   showFilters,
   setShowFilters,
   onResetMatrix,
-  growthStickyComp,
-  setGrowthStickyComp,
 }: CustomerReportTableProps) {
   const activeGrowthCount = displayYears.length > 1 ? growthComparisons.length : 0;
-  const hasGrowthSticky = !!(growthStickyComp && growthStickyComp.a && growthStickyComp.b && growthStickyComp.a !== growthStickyComp.b && displayYears.length > 1);
-
-  const handleGrowthStickyChange = (field: 'a' | 'b', value: string) => {
-    if (!setGrowthStickyComp || !growthStickyComp) return;
-    const other = field === 'a' ? 'b' : 'a';
-    const newComp = { ...growthStickyComp, [field]: value };
-    if (newComp.a === newComp.b) newComp[other] = growthStickyComp[field];
-    setGrowthStickyComp(newComp);
-  };
-
-  const renderStickyGrowth = (baseVal: number, compVal: number, isTrulyNew = false) => {
-    if (compVal === 0 && baseVal === 0) return <div className="customer-matrix-growth-sticky-value customer-matrix-growth-sticky-value--neutral">—</div>;
-    if (compVal === 0 && baseVal > 0 && isTrulyNew) return (
-      <div style={{ display: 'flex', justifyContent: 'center' }}>
-        <span style={{ background: 'color-mix(in srgb, var(--color-success-500) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--color-success-500) 45%, var(--color-border-light))', color: 'var(--color-success-500)', padding: '2px 6px', borderRadius: '4px', fontWeight: 900, fontSize: 'var(--erp-text-meta)' }}>NEW</span>
-      </div>
-    );
-    if (compVal === 0 && baseVal > 0) return <div className="customer-matrix-growth-sticky-value customer-matrix-growth-sticky-value--neutral"><span className="customer-matrix-growth-sticky-pct">0.0%</span></div>;
-    const pct = ((baseVal - compVal) / compVal) * 100;
-    const isUp = pct > 0;
-    const isDown = pct < 0;
-    const cls = isUp ? 'customer-matrix-growth-sticky-value--up' : isDown ? 'customer-matrix-growth-sticky-value--down' : 'customer-matrix-growth-sticky-value--neutral';
-    const arrow = isUp ? '↑' : isDown ? '↓' : '';
-    return (
-      <div className={`customer-matrix-growth-sticky-value ${cls}`}>
-        {arrow && <span className="customer-matrix-growth-sticky-arrow">{arrow}</span>}
-        <span className="customer-matrix-growth-sticky-pct">{isDown ? '\u2212' : isUp ? '+' : ''}{Math.abs(pct).toFixed(1)}%</span>
-      </div>
-    );
-  };
-
-  const growthStickyTh = hasGrowthSticky ? (
-    <th rowSpan={2} className="customer-matrix-th customer-matrix-th--top customer-matrix-th--growth-sticky">
-      <div className="customer-matrix-growth-sticky-header">
-        <span>Growth %</span>
-        <div className="customer-matrix-growth-sticky-selectors">
-          <select value={growthStickyComp!.a} onChange={e => handleGrowthStickyChange('a', e.target.value)}>
-            {displayYears.map(yr => <option key={yr} value={yr}>{yr}</option>)}
-          </select>
-          <span className="growth-vs">vs</span>
-          <select value={growthStickyComp!.b} onChange={e => handleGrowthStickyChange('b', e.target.value)}>
-            {displayYears.map(yr => <option key={yr} value={yr}>{yr}</option>)}
-          </select>
-        </div>
-      </div>
-    </th>
-  ) : null;
-
   const [searchDraft, setSearchDraft] = React.useState(searchQuery);
   const [resetPending, setResetPending] = React.useState(false);
   const resetPendingTimerRef = React.useRef<number | null>(null);
@@ -451,7 +399,6 @@ export default function CustomerReportTable({
                       <div className="customer-matrix-growth-label"><span>Change</span><span>{comp.a} vs {comp.b}</span></div>
                     </th>
                   ))}
-                  {growthStickyTh}
                 </tr>
                 <tr>
                   {displayYears.map((yr) => (
@@ -473,7 +420,7 @@ export default function CustomerReportTable({
 
               <tbody>
                 {tableData.rows.length === 0 ? (
-                  <tr><td colSpan={1 + displayYears.length * (displayMonths.length + 1) + activeGrowthCount * 2 + (hasGrowthSticky ? 1 : 0)} className="customer-matrix-empty">No customers match the current filter.</td></tr>
+                  <tr><td colSpan={1 + displayYears.length * (displayMonths.length + 1) + activeGrowthCount * 2} className="customer-matrix-empty">No customers match the current filter.</td></tr>
                 ) : tableData.rows.map((row) => (
                   <tr key={row.id} className="customer-matrix-row">
                     <td className="customer-matrix-td customer-matrix-td--customer">{row.label}</td>
@@ -496,46 +443,11 @@ export default function CustomerReportTable({
                         </React.Fragment>
                       );
                     })}
-                    {hasGrowthSticky && (
-                      <td className="customer-matrix-td customer-matrix-td--growth-sticky">
-                        {renderStickyGrowth(Number(row[`${growthStickyComp!.a}_total`] || 0), Number(row[`${growthStickyComp!.b}_total`] || 0), Boolean(row[`isTrulyNew_${growthStickyComp!.a}`]))}
-                      </td>
-                    )}
                   </tr>
                 ))}
               </tbody>
 
-              {tableData.rows.length > 0 && (
-                <tfoot>
-                  <tr className="customer-matrix-footer">
-                    <td className="customer-matrix-td customer-matrix-td--customer customer-matrix-footer-label">Total</td>
-                    {displayYears.map((yr) => (
-                      <React.Fragment key={yr}>
-                        {displayMonths.map((m) => {
-                          const val = tableData.colTotals[`${yr}_${m}`] || 0;
-                          return <td key={`${yr}_${m}`} className={`customer-matrix-td customer-matrix-td--number ${isCurrentMonth(yr, m) ? 'customer-matrix-current' : ''}`}>{renderCell(val)}</td>;
-                        })}
-                        <td key={`${yr}_total`} className={totalCellClassName(yr)}>{renderCell(tableData.colTotals[`${yr}_total`] || 0)}</td>
-                      </React.Fragment>
-                    ))}
-                    {displayYears.length > 1 && growthComparisons.map((comp, idx) => {
-                      const amt = renderGrowthAmt(tableData.colTotals[`${comp.a}_total`] || 0, tableData.colTotals[`${comp.b}_total`] || 0);
-                      const pct = renderGrowthPct(tableData.colTotals[`${comp.a}_total`] || 0, tableData.colTotals[`${comp.b}_total`] || 0);
-                      return (
-                        <React.Fragment key={`growth_footer_${idx}`}>
-                          <td className="customer-matrix-td customer-matrix-td--growth" style={{ background: amt.bgColor }}>{amt.node}</td>
-                          <td className="customer-matrix-td customer-matrix-td--growth" style={{ background: pct.bgColor }}>{pct.node}</td>
-                        </React.Fragment>
-                      );
-                    })}
-                    {hasGrowthSticky && (
-                      <td className="customer-matrix-td customer-matrix-td--growth-sticky">
-                        {renderStickyGrowth(tableData.colTotals[`${growthStickyComp!.a}_total`] || 0, tableData.colTotals[`${growthStickyComp!.b}_total`] || 0)}
-                      </td>
-                    )}
-                  </tr>
-                </tfoot>
-              )}
+
             </>
           ) : (
             <>
@@ -546,7 +458,6 @@ export default function CustomerReportTable({
                     <th key={m} colSpan={displayYears.length + activeGrowthCount * 2} className="customer-matrix-th customer-matrix-th--top">{m}</th>
                   ))}
                   <th colSpan={displayYears.length + activeGrowthCount * 2} className="customer-matrix-th customer-matrix-th--top">{metric === 'qty' ? 'Grand Total QTY' : 'Grand Total Sales'}</th>
-                  {growthStickyTh}
                 </tr>
                 <tr>
                   {displayMonths.map((m) => (
@@ -572,7 +483,7 @@ export default function CustomerReportTable({
 
               <tbody>
                 {tableData.rows.length === 0 ? (
-                  <tr><td colSpan={1 + (displayMonths.length + 1) * (displayYears.length + activeGrowthCount * 2) + (hasGrowthSticky ? 1 : 0)} className="customer-matrix-empty">No customers match the current filter.</td></tr>
+                  <tr><td colSpan={1 + (displayMonths.length + 1) * (displayYears.length + activeGrowthCount * 2)} className="customer-matrix-empty">No customers match the current filter.</td></tr>
                 ) : tableData.rows.map((row) => (
                   <tr key={row.id} className="customer-matrix-row">
                     <td className="customer-matrix-td customer-matrix-td--customer">
@@ -608,56 +519,11 @@ export default function CustomerReportTable({
                         </React.Fragment>
                       );
                     })}
-                    {hasGrowthSticky && (
-                      <td className="customer-matrix-td customer-matrix-td--growth-sticky">
-                        {renderStickyGrowth(Number(row[`${growthStickyComp!.a}_total`] || 0), Number(row[`${growthStickyComp!.b}_total`] || 0), Boolean(row[`isTrulyNew_${growthStickyComp!.a}`]))}
-                      </td>
-                    )}
                   </tr>
                 ))}
               </tbody>
 
-              {tableData.rows.length > 0 && (
-                <tfoot>
-                  <tr className="customer-matrix-footer">
-                    <td className="customer-matrix-td customer-matrix-td--customer customer-matrix-footer-label">Total</td>
-                    {displayMonths.map((m) => (
-                      <React.Fragment key={m}>
-                        {displayYears.map((yr) => {
-                          const val = tableData.colTotals[`${yr}_${m}`] || 0;
-                          return <td key={`${m}_${yr}`} className={`customer-matrix-td customer-matrix-td--number ${isCurrentMonth(yr, m) ? 'customer-matrix-current' : ''}`}>{renderCell(val)}</td>;
-                        })}
-                        {displayYears.length > 1 && growthComparisons.map((comp, gIdx) => {
-                          const amt = renderGrowthAmt(tableData.colTotals[`${comp.a}_${m}`] || 0, tableData.colTotals[`${comp.b}_${m}`] || 0);
-                          const pct = renderGrowthPct(tableData.colTotals[`${comp.a}_${m}`] || 0, tableData.colTotals[`${comp.b}_${m}`] || 0);
-                          return (
-                            <React.Fragment key={`growth_m_footer_${m}_${gIdx}`}>
-                              <td className="customer-matrix-td customer-matrix-td--growth" style={{ background: amt.bgColor }}>{amt.node}</td>
-                              <td className="customer-matrix-td customer-matrix-td--growth" style={{ background: pct.bgColor }}>{pct.node}</td>
-                            </React.Fragment>
-                          );
-                        })}
-                      </React.Fragment>
-                    ))}
-                    {displayYears.map((yr) => <td key={`total_${yr}`} className={totalCellClassName(yr)}>{renderCell(tableData.colTotals[`${yr}_total`] || 0)}</td>)}
-                    {displayYears.length > 1 && growthComparisons.map((comp, gIdx) => {
-                      const amt = renderGrowthAmt(tableData.colTotals[`${comp.a}_total`] || 0, tableData.colTotals[`${comp.b}_total`] || 0);
-                      const pct = renderGrowthPct(tableData.colTotals[`${comp.a}_total`] || 0, tableData.colTotals[`${comp.b}_total`] || 0);
-                      return (
-                        <React.Fragment key={`growth_m_footer_tot_${gIdx}`}>
-                          <td className="customer-matrix-td customer-matrix-td--growth" style={{ background: amt.bgColor }}>{amt.node}</td>
-                          <td className="customer-matrix-td customer-matrix-td--growth" style={{ background: pct.bgColor }}>{pct.node}</td>
-                        </React.Fragment>
-                      );
-                    })}
-                    {hasGrowthSticky && (
-                      <td className="customer-matrix-td customer-matrix-td--growth-sticky">
-                        {renderStickyGrowth(tableData.colTotals[`${growthStickyComp!.a}_total`] || 0, tableData.colTotals[`${growthStickyComp!.b}_total`] || 0)}
-                      </td>
-                    )}
-                  </tr>
-                </tfoot>
-              )}
+
             </>
           )}
         </table>

@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate, useLocation, useSearchParams, Outlet } from 'react-router-dom';
 import Topbar from '../components/layout/Topbar';
+import CustomSelect from '../components/ui/CustomSelect';
 import { CalendarDays, ChevronDown, Users, BarChart3, Table2, LineChart } from 'lucide-react';
 import { fetchAvailableYears } from '../services/dashboardAPI';
 import { fetchCustomerSummary, type CustomerSummaryRecord } from '../services/customerSummaryAPI';
@@ -42,9 +43,9 @@ export default function CustomerDashboardLayout() {
 
   // Determine current active view from pathname
   const currentPath = location.pathname;
-  const activeTab = currentPath.includes('/matrix') ? 'matrix' 
-                  : currentPath.includes('/trends') ? 'trends' 
-                  : 'dashboard';
+  const activeTab = currentPath.includes('/matrix') ? 'matrix'
+    : currentPath.includes('/trends') ? 'trends'
+      : 'dashboard';
 
   // Global Filter States
   // @ts-ignore
@@ -61,13 +62,136 @@ export default function CustomerDashboardLayout() {
   const [selGroups, setSelGroups] = useState<string[]>(hasGroupsParam ? requestedGroups : defaultGroups);
   const [custData, setCustData] = useState<CustomerSummaryRecord[]>([]);
 
+  // Period Filter Setup states สำหรับหน้า Matrix บน Topbar
+  const [monthStart, setMonthStart] = useState<number>(() => {
+    if (!requestedMonths.length) return 1;
+    const sorted = [...requestedMonths].map(Number).sort((a, b) => a - b);
+    return sorted[0];
+  });
+  const [monthEnd, setMonthEnd] = useState<number>(() => {
+    if (!requestedMonths.length) return 12;
+    const sorted = [...requestedMonths].map(Number).sort((a, b) => a - b);
+    return sorted[sorted.length - 1];
+  });
+  const [periodPreset, setPeriodPreset] = useState<'full-year' | 'ytd' | 'this-month' | 'last-month' | 'custom'>(() => {
+    if (!requestedMonths.length || requestedMonths.length === 12) return 'full-year';
+    return 'custom';
+  });
+
+  const [draftPreset, setDraftPreset] = useState<typeof periodPreset>(periodPreset);
+  const [draftStart, setDraftStart] = useState<number>(monthStart);
+  const [draftEnd, setDraftEnd] = useState<number>(monthEnd);
+  const [draftYear, setDraftYear] = useState<string>('');
+
+  // States สำหรับ Compare Years
+  const [compareActive1, setCompareActive1] = useState<boolean>(() => requestedYears.length > 1);
+  const [compareYearVal1, setCompareYearVal1] = useState<string>(() => requestedYears[1] || '');
+
+  const [compareActive2, setCompareActive2] = useState<boolean>(() => requestedYears.length > 2);
+  const [compareYearVal2, setCompareYearVal2] = useState<string>(() => requestedYears[2] || '');
+
+  const [draftCompareActive1, setDraftCompareActive1] = useState<boolean>(compareActive1);
+  const [draftCompareYearVal1, setDraftCompareYearVal1] = useState<string>(compareYearVal1);
+
+  const [draftCompareActive2, setDraftCompareActive2] = useState<boolean>(compareActive2);
+  const [draftCompareYearVal2, setDraftCompareYearVal2] = useState<string>(compareYearVal2);
+
+  // States สำหรับสลับปีที่นำมาเปรียบเทียบใน KPI การ์ด
+  const [kpiCompareYear, setKpiCompareYear] = useState<string>(() => {
+    const fromParam = searchParams.get('kpiCompare');
+    return fromParam || requestedYears[1] || '';
+  });
+  const [draftKpiCompareYear, setDraftKpiCompareYear] = useState<string>(kpiCompareYear);
+
+  useEffect(() => {
+    if (availableYears.length > 0) {
+      if (!draftYear) {
+        setDraftYear(selectedYears[0] || availableYears[0]);
+      }
+      if (!draftCompareYearVal1) {
+        setDraftCompareYearVal1(selectedYears[1] || availableYears[1] || availableYears[0]);
+      }
+      if (!draftCompareYearVal2) {
+        setDraftCompareYearVal2(selectedYears[2] || availableYears[2] || 'none');
+      }
+    }
+  }, [availableYears, selectedYears, draftYear, draftCompareYearVal1, draftCompareYearVal2]);
+
+  // Sync draft เมื่อ Popover เปิด
+  const syncDraftPeriods = () => {
+    setDraftPreset(periodPreset);
+    setDraftStart(monthStart);
+    setDraftEnd(monthEnd);
+    setDraftYear(selectedYears[0] || availableYears[0] || '');
+
+    setDraftCompareActive1(compareActive1);
+    setDraftCompareYearVal1(compareYearVal1 || selectedYears[1] || availableYears[1] || '');
+
+    setDraftCompareActive2(compareActive2);
+    setDraftCompareYearVal2(compareYearVal2 || selectedYears[2] || 'none');
+
+    setDraftKpiCompareYear(kpiCompareYear || selectedYears[1] || availableYears[1] || '');
+  };
+
+  const applyPeriodPresetLayout = (preset: typeof periodPreset) => {
+    setDraftPreset(preset);
+    const current = new Date().getMonth() + 1;
+    if (preset === 'ytd') {
+      setDraftStart(1);
+      setDraftEnd(current);
+    } else if (preset === 'this-month') {
+      setDraftStart(current);
+      setDraftEnd(current);
+    } else if (preset === 'last-month') {
+      const last = current === 1 ? 12 : current - 1;
+      setDraftStart(last);
+      setDraftEnd(last);
+    } else {
+      setDraftStart(1);
+      setDraftEnd(12);
+    }
+  };
+
+  const applyPeriodChangesLayout = () => {
+    setPeriodPreset(draftPreset);
+    setMonthStart(draftStart);
+    setMonthEnd(draftEnd);
+
+    setCompareActive1(draftCompareActive1);
+    setCompareYearVal1(draftCompareYearVal1);
+
+    setCompareActive2(draftCompareActive2);
+    setCompareYearVal2(draftCompareYearVal2);
+
+    setKpiCompareYear(draftKpiCompareYear);
+
+    const nextYears: string[] = [];
+    if (draftYear) nextYears.push(draftYear);
+    if (draftCompareActive1 && draftCompareYearVal1 && draftCompareYearVal1 !== 'none') nextYears.push(draftCompareYearVal1);
+    if (draftCompareActive2 && draftCompareYearVal2 && draftCompareYearVal2 !== 'none') nextYears.push(draftCompareYearVal2);
+
+    setSelectedYears(Array.from(new Set(nextYears)));
+
+    const start = Math.min(draftStart, draftEnd);
+    const end = Math.max(draftStart, draftEnd);
+    const newMonths = Array.from({ length: end - start + 1 }, (_, i) => String(start + i));
+    setSelectedMonths(newMonths);
+
+    // อัปเดต SearchParams ด้วยค่าใหม่
+    const newParams = new URLSearchParams(searchParams);
+    newParams.set('kpiCompare', draftKpiCompareYear);
+    setSearchParams(newParams);
+
+    setShowPeriodPopover(false);
+  };
+
   // Calculate dynamic active groups based on data in selectedYears
   const dynamicActiveGroups = useMemo(() => {
     if (custData.length === 0) return ACTIVE_GROUP_IDS; // fallback while loading
-    
+
     const groupTotals: Record<string, number> = {};
     ALL_GROUPS.forEach(g => groupTotals[g.id] = 0);
-    
+
     custData.forEach(customer => {
       const gId = getCustomerGroupId(customer.id);
       selectedYears.forEach(y => {
@@ -85,7 +209,7 @@ export default function CustomerDashboardLayout() {
         }
       });
     });
-    
+
     const active = ALL_GROUPS.filter(g => groupTotals[g.id] > 0).map(g => g.id);
     return active.length > 0 ? active : ACTIVE_GROUP_IDS; // fallback if no data
   }, [custData, selectedYears]);
@@ -114,7 +238,7 @@ export default function CustomerDashboardLayout() {
       if (selectedYears.length === 0 && stringYears.length > 0) {
         setSelectedYears([stringYears[0]]);
       }
-      
+
       // Fetch summary to calculate dynamic active groups
       fetchCustomerSummary(stringYears).then(setCustData).catch(console.error);
     });
@@ -123,11 +247,11 @@ export default function CustomerDashboardLayout() {
   // Sync state to URL when filters change
   useEffect(() => {
     const params = new URLSearchParams(searchParams);
-    
+
     // Years
     if (selectedYears.length > 0) params.set('years', selectedYears.join(','));
     else params.delete('years');
-    
+
     // Months
     const isAllMonths = selectedMonths.length === MONTH_PARAM_IDS.length;
     if (isAllMonths) params.delete('months');
@@ -159,31 +283,15 @@ export default function CustomerDashboardLayout() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const toggleYear = (y: string) => {
-    setSelectedYears(prev => prev.includes(y) ? prev.filter(x => x !== y) : [...prev, y]);
-  };
-
-  const toggleMonth = (mStr: string) => {
-    setSelectedMonths(prev => prev.includes(mStr) ? prev.filter(x => x !== mStr) : [...prev, mStr]);
-  };
-
   const toggleGroup = (id: string) => {
     setSelGroups(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   };
 
-  // Period Label
-  const periodButtonLabel = selectedYears.length === 1 && selectedMonths.length === 12
-    ? selectedYears[0]
-    : selectedYears.length === 0
-      ? 'Select Year'
-      : `${selectedYears.length} Yrs, ${selectedMonths.length} Mos`;
-
   // Breadcrumbs based on active tab
-  const breadcrumbs = [
+  const summaryBreadcrumb = [
     { label: 'JEWELRY FACTORY SYSTEM', path: '/' },
     { label: 'Sales Analytics' },
-    { label: 'Sales Summary', path: '/dashboard/customer' },
-    { label: activeTab === 'matrix' ? 'Customer Matrix' : activeTab === 'trends' ? 'Sales Performance Insights' : 'Customer Dashboard' }
+    { label: activeTab === 'matrix' ? 'Customer Matrix' : activeTab === 'trends' ? 'Order Volume Summary' : 'Customer Dashboard' }
   ];
 
   const handleTabChange = (val: string) => {
@@ -196,22 +304,22 @@ export default function CustomerDashboardLayout() {
 
   return (
     <>
-      <Topbar 
-        breadcrumb={breadcrumbs} 
-        contentLayout="workspace" 
-        hideSearch 
+      <Topbar
+        breadcrumb={summaryBreadcrumb}
+        contentLayout="workspace"
+        hideSearch
         rightContent={
           <div className="sales-gallery-topbar-tools flex min-w-0 flex-1 items-center justify-end gap-3 pr-2">
-            
+
             {/* View Switcher Tab */}
             <div style={{ display: 'flex', alignItems: 'center', background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)', borderRadius: 8, padding: 4 }}>
-              <ErpSegmentedControl 
-                ariaLabel="View Mode" 
-                value={activeTab} 
+              <ErpSegmentedControl
+                ariaLabel="View Mode"
+                value={activeTab}
                 onChange={(v) => handleTabChange(v as string)}
                 options={[
                   { value: 'dashboard', label: 'Chart', icon: <BarChart3 size={13} /> },
-                  { value: 'trends', label: 'Sales Insights', icon: <LineChart size={13} /> },
+                  { value: 'trends', label: 'Order Trends', icon: <LineChart size={13} /> },
                   { value: 'matrix', label: 'Matrix', icon: <Table2 size={13} /> }
                 ]}
               />
@@ -223,7 +331,12 @@ export default function CustomerDashboardLayout() {
             <div style={{ position: 'relative' }} ref={periodPopoverRef}>
               <button
                 type="button"
-                onClick={() => setShowPeriodPopover(!showPeriodPopover)}
+                onClick={() => {
+                  if (!showPeriodPopover) {
+                    syncDraftPeriods();
+                  }
+                  setShowPeriodPopover(!showPeriodPopover);
+                }}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px',
                   background: showPeriodPopover ? 'var(--color-surface-1)' : 'var(--color-surface-0)',
@@ -234,54 +347,191 @@ export default function CustomerDashboardLayout() {
                 }}
               >
                 <CalendarDays size={14} style={{ color: 'var(--color-brand-500)' }} />
-                <span>Period: <strong>{periodButtonLabel}</strong></span>
+                <>
+                  <span style={{ color: "var(--color-text-secondary)", fontSize: "0.76rem", fontWeight: 700 }}>
+                    Period:
+                  </span>
+                  <span>{draftPreset === 'full-year' ? 'Full Year' : draftPreset === 'ytd' ? 'YTD' : draftPreset === 'this-month' ? 'This Month' : draftPreset === 'last-month' ? 'Last Month' : 'Custom'}</span>
+                  <span style={{ color: "var(--color-text-tertiary)", fontSize: "0.72rem", fontWeight: 800 }}>
+                    ({selectedYears[0] || ''} {monthStart === 1 && monthEnd === 12 ? 'Full Year' : `${MONTHS[monthStart - 1]}-${MONTHS[monthEnd - 1]}`})
+                  </span>
+                </>
                 <ChevronDown size={14} style={{ color: 'var(--color-text-tertiary)' }} />
               </button>
 
               {showPeriodPopover && (
-                <div className="sales-summary-popover" style={{ width: 320, zIndex: 100 }}>
-                  <div style={{ fontWeight: 900, fontSize: 'var(--erp-text-control)', marginBottom: 8, color: 'var(--color-text-primary)' }}>Target Years</div>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
-                    {availableYears.map(y => {
-                      const on = selectedYears.includes(y);
-                      return (
-                        <button key={y} onClick={() => toggleYear(y)} style={{
-                          padding: '4px 10px', borderRadius: 6, fontSize: 'var(--erp-text-dense)', fontWeight: 800,
-                          border: `1px solid ${on ? 'var(--color-ui-interactive)' : 'var(--color-border-light)'}`,
-                          background: on ? 'var(--color-ui-selected)' : 'var(--color-ui-surface)',
-                          color: on ? 'var(--color-ui-interactive)' : 'var(--color-text-tertiary)',
-                          cursor: 'pointer'
-                        }}>{y}</button>
-                      );
-                    })}
-                  </div>
+                /* ตัวกรองตัวใหม่: Period Setup สำหรับทุกหน้าจอ */
+                <div className="sales-gallery-period-menu absolute right-0 z-[110] mt-2" style={{ width: 480, position: 'absolute', top: '100%' }}>
+                    <div className="flex items-center justify-between border-b border-[var(--color-border-light)] pb-2.5 mb-3">
+                      <span className="text-xs font-black capitalize tracking-wider text-[var(--color-text-primary)]">
+                        Period Setup
+                      </span>
+                      <span className="text-[11px] font-bold text-[var(--color-text-secondary)]">
+                        {selectedYears[0]} {monthStart === 1 && monthEnd === 12 ? 'Full Year' : `(${MONTHS[monthStart - 1]}-${MONTHS[monthEnd - 1]})`}
+                        {compareActive1 && ` vs ${compareYearVal1}`}
+                      </span>
+                    </div>
 
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                    <span style={{ fontWeight: 900, fontSize: 'var(--erp-text-control)', color: 'var(--color-text-primary)' }}>Months ({selectedMonths.length}/12)</span>
-                    <button
-                      onClick={() => selectedMonths.length === 12 ? setSelectedMonths([]) : setSelectedMonths(MONTHS.map((_, i) => String(i + 1)))}
-                      style={{ fontSize: 'var(--erp-text-meta)', fontWeight: 800, background: 'none', border: 'none', color: selectedMonths.length === 12 ? 'var(--color-danger-500)' : 'var(--color-ui-interactive)', cursor: 'pointer' }}>
-                      {selectedMonths.length === 12 ? 'None' : 'All'}
-                    </button>
+                    <div className="grid grid-cols-[140px_1fr] gap-4">
+                      {/* Left: Quick Presets */}
+                      <div className="flex flex-col gap-2 border-r border-[var(--color-border-light)] pr-3">
+                        <div className="text-[10px] font-black capitalize tracking-wider text-[var(--color-text-tertiary)]">
+                          Quick Presets
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                          {[
+                            { id: 'full-year', label: 'Full Year' },
+                            { id: 'ytd', label: 'YTD' },
+                            { id: 'this-month', label: 'This Month' },
+                            { id: 'last-month', label: 'Last Month' }
+                          ].map((preset) => {
+                            const active = draftPreset === preset.id;
+                            return (
+                              <button
+                                key={preset.id}
+                                type="button"
+                                onClick={() => applyPeriodPresetLayout(preset.id as any)}
+                                className={`rounded-lg border px-3 py-2 text-left text-xs font-black transition-colors ${active ? "border-[var(--color-brand-300)] bg-[color-mix(in_srgb,var(--color-brand-500)_9%,var(--color-surface-0))] text-[var(--color-brand-600)]" : "border-[var(--color-border-light)] bg-[var(--color-surface-0)] text-[var(--color-text-primary)] hover:border-[var(--color-brand-400)] hover:text-[var(--color-brand-600)]"}`}
+                              >
+                                {preset.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Right: Custom Options & Base Year */}
+                      <div className="flex flex-col gap-3">
+                        <div className="text-[10px] font-black capitalize tracking-wider text-[var(--color-text-tertiary)]">
+                          Custom Month Range
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2.5">
+                          <PeriodSelect
+                            label="Start Month"
+                            value={draftStart}
+                            options={MONTHS.map((month, index) => ({ value: index + 1, label: month }))}
+                            onChange={(value) => {
+                              setDraftPreset('custom');
+                              setDraftStart(Number(value));
+                            }}
+                          />
+                          <PeriodSelect
+                            label="End Month"
+                            value={draftEnd}
+                            options={MONTHS.map((month, index) => ({ value: index + 1, label: month }))}
+                            onChange={(value) => {
+                              setDraftPreset('custom');
+                              setDraftEnd(Number(value));
+                            }}
+                          />
+                        </div>
+
+                        <PeriodSelect
+                          label="Year (Base Year)"
+                          value={draftYear}
+                          options={availableYears.map(yr => ({ value: yr, label: yr }))}
+                          onChange={(value) => setDraftYear(String(value))}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Compare Years Section (แถวแนวนอนเดียวกันเพื่อประหยัดพื้นที่อย่างคุ้มค่า) */}
+                    <div className="mt-4 pt-3.5 border-t border-[var(--color-border-light)]">
+                      <div className="mb-2.5 text-[10px] font-black capitalize tracking-wider text-[var(--color-text-tertiary)]">
+                        Compare Target Years
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2.5">
+                        {/* Compare Year 1 */}
+                        <div className="flex flex-col gap-1 bg-[var(--color-surface-1)] p-2 rounded-lg border border-[var(--color-border-light)]">
+                          <label className="flex items-center gap-1.5 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={draftCompareActive1}
+                              onChange={(e) => setDraftCompareActive1(e.target.checked)}
+                              className="rounded border-[var(--color-border-light)] text-[var(--color-brand-600)] focus:ring-[var(--color-brand-400)]"
+                            />
+                            <span className="text-[10px] font-black text-[var(--color-text-secondary)]">Compare 1</span>
+                          </label>
+                          <div className="mt-1">
+                            <CustomSelect
+                              value={draftCompareYearVal1}
+                              disabled={!draftCompareActive1}
+                              onChange={(val: string) => {
+                                setDraftCompareYearVal1(val);
+                                setDraftKpiCompareYear(val);
+                              }}
+                              options={availableYears.map(yr => ({ value: yr, label: yr }))}
+                              ariaLabel="Compare Year 1"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Compare Year 2 */}
+                        <div className="flex flex-col gap-1 bg-[var(--color-surface-1)] p-2 rounded-lg border border-[var(--color-border-light)]">
+                          <label className="flex items-center gap-1.5 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={draftCompareActive2}
+                              onChange={(e) => setDraftCompareActive2(e.target.checked)}
+                              className="rounded border-[var(--color-border-light)] text-[var(--color-brand-600)] focus:ring-[var(--color-brand-400)]"
+                            />
+                            <span className="text-[10px] font-black text-[var(--color-text-secondary)]">Compare 2</span>
+                          </label>
+                          <div className="mt-1">
+                            <CustomSelect
+                              value={draftCompareYearVal2}
+                              disabled={!draftCompareActive2}
+                              onChange={(val: string) => {
+                                setDraftCompareYearVal2(val);
+                                if (val !== 'none') setDraftKpiCompareYear(val);
+                              }}
+                              options={[
+                                { value: 'none', label: 'None' },
+                                ...availableYears.filter(yr => yr !== draftYear).map(yr => ({ value: yr, label: yr }))
+                              ]}
+                              ariaLabel="Compare Year 2"
+                            />
+                          </div>
+                        </div>
+
+                        {/* KPI YoY Base (ตัวสลับปีเปรียบเทียบของ KPI) */}
+                        <div className="flex flex-col gap-1 bg-[var(--color-surface-1)] p-2 rounded-lg border border-[var(--color-border-light)]">
+                          <span className="text-[10px] font-black text-[var(--color-text-secondary)]">KPI YoY Base</span>
+                          <div className="mt-4">
+                            <CustomSelect
+                              value={draftKpiCompareYear}
+                              disabled={!draftCompareActive1 && !draftCompareActive2}
+                              onChange={(val: string) => setDraftKpiCompareYear(val)}
+                              options={[
+                                ...(draftCompareActive1 && draftCompareYearVal1 && draftCompareYearVal1 !== 'none' ? [{ value: draftCompareYearVal1, label: draftCompareYearVal1 }] : []),
+                                ...(draftCompareActive2 && draftCompareYearVal2 && draftCompareYearVal2 !== 'none' ? [{ value: draftCompareYearVal2, label: draftCompareYearVal2 }] : [])
+                              ].filter((opt, index, self) => self.findIndex(t => t.value === opt.value) === index)}
+                              ariaLabel="KPI YoY Base Year"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 pt-3 border-t border-[var(--color-border-light)] flex justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowPeriodPopover(false)}
+                        className="rounded-lg border border-[var(--color-border-light)] bg-[var(--color-surface-0)] px-4 py-2 text-xs font-black text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={applyPeriodChangesLayout}
+                        className="rounded-lg border border-[var(--color-brand-300)] bg-[color-mix(in_srgb,var(--color-brand-500)_12%,var(--color-surface-0))] px-4 py-2 text-xs font-black text-[var(--color-brand-600)] hover:bg-[color-mix(in_srgb,var(--color-brand-500)_16%,var(--color-surface-0))]"
+                      >
+                        Apply
+                      </button>
+                    </div>
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 5 }}>
-                    {MONTHS.map((m, i) => {
-                      const mStr = String(i + 1);
-                      const on = selectedMonths.includes(mStr);
-                      return (
-                        <button key={m} onClick={() => toggleMonth(mStr)} style={{
-                          padding: '4px 0', fontSize: 'var(--erp-text-meta)', fontWeight: 800, borderRadius: 5,
-                          border: `1px solid ${on ? 'var(--color-ui-interactive)' : 'var(--color-border-light)'}`,
-                          background: on ? 'var(--color-ui-selected)' : 'var(--color-ui-surface)',
-                          color: on ? 'var(--color-ui-interactive)' : 'var(--color-text-tertiary)',
-                          cursor: 'pointer'
-                        }}>
-                          {m}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
               )}
             </div>
 
@@ -364,9 +614,36 @@ export default function CustomerDashboardLayout() {
           </div>
         }
       />
-      
+
       {/* Shared Layout Main Content Area */}
-      <Outlet context={{ selectedYears, selectedMonths, selGroups, availableYears }} />
+      <Outlet context={{ selectedYears, selectedMonths, selGroups, availableYears, kpiCompareYear, setKpiCompareYear }} />
     </>
+  );
+}
+
+interface PeriodSelectProps {
+  label: string;
+  value: string | number;
+  options: Array<{ value: string | number; label: string }>;
+  disabled?: boolean;
+  className?: string;
+  onChange: (value: string | number) => void;
+}
+
+function PeriodSelect({ label, value, options, disabled = false, className = "", onChange }: PeriodSelectProps) {
+  const customOptions = options.map(opt => ({ value: String(opt.value), label: opt.label }));
+  return (
+    <div className={`flex flex-col gap-1.5 ${className}`}>
+      <span className="text-[10px] font-black capitalize tracking-wider text-[var(--color-text-tertiary)]">
+        {label}
+      </span>
+      <CustomSelect
+        value={String(value)}
+        disabled={disabled}
+        onChange={(val: string) => onChange(val)}
+        options={customOptions}
+        ariaLabel={label}
+      />
+    </div>
   );
 }

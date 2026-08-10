@@ -2,7 +2,7 @@ import {
   pageShell, filterToolbar, filterPrimaryRow, filterSectionLabel, filterControlDivider, filterBlock, filterLabel, selectStyle, filterCollapsedRow, filterCollapsedSummary, orderPanel, panelTitle, panelHeaderRight, panelMeta, tableScroll, tdStrongCenter, tdStrong, tdCenter, td, tdStrongRight, linkButton, paginationBar, paginationText, paginationButtons, pageButton, pageButtonDisabled, pageText
 } from '../components/infographic/InfographicSalesTrends';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-  // @ts-ignore
+// @ts-ignore
 import type { CSSProperties, KeyboardEvent, ReactNode } from 'react';
 import { useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
 import {
@@ -20,16 +20,16 @@ import {
   // @ts-ignore
   TableSkeletonRows
 } from '../components/infographic/InfographicSalesTrends';
-  // @ts-ignore
+// @ts-ignore
 import { ArrowRight, BarChart3, CalendarDays, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, DollarSign, FilterX, Hash, RefreshCw, Search, SlidersHorizontal, Table2, X } from 'lucide-react';
-  // @ts-ignore
+// @ts-ignore
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import '../components/sales/SalesDenseTable.css';
 import './OrderVolumeSummaryPage.css';
 import { CUSTOMER_GROUPS, getCustomerGroupId } from '../config/customerGroups';
 import { fetchSalesOrders, type SalesOrderRow } from '../services/orderVolumeSummaryAPI';
 import { ErpButton, ErpIconButton, ErpSegmentedControl } from '../components/ui/ErpButtons';
-  // @ts-ignore
+// @ts-ignore
 import CustomSelect from '../components/ui/CustomSelect';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -158,12 +158,12 @@ const fmtDate = (value: string | null) => {
   return date.toLocaleDateString('en-GB');
 };
 
-  // @ts-ignore
+// @ts-ignore
 function csv(value: string | null) {
   return String(value || '').split(',').map(item => item.trim()).filter(Boolean);
 }
 
-  // @ts-ignore
+// @ts-ignore
 function defaultYearSelection(years: string[]) {
   const latest = years[years.length - 1];
   const previous = years[years.length - 2];
@@ -176,7 +176,7 @@ function selectedCustomerCodes(groupIds: string[]) {
   return CUSTOMER_GROUPS.filter(group => groupIds.includes(group.id)).flatMap(group => group.prefixes);
 }
 
-  // @ts-ignore
+// @ts-ignore
 function initialGroupsFromParams(groups: string[], customers: string[]) {
   if (groups.length > 0) return groups;
   if (customers.length === 0) return [];
@@ -473,12 +473,10 @@ function rowMetricValue(row: SalesOrderRow, metric: Metric) {
 export default function OrderVolumeSummaryPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { selectedYears, selGroups: selectedGroups, availableYears } = useOutletContext<any>();
+  const { selectedYears, selectedMonths, selGroups: selectedGroups, availableYears } = useOutletContext<any>();
   const filterToolbarRef = useRef<HTMLElement>(null);
   const loadRequestIdRef = useRef(0);
   const yearsLoadFailedRef = useRef(false);
-  const [startDate, setStartDate] = useState<string>('');
-  const [endDate, setEndDate] = useState<string>('');
   const [filtersExpanded, setFiltersExpanded] = useState(true);
   const [selectedKpiType, setSelectedKpiType] = useState<KpiTypeSelection>('ALL');
   const [metric, setMetric] = useState<Metric>(searchParams.get('metric') === 'qty' ? 'qty' : 'amount');
@@ -492,19 +490,45 @@ export default function OrderVolumeSummaryPage() {
   const [hasResolvedData, setHasResolvedData] = useState(false);
   const [error, setError] = useState('');
   const [dueError, setDueError] = useState('');
-
+ 
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+
+  // คำนวณ startDate และ endDate อัตโนมัติตามฟิลเตอร์ layout
+  const { startDate, endDate } = useMemo(() => {
+    if (selectedYears.length === 0 || selectedMonths.length === 0) {
+      return { startDate: '', endDate: '' };
+    }
+    const sortedYears = [...selectedYears].map(Number).sort((a, b) => a - b);
+    const sortedMonths = [...selectedMonths].map(Number).sort((a, b) => a - b);
+    
+    const startYr = sortedYears[0];
+    const endYr = sortedYears[sortedYears.length - 1];
+    const startM = String(sortedMonths[0]).padStart(2, '0');
+    const endM = String(sortedMonths[sortedMonths.length - 1]).padStart(2, '0');
+
+    // ท้ายเดือน
+    const lastDayMap: Record<string, string> = {
+      '01': '31', '02': '29', '03': '31', '04': '30', '05': '31', '06': '30',
+      '07': '31', '08': '31', '09': '30', '10': '31', '11': '30', '12': '31'
+    };
+    const lastDay = lastDayMap[endM] || '31';
+
+    return {
+      startDate: `${startYr}-${startM}-01`,
+      endDate: `${endYr}-${endM}-${lastDay}`
+    };
+  }, [selectedYears, selectedMonths]);
 
   const customers = useMemo(() => selectedCustomerCodes(selectedGroups), [selectedGroups]);
   const drilldownKey = drilldown ? `${drilldown.basis || 'order'}|${drilldown.year}|${drilldown.month || 'all'}|${drilldown.week || 'all'}|${drilldown.type || 'all'}|${drilldown.metric || metric}` : 'all';
   const filterPageKey = `${selectedYears.join('|')}|${selectedGroups.join('|')}|${metric}|${search}|${drilldownKey}`;
-
+ 
   useEffect(() => {
     const resetTimer = window.setTimeout(() => setPage(1), 0);
     return () => window.clearTimeout(resetTimer);
   }, [filterPageKey]);
-
+ 
   useEffect(() => {
     const closeDropdowns = (event: PointerEvent) => {
       if (filterToolbarRef.current?.contains(event.target as Node)) return;
@@ -714,8 +738,6 @@ export default function OrderVolumeSummaryPage() {
   };
 
   const resetFilters = () => {
-    setStartDate(`${new Date().getFullYear()}-01-01`);
-    setEndDate('');
     setDrilldown(null);
     setMetric('amount');
   };
@@ -755,8 +777,8 @@ export default function OrderVolumeSummaryPage() {
       <div className="content-scrollbar flex-1 overflow-y-auto" style={pageShell}>
         <div className={`app-content-frame app-content-frame--workspace app-page-content customer-trends-page customer-trends-page--${activeView}`}>
           <header className="customer-trends-page-header">
-            <div className="customer-trends-page-header__title">
-              <h1>Sales Performance Insights</h1>
+            <div>
+              <h1>Order Volume Summary</h1>
               <p>Sales Trends by Customer Group with order-line details</p>
             </div>
             <div className="customer-trends-page-header__actions" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
@@ -770,7 +792,7 @@ export default function OrderVolumeSummaryPage() {
                 ]}
               />
               <ErpSegmentedControl
-                ariaLabel="Sales Performance Insights view"
+                ariaLabel="Order Volume Summary view"
                 value={activeView}
                 onChange={(v) => setActiveView(v as ViewMode)}
                 options={[
@@ -797,12 +819,12 @@ export default function OrderVolumeSummaryPage() {
                     <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                         <span style={{ fontSize: '10px', color: 'var(--color-text-tertiary)', fontWeight: 600, textTransform: 'uppercase' }}>Start Date</span>
-                        <input type="date" style={selectStyle} value={startDate} onChange={e => { setStartDate(e.target.value); setDrilldown(null); }} />
+                        <input type="date" disabled style={{ ...selectStyle, opacity: 0.75, cursor: 'not-allowed' }} value={startDate} readOnly />
                       </div>
                       <span style={{ color: 'var(--color-text-tertiary)', marginTop: 14 }}>-</span>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                         <span style={{ fontSize: '10px', color: 'var(--color-text-tertiary)', fontWeight: 600, textTransform: 'uppercase' }}>End Date</span>
-                        <input type="date" style={selectStyle} value={endDate} onChange={e => { setEndDate(e.target.value); setDrilldown(null); }} />
+                        <input type="date" disabled style={{ ...selectStyle, opacity: 0.75, cursor: 'not-allowed' }} value={endDate} readOnly />
                       </div>
                     </div>
                   </div>

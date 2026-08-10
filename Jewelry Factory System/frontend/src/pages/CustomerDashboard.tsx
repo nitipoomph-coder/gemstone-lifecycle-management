@@ -458,47 +458,59 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
             {/* Side-by-Side Summary Cards */}
             <div className="sales-summary-cards">
               {summaries.map((g) => {
+                const groupInfo = ALL_GROUPS.find(x => x.id === g.id);
+                const bTotal = g.yearTotals[activeYears[0]] || 0;
+                const cTotal = activeYears.length > 1 ? (g.yearTotals[activeYears[1]] || 0) : 0;
+                const pct = cTotal > 0 ? ((bTotal - cTotal) / cTotal) * 100 : null;
+                const isUp = pct !== null && pct > 0;
+                const isDown = pct !== null && pct < 0;
+
                 return (
-                  <div key={g.id} style={{ background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)', borderRadius: 8, padding: '16px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: ALL_GROUPS.find(x => x.id === g.id)?.color || 'var(--color-brand-500)' }} />
-                      <span style={{ fontSize: 'var(--erp-text-control)', color: 'var(--color-text-primary)', fontWeight: 900, textTransform: 'capitalize' }}>{g.label}</span>
+                  <div
+                    key={g.id}
+                    style={{
+                      background: 'var(--color-surface-0)',
+                      border: '1px solid var(--color-border-light)',
+                      borderLeft: `4px solid ${groupInfo?.color || 'var(--color-border-light)'}`,
+                      borderRadius: 8,
+                      padding: '12px 16px',
+                      boxShadow: '0 8px 20px -16px color-mix(in srgb, var(--color-surface-900) 25%, transparent)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 4
+                    }}
+                  >
+                    <div style={{ fontSize: 'var(--erp-text-dense)', fontWeight: 900, color: 'var(--color-text-primary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span>{g.label}</span>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--color-text-tertiary)', fontWeight: 800 }}>({activeYears[0]})</span>
                     </div>
-
-                    {/* Years Breakdown & YoY */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      {[...activeYears].reverse().map((yr, i, arr) => {
-                        const prevYr = arr[i + 1];
-                        const currVal = g.yearTotals[yr] || 0;
-                        const prevVal = prevYr ? (g.yearTotals[prevYr] || 0) : null;
-                        let pct = null;
-                        if (prevVal !== null && prevVal > 0) {
-                          pct = ((currVal - prevVal) / prevVal) * 100;
+                    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 2 }}>
+                      <span style={{ fontSize: 'var(--erp-text-panel)', fontWeight: 900, color: 'var(--color-text-secondary)', fontFamily: 'var(--font-display)' }}>
+                        {metric === 'qty'
+                          ? bTotal.toLocaleString(undefined, { maximumFractionDigits: 0 })
+                          : '$' + bTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                         }
-
-                        const isLatest = i === 0;
-                        const itemColor = pct === null ? 'var(--color-text-primary)' : pct >= 0 ? 'var(--color-success-500)' : 'var(--color-danger-500)';
-                        const valColor = isLatest ? itemColor : 'var(--color-text-primary)';
-
-                        return (
-                          <div key={yr} style={{ display: 'flex', justifyContent: 'space-between', alignItems: isLatest ? 'flex-end' : 'center', paddingBottom: isLatest ? 6 : 4, borderBottom: isLatest ? '2px solid var(--color-border-light)' : '1px dashed var(--color-border-light)' }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                              <span style={{ fontSize: isLatest ? 'var(--erp-text-panel)' : 'var(--erp-text-control)', fontWeight: 900, color: 'var(--color-text-secondary)' }}>{yr}</span>
-                              {prevYr && (
-                                <span style={{ fontSize: 'var(--erp-text-dense)', fontWeight: 800, color: pct === null ? 'var(--color-text-tertiary)' : itemColor }}>
-                                  {pct === null ? 'No data' : `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`}
-                                </span>
-                              )}
-                            </div>
-                            <span style={{ fontSize: isLatest ? 'var(--erp-text-panel)' : 'var(--erp-text-control)', fontWeight: 900, color: valColor, transition: 'color 0.3s' }}>
-                              {metric === 'qty'
-                                ? currVal.toLocaleString(undefined, { maximumFractionDigits: 0 })
-                                : '$' + currVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                              }
+                      </span>
+                      {pct !== null && (
+                        <span
+                          style={{
+                            fontSize: '0.72rem',
+                            fontWeight: 900,
+                            color: isUp ? 'var(--color-success-500)' : isDown ? 'var(--color-danger-500)' : 'var(--color-text-tertiary)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 2,
+                            flexWrap: 'nowrap'
+                          }}
+                        >
+                          <span>{isUp ? '↑' : isDown ? '↓' : ''} {Math.abs(pct).toFixed(2)}%</span>
+                          {activeYears.length > 1 && (
+                            <span style={{ fontSize: '0.62rem', opacity: 0.75, color: 'var(--color-text-quaternary)', fontWeight: 800 }}>
+                              vs {activeYears[1]}
                             </span>
-                          </div>
-                        );
-                      })}
+                          )}
+                        </span>
+                      )}
                     </div>
                   </div>
                 );

@@ -23,7 +23,7 @@ export const menuConfig: NavMenuGroup[] = [
     items: [
       { id: 'dash-cust', label: 'Sales Summary', path: '/dashboard/customer' },
       { id: 'dash-top-orders', label: 'Top Item Gallery', path: '/dashboard/top-orders' },
-      { id: 'dash-customer-trends', label: 'Sales Insights', path: '/dashboard/customer/trends' },
+      { id: 'dash-customer-trends', label: 'Customer Trends', path: '/dashboard/customer/trends' },
     ],
   },
 

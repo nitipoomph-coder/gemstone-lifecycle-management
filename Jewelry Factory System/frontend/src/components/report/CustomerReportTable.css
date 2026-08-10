@@ -221,6 +221,13 @@
 .customer-matrix-td--total {
   min-width: 108px;
   width: 108px;
+  text-align: center;
+}
+
+.customer-matrix-total {
+  color: var(--matrix-data-text);
+  font-weight: 900;
+  text-align: center;
 }
 
 .customer-matrix-td--growth {

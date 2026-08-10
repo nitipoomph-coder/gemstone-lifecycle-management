@@ -1,12 +1,13 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, DollarSign, Hash, Calendar, CalendarDays, Layers, Users, Eye, EyeOff } from 'lucide-react';
 import { fetchCustomerSummary } from '../services/customerSummaryAPI';
 import { ALL_GROUPS, getCustomerGroupId } from '../config/customerGroups';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList } from 'recharts';
 import { ErpSegmentedControl } from '../components/ui/ErpButtons';
   // @ts-ignore
 import { buildCustomerTrendsPath } from '../utils/customerTrendsUrl';
+import { useTheme } from '../contexts/useTheme';
 import './CustomerDashboard.css';
 
 
@@ -70,6 +71,7 @@ const CustomTooltip = ({ active, payload, label, metric }: CustomTooltipProps) =
 };
 
 export default function CustomerDashboard({ metric: propMetric = 'amount' }: { metric?: Metric }) {
+  const { theme } = useTheme();
   const [searchParams] = useSearchParams();
   const metric = (searchParams.get('metric') as Metric) || propMetric;
   const { selectedYears, selectedMonths, selGroups, availableYears } = useOutletContext<any>();
@@ -348,13 +350,13 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
               Sales Summary
             </h2>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <ErpSegmentedControl ariaLabel="Metric" value={metric} onChange={(v) => switchMetric(v as Metric)} options={[ { value: 'amount', label: 'Sales' }, { value: 'qty', label: 'Qty' } ]} />
+              <ErpSegmentedControl ariaLabel="Metric" value={metric} onChange={(v) => switchMetric(v as Metric)} options={[ { value: 'amount', label: 'Sales', icon: <DollarSign size={13} /> }, { value: 'qty', label: 'Qty', icon: <Hash size={13} /> } ]} />
               <div style={{ width: 1, height: 16, background: 'var(--color-border-light)' }} />
-              <ErpSegmentedControl ariaLabel="View" value={mode} onChange={(v) => setMode(v as 'yearly' | 'monthly')} options={[ { value: 'yearly', label: 'Year' }, { value: 'monthly', label: 'Month' } ]} />
+              <ErpSegmentedControl ariaLabel="View" value={mode} onChange={(v) => setMode(v as 'yearly' | 'monthly')} options={[ { value: 'yearly', label: 'Year', icon: <CalendarDays size={13} /> }, { value: 'monthly', label: 'Month', icon: <Calendar size={13} /> } ]} />
               <div style={{ width: 1, height: 16, background: 'var(--color-border-light)' }} />
-              <ErpSegmentedControl ariaLabel="Series" value={monthlySeries} onChange={(v) => setMonthlySeries(v as 'year' | 'group')} options={[ { value: 'year', label: 'By Year' }, { value: 'group', label: 'By Group' } ]} />
+              <ErpSegmentedControl ariaLabel="Series" value={monthlySeries} onChange={(v) => setMonthlySeries(v as 'year' | 'group')} options={[ { value: 'year', label: 'By Year', icon: <Layers size={13} /> }, { value: 'group', label: 'By Group', icon: <Users size={13} /> } ]} />
               <div style={{ width: 1, height: 16, background: 'var(--color-border-light)' }} />
-              <ErpSegmentedControl ariaLabel="Labels" value={showLabels ? 'on' : 'off'} onChange={(v) => setShowLabels(v === 'on')} options={[ { value: 'on', label: 'Show Labels' }, { value: 'off', label: 'Hide Labels' } ]} />
+              <ErpSegmentedControl ariaLabel="Labels" value={showLabels ? 'on' : 'off'} onChange={(v) => setShowLabels(v === 'on')} options={[ { value: 'on', label: 'Show Labels', icon: <Eye size={13} /> }, { value: 'off', label: 'Hide Labels', icon: <EyeOff size={13} /> } ]} />
               <button onClick={resetSummaryView} style={{ background: "none", border: "none", padding: "6px", color: "var(--color-text-tertiary)", cursor: "pointer", marginLeft: 8 }}><RefreshCw size={14} /></button>
             </div>
           </div>
@@ -410,14 +412,28 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
                   </div>
                   {grandYoy.length > 0 && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 2, alignItems: 'flex-end' }}>
-                      {grandYoy.slice(0, 1).map(({ currYr, prevYr, pct }) => (
-                        <div key={`${currYr}-${prevYr}`} style={{ fontSize: 'var(--erp-text-body)', fontWeight: 800, color: pct === null ? 'var(--color-text-tertiary)' : pct >= 0 ? 'var(--color-success-600)' : 'var(--color-danger-600)', background: pct === null ? 'transparent' : pct >= 0 ? 'var(--color-success-50)' : 'var(--color-danger-50)', padding: '4px 10px', borderRadius: 12 }}>
-                          {pct === null ? `No prior data` : `${pct >= 0 ? 'Up +' : 'Down '}${pct.toFixed(2)}%`}
-                          <span style={{ fontSize: 'var(--erp-text-dense)', color: pct === null ? 'var(--color-text-quaternary)' : pct >= 0 ? 'var(--color-success-600)' : 'var(--color-danger-600)', opacity: 0.8, marginLeft: 6 }}>
-                            vs {prevYr}
-                          </span>
-                        </div>
-                      ))}
+                      {grandYoy.slice(0, 1).map(({ currYr, prevYr, pct }) => {
+                        const isRoyalTheme = theme === 'royal-white';
+                        const isUp = pct !== null && pct >= 0;
+                        return (
+                          <div
+                            key={`${currYr}-${prevYr}`}
+                            style={{
+                              fontSize: 'var(--erp-text-body)',
+                              fontWeight: 800,
+                              color: pct === null ? 'var(--color-text-tertiary)' : isUp ? 'var(--color-success-500)' : 'var(--color-danger-500)',
+                              background: pct === null ? 'transparent' : (isRoyalTheme ? (isUp ? 'var(--color-success-50)' : 'var(--color-danger-50)') : 'transparent'),
+                              padding: isRoyalTheme ? '4px 10px' : '0',
+                              borderRadius: 12
+                            }}
+                          >
+                            {pct === null ? `No prior data` : `${isUp ? 'Up +' : 'Down '}${pct.toFixed(2)}%`}
+                            <span style={{ fontSize: 'var(--erp-text-dense)', color: pct === null ? 'var(--color-text-quaternary)' : isUp ? 'var(--color-success-500)' : 'var(--color-danger-500)', opacity: 0.8, marginLeft: 6 }}>
+                              vs {prevYr}
+                            </span>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -465,6 +481,7 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
                 const isUp = pct !== null && pct > 0;
                 const isDown = pct !== null && pct < 0;
 
+                const isRoyalTheme = theme === 'royal-white';
                 return (
                   <div
                     key={g.id}
@@ -497,6 +514,9 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
                             fontSize: '0.72rem',
                             fontWeight: 900,
                             color: isUp ? 'var(--color-success-500)' : isDown ? 'var(--color-danger-500)' : 'var(--color-text-tertiary)',
+                            background: isRoyalTheme ? (isUp ? 'color-mix(in srgb, var(--color-success-500) 12%, transparent)' : isDown ? 'color-mix(in srgb, var(--color-danger-500) 12%, transparent)' : 'transparent') : 'transparent',
+                            padding: isRoyalTheme ? '2px 6px' : '0',
+                            borderRadius: isRoyalTheme ? 4 : 0,
                             display: 'flex',
                             alignItems: 'center',
                             gap: 2,

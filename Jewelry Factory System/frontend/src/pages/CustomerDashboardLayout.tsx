@@ -361,7 +361,7 @@ export default function CustomerDashboardLayout() {
 
               {showPeriodPopover && (
                 /* ตัวกรองตัวใหม่: Period Setup สำหรับทุกหน้าจอ */
-                <div className="sales-gallery-period-menu absolute right-0 z-[110] mt-2" style={{ width: 480, position: 'absolute', top: '100%' }}>
+                <div className="sales-gallery-period-menu absolute right-0 z-[110] mt-2 period-popover-animate" style={{ width: 480, position: 'absolute', top: '100%' }}>
                     <div className="flex items-center justify-between border-b border-[var(--color-border-light)] pb-2.5 mb-3">
                       <span className="text-xs font-black capitalize tracking-wider text-[var(--color-text-primary)]">
                         Period Setup
@@ -430,7 +430,11 @@ export default function CustomerDashboardLayout() {
                         <PeriodSelect
                           label="Year (Base Year)"
                           value={draftYear}
-                          options={availableYears.map(yr => ({ value: yr, label: yr }))}
+                          options={availableYears.filter(yr => {
+                            if (draftCompareActive1 && yr === draftCompareYearVal1) return false;
+                            if (draftCompareActive2 && yr === draftCompareYearVal2 && yr !== 'none') return false;
+                            return true;
+                          }).map(yr => ({ value: yr, label: yr }))}
                           onChange={(value) => setDraftYear(String(value))}
                         />
                       </div>
@@ -462,7 +466,11 @@ export default function CustomerDashboardLayout() {
                                 setDraftCompareYearVal1(val);
                                 setDraftKpiCompareYear(val);
                               }}
-                              options={availableYears.map(yr => ({ value: yr, label: yr }))}
+                              options={availableYears.filter(yr => {
+                                if (yr === draftYear) return false;
+                                if (draftCompareActive2 && yr === draftCompareYearVal2 && yr !== 'none') return false;
+                                return true;
+                              }).map(yr => ({ value: yr, label: yr }))}
                               ariaLabel="Compare Year 1"
                             />
                           </div>
@@ -489,7 +497,11 @@ export default function CustomerDashboardLayout() {
                               }}
                               options={[
                                 { value: 'none', label: 'None' },
-                                ...availableYears.filter(yr => yr !== draftYear).map(yr => ({ value: yr, label: yr }))
+                                ...availableYears.filter(yr => {
+                                  if (yr === draftYear) return false;
+                                  if (draftCompareActive1 && yr === draftCompareYearVal1) return false;
+                                  return true;
+                                }).map(yr => ({ value: yr, label: yr }))
                               ]}
                               ariaLabel="Compare Year 2"
                             />

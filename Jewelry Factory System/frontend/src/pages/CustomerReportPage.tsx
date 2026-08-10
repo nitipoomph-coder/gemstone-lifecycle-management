@@ -13,6 +13,7 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 
 interface CustomerSummaryRecord {
   id: string;
+  name?: string;
   topItem?: string;
   topItemQty?: number | string;
   monthly?: Record<string, Record<string, number | string>>;
@@ -39,7 +40,7 @@ export default function CustomerReportPage() {
   const { selectedYears, selectedMonths, selGroups, kpiCompareYear } = useOutletContext<any>();
   const metric = searchParams.get('metric') || 'amount';
   const requestedCustomers = useMemo(() => csv(searchParams.get('customers')).map(customer => customer.toUpperCase()), [searchParams]);
-  const requestedViewMode = searchParams.get('view') === 'monthly' ? 'monthly' : 'ytd';
+  const requestedViewMode: 'ytd' | 'quarterly' | 'monthly' = searchParams.get('view') === 'monthly' ? 'monthly' : searchParams.get('view') === 'quarterly' ? 'quarterly' : 'ytd';
 
   const fmt = useCallback((val: number) => {
     if (metric === 'qty') return val.toLocaleString(undefined, { maximumFractionDigits: 0 });
@@ -59,7 +60,7 @@ export default function CustomerReportPage() {
   const [isFiltering, setIsFiltering] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(true);
 
-  const [viewMode, setViewMode] = useState<'ytd' | 'monthly'>(requestedViewMode);
+  const [viewMode, setViewMode] = useState<'ytd' | 'quarterly' | 'monthly'>(requestedViewMode);
   const [aggregationMode, setAggregationMode] = useState<'group' | 'customer'>('group');
 
   useEffect(() => {
@@ -81,14 +82,19 @@ export default function CustomerReportPage() {
 
 
   const renderGrowthAmt = useCallback((baseVal: number, compVal: number) => {
-    if (compVal === 0 && baseVal === 0) return {
-      bgColor: 'transparent',
-      node: <div style={{ textAlign: 'right', color: 'var(--color-text-quaternary)' }}>-</div>
-    };
     const diff = baseVal - compVal;
+    if (diff === 0) return {
+      bgColor: 'transparent',
+      node: (
+        <div style={{ width: '100%', textAlign: 'right' }}>
+          <span style={{ color: 'var(--color-text-tertiary)', fontWeight: 900, fontSize: 'var(--erp-text-panel)', fontVariantNumeric: 'tabular-nums' }}>{fmt(0)}</span>
+        </div>
+      )
+    };
     const isUp = diff > 0;
     const isDown = diff < 0;
-    const bgColor = theme === 'royal-white'
+    const isRoyal = theme === 'royal-white';
+    const bgColor = isRoyal
       ? (isUp ? 'color-mix(in srgb, var(--color-success-500) 15%, transparent)' : isDown ? 'color-mix(in srgb, var(--color-danger-500) 15%, transparent)' : 'transparent')
       : 'transparent';
     const textColor = isUp ? 'var(--color-success-500)' : isDown ? 'var(--color-danger-500)' : 'var(--color-text-tertiary)';
@@ -107,7 +113,11 @@ export default function CustomerReportPage() {
   const renderGrowthPct = useCallback((baseVal: number, compVal: number, isTrulyNew = false) => {
     if (compVal === 0 && baseVal === 0) return {
       bgColor: 'transparent',
-      node: <div style={{ textAlign: 'right', color: 'var(--color-text-quaternary)' }}>-</div>
+      node: (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', width: '100%' }}>
+          <span style={{ color: 'var(--color-text-tertiary)', fontWeight: 900, fontSize: 'var(--erp-text-panel)', fontVariantNumeric: 'tabular-nums' }}>0.00%</span>
+        </div>
+      )
     };
     if (compVal === 0 && baseVal > 0 && isTrulyNew) return {
       bgColor: theme === 'royal-white' ? 'color-mix(in srgb, var(--color-success-500) 8%, var(--color-surface-0))' : 'transparent',
@@ -119,21 +129,37 @@ export default function CustomerReportPage() {
     };
     if (compVal === 0 && baseVal > 0) return {
       bgColor: 'transparent',
-      node: <div style={{ textAlign: 'right', color: 'var(--color-text-tertiary)', fontWeight: 900, fontVariantNumeric: 'tabular-nums' }}>0.0%</div>
+      node: (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', width: '100%' }}>
+          <span style={{ color: 'var(--color-text-tertiary)', fontWeight: 900, fontSize: 'var(--erp-text-panel)', fontVariantNumeric: 'tabular-nums' }}>0.00%</span>
+        </div>
+      )
     };
     const pct = ((baseVal - compVal) / compVal) * 100;
+    if (pct === 0) return {
+      bgColor: 'transparent',
+      node: (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', width: '100%' }}>
+          <span style={{ color: 'var(--color-text-tertiary)', fontWeight: 900, fontSize: 'var(--erp-text-panel)', fontVariantNumeric: 'tabular-nums' }}>0.00%</span>
+        </div>
+      )
+    };
     const isUp = pct > 0;
     const isDown = pct < 0;
-    const bgColor = theme === 'royal-white'
+    const isRoyal = theme === 'royal-white';
+    const bgColor = isRoyal
       ? (isUp ? 'color-mix(in srgb, var(--color-success-500) 15%, transparent)' : isDown ? 'color-mix(in srgb, var(--color-danger-500) 15%, transparent)' : 'transparent')
       : 'transparent';
     const textColor = isUp ? 'var(--color-success-500)' : isDown ? 'var(--color-danger-500)' : 'var(--color-text-tertiary)';
     const sign = isUp ? '+' : isDown ? '\u2212' : '';
+    const arrow = isUp ? '↑ ' : isDown ? '↓ ' : '';
     return {
       bgColor,
       node: (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', width: '100%' }}>
-          <span style={{ color: textColor, fontWeight: 900, fontSize: 'var(--erp-text-panel)', fontVariantNumeric: 'tabular-nums' }}>{sign}{Math.abs(pct).toFixed(1)}%</span>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', width: '100%', gap: 2 }}>
+          <span style={{ color: textColor, fontWeight: 900, fontSize: 'var(--erp-text-panel)', fontVariantNumeric: 'tabular-nums' }}>
+            {arrow}{sign}{Math.abs(pct).toFixed(2)}%
+          </span>
         </div>
       )
     };
@@ -199,40 +225,32 @@ export default function CustomerReportPage() {
 
 
   useEffect(() => {
-    const syncTimer = window.setTimeout(() => {
-      setGrowthComparisons(prev => {
-        if (activeYears.length < 2) return prev.length === 0 ? prev : [];
-
-        const maxPairs = Math.max(1, activeYears.length - 1);
-        const seen = new Set<string>();
-        const next = prev.slice(0, maxPairs)
-          .map((comp: any, index: number) => {
-            const normalizedA = activeYears.includes(comp.a) ? comp.a : activeYears[0];
-            const normalizedB = activeYears.includes(comp.b) ? comp.b : (activeYears[index + 1] || activeYears[1]);
-            const nextB = normalizedA === normalizedB
-              ? (activeYears.find((year: string) => year !== normalizedA) || normalizedB)
-              : normalizedB;
-            return { a: normalizedA, b: nextB };
-          })
-          .filter((comp: any) => {
-            if (!comp.a || !comp.b || comp.a === comp.b) return false;
-            const key = `${comp.a}_${comp.b}`;
-            if (seen.has(key)) return false;
-            seen.add(key);
-            return true;
-          });
-
-        const same = prev.length === next.length && prev.every((comp: any, index: number) => comp.a === next[index].a && comp.b === next[index].b);
-        return same ? prev : next;
-      });
-    }, 0);
-    return () => window.clearTimeout(syncTimer);
+    if (activeYears.length < 2) {
+      setGrowthComparisons([]);
+      return;
+    }
+    const base = activeYears[0];
+    const pairs: { a: string; b: string }[] = [];
+    for (let i = 1; i < activeYears.length; i++) {
+      if (activeYears[i] && activeYears[i] !== base) {
+        pairs.push({ a: base, b: activeYears[i] });
+      }
+    }
+    setGrowthComparisons(pairs);
   }, [activeYears]);
 
   const tableData = useMemo(() => {
     if (!baseYear || activeYears.length === 0) return { rows: [], colTotals: {} as Record<string, number>, activeYears: [] as string[] };
 
     let rows: CustomerReportMatrixRow[] = [];
+
+    const QUARTERS = ['Q1', 'Q2', 'Q3', 'Q4'];
+    const Q_MAP: Record<string, string[]> = {
+      Q1: ['Jan', 'Feb', 'Mar'],
+      Q2: ['Apr', 'May', 'Jun'],
+      Q3: ['Jul', 'Aug', 'Sep'],
+      Q4: ['Oct', 'Nov', 'Dec']
+    };
 
     if (aggregationMode === 'group') {
       const groupRows: Record<string, CustomerReportMatrixRow> = {};
@@ -243,6 +261,7 @@ export default function CustomerReportPage() {
         activeYears.forEach((yr: string) => {
           groupRows[gId][`isTrulyNew_${yr}`] = false;
           displayMonths.forEach((m: string) => { groupRows[gId][`${yr}_${m}`] = 0; });
+          QUARTERS.forEach(q => { groupRows[gId][`${yr}_${q}`] = 0; });
           groupRows[gId][`${yr}_total`] = 0;
         });
       });
@@ -262,34 +281,72 @@ export default function CustomerReportPage() {
             row[`${yr}_${m}`] = Number(row[`${yr}_${m}`]) + Number(val);
             row[`${yr}_total`] = Number(row[`${yr}_total`]) + Number(val);
           });
+          QUARTERS.forEach(q => {
+            row[`${yr}_${q}`] = Q_MAP[q].reduce((s, m) => s + Number(row[`${yr}_${m}`] || 0), 0);
+          });
         });
       });
 
       rows = Object.values(groupRows).filter((r: any) => activeYears.some((yr: string) => Number(r[`${yr}_total`]) > 0));
+    } else {
+      const custRows: Record<string, CustomerReportMatrixRow> = {};
 
-      rows.sort((a, b) => {
-        const valA = Number(a[`${activeYears[0]}_total`] || 0);
-        const valB = Number(b[`${activeYears[0]}_total`] || 0);
-        return sortOrder === 'desc' ? valB - valA : valA - valB;
-      });
+      custData.forEach(cust => {
+        const gId = getCustomerGroupId(cust.id || '');
+        if (!selGroups.includes(gId)) return;
+        const cId = cust.id || '';
 
-      const colTotals: Record<string, number> = {};
-      activeYears.forEach((yr: string) => {
-        colTotals[`${yr}_total`] = 0;
-        displayMonths.forEach((m: string) => { colTotals[`${yr}_${m}`] = 0; });
-      });
-      rows.forEach(r => {
+        if (!custRows[cId]) {
+          custRows[cId] = { id: cId, label: cId, topItem: '', topItemQty: 0 };
+          activeYears.forEach((yr: string) => {
+            custRows[cId][`isTrulyNew_${yr}`] = false;
+            displayMonths.forEach((m: string) => { custRows[cId][`${yr}_${m}`] = 0; });
+            QUARTERS.forEach(q => { custRows[cId][`${yr}_${q}`] = 0; });
+            custRows[cId][`${yr}_total`] = 0;
+          });
+        }
+
+        const row = custRows[cId];
+        const source = metric === 'qty' ? cust.monthlyQty : cust.monthly;
+
         activeYears.forEach((yr: string) => {
-          colTotals[`${yr}_total`] += Number(r[`${yr}_total`] || 0);
-          displayMonths.forEach((m: string) => { colTotals[`${yr}_${m}`] += Number(r[`${yr}_${m}`] || 0); });
+          displayMonths.forEach((m: string) => {
+            const idx = MONTHS.indexOf(m);
+            const val = source?.[yr]?.[String(idx + 1)] || 0;
+            row[`${yr}_${m}`] = Number(row[`${yr}_${m}`]) + Number(val);
+            row[`${yr}_total`] = Number(row[`${yr}_total`]) + Number(val);
+          });
+          QUARTERS.forEach(q => {
+            row[`${yr}_${q}`] = Q_MAP[q].reduce((s, m) => s + Number(row[`${yr}_${m}`] || 0), 0);
+          });
         });
       });
 
-      return { rows, colTotals, activeYears };
+      rows = Object.values(custRows).filter((r: any) => activeYears.some((yr: string) => Number(r[`${yr}_total`]) > 0));
     }
 
-    return { rows: [], colTotals: {} as Record<string, number>, activeYears: [] as string[] };
-  }, [custData, baseYear, activeYears, activeCustomers, searchQuery, displayMonths, metric, sortOrder]);
+    rows.sort((a, b) => {
+      const valA = Number(a[`${activeYears[0]}_total`] || 0);
+      const valB = Number(b[`${activeYears[0]}_total`] || 0);
+      return sortOrder === 'desc' ? valB - valA : valA - valB;
+    });
+
+    const colTotals: Record<string, number> = {};
+    activeYears.forEach((yr: string) => {
+      colTotals[`${yr}_total`] = 0;
+      displayMonths.forEach((m: string) => { colTotals[`${yr}_${m}`] = 0; });
+      QUARTERS.forEach(q => { colTotals[`${yr}_${q}`] = 0; });
+    });
+    rows.forEach(r => {
+      activeYears.forEach((yr: string) => {
+        colTotals[`${yr}_total`] += Number(r[`${yr}_total`] || 0);
+        displayMonths.forEach((m: string) => { colTotals[`${yr}_${m}`] += Number(r[`${yr}_${m}`] || 0); });
+        QUARTERS.forEach(q => { colTotals[`${yr}_${q}`] += Number(r[`${yr}_${q}`] || 0); });
+      });
+    });
+
+    return { rows, colTotals, activeYears };
+  }, [custData, baseYear, activeYears, activeCustomers, searchQuery, displayMonths, metric, sortOrder, aggregationMode]);
 
 
 
@@ -435,6 +492,8 @@ export default function CustomerReportPage() {
                 baseYear={baseYear}
                 viewMode={viewMode}
                 setViewMode={setViewMode}
+                aggregationMode={aggregationMode}
+                setAggregationMode={setAggregationMode}
                 tableData={tableData}
                 displayYears={displayYears}
                 displayMonths={displayMonths}

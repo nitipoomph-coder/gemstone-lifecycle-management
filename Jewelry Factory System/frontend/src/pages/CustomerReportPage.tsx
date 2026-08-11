@@ -171,6 +171,7 @@ export default function CustomerReportPage() {
   const displayMonths = useMemo(() => MONTHS.filter(m => selMonths.includes(m)), [selMonths]);
 
   const dataYears = useMemo(() => {
+    if (firstDataYear === null) return [];
     const startYear = Number(firstDataYear);
     const maxYear = Math.max(...activeYears.map(Number).filter(Boolean));
     if (!Number.isFinite(startYear) || !Number.isFinite(maxYear) || maxYear < startYear) return [];

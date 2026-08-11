@@ -63,9 +63,31 @@ router.get('/customer-summary', async (req, res) => {
     }
 
     const sargableDateCondition = buildDateRangeCondition('OrdDate', years, months);
-    const sargableTopItemDateCondition = buildDateRangeCondition('OrdDate', years, months);
 
-    const query = `
+    // ✅ OPTIMIZED: สร้าง Temporary Table และดึงข้อมูล 4 ชุดในคำสั่งเดียว
+    const multiQuery = `
+      -- 1. กรองข้อมูลเฉพาะช่วงเวลาที่ต้องการมาใส่ Temporary Table (#FilteredSales)
+      IF OBJECT_ID('tempdb..#FilteredSales') IS NOT NULL DROP TABLE #FilteredSales;
+
+      SELECT 
+        CustCode,
+        CustName,
+        CustStatus,
+        SalesName,
+        OrdYear,
+        OrdMonth,
+        ItemAmnt,
+        ItemQty,
+        ItemNo,
+        ProductType
+      INTO #FilteredSales
+      FROM VW_Web_SalesDashboard
+      WHERE ${sargableDateCondition}
+        AND ISNULL(CustStatus, 'Y') = 'Y';
+
+      -- 2. ดึงข้อมูล 4 ชุด จาก Temporary Table
+
+      -- [Recordset 0] General Sales
       SELECT
         CustCode AS id,
         MAX(CustName) AS name,
@@ -75,96 +97,66 @@ router.get('/customer-summary', async (req, res) => {
         OrdMonth AS mth,
         SUM(ItemAmnt) AS totalSales,
         SUM(ItemQty) AS totalQty
-      FROM VW_Web_SalesDashboard
-      WHERE ${sargableDateCondition}
-        AND ISNULL(CustStatus, 'Y') = 'Y'
-      GROUP BY CustCode, OrdYear, OrdMonth
-    `;
-    const result = await request.query(query);
+      FROM #FilteredSales
+      GROUP BY CustCode, OrdYear, OrdMonth;
 
-    const topItemQuery = `
+      -- [Recordset 1] Top Item All-time
       WITH ItemTotals AS (
-        SELECT
-          CustCode,
-          ItemNo,
-          SUM(ItemQty) as totalQty
-        FROM VW_Web_SalesDashboard
-        WHERE ${sargableTopItemDateCondition}
-          AND ISNULL(CustStatus, 'Y') = 'Y'
+        SELECT CustCode, ItemNo, SUM(ItemQty) as totalQty
+        FROM #FilteredSales
         GROUP BY CustCode, ItemNo
       ),
       RankedItems AS (
-        SELECT
-          CustCode,
-          ItemNo,
-          totalQty,
+        SELECT CustCode, ItemNo, totalQty,
           ROW_NUMBER() OVER(PARTITION BY CustCode ORDER BY totalQty DESC) as rn
         FROM ItemTotals
       )
       SELECT CustCode as id, ItemNo as topItem, totalQty as topItemQty
-      FROM RankedItems
-      WHERE rn = 1
-    `;
-    const topItemResult = await request.query(topItemQuery);
+      FROM RankedItems WHERE rn = 1;
 
-    const topItemByYearQuery = `
+      -- [Recordset 2] Top Item By Year
       WITH ItemTotals AS (
-        SELECT
-          CustCode,
-          OrdYear AS yr,
-          ItemNo,
-          SUM(ItemQty) as totalQty
-        FROM VW_Web_SalesDashboard
-        WHERE ${sargableTopItemDateCondition}
-          AND ISNULL(CustStatus, 'Y') = 'Y'
+        SELECT CustCode, OrdYear AS yr, ItemNo, SUM(ItemQty) as totalQty
+        FROM #FilteredSales
         GROUP BY CustCode, OrdYear, ItemNo
       ),
       RankedItems AS (
-        SELECT
-          CustCode,
-          yr,
-          ItemNo,
-          totalQty,
+        SELECT CustCode, yr, ItemNo, totalQty,
           ROW_NUMBER() OVER(PARTITION BY CustCode, yr ORDER BY totalQty DESC) as rn
         FROM ItemTotals
       )
       SELECT CustCode as id, yr, ItemNo as topItem, totalQty as topItemQty
-      FROM RankedItems
-      WHERE rn = 1
-    `;
-    const topItemByYearResult = await request.query(topItemByYearQuery);
+      FROM RankedItems WHERE rn = 1;
 
-    const topItemByYearTypeQuery = `
+      -- [Recordset 3] Top Item By Year & Type
       WITH ItemTotals AS (
-        SELECT
-          CustCode,
-          OrdYear AS yr,
-          ProductType AS productType,
-          ItemNo,
-          SUM(ItemQty) as totalQty
-        FROM VW_Web_SalesDashboard
-        WHERE ${sargableTopItemDateCondition}
-          AND ISNULL(CustStatus, 'Y') = 'Y'
+        SELECT CustCode, OrdYear AS yr, ProductType, ItemNo, SUM(ItemQty) as totalQty
+        FROM #FilteredSales
         GROUP BY CustCode, OrdYear, ProductType, ItemNo
       ),
       RankedItems AS (
-        SELECT
-          CustCode,
-          yr,
-          productType,
-          ItemNo,
-          totalQty,
-          ROW_NUMBER() OVER(PARTITION BY CustCode, yr, productType ORDER BY totalQty DESC) as rn
+        SELECT CustCode, yr, ProductType, ItemNo, totalQty,
+          ROW_NUMBER() OVER(PARTITION BY CustCode, yr, ProductType ORDER BY totalQty DESC) as rn
         FROM ItemTotals
       )
-      SELECT CustCode as id, yr, productType, ItemNo as topItem, totalQty as topItemQty
-      FROM RankedItems
-      WHERE rn = 1
+      SELECT CustCode as id, yr, ProductType as productType, ItemNo as topItem, totalQty as topItemQty
+      FROM RankedItems WHERE rn = 1;
+
+      -- 3. ลบ Temporary Table
+      DROP TABLE #FilteredSales;
     `;
-    const topItemByYearTypeResult = await request.query(topItemByYearTypeQuery);
+
+    // ยิง Query ครั้งเดียวจบ
+    const multiResult = await request.query(multiQuery);
+    
+    // ดึง Recordsets ทั้ง 4 ชุดมาใช้งาน
+    const resultRows = multiResult.recordsets[0] || [];
+    const topItemRows = multiResult.recordsets[1] || [];
+    const topItemByYearRows = multiResult.recordsets[2] || [];
+    const topItemByYearTypeRows = multiResult.recordsets[3] || [];
 
     const topItemMap = {};
-    topItemResult.recordset.forEach(r => {
+    topItemRows.forEach(r => {
       topItemMap[r.id] = {
         topItem: r.topItem,
         topItemQty: r.topItemQty
@@ -172,7 +164,7 @@ router.get('/customer-summary', async (req, res) => {
     });
 
     const topItemsByYearMap = {};
-    topItemByYearResult.recordset.forEach(r => {
+    topItemByYearRows.forEach(r => {
       if (!topItemsByYearMap[r.id]) topItemsByYearMap[r.id] = {};
       topItemsByYearMap[r.id][String(r.yr)] = {
         topItem: r.topItem,
@@ -181,7 +173,7 @@ router.get('/customer-summary', async (req, res) => {
     });
 
     const topItemsByYearByTypeMap = {};
-    topItemByYearTypeResult.recordset.forEach(r => {
+    topItemByYearTypeRows.forEach(r => {
       if (!topItemsByYearByTypeMap[r.id]) topItemsByYearByTypeMap[r.id] = {};
       if (!topItemsByYearByTypeMap[r.id][String(r.yr)]) topItemsByYearByTypeMap[r.id][String(r.yr)] = {};
       topItemsByYearByTypeMap[r.id][String(r.yr)][r.productType] = {
@@ -195,7 +187,7 @@ router.get('/customer-summary', async (req, res) => {
     const curYear = new Date().getFullYear();
     const curMonth = new Date().getMonth() + 1;
 
-    result.recordset.forEach(row => {
+    resultRows.forEach(row => {
       if (!custMap[row.id]) {
         custMap[row.id] = {
           id: row.id,

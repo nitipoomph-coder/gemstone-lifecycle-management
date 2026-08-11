@@ -137,6 +137,24 @@ export default function CustomerReportTable({
   });
   const skeletonCellClassName = (index: number) => `customer-matrix-loading-cell ${activeCurrentMonthIndex >= 0 && index % skeletonPeriod === activeCurrentMonthIndex ? 'customer-matrix-loading-cell--current' : ''}`.trim();
 
+  const totalsRow = useMemo(() => {
+    if (!tableData?.rows || tableData.rows.length === 0) return null;
+    const tot: Record<string, number> = {};
+    displayYears.forEach(yr => {
+      displayMonths.forEach(m => {
+        const key = `${yr}_${m}`;
+        tot[key] = tableData.rows.reduce((sum, r) => sum + Number(r[key] || 0), 0);
+      });
+      ['Q1', 'Q2', 'Q3', 'Q4'].forEach(q => {
+        const key = `${yr}_${q}`;
+        tot[key] = tableData.rows.reduce((sum, r) => sum + Number(r[key] || 0), 0);
+      });
+      const totKey = `${yr}_total`;
+      tot[totKey] = tableData.rows.reduce((sum, r) => sum + Number(r[totKey] || 0), 0);
+    });
+    return tot;
+  }, [tableData?.rows, displayYears, displayMonths]);
+
   if (loading) {
     return (
       <section className="customer-matrix-shell customer-matrix-shell--loading" aria-busy="true" aria-label="Loading customer report matrix">
@@ -233,24 +251,6 @@ export default function CustomerReportTable({
       </div>
     );
   };
-
-  const totalsRow = useMemo(() => {
-    if (!tableData.rows || tableData.rows.length === 0) return null;
-    const tot: Record<string, number> = {};
-    displayYears.forEach(yr => {
-      displayMonths.forEach(m => {
-        const key = `${yr}_${m}`;
-        tot[key] = tableData.rows.reduce((sum, r) => sum + Number(r[key] || 0), 0);
-      });
-      ['Q1', 'Q2', 'Q3', 'Q4'].forEach(q => {
-        const key = `${yr}_${q}`;
-        tot[key] = tableData.rows.reduce((sum, r) => sum + Number(r[key] || 0), 0);
-      });
-      const totKey = `${yr}_total`;
-      tot[totKey] = tableData.rows.reduce((sum, r) => sum + Number(r[totKey] || 0), 0);
-    });
-    return tot;
-  }, [tableData.rows, displayYears, displayMonths]);
 
   const isCurrentMonth = (yr: string, month: string) => yr === currentYearStr && MONTHS.indexOf(month) === currentMonthIdx;
   const isCurrentYear = (yr: string) => yr === currentYearStr;

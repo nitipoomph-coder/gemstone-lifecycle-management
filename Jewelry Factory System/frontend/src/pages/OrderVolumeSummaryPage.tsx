@@ -679,7 +679,7 @@ export default function OrderVolumeSummaryPage() {
         row.poNo,
         row.itemNo,
         row.customerCode,
-        row.customerName,
+
         row.brand,
         row.itemType,
         row.itemTypeName,

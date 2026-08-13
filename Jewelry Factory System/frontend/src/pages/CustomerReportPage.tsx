@@ -230,11 +230,12 @@ export default function CustomerReportPage() {
       setGrowthComparisons([]);
       return;
     }
-    const base = activeYears[0];
+    const sortedDesc = [...activeYears].map(String).sort((y1, y2) => Number(y2) - Number(y1));
+    const newestYear = sortedDesc[0];
     const pairs: { a: string; b: string }[] = [];
-    for (let i = 1; i < activeYears.length; i++) {
-      if (activeYears[i] && activeYears[i] !== base) {
-        pairs.push({ a: base, b: activeYears[i] });
+    for (let i = 1; i < sortedDesc.length; i++) {
+      if (sortedDesc[i] && sortedDesc[i] !== newestYear) {
+        pairs.push({ a: newestYear, b: sortedDesc[i] });
       }
     }
     setGrowthComparisons(pairs);
@@ -426,10 +427,14 @@ export default function CustomerReportPage() {
                 <div style={{ marginBottom: 20 }}>
                   <div className="sales-report-kpis flex-wrap" style={{ display: 'flex', gap: 12 }}>
                     {groupKpis.map((g: any) => {
-                      const bTotal = g.totals[activeYears[0]] || 0;
-                      // ค้นหาและดึงยอดของปีเปรียบเทียบที่เลือกสลับ (kpiCompareYear)
-                      const targetCompYear = kpiCompareYear && activeYears.includes(kpiCompareYear) ? kpiCompareYear : (activeYears[1] || '');
-                      const cTotal = targetCompYear ? (g.totals[targetCompYear] || 0) : 0;
+                      const sortedYearsDesc = [...activeYears].map(String).sort((y1, y2) => Number(y2) - Number(y1));
+                      const cardBaseYear = sortedYearsDesc[0] || activeYears[0];
+                      const cardCompYear = kpiCompareYear && activeYears.includes(kpiCompareYear) && kpiCompareYear !== cardBaseYear
+                        ? kpiCompareYear
+                        : (sortedYearsDesc.length > 1 ? sortedYearsDesc.find(y => y !== cardBaseYear) || null : null);
+
+                      const bTotal = g.totals[cardBaseYear] || 0;
+                      const cTotal = cardCompYear ? (g.totals[cardCompYear] || 0) : 0;
                       const pct = cTotal > 0 ? ((bTotal - cTotal) / cTotal) * 100 : null;
                       const isUp = pct !== null && pct > 0;
                       const isDown = pct !== null && pct < 0;
@@ -450,13 +455,13 @@ export default function CustomerReportPage() {
                         >
                           <div style={{ fontSize: 'var(--erp-text-dense)', fontWeight: 900, color: 'var(--color-text-primary)', marginBottom: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <span>{g.label}</span>
-                            <span style={{ fontSize: '0.72rem', color: 'var(--color-text-tertiary)', fontWeight: 800 }}>({activeYears[0]})</span>
+                            <span style={{ fontSize: '0.72rem', color: 'var(--color-text-tertiary)', fontWeight: 800 }}>({cardBaseYear})</span>
                           </div>
                           <div className="flex items-baseline justify-between gap-2">
                             <span style={{ fontSize: 'var(--erp-text-panel)', fontWeight: 900, color: 'var(--color-text-secondary)', fontFamily: 'var(--font-display)' }}>
                               {fmtCurr(bTotal)}
                             </span>
-                            {pct !== null && (
+                            {pct !== null && cardCompYear && (
                               <span
                                 style={{
                                   fontSize: '0.72rem',
@@ -469,11 +474,9 @@ export default function CustomerReportPage() {
                                 }}
                               >
                                 <span>{isUp ? '↑' : isDown ? '↓' : ''} {Math.abs(pct).toFixed(2)}%</span>
-                                {targetCompYear && (
-                                  <span style={{ fontSize: '0.62rem', opacity: 0.75, color: 'var(--color-text-quaternary)', fontWeight: 800 }}>
-                                    vs {targetCompYear}
-                                  </span>
-                                )}
+                                <span style={{ fontSize: '0.62rem', opacity: 0.75, color: 'var(--color-text-quaternary)', fontWeight: 800 }}>
+                                  vs {cardCompYear}
+                                </span>
                               </span>
                             )}
                           </div>

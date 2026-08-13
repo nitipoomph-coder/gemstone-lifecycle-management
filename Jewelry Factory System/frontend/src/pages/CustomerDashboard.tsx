@@ -204,11 +204,11 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
 
   // Summary Cards computation
   const summaries = useMemo(() => {
-    // Determine Base Year and Target Compare Year using the same logic as Matrix
-    const baseYear = activeYears.length > 0 ? activeYears[activeYears.length - 1] : null;
-    const targetCompYear = kpiCompareYear && activeYears.includes(kpiCompareYear) 
+    const sortedDesc = [...activeYears].sort((a, b) => Number(b) - Number(a));
+    const baseYear = sortedDesc.length > 0 ? sortedDesc[0] : null;
+    const targetCompYear = kpiCompareYear && activeYears.includes(kpiCompareYear) && kpiCompareYear !== baseYear
       ? kpiCompareYear 
-      : (activeYears.length > 1 ? activeYears[activeYears.length - 2] : null);
+      : (sortedDesc.length > 1 ? sortedDesc.find(y => y !== baseYear) || null : null);
 
     return sortedSel.map(gId => {
       const g = ALL_GROUPS.find(x => x.id === gId)!;
@@ -260,11 +260,11 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
       });
     });
 
-    const reversedYears = [...activeYears].reverse();
+    const reversedYears = [...activeYears].sort((a, b) => Number(b) - Number(a));
     const latestYear = reversedYears.length > 0 ? reversedYears[0] : null;
-    const targetCompYear = kpiCompareYear && activeYears.includes(kpiCompareYear) 
-      ? kpiCompareYear 
-      : (reversedYears.length > 1 ? reversedYears[1] : null);
+    const targetCompYear = kpiCompareYear && activeYears.includes(kpiCompareYear) && kpiCompareYear !== latestYear
+      ? kpiCompareYear
+      : (reversedYears.length > 1 ? reversedYears.find(y => y !== latestYear) || null : null);
 
     if (latestYear) {
       gTotal = grandYearTotals[latestYear] || 0;
@@ -272,10 +272,10 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
 
     const gYoy: { currYr: string, prevYr: string, pct: number | null }[] = [];
     
-    // Always show the comparison against the user's selected kpiCompareYear first (if available)
+    // Always show the comparison against the comparison year
     if (latestYear && targetCompYear && latestYear !== targetCompYear) {
-      const currVal = grandYearTotals[latestYear];
-      const prevVal = grandYearTotals[targetCompYear];
+      const currVal = grandYearTotals[latestYear] || 0;
+      const prevVal = grandYearTotals[targetCompYear] || 0;
       let pct = null;
       if (prevVal > 0) {
         pct = ((currVal - prevVal) / prevVal) * 100;
@@ -480,8 +480,9 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
             <div className="sales-summary-cards">
               {summaries.map((g) => {
                 const groupInfo = ALL_GROUPS.find(x => x.id === g.id);
-                const cardBaseYear = g.latestYear || activeYears[activeYears.length - 1];
-                const cardCompYear = g.minYear || (activeYears.length > 1 ? activeYears[activeYears.length - 2] : null);
+                const sortedDesc = [...activeYears].map(String).sort((a, b) => Number(b) - Number(a));
+                const cardBaseYear = g.latestYear || sortedDesc[0];
+                const cardCompYear = g.minYear || (sortedDesc.length > 1 ? sortedDesc[1] : null);
                 const bTotal = g.totalLatestYear;
                 const cTotal = cardCompYear ? (g.yearTotals[cardCompYear] || 0) : 0;
                 const pct = g.pct;

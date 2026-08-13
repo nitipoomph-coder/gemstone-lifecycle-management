@@ -480,9 +480,11 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
             <div className="sales-summary-cards">
               {summaries.map((g) => {
                 const groupInfo = ALL_GROUPS.find(x => x.id === g.id);
-                const bTotal = g.yearTotals[activeYears[0]] || 0;
-                const cTotal = activeYears.length > 1 ? (g.yearTotals[activeYears[1]] || 0) : 0;
-                const pct = cTotal > 0 ? ((bTotal - cTotal) / cTotal) * 100 : null;
+                const cardBaseYear = g.latestYear || activeYears[activeYears.length - 1];
+                const cardCompYear = g.minYear || (activeYears.length > 1 ? activeYears[activeYears.length - 2] : null);
+                const bTotal = g.totalLatestYear;
+                const cTotal = cardCompYear ? (g.yearTotals[cardCompYear] || 0) : 0;
+                const pct = g.pct;
                 const isUp = pct !== null && pct > 0;
                 const isDown = pct !== null && pct < 0;
 
@@ -504,7 +506,7 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
                   >
                     <div style={{ fontSize: 'var(--erp-text-dense)', fontWeight: 900, color: 'var(--color-text-primary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span>{g.label}</span>
-                      <span style={{ fontSize: '0.72rem', color: 'var(--color-text-tertiary)', fontWeight: 800 }}>({activeYears[0]})</span>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--color-text-tertiary)', fontWeight: 800 }}>({cardBaseYear})</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 2 }}>
                       <span style={{ fontSize: 'var(--erp-text-panel)', fontWeight: 900, color: 'var(--color-text-secondary)', fontFamily: 'var(--font-display)' }}>
@@ -513,7 +515,7 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
                           : '$' + bTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                         }
                       </span>
-                      {pct !== null && (
+                      {pct !== null && cardCompYear && (
                         <span
                           style={{
                             fontSize: '0.72rem',
@@ -529,11 +531,9 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
                           }}
                         >
                           <span>{isUp ? '↑' : isDown ? '↓' : ''} {Math.abs(pct).toFixed(2)}%</span>
-                          {activeYears.length > 1 && (
-                            <span style={{ fontSize: '0.62rem', opacity: 0.75, color: 'var(--color-text-quaternary)', fontWeight: 800 }}>
-                              vs {activeYears[1]}
-                            </span>
-                          )}
+                          <span style={{ fontSize: '0.62rem', opacity: 0.75, color: 'var(--color-text-quaternary)', fontWeight: 800 }}>
+                            vs {cardCompYear}
+                          </span>
                         </span>
                       )}
                     </div>

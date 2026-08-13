@@ -196,45 +196,56 @@ export function InteractiveTrendBar({
   );
 }
 
-export function TrendComparisonTooltip({ active, payload, label, metric, reportYear }: { active?: boolean; payload?: TooltipPayloadEntry[]; label?: string | number; metric: Metric; reportYear: string; }) {
+export function TrendComparisonTooltip({ active, payload, label, metric, reportYear, compareYear }: { active?: boolean; payload?: TooltipPayloadEntry[]; label?: string | number; metric: Metric; reportYear: string; compareYear?: string }) {
   if (!active || !payload?.length) return null;
   const point = payload[0]?.payload;
   const reportValue = Number(point?.report || 0);
   const compareValue = Number(point?.compare || 0);
   const delta = reportValue - compareValue;
+  const hasCompare = !!compareYear && compareValue > 0;
 
 
   return (
     <div className="customer-trends-tooltip">
       <div className="customer-trends-tooltip__header">
         <strong>{label}</strong>
-        {false && <span className={delta < 0 ? 'is-down' : delta > 0 ? 'is-up' : undefined}>{fmtSignedMetric(delta, metric)}</span>}
+        {hasCompare && <span className={delta < 0 ? 'is-down' : delta > 0 ? 'is-up' : undefined}>{fmtSignedMetric(delta, metric)}</span>}
       </div>
       <div className="customer-trends-tooltip__row">
         <span><i style={{ background: 'var(--color-brand-500)' }} />{reportYear}</span>
         <strong>{fmtMetric(reportValue, metric)}</strong>
         <small>Report</small>
       </div>
+      {hasCompare && (
+        <div className="customer-trends-tooltip__row">
+          <span><i style={{ background: 'var(--color-text-quaternary)' }} />{compareYear}</span>
+          <strong>{fmtMetric(compareValue, metric)}</strong>
+          <small>Compare</small>
+        </div>
+      )}
     </div>
   );
 }
 
-export function WeeklyComparisonList({ groups, reportYear, metric, onDrilldown }: { groups: WeeklyComparisonGroup[]; reportYear: string; metric: Metric; onDrilldown: (year: string, week: number | undefined, type?: SalesTypeCode) => void }) {
+export function WeeklyComparisonList({ groups, reportYear, compareYear, metric, onDrilldown }: { groups: WeeklyComparisonGroup[]; reportYear: string; compareYear?: string; metric: Metric; onDrilldown: (year: string, week: number | undefined, type?: SalesTypeCode) => void }) {
   const [expandedMonth, setExpandedMonth] = useState<number | null>(() => groups[0]?.monthNumber ?? null);
+  const hasCompare = !!compareYear;
 
   if (groups.length === 0) return <div className="customer-trends-chart-empty">No weekly data</div>;
 
   return (
-    <section className="customer-trends-weekly" data-compare={false} aria-label={`Weekly comparison for ${reportYear}`}>
+    <section className="customer-trends-weekly" data-compare={hasCompare} aria-label={`Weekly comparison for ${reportYear}`}>
       <div className="customer-trends-weekly__columns" aria-hidden="true">
         <span>Month / week</span>
         <span>{reportYear || 'Report year'}</span>
+        {hasCompare && <span>{compareYear}</span>}
         <span />
       </div>
       <div className="customer-trends-weekly__months">
         {groups.map(group => {
           const isExpanded = expandedMonth === group.monthNumber;
           const reportTotal = group.weeks.reduce((sum, week) => sum + week.report, 0);
+          const compareTotal = hasCompare ? group.weeks.reduce((sum, week) => sum + week.compare, 0) : 0;
 
           const panelId = `weekly-month-panel-${group.monthNumber}`;
           const triggerId = `weekly-month-trigger-${group.monthNumber}`;
@@ -245,7 +256,7 @@ export function WeeklyComparisonList({ groups, reportYear, metric, onDrilldown }
                 id={triggerId}
                 type="button"
                 className="customer-trends-weekly__month-toggle"
-                data-tone={'flat'}
+                data-tone={hasCompare && reportTotal !== compareTotal ? (reportTotal > compareTotal ? 'up' : 'down') : 'flat'}
                 aria-expanded={isExpanded}
                 aria-controls={panelId}
                 onClick={() => setExpandedMonth(current => current === group.monthNumber ? null : group.monthNumber)}
@@ -258,15 +269,22 @@ export function WeeklyComparisonList({ groups, reportYear, metric, onDrilldown }
                   <small>{reportYear}</small>
                   <strong>{fmtMetric(reportTotal, metric)}</strong>
                 </span>
+                {hasCompare && (
+                  <span className="customer-trends-weekly__metric">
+                    <small>{compareYear}</small>
+                    <strong>{fmtMetric(compareTotal, metric)}</strong>
+                  </span>
+                )}
                 <ChevronDown className="customer-trends-weekly__chevron" size={15} aria-hidden="true" />
               </button>
 
               {isExpanded && (
                 <div id={panelId} className="customer-trends-weekly__week-list" role="region" aria-labelledby={triggerId}>
                   {group.weeks.map(week => {
+                    const weekDelta = hasCompare ? week.report - week.compare : 0;
 
                     return (
-                      <div key={week.periodNumber} className="customer-trends-weekly__week-row" data-tone={'flat'}>
+                      <div key={week.periodNumber} className="customer-trends-weekly__week-row" data-tone={hasCompare && weekDelta !== 0 ? (weekDelta > 0 ? 'up' : 'down') : 'flat'}>
                         <span className="customer-trends-weekly__period">
                           <strong>{week.label}</strong>
                           <small>{week.dateRange}</small>
@@ -275,6 +293,12 @@ export function WeeklyComparisonList({ groups, reportYear, metric, onDrilldown }
                           <small>{reportYear}</small>
                           <strong>{fmtMetric(week.report, metric)}</strong>
                         </button>
+                        {hasCompare && (
+                          <button type="button" className="customer-trends-weekly__metric" disabled={week.compare <= 0} onClick={() => onDrilldown(compareYear!, week.periodNumber)} title={`Open ${compareYear} order details`}>
+                            <small>{compareYear}</small>
+                            <strong>{fmtMetric(week.compare, metric)}</strong>
+                          </button>
+                        )}
                       </div>
                     );
                   })}
@@ -363,15 +387,16 @@ export function DueDateOutlook({ rows, year, metric, loading, error, onDrilldown
   );
 }
 
-export function TrendComparisonChart({ data, reportYear, metric, granularity, onDrilldown }: { data: TrendComparisonDatum[]; reportYear: string; metric: Metric; granularity: TrendGranularity; onDrilldown: (year: string, periodNumber: number | undefined, type?: SalesTypeCode) => void }) {
+export function TrendComparisonChart({ data, reportYear, compareYear, metric, granularity, onDrilldown }: { data: TrendComparisonDatum[]; reportYear: string; compareYear?: string; metric: Metric; granularity: TrendGranularity; onDrilldown: (year: string, periodNumber: number | undefined, type?: SalesTypeCode) => void }) {
   const hasData = data.some(point => point.report > 0);
+  const hasCompare = !!compareYear && data.some(point => point.compare > 0);
   const intervalLabel = granularity === 'monthly' ? 'Monthly' : 'Weekly';
   const canvasWidth = granularity === 'weekly' ? data.length * 44 : '100%';
   return (
     <section className="customer-trends-comparison-chart" aria-label={`${intervalLabel} comparison for ${reportYear}`}>
       <div className="customer-trends-comparison-chart__legend">
         <span><i style={{ background: 'var(--color-brand-500)' }} /><small>Report</small><strong>{reportYear || '-'}</strong></span>
-
+        {hasCompare && <span><i style={{ background: 'var(--color-text-quaternary)' }} /><small>Compare</small><strong>{compareYear}</strong></span>}
       </div>
       <div className="customer-trends-comparison-chart__scroll content-scrollbar">
         {!hasData ? (
@@ -383,7 +408,8 @@ export function TrendComparisonChart({ data, reportYear, metric, granularity, on
                 <CartesianGrid vertical={false} stroke="var(--color-border-light)" strokeDasharray="3 3" opacity={0.7} />
                 <XAxis dataKey="label" axisLine={false} tickLine={false} interval={0} tick={{ fill: 'var(--color-text-tertiary)', fontSize: 10, fontWeight: 800 }} dy={7} />
                 <YAxis axisLine={false} tickLine={false} tickFormatter={(value: number) => fmtAxis(value, metric)} tick={{ fill: 'var(--color-text-tertiary)', fontSize: 10, fontWeight: 750 }} width={58} />
-                <Tooltip content={<TrendComparisonTooltip metric={metric} reportYear={reportYear} />} cursor={{ fill: 'color-mix(in srgb, var(--color-brand-500) 6%, transparent)' }} />
+                <Tooltip content={<TrendComparisonTooltip metric={metric} reportYear={reportYear} compareYear={compareYear} />} cursor={{ fill: 'color-mix(in srgb, var(--color-brand-500) 6%, transparent)' }} />
+                {hasCompare && <Bar dataKey="compare" name={compareYear} fill="var(--color-text-quaternary)" maxBarSize={30} isAnimationActive={false} shape={<InteractiveTrendBar year={compareYear!} series="compare" metric={metric} fillColor="var(--color-text-quaternary)" onActivate={onDrilldown} />} />}
                 <Bar dataKey="report" name={reportYear} fill="var(--color-brand-500)" maxBarSize={30} isAnimationActive={false} shape={<InteractiveTrendBar year={reportYear} series="report" metric={metric} fillColor="var(--color-brand-500)" onActivate={onDrilldown} />} />
               </BarChart>
             </ResponsiveContainer>
@@ -394,25 +420,30 @@ export function TrendComparisonChart({ data, reportYear, metric, granularity, on
   );
 }
 
-export function TypeContribution({ rows, metric, year, total, onDrilldown }: { rows: TypeContributionRow[]; metric: Metric; year: string; total: number; onDrilldown: (year: string, month: number | undefined, type: SalesTypeCode) => void }) {
-
+export function TypeContribution({ rows, metric, year, compareYear, total, onDrilldown }: { rows: TypeContributionRow[]; metric: Metric; year: string; compareYear?: string; total: number; onDrilldown: (year: string, month: number | undefined, type: SalesTypeCode) => void }) {
+  const hasCompare = !!compareYear;
 
   return (
     <section className="customer-trends-contribution" aria-labelledby="customer-trends-contribution-title">
       <div className="customer-trends-contribution__header">
-        <div><h3 id="customer-trends-contribution-title">Type Contribution</h3><span>{year || '-'}</span></div>
+        <div><h3 id="customer-trends-contribution-title">Type Contribution</h3><span>{year || '-'}{hasCompare ? ` vs ${compareYear}` : ''}</span></div>
         <strong>{fmtMetric(total, metric)}</strong>
       </div>
       <div className="customer-trends-contribution__columns" aria-hidden="true">
-        <span>Type</span><span>{year}</span><span>Share</span><span>Orders</span><span />
+        <span>Type</span><span>{year}</span>{hasCompare && <span>{compareYear}</span>}<span>Share</span><span>Orders</span><span />
       </div>
       <div className="customer-trends-contribution__rows">
         {rows.map(row => {
+          const delta = hasCompare ? row.current - row.compare : 0;
+          const deltaTone = delta > 0 ? 'up' : delta < 0 ? 'down' : 'flat';
 
           return (
             <button key={row.code} type="button" onClick={() => onDrilldown(year, undefined, row.code)} aria-label={`Open ${row.code} order details for ${year}`}>
               <span className="customer-trends-contribution__type"><i style={{ background: SALES_TYPE_COLORS[row.code] }} /><span><strong>{row.code}</strong><small>{row.label}</small></span></span>
               <span className="customer-trends-contribution__value"><strong>{fmtMetric(row.current, metric)}</strong><small>{year} / {row.share.toFixed(1)}%</small></span>
+              {hasCompare && (
+                <span className="customer-trends-contribution__delta" data-tone={deltaTone}><strong>{fmtMetric(row.compare, metric)}</strong><small>{compareYear} / {fmtSignedMetric(delta, metric)}</small></span>
+              )}
               <span className="customer-trends-contribution__delta" data-tone={'flat'}><strong>{fmtQty(row.orderCount)}</strong><small>orders</small></span>
               <ArrowRight size={13} />
             </button>

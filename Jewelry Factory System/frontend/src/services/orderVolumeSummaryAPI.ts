@@ -23,9 +23,7 @@ export interface SalesMonthlyPoint {
   qty: number;
   shippedQty: number;
   gapQty: number;
-  amount: number;
-  shippedAmount: number;
-  fulfillmentRate: number;
+  avgQtyPerOrder: number;
 }
 
 export interface SalesTypePoint {
@@ -35,11 +33,6 @@ export interface SalesTypePoint {
   typeName: string;
   orderCount: number;
   qty: number;
-  shippedQty: number;
-  gapQty: number;
-  amount: number;
-  shippedAmount: number;
-  fulfillmentRate: number;
 }
 
 export interface SalesOrderRow {
@@ -51,15 +44,12 @@ export interface SalesOrderRow {
   customerCode: string;
   customerName: string;
   salesName: string | null;
-  brand: string;
   po2: string | null;
-  shipT: string | null;
+  shipTo: string | null;
   ordStamp: string | null;
   ordMaker: string | null;
   itemNo: string;
-  itemSku: string | null;
   itemType: string;
-  itemTypeName: string;
   productTypeCode?: string;
   custItem: string | null;
   itemMat: string | null;
@@ -68,15 +58,11 @@ export interface SalesOrderRow {
   itemDesc: string | null;
   itemPlate: string | null;
   setType: string | null;
-  itemWeight: number | null;
   orderQty: number;
   shippedQty: number;
-  itemPrice: number | null;
-  amount: number;
-  shippedAmount: number;
-  status: 'Open' | 'Partial' | 'Shipped' | 'Late';
-  market: string;
-
+  openQty: number;
+  ordStatus: string | null;
+  closeStatus: string | null;
 }
 
 export interface TopItemRow {

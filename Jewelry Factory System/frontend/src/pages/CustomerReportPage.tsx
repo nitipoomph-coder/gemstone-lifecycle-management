@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useSearchParams, useOutletContext } from 'react-router-dom';
-import { DollarSign } from 'lucide-react';
+import { DollarSign, Hash } from 'lucide-react';
 import './SalesResponsive.css';
 import { fetchAvailableYearsMeta } from '../services/dashboardAPI';
 import { fetchCustomerSummary } from '../services/customerSummaryAPI';
@@ -10,6 +10,7 @@ import CustomerReportTable from '../components/report/CustomerReportTable';
 import { useTheme } from '../contexts/useTheme';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const YEAR_COLORS = ['var(--color-chart-1)', 'var(--color-chart-2)', 'var(--color-chart-3)', 'var(--color-chart-4)', 'var(--color-chart-5)', 'var(--color-chart-6)'];
 
 interface CustomerSummaryRecord {
   id: string;
@@ -36,9 +37,20 @@ function csv(value: string | null) {
 
 export default function CustomerReportPage() {
   const { theme } = useTheme();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { selectedYears, selectedMonths, selGroups, kpiCompareYear } = useOutletContext<any>();
   const metric = searchParams.get('metric') || 'amount';
+
+  const handleSetMetric = useCallback((nextMetric: 'amount' | 'qty') => {
+    const newParams = new URLSearchParams(searchParams);
+    if (nextMetric === 'qty') {
+      newParams.set('metric', 'qty');
+    } else {
+      newParams.delete('metric');
+    }
+    setSearchParams(newParams, { replace: true });
+  }, [searchParams, setSearchParams]);
+
   const requestedCustomers = useMemo(() => csv(searchParams.get('customers')).map(customer => customer.toUpperCase()), [searchParams]);
   const requestedViewMode: 'ytd' | 'quarterly' | 'monthly' = searchParams.get('view') === 'monthly' ? 'monthly' : searchParams.get('view') === 'quarterly' ? 'quarterly' : 'ytd';
 
@@ -57,15 +69,13 @@ export default function CustomerReportPage() {
   const [custData, setCustData] = useState<CustomerSummaryRecord[]>([]);
   const [firstDataYear, setFirstDataYear] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isFiltering, setIsFiltering] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(true);
 
   const [viewMode, setViewMode] = useState<'ytd' | 'quarterly' | 'monthly'>(requestedViewMode);
   const [aggregationMode, setAggregationMode] = useState<'group' | 'customer'>('group');
 
   useEffect(() => {
-    if (selGroups.length === 1) setAggregationMode('customer');
-    else setAggregationMode('group');
+    setAggregationMode(selGroups.length === 1 ? 'customer' : 'group');
   }, [selGroups.length]);
 
   const searchQuery = searchParams.get('search') || '';
@@ -204,16 +214,6 @@ export default function CustomerReportPage() {
     };
   }, [dataYears, selMonths]);
 
-  useEffect(() => {
-    if (loading) return;
-    const startTimer = window.setTimeout(() => setIsFiltering(true), 0);
-    const stopTimer = window.setTimeout(() => setIsFiltering(false), 400);
-    return () => {
-      window.clearTimeout(startTimer);
-      window.clearTimeout(stopTimer);
-    };
-  }, [baseYear, selGroups, requestedCustomers, selMonths, searchQuery, sortOrder, growthComparisons, loading]);
-
   const groupCustomers = useMemo(() => {
     return custData
       .filter(c => selGroups.includes(getCustomerGroupId(c.id || '')))
@@ -223,11 +223,9 @@ export default function CustomerReportPage() {
 
   const activeCustomers = requestedCustomers.length > 0 ? requestedCustomers.filter((id: string) => id !== '__NONE__') : groupCustomers;
 
-
-
   useEffect(() => {
     if (activeYears.length < 2) {
-      setGrowthComparisons([]);
+      setGrowthComparisons(prev => (prev.length === 0 ? prev : []));
       return;
     }
     const sortedDesc = [...activeYears].map(String).sort((y1, y2) => Number(y2) - Number(y1));
@@ -238,7 +236,10 @@ export default function CustomerReportPage() {
         pairs.push({ a: newestYear, b: sortedDesc[i] });
       }
     }
-    setGrowthComparisons(pairs);
+    setGrowthComparisons(prev => {
+      const isSame = prev.length === pairs.length && prev.every((p, idx) => p.a === pairs[idx].a && p.b === pairs[idx].b);
+      return isSame ? prev : pairs;
+    });
   }, [activeYears]);
 
   const tableData = useMemo(() => {
@@ -371,8 +372,7 @@ export default function CustomerReportPage() {
 
     return ALL_GROUPS
       .filter(g => selGroups.includes(g.id) && groupTotals[g.id])
-      .map(g => ({ ...g, totals: groupTotals[g.id] }))
-      .filter(g => activeYears.some((yr: string) => g.totals[yr] > 0));
+      .map(g => ({ ...g, totals: groupTotals[g.id] }));
   }, [tableData, selGroups, activeYears]);
 
   return (
@@ -380,27 +380,41 @@ export default function CustomerReportPage() {
       <div className="content-scrollbar flex-1 overflow-y-auto" style={{ background: 'var(--color-surface-1)' }}>
         <div className="app-content-frame app-content-frame--dashboard-wide sales-report-page">
           {/* Loading Skeletons for KPIs */}
-          {(loading || isFiltering) && (
-            <div className="sales-report-kpis">
-              {Array.from({ length: displayYears.length || 4 }).map((_, i) => (
-                <div key={`kpi-skeleton-${i}`} style={{ background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)', borderRadius: 8, padding: '12px 18px', flex: '1 1 min-content', minWidth: 200, boxShadow: '0 10px 24px -20px color-mix(in srgb, var(--color-surface-900) 36%, transparent)' }}>
-                  <div className="app-skeleton" style={{ width: 100, height: 16, marginBottom: 12, borderRadius: 4 }} />
-                  <div className="app-skeleton" style={{ width: '80%', height: 32, marginBottom: 8, borderRadius: 6 }} />
-                  <div className="app-skeleton" style={{ width: 140, height: 14, borderRadius: 4 }} />
-                </div>
-              ))}
+          {(loading) && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+              <div className="sales-report-kpis flex-wrap" style={{ display: 'flex', gap: 12 }}>
+                {Array.from({ length: displayYears.length || 2 }).map((_, i) => (
+                  <div key={`kpi-skeleton-yr-${i}`} style={{ background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)', borderRadius: 8, padding: '12px 18px', flex: '1 1 min-content', minWidth: 200, boxShadow: '0 10px 24px -20px color-mix(in srgb, var(--color-surface-900) 36%, transparent)' }}>
+                    <div className="app-skeleton" style={{ width: 100, height: 16, marginBottom: 12, borderRadius: 4 }} />
+                    <div className="app-skeleton" style={{ width: '80%', height: 32, marginBottom: 8, borderRadius: 6 }} />
+                    <div className="app-skeleton" style={{ width: 140, height: 14, borderRadius: 4 }} />
+                  </div>
+                ))}
+              </div>
+              <div className="sales-report-kpis flex-wrap" style={{ display: 'flex', gap: 12 }}>
+                {Array.from({ length: selGroups?.length || 6 }).map((_, i) => (
+                  <div key={`kpi-skeleton-grp-${i}`} style={{ background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)', borderRadius: 8, padding: '12px 18px', flex: '1 1 200px', minWidth: 180, boxShadow: '0 8px 20px -16px color-mix(in srgb, var(--color-surface-900) 25%, transparent)' }}>
+                    <div className="app-skeleton" style={{ width: 120, height: 16, marginBottom: 12, borderRadius: 4 }} />
+                    <div className="app-skeleton" style={{ width: '80%', height: 32, marginBottom: 8, borderRadius: 6 }} />
+                    <div className="app-skeleton" style={{ width: 140, height: 14, borderRadius: 4 }} />
+                  </div>
+                ))}
+              </div>
+              <div className="app-skeleton rounded-lg" style={{ width: '100%', height: 600, borderRadius: 12 }} />
             </div>
           )}
 
-          {(!loading && !isFiltering) && (
+          {(!loading) && (
             <>
               <div className="sales-report-kpis flex-wrap" style={{ display: 'flex', gap: 12, marginBottom: 1 }}>
                 {displayYears.map((yr, yIdx) => (
                   <div
                     key={yr}
+                    className="kpi-card"
                     style={{
                       background: 'var(--color-surface-0)',
                       border: '1px solid var(--color-border-light)',
+                      borderLeft: `4px solid ${YEAR_COLORS[yIdx % YEAR_COLORS.length] || 'var(--color-border-light)'}`,
                       borderRadius: 8,
                       padding: '12px 16px',
                       flex: '1 1 200px',
@@ -412,8 +426,10 @@ export default function CustomerReportPage() {
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--color-text-tertiary)' }}>
-                      <DollarSign size={14} />
-                      <span style={{ fontSize: 'var(--erp-text-dense)', fontWeight: 900, textTransform: 'capitalize', letterSpacing: 0 }}>Year {yr}</span>
+                      {metric === 'qty' ? <Hash size={14} /> : <DollarSign size={14} />}
+                      <span style={{ fontSize: 'var(--erp-text-dense)', fontWeight: 900, textTransform: 'capitalize', letterSpacing: 0 }}>
+                        Year {yr} {metric === 'qty' ? '(PCS)' : ''}
+                      </span>
                     </div>
                     <div style={{ fontSize: 'var(--erp-text-kpi)', fontWeight: 900, color: yIdx === 0 ? 'var(--color-text-primary)' : 'var(--color-text-secondary)', fontFamily: 'var(--font-display)', letterSpacing: 0, marginTop: 2 }}>
                       {fmtCurr(tableData.colTotals[`${yr}_total`] || 0)}
@@ -435,13 +451,21 @@ export default function CustomerReportPage() {
 
                       const bTotal = g.totals[cardBaseYear] || 0;
                       const cTotal = cardCompYear ? (g.totals[cardCompYear] || 0) : 0;
-                      const pct = cTotal > 0 ? ((bTotal - cTotal) / cTotal) * 100 : null;
-                      const isUp = pct !== null && pct > 0;
-                      const isDown = pct !== null && pct < 0;
+
+                      let diff = null;
+                      let pct = null;
+                      if (cardCompYear) {
+                        if (bTotal > 0 || cTotal > 0) diff = bTotal - cTotal;
+                        if (cTotal > 0) pct = ((bTotal - cTotal) / cTotal) * 100;
+                      }
+
+                      const isUp = diff !== null && diff > 0;
+                      const isDown = diff !== null && diff < 0;
 
                       return (
                         <div
                           key={g.id}
+                          className="kpi-card"
                           style={{
                             background: 'var(--color-surface-0)',
                             border: '1px solid var(--color-border-light)',
@@ -453,32 +477,39 @@ export default function CustomerReportPage() {
                             boxShadow: '0 8px 20px -16px color-mix(in srgb, var(--color-surface-900) 25%, transparent)'
                           }}
                         >
-                          <div style={{ fontSize: 'var(--erp-text-dense)', fontWeight: 900, color: 'var(--color-text-primary)', marginBottom: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span>{g.label}</span>
-                            <span style={{ fontSize: '0.72rem', color: 'var(--color-text-tertiary)', fontWeight: 800 }}>({cardBaseYear})</span>
-                          </div>
-                          <div className="flex items-baseline justify-between gap-2">
-                            <span style={{ fontSize: 'var(--erp-text-panel)', fontWeight: 900, color: 'var(--color-text-secondary)', fontFamily: 'var(--font-display)' }}>
-                              {fmtCurr(bTotal)}
-                            </span>
-                            {pct !== null && cardCompYear && (
-                              <span
-                                style={{
-                                  fontSize: '0.72rem',
-                                  fontWeight: 900,
-                                  color: isUp ? 'var(--color-success-500)' : isDown ? 'var(--color-danger-500)' : 'var(--color-text-tertiary)',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: 2,
-                                  flexWrap: 'nowrap'
-                                }}
-                              >
-                                <span>{isUp ? '↑' : isDown ? '↓' : ''} {Math.abs(pct).toFixed(2)}%</span>
-                                <span style={{ fontSize: '0.62rem', opacity: 0.75, color: 'var(--color-text-quaternary)', fontWeight: 800 }}>
-                                  vs {cardCompYear}
-                                </span>
-                              </span>
-                            )}
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                            <div style={{ fontSize: 'var(--erp-text-dense)', fontWeight: 900, color: 'var(--color-text-primary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <span>{g.label}</span>
+                              <span style={{ fontSize: '0.72rem', color: 'var(--color-text-tertiary)', fontWeight: 800 }}>{cardBaseYear}</span>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                              <div style={{ fontSize: 'var(--erp-text-panel)', fontWeight: 900, color: 'var(--color-text-secondary)', fontFamily: 'var(--font-display)' }}>
+                                {fmtCurr(bTotal)}
+                              </div>
+                              {diff !== null && cardCompYear && (
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                  <span
+                                    style={{
+                                      fontSize: '0.72rem',
+                                      fontWeight: 900,
+                                      color: isUp ? 'var(--color-success-500)' : isDown ? 'var(--color-danger-500)' : 'var(--color-text-tertiary)',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: 4
+                                    }}
+                                  >
+                                    <span>
+                                      {isUp ? '↑ ' : isDown ? '↓ ' : ''}
+                                      {metric === 'qty' ? Math.abs(diff).toLocaleString(undefined, { maximumFractionDigits: 0 }) : '$' + Math.abs(diff).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                      {pct !== null && ` (${pct > 0 ? '+' : ''}${pct.toFixed(2)}%)`}
+                                    </span>
+                                  </span>
+                                  <span style={{ fontSize: '0.62rem', opacity: 0.75, color: 'var(--color-text-quaternary)', fontWeight: 800 }}>
+                                    vs {cardCompYear}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
                       );
@@ -492,7 +523,7 @@ export default function CustomerReportPage() {
           <div className="sales-report-table-region">
             <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
               <CustomerReportTable
-                loading={loading || isFiltering}
+                loading={loading}
                 baseYear={baseYear}
                 viewMode={viewMode}
                 setViewMode={setViewMode}
@@ -507,6 +538,7 @@ export default function CustomerReportPage() {
                 sortOrder={sortOrder}
                 setSortOrder={setSortOrder}
                 metric={metric}
+                setMetric={handleSetMetric}
                 fmt={fmt}
                 renderGrowthAmt={renderGrowthAmt}
                 renderGrowthPct={renderGrowthPct}

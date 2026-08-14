@@ -221,13 +221,13 @@
 .customer-matrix-td--total {
   min-width: 108px;
   width: 108px;
-  text-align: center;
+  text-align: right;
 }
 
 .customer-matrix-total {
   color: var(--matrix-data-text);
   font-weight: 900;
-  text-align: center;
+  text-align: right;
 }
 
 .customer-matrix-td--growth {
@@ -441,8 +441,8 @@
   display: flex;
   width: 100%;
   align-items: center;
-  justify-content: space-between;
-  gap: 6px;
+  justify-content: flex-end;
+  gap: 4px;
 }
 
 .customer-matrix-currency {

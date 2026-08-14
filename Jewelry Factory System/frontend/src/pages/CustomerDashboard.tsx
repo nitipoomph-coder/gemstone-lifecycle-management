@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
-import { RefreshCw, DollarSign, Hash, Calendar, CalendarDays, Layers, Users, Eye, EyeOff } from 'lucide-react';
+import { RefreshCw, DollarSign, Hash, Calendar, CalendarDays, Layers, Users, Eye, EyeOff, ChevronRight } from 'lucide-react';
 import { fetchCustomerSummary } from '../services/customerSummaryAPI';
 import { ALL_GROUPS, getCustomerGroupId } from '../config/customerGroups';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList } from 'recharts';
@@ -30,7 +30,7 @@ type CustomerSummaryRow = {
 type RawSummary = Record<string, Record<string, Record<string, number>>>;
 type ChartDatum = { label: string; sortKey?: string } & Record<string, string | number | undefined>;
 type TooltipPayloadEntry = { value?: number; color?: string; dataKey?: string | number; name?: string };
-type CustomTooltipProps = { active?: boolean; payload?: TooltipPayloadEntry[]; label?: string; metric: Metric };
+type CustomTooltipProps = { active?: boolean; payload?: TooltipPayloadEntry[]; label?: string; metric: Metric; chartData?: any[]; mode?: string; monthlySeries?: string; };
   // @ts-ignore
 function defaultYearSelection(years: string[]) {
   const latest = years[years.length - 1];
@@ -39,7 +39,7 @@ function defaultYearSelection(years: string[]) {
 }
 
 // Custom Tooltip for Recharts
-const CustomTooltip = ({ active, payload, label, metric }: CustomTooltipProps) => {
+const CustomTooltip = ({ active, payload, label, metric, chartData, mode, monthlySeries }: CustomTooltipProps) => {
   if (active && payload && payload.length) {
     return (
       <div style={{ padding: '12px 16px', borderRadius: 8, border: '1px solid var(--color-border-light)', minWidth: 200, background: 'var(--color-ui-surface)', boxShadow: 'var(--shadow-dropdown)' }}>
@@ -49,17 +49,58 @@ const CustomTooltip = ({ active, payload, label, metric }: CustomTooltipProps) =
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {payload.map((entry, index) => {
             if (entry.value === 0) return null;
+            
+            let diff = null;
+            let pct = null;
+            const currVal = Number(entry.value || 0);
+
+            if (monthlySeries === 'year' && String(entry.dataKey).length === 4) {
+              const prevYear = String(Number(entry.dataKey) - 1);
+              const prevEntry = payload.find((p: any) => String(p.dataKey) === prevYear);
+              if (prevEntry) {
+                const prevVal = Number(prevEntry.value || 0);
+                if (prevVal > 0 || currVal > 0) {
+                  diff = currVal - prevVal;
+                  if (prevVal > 0) pct = ((currVal - prevVal) / prevVal) * 100;
+                }
+              }
+            } else if (mode === 'yearly' && monthlySeries === 'group' && chartData) {
+              const prevYear = String(Number(label) - 1);
+              const prevData = chartData.find(d => String(d.label) === prevYear);
+              if (prevData && prevData[entry.dataKey!]) {
+                const prevVal = Number(prevData[entry.dataKey!]);
+                if (prevVal > 0 || currVal > 0) {
+                  diff = currVal - prevVal;
+                  if (prevVal > 0) pct = ((currVal - prevVal) / prevVal) * 100;
+                }
+              }
+            }
+
+            const isUp = diff !== null && diff > 0;
+            const isDown = diff !== null && diff < 0;
+
             return (
-              <div key={index} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 'var(--erp-text-control)', fontWeight: 800 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--color-text-secondary)' }}>
-                  <span style={{ width: 8, height: 8, borderRadius: 2, background: entry.color }} />
-                  {ALL_GROUPS.find(g => g.id === entry.dataKey)?.label || (String(entry.dataKey).length === 4 ? `Year ${entry.dataKey}` : entry.name)}
+              <div key={index} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 'var(--erp-text-control)', fontWeight: 800 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--color-text-secondary)' }}>
+                    <span style={{ width: 8, height: 8, borderRadius: 2, background: entry.color }} />
+                    {ALL_GROUPS.find(g => g.id === entry.dataKey)?.label || (String(entry.dataKey).length === 4 ? `Year ${entry.dataKey}` : entry.name)}
+                  </div>
+                  <span style={{ color: 'var(--color-text-primary)', fontVariantNumeric: 'tabular-nums' }}>
+                    {metric === 'qty'
+                      ? currVal.toLocaleString(undefined, { maximumFractionDigits: 0 })
+                      : '$' + currVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
                 </div>
-                <span style={{ color: 'var(--color-text-primary)', fontVariantNumeric: 'tabular-nums' }}>
-                  {metric === 'qty'
-                    ? Number(entry.value || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })
-                    : '$' + Number(entry.value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </span>
+                {diff !== null && (
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', fontSize: '0.72rem', fontWeight: 900, color: isUp ? 'var(--color-success-500)' : isDown ? 'var(--color-danger-500)' : 'var(--color-text-tertiary)' }}>
+                    <span>
+                      {isUp ? '↑ ' : isDown ? '↓ ' : ''}
+                      {metric === 'qty' ? Math.abs(diff).toLocaleString(undefined, { maximumFractionDigits: 0 }) : '$' + Math.abs(diff).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      {pct !== null && ` (${Math.abs(pct).toFixed(2)}%)`}
+                    </span>
+                  </div>
+                )}
               </div>
             );
           })}
@@ -221,22 +262,68 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
 
       const totalLatestYear = baseYear ? (yearTotals[baseYear] || 0) : 0;
 
+      let diff = null;
       let pct = null;
       if (baseYear && targetCompYear && baseYear !== targetCompYear) {
         const curr = yearTotals[baseYear] || 0;
         const prev = yearTotals[targetCompYear] || 0;
-        if (prev > 0) {
-          pct = ((curr - prev) / prev) * 100;
+        if (prev > 0 || curr > 0) {
+          diff = curr - prev;
+          if (prev > 0) pct = ((curr - prev) / prev) * 100;
         }
       }
 
-      return { ...g, yearTotals, totalLatestYear, pct, maxYear: baseYear, minYear: targetCompYear, latestYear: baseYear };
+      return { ...g, yearTotals, totalLatestYear, diff, pct, maxYear: baseYear, minYear: targetCompYear, latestYear: baseYear };
+    });
+  }, [sortedSel, activeYears, selectedMonths, RAW, kpiCompareYear]);
+
+  const yearSummaries = useMemo(() => {
+    const sortedDesc = [...activeYears].sort((a, b) => Number(b) - Number(a));
+    const baseYear = sortedDesc.length > 0 ? sortedDesc[0] : null;
+    const targetCompYear = kpiCompareYear && activeYears.includes(kpiCompareYear) && kpiCompareYear !== baseYear
+      ? kpiCompareYear 
+      : (sortedDesc.length > 1 ? sortedDesc.find(y => y !== baseYear) || null : null);
+
+    const yearTotals: Record<string, number> = {};
+    activeYears.forEach(y => yearTotals[y] = 0);
+    
+    activeYears.forEach(y => {
+      sortedSel.forEach(gId => {
+        // @ts-ignore
+        yearTotals[y] += selectedMonths.reduce((s, mStr) => s + (RAW[y]?.[MONTHS[parseInt(mStr) - 1]]?.[gId] || 0), 0);
+      });
+    });
+
+    return sortedDesc.map(y => {
+      let diff = null;
+      let pct = null;
+      let compYear = null;
+
+      if (y === baseYear && targetCompYear) {
+        const curr = yearTotals[y] || 0;
+        const prev = yearTotals[targetCompYear] || 0;
+        if (prev > 0 || curr > 0) {
+          diff = curr - prev;
+          compYear = targetCompYear;
+          if (prev > 0) pct = ((curr - prev) / prev) * 100;
+        }
+      }
+
+      return { year: y, total: yearTotals[y], diff, pct, compYear };
     });
   }, [sortedSel, activeYears, selectedMonths, RAW, kpiCompareYear]);
 
   const switchMetric = (nextMetric: Metric) => {
     if (nextMetric === metric) return;
     navigate(`/dashboard/customer${nextMetric === 'qty' ? '?metric=qty' : ''}`);
+  };
+
+  const handleGroupClick = (groupId: string) => {
+    const params = new URLSearchParams(searchParams);
+    params.set('groups', groupId);
+    params.delete('customers');
+    params.delete('search');
+    navigate(`/dashboard/customer/matrix?${params.toString()}`);
   };
 
   const resetSummaryView = () => {
@@ -322,7 +409,7 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
 
             {/* KPI Cards Skeleton Grid */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20, marginBottom: 24 }}>
-              {Array.from({ length: 6 }).map((_, i) => (
+              {Array.from({ length: selGroups?.length || 6 }).map((_, i) => (
                 <div key={i} style={{ background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)', borderRadius: 12, padding: 20, height: 160 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
                     <div className="app-skeleton" style={{ width: 120, height: 18, borderRadius: 4 }} />
@@ -451,7 +538,7 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
                     <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--color-border-light)" opacity={0.5} />
                     <XAxis dataKey="label" tick={{ fontSize: 10, fill: 'var(--color-text-secondary)', fontWeight: 800 }} axisLine={false} tickLine={false} dy={10} />
                     <YAxis tickFormatter={(val) => formatAxisValue(val)} tick={{ fontSize: 10, fill: 'var(--color-text-quaternary)', fontWeight: 700 }} axisLine={false} tickLine={false} dx={-5} width={70} />
-                    <Tooltip content={<CustomTooltip metric={metric} />} cursor={{ fill: 'var(--color-surface-1)', opacity: 0.4 }} />
+                    <Tooltip content={<CustomTooltip metric={metric} chartData={chartData} mode={mode} monthlySeries={monthlySeries} />} cursor={{ fill: 'var(--color-surface-1)', opacity: 0.4 }} />
                     {monthlySeries === 'group' ? sortedSel.map((gId) => {
                       const g = ALL_GROUPS.find(x => x.id === gId)!;
                       return (
@@ -478,22 +565,94 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
 
             {/* Side-by-Side Summary Cards */}
             <div className="sales-summary-cards">
+              {/* Year KPIs */}
+              {yearSummaries.map((yData) => {
+                const color = YEAR_COLORS[activeYears.indexOf(yData.year) % YEAR_COLORS.length];
+                
+                const diff = yData.diff;
+                const pct = yData.pct;
+                const cardCompYear = yData.compYear;
+                const isUp = diff !== null && diff > 0;
+                const isDown = diff !== null && diff < 0;
+
+                return (
+                  <div
+                    key={`year-${yData.year}`}
+                    className="kpi-card"
+                    style={{
+                      background: 'var(--color-surface-0)',
+                      border: '1px solid var(--color-border-light)',
+                      borderLeft: `4px solid ${color}`,
+                      borderRadius: 8,
+                      padding: '12px 16px',
+                      boxShadow: '0 8px 20px -16px color-mix(in srgb, var(--color-surface-900) 25%, transparent)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 4,
+                      transition: 'all 140ms ease-in-out',
+                    }}
+                  >
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                      <div style={{ fontSize: 'var(--erp-text-dense)', fontWeight: 900, color: 'var(--color-text-primary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          Year {yData.year}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <div style={{ fontSize: 'var(--erp-text-panel)', fontWeight: 900, color: 'var(--color-text-secondary)', fontFamily: 'var(--font-display)' }}>
+                          {metric === 'qty'
+                            ? yData.total.toLocaleString(undefined, { maximumFractionDigits: 0 })
+                            : '$' + yData.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                          }
+                        </div>
+                        {diff !== null && cardCompYear && (
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span
+                              style={{
+                                fontSize: '0.72rem',
+                                fontWeight: 900,
+                                color: isUp ? 'var(--color-success-500)' : isDown ? 'var(--color-danger-500)' : 'var(--color-text-tertiary)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 4
+                              }}
+                            >
+                              <span>
+                                {isUp ? '↑ ' : isDown ? '↓ ' : ''}
+                                {metric === 'qty' ? Math.abs(diff).toLocaleString(undefined, { maximumFractionDigits: 0 }) : '$' + Math.abs(diff).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                {pct !== null && ` (${pct > 0 ? '+' : ''}${pct.toFixed(2)}%)`}
+                              </span>
+                            </span>
+                            <span style={{ fontSize: '0.62rem', opacity: 0.75, color: 'var(--color-text-quaternary)', fontWeight: 800 }}>
+                              vs {cardCompYear}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+
               {summaries.map((g) => {
                 const groupInfo = ALL_GROUPS.find(x => x.id === g.id);
                 const sortedDesc = [...activeYears].map(String).sort((a, b) => Number(b) - Number(a));
                 const cardBaseYear = g.latestYear || sortedDesc[0];
                 const cardCompYear = g.minYear || (sortedDesc.length > 1 ? sortedDesc[1] : null);
                 const bTotal = g.totalLatestYear;
-                const cTotal = cardCompYear ? (g.yearTotals[cardCompYear] || 0) : 0;
+                const diff = g.diff;
                 const pct = g.pct;
-                const isUp = pct !== null && pct > 0;
-                const isDown = pct !== null && pct < 0;
+                const isUp = diff !== null && diff > 0;
+                const isDown = diff !== null && diff < 0;
 
-                const isRoyalTheme = theme === 'royal-white';
                 return (
                   <div
                     key={g.id}
+                    onClick={() => handleGroupClick(g.id)}
+                    title={`Click to view ${g.label} Matrix breakdown (By Customer)`}
+                    className="kpi-card"
                     style={{
+                      cursor: 'pointer',
                       background: 'var(--color-surface-0)',
                       border: '1px solid var(--color-border-light)',
                       borderLeft: `4px solid ${groupInfo?.color || 'var(--color-border-light)'}`,
@@ -502,41 +661,49 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
                       boxShadow: '0 8px 20px -16px color-mix(in srgb, var(--color-surface-900) 25%, transparent)',
                       display: 'flex',
                       flexDirection: 'column',
-                      gap: 4
+                      gap: 4,
+                      transition: 'all 140ms ease-in-out',
                     }}
                   >
-                    <div style={{ fontSize: 'var(--erp-text-dense)', fontWeight: 900, color: 'var(--color-text-primary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span>{g.label}</span>
-                      <span style={{ fontSize: '0.72rem', color: 'var(--color-text-tertiary)', fontWeight: 800 }}>({cardBaseYear})</span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 2 }}>
-                      <span style={{ fontSize: 'var(--erp-text-panel)', fontWeight: 900, color: 'var(--color-text-secondary)', fontFamily: 'var(--font-display)' }}>
-                        {metric === 'qty'
-                          ? bTotal.toLocaleString(undefined, { maximumFractionDigits: 0 })
-                          : '$' + bTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                        }
-                      </span>
-                      {pct !== null && cardCompYear && (
-                        <span
-                          style={{
-                            fontSize: '0.72rem',
-                            fontWeight: 900,
-                            color: isUp ? 'var(--color-success-500)' : isDown ? 'var(--color-danger-500)' : 'var(--color-text-tertiary)',
-                            background: isRoyalTheme ? (isUp ? 'color-mix(in srgb, var(--color-success-500) 12%, transparent)' : isDown ? 'color-mix(in srgb, var(--color-danger-500) 12%, transparent)' : 'transparent') : 'transparent',
-                            padding: isRoyalTheme ? '2px 6px' : '0',
-                            borderRadius: isRoyalTheme ? 4 : 0,
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 2,
-                            flexWrap: 'nowrap'
-                          }}
-                        >
-                          <span>{isUp ? '↑' : isDown ? '↓' : ''} {Math.abs(pct).toFixed(2)}%</span>
-                          <span style={{ fontSize: '0.62rem', opacity: 0.75, color: 'var(--color-text-quaternary)', fontWeight: 800 }}>
-                            vs {cardCompYear}
-                          </span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                      <div style={{ fontSize: 'var(--erp-text-dense)', fontWeight: 900, color: 'var(--color-text-primary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          {g.label}
+                          <ChevronRight size={13} style={{ opacity: 0.6, color: 'var(--color-text-tertiary)' }} />
                         </span>
-                      )}
+                        <span style={{ fontSize: '0.72rem', color: 'var(--color-text-tertiary)', fontWeight: 800 }}>{cardBaseYear}</span>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <div style={{ fontSize: 'var(--erp-text-panel)', fontWeight: 900, color: 'var(--color-text-secondary)', fontFamily: 'var(--font-display)' }}>
+                          {metric === 'qty'
+                            ? bTotal.toLocaleString(undefined, { maximumFractionDigits: 0 })
+                            : '$' + bTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                          }
+                        </div>
+                        {diff !== null && cardCompYear && (
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span
+                              style={{
+                                fontSize: '0.72rem',
+                                fontWeight: 900,
+                                color: isUp ? 'var(--color-success-500)' : isDown ? 'var(--color-danger-500)' : 'var(--color-text-tertiary)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 4
+                              }}
+                            >
+                              <span>
+                                {isUp ? '↑ ' : isDown ? '↓ ' : ''}
+                                {metric === 'qty' ? Math.abs(diff).toLocaleString(undefined, { maximumFractionDigits: 0 }) : '$' + Math.abs(diff).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                {pct !== null && ` (${pct > 0 ? '+' : ''}${pct.toFixed(2)}%)`}
+                              </span>
+                            </span>
+                            <span style={{ fontSize: '0.62rem', opacity: 0.75, color: 'var(--color-text-quaternary)', fontWeight: 800 }}>
+                              vs {cardCompYear}
+                            </span>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );

@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { ArrowDown, ArrowUp, RefreshCw, RotateCcw, Search } from 'lucide-react';
+import { ArrowDown, ArrowUp, DollarSign, Hash, RefreshCw, RotateCcw, Search } from 'lucide-react';
 import { ErpButton, ErpSegmentedControl } from '../ui/ErpButtons';
 import './CustomerReportTable.css';
 
@@ -32,6 +32,7 @@ interface CustomerReportTableProps {
   sortOrder: 'desc' | 'asc';
   setSortOrder: (v: 'desc' | 'asc') => void;
   metric: string;
+  setMetric?: (v: 'amount' | 'qty') => void;
   fmt: (val: number) => string;
   renderGrowthAmt: (baseVal: number, compVal: number) => { node: React.ReactNode, bgColor: string };
   renderGrowthPct: (baseVal: number, compVal: number, isTrulyNew?: boolean) => { node: React.ReactNode, bgColor: string };
@@ -63,6 +64,7 @@ export default function CustomerReportTable({
   sortOrder,
   setSortOrder,
   metric,
+  setMetric,
   fmt,
   renderGrowthAmt,
   renderGrowthPct,
@@ -269,6 +271,18 @@ export default function CustomerReportTable({
               { value: 'ytd', label: 'Yearly' },
               { value: 'quarterly', label: 'Quarterly' },
               { value: 'monthly', label: 'Monthly' }
+            ]}
+          />
+        )}
+
+        {setMetric && (
+          <ErpSegmentedControl
+            ariaLabel="Metric mode"
+            value={metric === 'qty' ? 'qty' : 'amount'}
+            onChange={(v) => setMetric(v as 'amount' | 'qty')}
+            options={[
+              { value: 'amount', label: 'Sales', icon: <DollarSign size={13} /> },
+              { value: 'qty', label: 'Qty', icon: <Hash size={13} /> }
             ]}
           />
         )}
@@ -550,11 +564,11 @@ export default function CustomerReportTable({
                     {displayYears.map((yr) => (
                       <React.Fragment key={`tot_row_ytd_${yr}`}>
                         {displayMonths.map((m) => (
-                          <td key={`tot_row_${yr}_${m}`} className={`customer-matrix-td customer-matrix-td--number ${isCurrentMonth(yr, m) ? 'customer-matrix-current' : ''}`} style={{ textAlign: 'center' }}>
+                          <td key={`tot_row_${yr}_${m}`} className={`customer-matrix-td customer-matrix-td--number ${isCurrentMonth(yr, m) ? 'customer-matrix-current' : ''}`}>
                             {renderCell(totalsRow[`${yr}_${m}`] || 0)}
                           </td>
                         ))}
-                        <td key={`tot_row_${yr}_total`} className={totalCellClassName(yr)} style={{ textAlign: 'center' }}>
+                        <td key={`tot_row_${yr}_total`} className={totalCellClassName(yr)}>
                           {renderCell(totalsRow[`${yr}_total`] || 0)}
                         </td>
                       </React.Fragment>
@@ -651,7 +665,7 @@ export default function CustomerReportTable({
                     {displayMonths.map((m) => (
                       <React.Fragment key={`tot_row_m_${m}`}>
                         {displayYears.map((yr) => (
-                          <td key={`tot_row_${m}_${yr}`} className={`customer-matrix-td customer-matrix-td--number ${isCurrentMonth(yr, m) ? 'customer-matrix-current' : ''}`} style={{ textAlign: 'center' }}>
+                          <td key={`tot_row_${m}_${yr}`} className={`customer-matrix-td customer-matrix-td--number ${isCurrentMonth(yr, m) ? 'customer-matrix-current' : ''}`}>
                             {renderCell(totalsRow[`${yr}_${m}`] || 0)}
                           </td>
                         ))}

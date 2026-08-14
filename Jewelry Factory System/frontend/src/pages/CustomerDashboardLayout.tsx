@@ -246,26 +246,23 @@ export default function CustomerDashboardLayout() {
 
   // Sync state to URL when filters change
   useEffect(() => {
-    const params = new URLSearchParams(searchParams);
+    const currentYears = searchParams.get('years') || '';
+    const targetYears = selectedYears.length > 0 ? selectedYears.join(',') : '';
 
-    // Years
-    if (selectedYears.length > 0) params.set('years', selectedYears.join(','));
-    else params.delete('years');
-
-    // Months
     const isAllMonths = selectedMonths.length === MONTH_PARAM_IDS.length;
-    if (isAllMonths) params.delete('months');
-    else params.set('months', selectedMonths.sort((a, b) => Number(a) - Number(b)).join(','));
+    const currentMonths = searchParams.get('months') || '';
+    const targetMonths = isAllMonths ? '' : selectedMonths.slice().sort((a, b) => Number(a) - Number(b)).join(',');
 
-    // Groups
     const isAllGroups = selGroups.length === ALL_GROUP_IDS.length;
-    if (selGroups.length === 0) params.set('groups', 'none');
-    else if (isAllGroups) params.set('groups', 'all');
-    else params.set('groups', selGroups.join(','));
+    const currentGroups = searchParams.get('groups') || '';
+    const targetGroups = selGroups.length === 0 ? 'none' : isAllGroups ? 'all' : selGroups.join(',');
 
-    // Only update if changed to avoid loop
-    if (params.toString() !== searchParams.toString()) {
-      setSearchParams(params, { replace: true });
+    if (currentYears !== targetYears || currentMonths !== targetMonths || currentGroups !== targetGroups) {
+      const newParams = new URLSearchParams(searchParams);
+      if (targetYears) newParams.set('years', targetYears); else newParams.delete('years');
+      if (targetMonths) newParams.set('months', targetMonths); else newParams.delete('months');
+      if (targetGroups) newParams.set('groups', targetGroups); else newParams.delete('groups');
+      setSearchParams(newParams, { replace: true });
     }
   }, [selectedYears, selectedMonths, selGroups, searchParams, setSearchParams]);
 

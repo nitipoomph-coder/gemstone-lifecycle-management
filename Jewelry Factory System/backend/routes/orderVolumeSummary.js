@@ -9,7 +9,7 @@ const express = require('express');
 const router = express.Router();
 const { getPool, sql } = require('../db');
 
-const SALES_ANALYTICS_VIEW = 'dbo.VW_Web_OrderTrends';
+const SALES_ANALYTICS_VIEW = 'dbo.VW_Web_SalesDashboard';
 
 function parseCsvInts(value, fallback = []) {
   const parsed = String(value || '')
@@ -101,10 +101,6 @@ function buildSalesFilters(req, request, viewAlias = 'v', dateExpr = null) {
 
   const filters = [
     sargableDateCondition,
-    `ISNULL(${viewAlias}.OrdStatus, '') != 'C'`,
-    `ISNULL(${viewAlias}.CloseStatus, '') != 'C'`,
-    `SUBSTRING(${viewAlias}.OrdNo, 1, 3) NOT IN ('BBP','BBK','BBS','BBL','BBT','BBD')`,
-    `(${viewAlias}.PONo IS NULL OR UPPER(${viewAlias}.PONo) NOT LIKE '%SAMPLE%')`,
   ];
 
   if (customers.length > 0) {
@@ -136,7 +132,10 @@ router.get('/sales-monthly-analytics', async (req, res) => {
         SUM(v.ItemQty) AS qty,
         SUM(v.ExportQty) AS shippedQty,
         SUM(v.OpenQty) AS gapQty,
-        CASE WHEN COUNT(DISTINCT v.OrdNo) = 0 THEN 0 ELSE CAST(SUM(v.ItemQty) AS FLOAT) / COUNT(DISTINCT v.OrdNo) END AS avgQtyPerOrder
+        SUM(v.ItemAmnt) AS amount,
+        SUM(ISNULL(v.ExportAmnt, 0)) AS shippedAmount,
+        CASE WHEN COUNT(DISTINCT v.OrdNo) = 0 THEN 0 ELSE CAST(SUM(v.ItemQty) AS FLOAT) / COUNT(DISTINCT v.OrdNo) END AS avgQtyPerOrder,
+        CASE WHEN COUNT(DISTINCT v.OrdNo) = 0 THEN 0 ELSE CAST(SUM(v.ItemAmnt) AS FLOAT) / COUNT(DISTINCT v.OrdNo) END AS avgAmountPerOrder
       FROM ${SALES_ANALYTICS_VIEW} v
       WHERE ${whereSql}
       GROUP BY YEAR(${dateExpr}), MONTH(${dateExpr})
@@ -166,7 +165,8 @@ router.get('/sales-type-analytics', async (req, res) => {
           MONTH(${dateExpr}) AS month,
           ${typeExpr} AS typeCode,
           v.OrdNo AS orderNo,
-          v.ItemQty AS qty
+          v.ItemQty AS qty,
+          v.ItemAmnt AS amount
         FROM ${SALES_ANALYTICS_VIEW} v
         WHERE ${whereSql}
       )
@@ -176,7 +176,8 @@ router.get('/sales-type-analytics', async (req, res) => {
         typeCode,
         ${salesProductTypeNameSql('typeCode')} AS typeName,
         COUNT(DISTINCT orderNo) AS orderCount,
-        SUM(qty) AS qty
+        SUM(qty) AS qty,
+        SUM(amount) AS amount
       FROM Lines
       GROUP BY year, month, typeCode
       ORDER BY year, month, typeCode
@@ -204,7 +205,9 @@ router.get('/sales-weekly-analytics', async (req, res) => {
         COUNT(DISTINCT v.OrdNo) AS orderCount,
         SUM(v.ItemQty) AS qty,
         SUM(v.ExportQty) AS shippedQty,
-        SUM(v.OpenQty) AS gapQty
+        SUM(v.OpenQty) AS gapQty,
+        SUM(v.ItemAmnt) AS amount,
+        SUM(ISNULL(v.ExportAmnt, 0)) AS shippedAmount
       FROM ${SALES_ANALYTICS_VIEW} v
       WHERE ${whereSql}
       GROUP BY YEAR(${dateExpr}), DATEPART(iso_week, ${dateExpr})
@@ -230,7 +233,7 @@ router.get('/sales-orders', async (req, res) => {
       SELECT
         v.OrdNo AS orderNo,
         v.PONo AS poNo,
-        v.EXNo AS po2,
+        v.PO2 AS po2,
         v.OrdDate AS ordDate,
         v.DueDate AS dueDate,
         v.CustDueDate AS custDate,
@@ -240,9 +243,9 @@ router.get('/sales-orders', async (req, res) => {
         v.OrdStamp AS ordStamp,
         v.OrdMaker AS ordMaker,
         v.ItemNo AS itemNo,
-        v.CustItem AS custItem,
+        v.[Cust Item] AS custItem,
         v.ItemType AS itemType,
-        UPPER(ISNULL(v.ProductType, 'OTHERS')) AS productTypeCode,
+        v.ProductType AS productTypeCode,
         v.ItemMat AS itemMat,
         v.ItemSize AS itemSize,
         v.ItemStone AS itemStone,
@@ -252,6 +255,9 @@ router.get('/sales-orders', async (req, res) => {
         v.ItemQty AS orderQty,
         v.ExportQty AS shippedQty,
         v.OpenQty AS openQty,
+        v.ItemPrice AS itemPrice,
+        v.ItemAmnt AS itemAmnt,
+        v.ExportAmnt AS shippedAmnt,
         v.OrdStatus AS ordStatus,
         v.CloseStatus AS closeStatus
       FROM ${SALES_ANALYTICS_VIEW} v

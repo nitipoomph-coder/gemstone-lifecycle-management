@@ -21,7 +21,7 @@ import {
   TableSkeletonRows
 } from '../components/infographic/InfographicSalesTrends';
 // @ts-ignore
-import { ArrowRight, BarChart3, CalendarDays, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, FilterX, Hash, RefreshCw, Search, SlidersHorizontal, Table2, X } from 'lucide-react';
+import { ArrowRight, BarChart3, CalendarDays, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, DollarSign, FilterX, Hash, RefreshCw, Search, SlidersHorizontal, Table2, X } from 'lucide-react';
 // @ts-ignore
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import '../components/sales/SalesDenseTable.css';
@@ -63,7 +63,9 @@ export const ORDER_DETAIL_COLUMNS = [
   ['SetType', 80],
   ['OrdQTY', 90],
   ['ExportQTY', 90],
-  ['OpenQTY', 90]
+  ['OpenQTY', 90],
+  ['Price', 90],
+  ['Amount', 110]
 ] as const;
 
 export const SALES_TYPE_OPTIONS = [
@@ -74,7 +76,7 @@ export const SALES_TYPE_OPTIONS = [
   { value: 'OTHERS', label: 'Others' },
 ] as const;
 
-export type Metric = 'qty';
+export type Metric = 'amount' | 'qty';
 export type TrendGranularity = 'monthly' | 'weekly';
 export type SalesTypeCode = typeof SALES_TYPE_OPTIONS[number]['value'];
 export type KpiTypeSelection = 'ALL' | SalesTypeCode;
@@ -83,9 +85,13 @@ type DrilldownBasis = 'order' | 'due';
 type Drilldown = { year: string; month?: string; week?: number; type?: SalesTypeCode; basis?: DrilldownBasis; metric?: Metric };
 type SalesTotals = {
   avgQtyPerOrder: number;
+  avgAmountPerOrder: number;
   qty: number;
+  amount: number;
   shippedQty: number;
+  shippedAmount: number;
   gapQty: number;
+  gapAmount: number;
   orders: number;
 };
 type MonthlyTypeDatum = {
@@ -127,6 +133,9 @@ export type DueOutlookDatum = {
   dueQty: number;
   shippedQty: number;
   openQty: number;
+  dueAmount: number;
+  shippedAmount: number;
+  openAmount: number;
   overdueOrders: number;
   dueSoonOrders: number;
 };
@@ -139,14 +148,15 @@ export const SALES_TYPE_COLORS: Record<SalesTypeCode, string> = {
   OTHERS: 'var(--color-chart-6)',
 };
 
-const emptyTotals: SalesTotals = { avgQtyPerOrder: 0, qty: 0, shippedQty: 0, gapQty: 0, orders: 0 };
+const emptyTotals: SalesTotals = { avgQtyPerOrder: 0, avgAmountPerOrder: 0, qty: 0, amount: 0, shippedQty: 0, shippedAmount: 0, gapQty: 0, gapAmount: 0, orders: 0 };
 
 export const fmtQty = (value: number) => (value || 0).toLocaleString(undefined, { maximumFractionDigits: 0 });
-export const fmtMetric = (value: number, metric: Metric) => fmtQty(value);
+export const fmtCurrency = (value: number) => `$${(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+export const fmtMetric = (value: number, metric: Metric) => metric === 'amount' ? fmtCurrency(value) : fmtQty(value);
 export const fmtSignedMetric = (value: number, metric: Metric) => `${value > 0 ? '+' : value < 0 ? '-' : ''}${fmtMetric(Math.abs(value), metric)}`;
 export const fmtPercent = (value: number) => `${value > 0 ? '+' : value < 0 ? '-' : ''}${Math.abs(value).toFixed(1)}%`;
 const compactNumber = new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 });
-export const fmtAxis = (value: number, metric: Metric) => `${compactNumber.format(value)}`;
+export const fmtAxis = (value: number, metric: Metric) => metric === 'amount' ? `$${compactNumber.format(value)}` : `${compactNumber.format(value)}`;
 
 function selectedCustomerCodes(groupIds: string[]) {
   if (groupIds.length === 0) return [];
@@ -175,38 +185,42 @@ function calcTotalsFromMonthly(rows: SalesMonthlyPoint[], year: string): SalesTo
   const yearNum = Number(year);
   const filtered = rows.filter(r => r.year === yearNum);
   if (filtered.length === 0) return emptyTotals;
-  const qty = filtered.reduce((s, r) => s + r.qty, 0);
-  const shippedQty = filtered.reduce((s, r) => s + r.shippedQty, 0);
-  const gapQty = filtered.reduce((s, r) => s + r.gapQty, 0);
-  const orders = filtered.reduce((s, r) => s + r.orderCount, 0);
+  const qty = filtered.reduce((s, r) => s + (r.qty || 0), 0);
+  const amount = filtered.reduce((s, r) => s + (r.amount || 0), 0);
+  const shippedQty = filtered.reduce((s, r) => s + (r.shippedQty || 0), 0);
+  const shippedAmount = filtered.reduce((s, r) => s + (r.shippedAmount || 0), 0);
+  const gapQty = filtered.reduce((s, r) => s + (r.gapQty || 0), 0);
+  const gapAmount = amount > shippedAmount ? amount - shippedAmount : 0;
+  const orders = filtered.reduce((s, r) => s + (r.orderCount || 0), 0);
   const avgQtyPerOrder = orders > 0 ? qty / orders : 0;
-  return { avgQtyPerOrder, qty, shippedQty, gapQty, orders };
+  const avgAmountPerOrder = orders > 0 ? amount / orders : 0;
+  return { avgQtyPerOrder, avgAmountPerOrder, qty, amount, shippedQty, shippedAmount, gapQty, gapAmount, orders };
 }
 
-function buildMonthlyComparison(rows: SalesMonthlyPoint[], primaryYear: string, compareYear?: string): TrendComparisonDatum[] {
+function buildMonthlyComparison(rows: SalesMonthlyPoint[], primaryYear: string, compareYear?: string, metric: Metric = 'amount'): TrendComparisonDatum[] {
   const pYear = Number(primaryYear);
   const cYear = compareYear ? Number(compareYear) : null;
   const data: TrendComparisonDatum[] = [];
   for (let m = 1; m <= 12; m++) {
     const primary = rows.find(r => r.year === pYear && r.month === m);
     const compare = cYear ? rows.find(r => r.year === cYear && r.month === m) : null;
-    const report = primary?.qty || 0;
-    const comp = compare?.qty || 0;
+    const report = metric === 'amount' ? (primary?.amount || 0) : (primary?.qty || 0);
+    const comp = metric === 'amount' ? (compare?.amount || 0) : (compare?.qty || 0);
     if (report > 0 || comp > 0) {
       data.push({
         label: MONTHS[m - 1],
         periodNumber: m,
         report,
         compare: comp,
-        reportShipped: primary?.shippedQty || 0,
-        compareShipped: compare?.shippedQty || 0,
+        reportShipped: metric === 'amount' ? (primary?.shippedAmount || 0) : (primary?.shippedQty || 0),
+        compareShipped: metric === 'amount' ? (compare?.shippedAmount || 0) : (compare?.shippedQty || 0),
       });
     }
   }
   return data;
 }
 
-function buildWeeklyComparison(rows: SalesWeeklyPoint[], primaryYear: string, compareYear?: string): TrendComparisonDatum[] {
+function buildWeeklyComparison(rows: SalesWeeklyPoint[], primaryYear: string, compareYear?: string, metric: Metric = 'amount'): TrendComparisonDatum[] {
   const pYear = Number(primaryYear);
   const cYear = compareYear ? Number(compareYear) : null;
   const allWeeks = new Set<number>();
@@ -217,25 +231,27 @@ function buildWeeklyComparison(rows: SalesWeeklyPoint[], primaryYear: string, co
   return sortedWeeks.map(w => {
     const primary = rows.find(r => r.year === pYear && r.week === w);
     const compare = cYear ? rows.find(r => r.year === cYear && r.week === w) : null;
+    const report = metric === 'amount' ? (primary?.amount || 0) : (primary?.qty || 0);
+    const comp = metric === 'amount' ? (compare?.amount || 0) : (compare?.qty || 0);
     return {
       label: `W${String(w).padStart(2, '0')}`,
       periodNumber: w,
-      report: primary?.qty || 0,
-      compare: compare?.qty || 0,
-      reportShipped: primary?.shippedQty || 0,
-      compareShipped: compare?.shippedQty || 0,
+      report,
+      compare: comp,
+      reportShipped: metric === 'amount' ? (primary?.shippedAmount || 0) : (primary?.shippedQty || 0),
+      compareShipped: metric === 'amount' ? (compare?.shippedAmount || 0) : (compare?.shippedQty || 0),
     };
   }).filter(d => d.report > 0 || d.compare > 0);
 }
 
-function buildTypeContribution(rows: SalesTypePoint[], primaryYear: string, compareYear: string | undefined, primaryMetric: number): TypeContributionRow[] {
+function buildTypeContribution(rows: SalesTypePoint[], primaryYear: string, compareYear: string | undefined, primaryMetric: number, metric: Metric = 'amount'): TypeContributionRow[] {
   const pYear = Number(primaryYear);
   const cYear = compareYear ? Number(compareYear) : null;
   return SALES_TYPE_OPTIONS.map(opt => {
     const primaryRows = rows.filter(r => r.year === pYear && r.typeCode === opt.value);
     const compareRows = cYear ? rows.filter(r => r.year === cYear && r.typeCode === opt.value) : [];
-    const current = primaryRows.reduce((s, r) => s + r.qty, 0);
-    const compare = compareRows.reduce((s, r) => s + r.qty, 0);
+    const current = metric === 'amount' ? primaryRows.reduce((s, r) => s + (r.amount || 0), 0) : primaryRows.reduce((s, r) => s + (r.qty || 0), 0);
+    const compare = metric === 'amount' ? compareRows.reduce((s, r) => s + (r.amount || 0), 0) : compareRows.reduce((s, r) => s + (r.qty || 0), 0);
     const orderCount = primaryRows.reduce((s, r) => s + r.orderCount, 0);
     return {
       code: opt.value,
@@ -367,11 +383,28 @@ function growthPercent(primary: number, compare: number) {
 
 export default function OrderVolumeSummaryPage() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const { selectedYears, selectedMonths, selGroups: selectedGroups, availableYears } = useOutletContext<any>();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { selectedYears, selectedMonths, selGroups: selectedGroups, availableYears, kpiCompareYear } = useOutletContext<any>();
   const loadRequestIdRef = useRef(0);
   const [selectedKpiType, setSelectedKpiType] = useState<KpiTypeSelection>('ALL');
-  const metric: Metric = 'qty';
+  const urlMetric = (searchParams.get('metric') as Metric) || 'amount';
+  const [metric, setMetric] = useState<Metric>(urlMetric);
+
+  useEffect(() => {
+    const m = searchParams.get('metric') as Metric;
+    if (m && (m === 'amount' || m === 'qty')) {
+      setMetric(m);
+    }
+  }, [searchParams]);
+
+  const switchMetric = (m: Metric) => {
+    setMetric(m);
+    const newParams = new URLSearchParams(searchParams);
+    if (m === 'qty') newParams.set('metric', 'qty');
+    else newParams.delete('metric');
+    navigate({ search: newParams.toString() }, { replace: true });
+  };
+
   const [trendGranularity, setTrendGranularity] = useState<TrendGranularity>('monthly');
   const [activeView, setActiveView] = useState<ViewMode>('overview');
   const [drilldown, setDrilldown] = useState<Drilldown | null>(null);
@@ -509,13 +542,15 @@ export default function OrderVolumeSummaryPage() {
 
   const primaryYear = selectedYears[selectedYears.length - 1] || availableYears[availableYears.length - 1] || '';
   // @ts-ignore
-  const compareYear = selectedYears.find(year => year !== primaryYear) || 'none';
+  const compareYear = (kpiCompareYear && selectedYears.includes(kpiCompareYear) && kpiCompareYear !== primaryYear)
+    ? kpiCompareYear
+    : (selectedYears.find(year => year !== primaryYear) || 'none');
   const hasCompareYear = compareYear !== 'none';
 
   const primaryTotals = useMemo(() => calcTotalsFromMonthly(monthlyData, primaryYear), [monthlyData, primaryYear]);
   const compareTotals = useMemo(() => hasCompareYear ? calcTotalsFromMonthly(monthlyData, compareYear) : emptyTotals, [monthlyData, compareYear, hasCompareYear]);
-  const primaryMetric = primaryTotals.qty;
-  const compareMetric = compareTotals.qty;
+  const primaryMetric = metric === 'amount' ? primaryTotals.amount : primaryTotals.qty;
+  const compareMetric = metric === 'amount' ? compareTotals.amount : compareTotals.qty;
   const changeAmount = hasCompareYear ? primaryMetric - compareMetric : 0;
   const growthRate = hasCompareYear && compareMetric !== 0 ? growthPercent(primaryMetric, compareMetric) : null;
   const deliveryRate = primaryTotals.qty > 0 ? (primaryTotals.shippedQty / primaryTotals.qty) * 100 : 0;
@@ -534,13 +569,13 @@ export default function OrderVolumeSummaryPage() {
   }, [typeData, primaryYear, selectedKpiType]);
 
   const monthlyComparisonData = useMemo(
-    () => buildMonthlyComparison(monthlyData, primaryYear, hasCompareYear ? compareYear : undefined),
-    [monthlyData, primaryYear, compareYear, hasCompareYear],
+    () => buildMonthlyComparison(monthlyData, primaryYear, hasCompareYear ? compareYear : undefined, metric),
+    [monthlyData, primaryYear, compareYear, hasCompareYear, metric],
   );
 
   const weeklyComparisonData = useMemo(
-    () => buildWeeklyComparison(weeklyData, primaryYear, hasCompareYear ? compareYear : undefined),
-    [weeklyData, primaryYear, compareYear, hasCompareYear],
+    () => buildWeeklyComparison(weeklyData, primaryYear, hasCompareYear ? compareYear : undefined, metric),
+    [weeklyData, primaryYear, compareYear, hasCompareYear, metric],
   );
 
   const weeklyComparisonGroups = useMemo(
@@ -554,8 +589,8 @@ export default function OrderVolumeSummaryPage() {
   );
 
   const typeContribution = useMemo(
-    () => buildTypeContribution(typeData, primaryYear, hasCompareYear ? compareYear : undefined, primaryMetric),
-    [typeData, primaryYear, compareYear, hasCompareYear, primaryMetric],
+    () => buildTypeContribution(typeData, primaryYear, hasCompareYear ? compareYear : undefined, primaryMetric, metric),
+    [typeData, primaryYear, compareYear, hasCompareYear, primaryMetric, metric],
   );
 
   // ═══════════════════════════════════════════════════════════
@@ -590,7 +625,7 @@ export default function OrderVolumeSummaryPage() {
   const selectedGroupSummary = selectedGroups.length === 0 ? 'All groups' : `${selectedGroups.length} groups`;
   const selectedKpiTypeLabel = kpiTypeLabel(selectedKpiType);
   const hasOverviewData = monthlyData.length > 0 || typeData.length > 0 || weeklyData.length > 0;
-  const loadingScopeSummary = primaryYear ? `${selectedYearSummary} / ${selectedGroupSummary} / Quantity` : 'Preparing available reporting periods';
+  const loadingScopeSummary = primaryYear ? `${selectedYearSummary} / ${selectedGroupSummary} / ${metric === 'amount' ? 'Sales ($)' : 'Quantity (PCS)'}` : 'Preparing available reporting periods';
   const loadFailure = !hasResolvedData ? error || dueError : '';
   const orderCountHint = selectedKpiType === 'ALL'
     ? `${fmtQty(kpiOrderStats.types)} types`
@@ -654,10 +689,20 @@ export default function OrderVolumeSummaryPage() {
         <div className={`app-content-frame app-content-frame--workspace app-page-content customer-trends-page customer-trends-page--${activeView}`}>
           <header className="customer-trends-page-header">
             <div>
-              <h1>Order Volume Summary</h1>
-              <p>Sales Trends by Customer Group with order-line details</p>
+              <h1 style={{ display: 'flex', alignItems: 'center', gap: 10 }}>Order Trends</h1>
+              <p>Sales & Order Volume Trends by Customer Group with line details</p>
             </div>
-            <div className="customer-trends-page-header__actions" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <div className="customer-trends-page-header__actions" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <ErpSegmentedControl
+                ariaLabel="Metric switch"
+                value={metric}
+                onChange={(v) => switchMetric(v as Metric)}
+                options={[
+                  { value: 'amount', label: 'Sales ($)', icon: <DollarSign size={13} /> },
+                  { value: 'qty', label: 'Qty (PCS)', icon: <Hash size={13} /> },
+                ]}
+              />
+              <div style={{ width: '1px', height: '20px', background: 'var(--color-border)' }} />
               <ErpSegmentedControl
                 ariaLabel="Order Volume Summary view"
                 value={activeView}
@@ -673,7 +718,7 @@ export default function OrderVolumeSummaryPage() {
                   { value: 'details', label: 'Order Details', icon: <Table2 size={13} /> },
                 ]}
               />
-              <div style={{ width: '1px', height: '24px', background: 'var(--color-border)' }} />
+              <div style={{ width: '1px', height: '20px', background: 'var(--color-border)' }} />
               <ErpIconButton label="Reload data" tone="refresh" onClick={() => void loadOverviewData()} icon={<RefreshCw size={14} className={loading ? 'animate-spin' : undefined} />} disabled={loading} size="sm" />
             </div>
           </header>
@@ -695,8 +740,8 @@ export default function OrderVolumeSummaryPage() {
             <>
               {activeView === 'overview' && (
                 <section className="customer-trends-summary" aria-label="Selected period summary">
-                  <SummaryMetric label={`Ordered Qty ${primaryYear || '-'}`} value={fmtMetric(primaryMetric, metric)} hint="Primary year" />
-                  <SummaryMetric label={`Ordered Qty ${hasCompareYear ? compareYear : '-'}`} value={hasCompareYear ? fmtMetric(compareMetric, metric) : '-'} hint="Compare year" muted={!hasCompareYear} />
+                  <SummaryMetric label={`Ordered ${metric === 'amount' ? 'Amount' : 'Qty'} ${primaryYear || '-'}`} value={fmtMetric(primaryMetric, metric)} hint="Primary year" />
+                  <SummaryMetric label={`Ordered ${metric === 'amount' ? 'Amount' : 'Qty'} ${hasCompareYear ? compareYear : '-'}`} value={hasCompareYear ? fmtMetric(compareMetric, metric) : '-'} hint="Compare year" muted={!hasCompareYear} />
                   <SummaryMetric label={hasCompareYear ? `Change vs ${compareYear}` : 'Change'} value={hasCompareYear ? fmtSignedMetric(changeAmount, metric) : '-'} hint={growthRate === null ? 'No comparison baseline' : fmtPercent(growthRate)} tone={!hasCompareYear || changeAmount === 0 ? undefined : changeAmount < 0 ? 'down' : 'up'} muted={!hasCompareYear} />
                   <SummaryMetric
                     label="Order Count"
@@ -705,7 +750,7 @@ export default function OrderVolumeSummaryPage() {
                     control={<KpiTypeSelect value={selectedKpiType} onChange={setSelectedKpiType} />}
                   />
                   <SummaryMetric label="Delivery Rate" value={`${deliveryRate.toFixed(1)}%`} hint={`${fmtQty(primaryTotals.shippedQty)} / ${fmtQty(primaryTotals.qty)} qty`} tone={deliveryRate >= 100 ? 'up' : undefined} />
-                  <SummaryMetric label="Outstanding Qty" value={fmtQty(primaryTotals.gapQty)} hint={`${fmtQty(primaryTotals.orders)} orders`} />
+                  <SummaryMetric label={`Outstanding ${metric === 'amount' ? 'Balance' : 'Qty'}`} value={fmtMetric(metric === 'amount' ? primaryTotals.gapAmount : primaryTotals.gapQty, metric)} hint={`${fmtQty(primaryTotals.orders)} orders`} />
                 </section>
               )}
 
@@ -721,7 +766,7 @@ export default function OrderVolumeSummaryPage() {
                   <div className="customer-trends-overview__header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
                       <h2>{trendGranularity === 'monthly' ? 'Monthly Comparison' : 'Weekly Comparison'}</h2>
-                      <span>{selectedYearSummary} / Ordered quantity</span>
+                      <span>{selectedYearSummary} / {metric === 'amount' ? 'Sales Amount ($)' : 'Ordered Quantity (PCS)'}</span>
                     </div>
                     <ErpSegmentedControl
                       ariaLabel="Trend interval"
@@ -880,6 +925,8 @@ export default function OrderVolumeSummaryPage() {
                                   <td style={tdStrongRight}>{row.orderQty}</td>
                                   <td style={tdStrongRight}>{row.shippedQty}</td>
                                   <td style={tdStrongRight}>{row.openQty || 0}</td>
+                                  <td style={tdStrongRight}>{row.itemPrice !== undefined ? `$${Number(row.itemPrice).toFixed(2)}` : '-'}</td>
+                                  <td style={tdStrongRight}>{row.itemAmnt !== undefined ? `$${Number(row.itemAmnt).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-'}</td>
                                 </tr>
                               );
                             })}

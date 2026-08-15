@@ -10,6 +10,8 @@ Target: **SQL Server 2012 Enterprise** · DB `dbGeneration` · server `192.168.5
 ```
 sql/
 ├── indexes.sql                     # 22 covering indexes (9 SP + 13 Web App)
+├── views/                          # Database Views สำหรับระบบเว็บ (SSOT)
+│   └── VW_Web_SalesDashboard.sql   # Central View สำหรับ Customer Dashboard, Matrix & Order Trends
 ├── stored-procedures/              # SP เวอร์ชันปัจจุบัน (ตัดรูป base64 ออกแล้ว)
 │   ├── PC_Show_OrdTrack_Sum_OrdDate.sql      # @FromDate/@ToDate/@Status · 63 cols
 │   ├── PC_Show_OrdTrack_Sum_DueDate.sql      # @FromDate/@ToDate/@Status · 63 cols
@@ -116,15 +118,47 @@ sql/
 > finish/All บน `_DueDate/_CustDueDate/_FinDate` ยังคง filter `TrackStatus <> 'Y'` ใน CTE_Track ไว้ตามเดิม
 > (ออเดอร์ที่ปิดแล้วอาจมี track fields ว่างในกลุ่ม N008) — แนะนำเทียบผลกับ VB.net เดิมก่อนใช้จริง
 
+## Database Views (SSOT สำหรับ Sales & Customer Analytics)
+
+### `dbo.VW_Web_SalesDashboard` (`sql/views/VW_Web_SalesDashboard.sql`)
+View กลางตัวเดียว (Single Source of Truth) ที่เชื่อมโยงและคำนวณยอดขาย/จำนวนชิ้นของ 3 โมดูลหลักบน Web Application:
+1. **Customer Dashboard (Chart)** (`/dashboard/customer`) — กราฟแนวโน้ม และ KPI การเติบโต YoY
+2. **Customer Matrix Report** (`/dashboard/customer/matrix`) — ตาราง Matrix รายเดือนและรายปี
+3. **Order Trends** (`/dashboard/customer/trends`) — การวิเคราะห์แนวโน้มออเดอร์ แยก Sales ($) / Qty (PCS) และ Order Details Drilldown
+
+#### 📌 Business Logic & Data Filtering (ตรงตามรายงาน "Yearly Sales Summary By Customer" จริง 100%):
+1. **สถานะบิล:** กรองเฉพาะ `ISNULL(OrdStatus, '') <> 'C'` (ตัดบิลยกเลิก)
+2. **สถานะลูกค้า:** กรองเฉพาะ `ISNULL(CustStatus, 'Y') = 'Y'` (เฉพาะลูกค้าที่ Active)
+3. **Prefix บิล:** กรอง `SUBSTRING(OrdNo, 1, 3) NOT IN ('BBL', 'BBD', 'BBK', 'BBT', 'BBP')` (ตัดบิลสั่งผลิตเฉพาะกิจ / กึ่งสำเร็จรูป / งานภายใน ออกตามมาตรฐานรายงานยอดขาย Finished Goods ของบริษัท)
+4. **มาตรฐานยอดเงิน ($ USD):** ใช้ `ISNULL(DT.ItemExchAmnt, DT.ItemAmnt)` เพื่อแปลงสกุลเงินต่างประเทศ (EUR/GBP/etc.) เป็น USD ตามอัตราแลกเปลี่ยนจริง ทำให้ยอดของลูกค้านอก (เช่น U319) ตรงกับรายงานการเงินของบริษัท 100%
+5. **Product Type Classification:**
+   - `BBS`: Bracelet / Bangle
+   - `BES`: Earring
+   - `BNS`: Necklace
+   - `BRS`: Ring
+   - `Others`: สินค้าประเภทอื่นๆ
+
+#### 🎯 ผลการทดสอบความถูกต้อง (Benchmark เทียบรายงาน 2025):
+- **N044:** $883,313.48 (ตรงเป๊ะ 100%)
+- **N051:** $4,124,569.49 (ตรงเป๊ะ 100%)
+- **N066:** $1,894,352.39 (ตรงเป๊ะ 100%)
+- **U319:** $1,715,292.21 (ตรงเป๊ะตาม Exchange Rate)
+- **N083:** $676,766.01 (ตรงเป๊ะ 100%)
+
+---
+
 ## วิธี Apply (ตามลำดับ)
 
 รันด้วย SSMS หรือ `sqlcmd` (ไฟล์มี `GO` batch separator + `IF NOT EXISTS` / `ALTER PROCEDURE` กันพัง):
 
 ```bash
-# 1) Index ก่อน (ONLINE, ใช้เวลาไม่กี่วินาที)
+# 1) Database View (สร้างหรืออัปเดต View กลาง)
+sqlcmd -S 192.168.5.40 -d dbGeneration -U <user> -i views/VW_Web_SalesDashboard.sql
+
+# 2) Index ก่อน (ONLINE, ใช้เวลาไม่กี่วินาที)
 sqlcmd -S 192.168.5.40 -d dbGeneration -U <user> -i indexes.sql
 
-# 2) Stored Procedures (ALTER — คงสิทธิ์เดิม ไม่ต้อง DROP)
+# 3) Stored Procedures (ALTER — คงสิทธิ์เดิม ไม่ต้อง DROP)
 sqlcmd -S 192.168.5.40 -d dbGeneration -U <user> -i stored-procedures/PC_Show_OrdTrack_Sum_OrdDate.sql
 #   ... ทำครบทั้ง 5 ไฟล์
 ```

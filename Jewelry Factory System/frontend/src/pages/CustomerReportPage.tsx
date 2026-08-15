@@ -381,31 +381,78 @@ export default function CustomerReportPage() {
         <div className="app-content-frame app-content-frame--dashboard-wide sales-report-page">
           {/* Loading Skeletons for KPIs */}
           {(loading) && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-              <div className="sales-report-kpis flex-wrap" style={{ display: 'flex', gap: 12 }}>
-                {Array.from({ length: displayYears.length || 2 }).map((_, i) => (
-                  <div key={`kpi-skeleton-yr-${i}`} style={{ background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)', borderRadius: 8, padding: '12px 18px', flex: '1 1 min-content', minWidth: 200, boxShadow: '0 10px 24px -20px color-mix(in srgb, var(--color-surface-900) 36%, transparent)' }}>
-                    <div className="app-skeleton" style={{ width: 100, height: 16, marginBottom: 12, borderRadius: 4 }} />
-                    <div className="app-skeleton" style={{ width: '80%', height: 32, marginBottom: 8, borderRadius: 6 }} />
-                    <div className="app-skeleton" style={{ width: 140, height: 14, borderRadius: 4 }} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20, marginBottom: 20 }}>
+              {/* Year KPI Skeletons */}
+              <div className="sales-report-kpis flex-wrap" style={{ display: 'flex', gap: 12, marginBottom: 1 }}>
+                {(displayYears.length > 0 ? displayYears : ['2025', '2024']).map((yr, i) => (
+                  <div
+                    key={`kpi-skeleton-yr-${yr}`}
+                    style={{
+                      background: 'var(--color-surface-0)',
+                      border: '1px solid var(--color-border-light)',
+                      borderLeft: `4px solid ${YEAR_COLORS[i % YEAR_COLORS.length] || 'var(--color-border-light)'}`,
+                      borderRadius: 8,
+                      padding: '12px 16px',
+                      flex: '1 1 200px',
+                      minWidth: 180,
+                      boxShadow: '0 8px 20px -16px color-mix(in srgb, var(--color-surface-900) 25%, transparent)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 5
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <div className="app-skeleton" style={{ width: 16, height: 16, borderRadius: 4 }} />
+                      <div className="app-skeleton" style={{ width: 85, height: 16, borderRadius: 4 }} />
+                    </div>
+                    <div className="app-skeleton" style={{ width: '70%', height: 26, borderRadius: 6, marginTop: 4 }} />
                   </div>
                 ))}
               </div>
+
+              {/* Group KPI Skeletons */}
               <div className="sales-report-kpis flex-wrap" style={{ display: 'flex', gap: 12 }}>
-                {Array.from({ length: selGroups?.length || 6 }).map((_, i) => (
-                  <div key={`kpi-skeleton-grp-${i}`} style={{ background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)', borderRadius: 8, padding: '12px 18px', flex: '1 1 200px', minWidth: 180, boxShadow: '0 8px 20px -16px color-mix(in srgb, var(--color-surface-900) 25%, transparent)' }}>
-                    <div className="app-skeleton" style={{ width: 120, height: 16, marginBottom: 12, borderRadius: 4 }} />
-                    <div className="app-skeleton" style={{ width: '80%', height: 32, marginBottom: 8, borderRadius: 6 }} />
-                    <div className="app-skeleton" style={{ width: 140, height: 14, borderRadius: 4 }} />
-                  </div>
-                ))}
+                {selGroups.map((gId) => {
+                  const group = ALL_GROUPS.find(x => x.id === gId);
+                  const color = group?.color || 'var(--color-border-light)';
+                  const label = group?.label || gId;
+                  return (
+                    <div
+                      key={`kpi-skeleton-grp-${gId}`}
+                      style={{
+                        background: 'var(--color-surface-0)',
+                        border: '1px solid var(--color-border-light)',
+                        borderLeft: `4px solid ${color}`,
+                        borderRadius: 8,
+                        padding: '12px 16px',
+                        flex: '1 1 200px',
+                        minWidth: 180,
+                        boxShadow: '0 8px 20px -16px color-mix(in srgb, var(--color-surface-900) 25%, transparent)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 12
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: 'var(--erp-text-dense)', fontWeight: 900, color: 'var(--color-text-secondary)', opacity: 0.7 }}>{label}</span>
+                        <div className="app-skeleton" style={{ width: 35, height: 14, borderRadius: 4 }} />
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <div className="app-skeleton" style={{ width: '75%', height: 24, borderRadius: 6 }} />
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div className="app-skeleton" style={{ width: 90, height: 14, borderRadius: 4 }} />
+                          <div className="app-skeleton" style={{ width: 45, height: 12, borderRadius: 4 }} />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-              <div className="app-skeleton rounded-lg" style={{ width: '100%', height: 600, borderRadius: 12 }} />
             </div>
           )}
 
           {(!loading) && (
-            <>
+            <div key={`kpis-${displayYears.join(',')}-${selGroups.join(',')}-${selMonths.join(',')}-${metric}`}>
               <div className="sales-report-kpis flex-wrap" style={{ display: 'flex', gap: 12, marginBottom: 1 }}>
                 {displayYears.map((yr, yIdx) => (
                   <div
@@ -517,7 +564,7 @@ export default function CustomerReportPage() {
                   </div>
                 </div>
               )}
-            </>
+            </div>
           )}
 
           <div className="sales-report-table-region">

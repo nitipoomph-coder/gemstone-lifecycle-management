@@ -394,38 +394,147 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
   }, [selectedMonths]);
 
   if (loading) {
+    const sortedGroups = sortedSel.map(gId => ALL_GROUPS.find(x => x.id === gId)).filter(Boolean);
+
     return (
-      <>
-          <div className="app-page-scroll content-scrollbar">
-          <div className="app-content-frame app-content-frame--workspace app-page-content sales-summary-page sales-summary-page--loading">
-            {/* Header Skeleton */}
-            <div className="sales-summary-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 24 }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div className="app-skeleton" style={{ width: 280, height: 28, borderRadius: 6 }} />
-                <div className="app-skeleton" style={{ width: 180, height: 16, borderRadius: 4 }} />
+      <div className="content-scrollbar flex-1 overflow-y-auto" style={{ background: 'var(--color-surface-1)' }}>
+        <div className="app-content-frame app-content-frame--workspace app-page-content sales-summary-page" style={{ paddingTop: 16 }}>
+          
+          {/* Top Filter Bar Skeleton */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', background: 'var(--color-surface-0)', borderBottom: '1px solid var(--color-border-light)', borderRadius: '8px 8px 0 0', marginBottom: 16 }}>
+            <div className="app-skeleton" style={{ width: 140, height: 22, borderRadius: 4 }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div className="app-skeleton" style={{ width: 130, height: 32, borderRadius: 7 }} />
+              <div style={{ width: 1, height: 16, background: 'var(--color-border-light)' }} />
+              <div className="app-skeleton" style={{ width: 130, height: 32, borderRadius: 7 }} />
+              <div style={{ width: 1, height: 16, background: 'var(--color-border-light)' }} />
+              <div className="app-skeleton" style={{ width: 160, height: 32, borderRadius: 7 }} />
+              <div style={{ width: 1, height: 16, background: 'var(--color-border-light)' }} />
+              <div className="app-skeleton" style={{ width: 170, height: 32, borderRadius: 7 }} />
+            </div>
+          </div>
+
+          {/* Main Content Grid: Chart on Left, YoY Cards on Right */}
+          <div className="sales-summary-main-grid">
+
+            {/* Main Chart Section Skeleton */}
+            <div className="sales-summary-chart" style={{ background: 'var(--color-surface-0)', borderRadius: 8, padding: 18, border: '1px solid var(--color-border-light)', boxShadow: 'none' }}>
+              {/* Dynamic Chart Header Skeleton */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, marginBottom: 14, flexWrap: 'wrap' }}>
+                <div>
+                  <div className="app-skeleton" style={{ width: 280, height: 24, borderRadius: 6, marginBottom: 8 }} />
+                  <div className="app-skeleton" style={{ width: 340, height: 14, borderRadius: 4 }} />
+
+                  {/* Chart Legend Skeleton */}
+                  <div style={{ display: 'flex', gap: 10, marginTop: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+                    <div className="app-skeleton" style={{ width: 80, height: 14, borderRadius: 4 }} />
+                    {(sortedGroups.length > 0 ? sortedGroups : Array.from({ length: 6 })).map((g: any, idx) => (
+                      <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ width: 10, height: 10, borderRadius: 2, background: g?.color || 'var(--color-surface-3)' }} />
+                        <div className="app-skeleton" style={{ width: 65, height: 14, borderRadius: 4 }} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+                  <div className="app-skeleton" style={{ width: 130, height: 14, borderRadius: 4 }} />
+                  <div className="app-skeleton" style={{ width: 180, height: 32, borderRadius: 6 }} />
+                  <div className="app-skeleton" style={{ width: 110, height: 20, borderRadius: 12 }} />
+                </div>
               </div>
-              <div className="app-skeleton" style={{ width: 240, height: 40, borderRadius: 8 }} />
+
+              {/* Chart Body Simulated Bar Graph Skeleton */}
+              <div className="sales-summary-chart-body" style={{ padding: '20px 8px 8px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-around', gap: 16, borderTop: '1px solid var(--color-border-light)', minHeight: 320 }}>
+                {Array.from({ length: 7 }).map((_, colIdx) => (
+                  <div key={colIdx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, height: '100%', justifyContent: 'flex-end', flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: '80%', width: '100%', justifyContent: 'center' }}>
+                      <div className="app-skeleton" style={{ width: '40%', height: `${30 + (colIdx * 13) % 60}%`, borderRadius: '4px 4px 0 0' }} />
+                      <div className="app-skeleton" style={{ width: '40%', height: `${40 + (colIdx * 17) % 55}%`, borderRadius: '4px 4px 0 0', opacity: 0.7 }} />
+                    </div>
+                    <div className="app-skeleton" style={{ width: 40, height: 12, borderRadius: 4 }} />
+                  </div>
+                ))}
+              </div>
             </div>
 
-            {/* KPI Cards Skeleton Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20, marginBottom: 24 }}>
-              {Array.from({ length: selGroups?.length || 6 }).map((_, i) => (
-                <div key={i} style={{ background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)', borderRadius: 12, padding: 20, height: 160 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
-                    <div className="app-skeleton" style={{ width: 120, height: 18, borderRadius: 4 }} />
-                    <div className="app-skeleton" style={{ width: 32, height: 32, borderRadius: 8 }} />
+            {/* Side-by-Side Summary Cards Skeleton */}
+            <div className="sales-summary-cards">
+              {/* Year KPI Skeletons */}
+              {(activeYears.length > 0 ? activeYears : ['2025', '2024']).map((y, idx) => {
+                const color = YEAR_COLORS[idx % YEAR_COLORS.length];
+                return (
+                  <div
+                    key={`skel-yr-${y}`}
+                    style={{
+                      background: 'var(--color-surface-0)',
+                      border: '1px solid var(--color-border-light)',
+                      borderLeft: `4px solid ${color}`,
+                      borderRadius: 8,
+                      padding: '12px 16px',
+                      boxShadow: '0 8px 20px -16px color-mix(in srgb, var(--color-surface-900) 25%, transparent)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 12
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div className="app-skeleton" style={{ width: 90, height: 16, borderRadius: 4 }} />
+                      <div className="app-skeleton" style={{ width: 40, height: 14, borderRadius: 4 }} />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <div className="app-skeleton" style={{ width: 140, height: 24, borderRadius: 6 }} />
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div className="app-skeleton" style={{ width: 110, height: 14, borderRadius: 4 }} />
+                        <div className="app-skeleton" style={{ width: 50, height: 12, borderRadius: 4 }} />
+                      </div>
+                    </div>
                   </div>
-                  <div className="app-skeleton" style={{ width: '60%', height: 36, marginBottom: 12, borderRadius: 6 }} />
-                  <div className="app-skeleton" style={{ width: '40%', height: 14, borderRadius: 4 }} />
-                </div>
-              ))}
+                );
+              })}
+
+              {/* Group KPI Skeletons */}
+              {(sortedGroups.length > 0 ? sortedGroups : Array.from({ length: 6 })).map((g: any, idx) => {
+                const color = g?.color || 'var(--color-border-light)';
+                const label = g?.label || `Group ${idx + 1}`;
+                return (
+                  <div
+                    key={`skel-grp-${idx}`}
+                    style={{
+                      background: 'var(--color-surface-0)',
+                      border: '1px solid var(--color-border-light)',
+                      borderLeft: `4px solid ${color}`,
+                      borderRadius: 8,
+                      padding: '12px 16px',
+                      boxShadow: '0 8px 20px -16px color-mix(in srgb, var(--color-surface-900) 25%, transparent)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 4
+                    }}
+                  >
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span style={{ fontSize: 'var(--erp-text-dense)', fontWeight: 900, color: 'var(--color-text-secondary)', opacity: 0.7 }}>{label}</span>
+                        </div>
+                        <div className="app-skeleton" style={{ width: 35, height: 14, borderRadius: 4 }} />
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <div className="app-skeleton" style={{ width: 130, height: 24, borderRadius: 6 }} />
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div className="app-skeleton" style={{ width: 110, height: 14, borderRadius: 4 }} />
+                          <div className="app-skeleton" style={{ width: 50, height: 12, borderRadius: 4 }} />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-            
-            {/* Main Chart Skeleton */}
-            <div className="app-skeleton rounded-lg" style={{ width: '100%', height: 400, borderRadius: 12 }} />
+
           </div>
         </div>
-      </>
+      </div>
     );
   }
 
@@ -564,7 +673,7 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
             </div>
 
             {/* Side-by-Side Summary Cards */}
-            <div className="sales-summary-cards">
+            <div className="sales-summary-cards" key={`kpis-${activeYears.join(',')}-${sortedSel.join(',')}-${monthlySeries}-${metric}`}>
               {/* Year KPIs */}
               {yearSummaries.map((yData) => {
                 const color = YEAR_COLORS[activeYears.indexOf(yData.year) % YEAR_COLORS.length];

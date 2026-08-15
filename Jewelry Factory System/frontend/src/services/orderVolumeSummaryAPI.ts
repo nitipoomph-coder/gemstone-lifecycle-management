@@ -23,7 +23,10 @@ export interface SalesMonthlyPoint {
   qty: number;
   shippedQty: number;
   gapQty: number;
+  amount?: number;
+  shippedAmount?: number;
   avgQtyPerOrder: number;
+  avgAmountPerOrder?: number;
 }
 
 export interface SalesTypePoint {
@@ -33,6 +36,7 @@ export interface SalesTypePoint {
   typeName: string;
   orderCount: number;
   qty: number;
+  amount?: number;
 }
 
 export interface SalesOrderRow {
@@ -42,7 +46,7 @@ export interface SalesOrderRow {
   dueDate: string | null;
   custDate: string | null;
   customerCode: string;
-  customerName: string;
+  customerName?: string;
   salesName: string | null;
   po2: string | null;
   shipTo: string | null;
@@ -61,6 +65,9 @@ export interface SalesOrderRow {
   orderQty: number;
   shippedQty: number;
   openQty: number;
+  itemPrice?: number;
+  itemAmnt?: number;
+  shippedAmnt?: number;
   ordStatus: string | null;
   closeStatus: string | null;
 }

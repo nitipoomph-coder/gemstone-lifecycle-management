@@ -8,12 +8,14 @@ import {
   BarChart3,
   CalendarDays,
   ChevronDown,
+  Camera,
+  Box,
 } from "lucide-react";
 import { fetchAvailableYearsMeta } from "../services/dashboardAPI";
 import { fetchCustomerSummary } from "../services/customerSummaryAPI";
 import { fetchItemCustomerYearlySummary } from "../services/itemYearlySummaryAPI";
 import type { ItemCustomerYearlySummaryItem, ItemCustomerYearlySummaryPair } from "../services/itemYearlySummaryAPI";
-import { getCustomerGroupId, ALL_GROUPS } from "../config/customerGroups";
+import { getCustomerGroupId, ALL_GROUPS, ACTIVE_GROUP_IDS } from "../config/customerGroups";
 import Topbar from "../components/layout/Topbar";
 import "./SalesResponsive.css";
 
@@ -185,7 +187,10 @@ export default function TopOrdersGalleryPage() {
 
   // Filter state
   const [baseYear, setBaseYear] = useState<string>("");
-  const [selGroups, setSelGroups] = useState<string[]>([]);
+  const [selGroups, setSelGroups] = useState<string[]>(() => {
+    const urlGroups = searchParams.get("groups");
+    return urlGroups ? urlGroups.split(",").filter(Boolean) : ACTIVE_GROUP_IDS;
+  });
   const [searchDraft, setSearchDraft] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedProductType, setSelectedProductType] = useState<ProductTypeFilter>("ALL");
@@ -347,30 +352,78 @@ export default function TopOrdersGalleryPage() {
         yrTotal += Number(val) || 0;
       });
 
-      const yearlyTopItem = selectedProductType === "ALL"
-        ? cust.topItemsByYear?.[baseYear]
-        : cust.topItemsByYearByType?.[baseYear]?.[selectedProductType];
-      const topItem = yearlyTopItem?.topItem || (cust.topItemsByYear ? null : cust.topItem);
-      const topItemQty = Number(yearlyTopItem?.topItemQty || (cust.topItemsByYear ? 0 : cust.topItemQty) || 0);
-      const productType = yearlyTopItem?.productType || selectedProductType;
-
-      if (yrTotal > 0 && topItem && topItemQty > 0) {
+      if (yrTotal > 0) {
         const groupLabel = getGroupLabel(groupId);
-        sourceRows.push({
-          rowKey: `list-${customerCode}-${normalizeStyleNo(topItem)}-${baseYear}-${selectedProductType}`,
-          id: customerCode,
-          label: customerCode,
-          customerCode,
-          customerName: String(cust.name || ""),
-          groupId,
-          groupLabel,
-          topItem,
-          topItemQty,
-          productType,
-          yrTotal,
-          sortValue: selectedProductType === "ALL" ? yrTotal : topItemQty,
-          displayMode: "list",
-        });
+        if (selectedProductType === "ALL") {
+          const typeMap = cust.topItemsByYearByType?.[baseYear] || {};
+          const typeKeys = Object.keys(typeMap);
+          if (typeKeys.length > 0) {
+            typeKeys.forEach((pType) => {
+              const itemInfo = typeMap[pType as ProductTypeFilter];
+              const tItem = itemInfo?.topItem;
+              const tQty = Number(itemInfo?.topItemQty || 0);
+              if (tItem && tQty > 0) {
+                sourceRows.push({
+                  rowKey: `list-${customerCode}-${normalizeStyleNo(tItem)}-${baseYear}-${pType}`,
+                  id: customerCode,
+                  label: customerCode,
+                  customerCode,
+                  customerName: String(cust.name || ""),
+                  groupId,
+                  groupLabel,
+                  topItem: tItem,
+                  topItemQty: tQty,
+                  productType: pType,
+                  yrTotal,
+                  sortValue: tQty,
+                  displayMode: "list",
+                });
+              }
+            });
+          } else if (cust.topItemsByYear?.[baseYear]?.topItem) {
+            const yearlyTopItem = cust.topItemsByYear[baseYear];
+            const tItem = yearlyTopItem.topItem;
+            const tQty = Number(yearlyTopItem.topItemQty || 0);
+            if (tItem && tQty > 0) {
+              sourceRows.push({
+                rowKey: `list-${customerCode}-${normalizeStyleNo(tItem)}-${baseYear}-ALL`,
+                id: customerCode,
+                label: customerCode,
+                customerCode,
+                customerName: String(cust.name || ""),
+                groupId,
+                groupLabel,
+                topItem: tItem,
+                topItemQty: tQty,
+                productType: yearlyTopItem.productType || "ALL",
+                yrTotal,
+                sortValue: tQty,
+                displayMode: "list",
+              });
+            }
+          }
+        } else {
+          const yearlyTopItem = cust.topItemsByYearByType?.[baseYear]?.[selectedProductType];
+          const topItem = yearlyTopItem?.topItem;
+          const topItemQty = Number(yearlyTopItem?.topItemQty || 0);
+          if (topItem && topItemQty > 0) {
+            sourceRows.push({
+              rowKey: `list-${customerCode}-${normalizeStyleNo(topItem)}-${baseYear}-${selectedProductType}`,
+              id: customerCode,
+              label: customerCode,
+              customerCode,
+              customerName: String(cust.name || ""),
+              groupId,
+              groupLabel,
+              topItem,
+              topItemQty,
+              productType: selectedProductType,
+              yrTotal,
+              sortValue: topItemQty,
+              displayMode: "list",
+            });
+          }
+        }
       }
     });
 
@@ -1006,10 +1059,6 @@ export default function TopOrdersGalleryPage() {
             margin: 0 auto;
             direction: ltr;
           }
-          .gallery-card-hover {
-            grid-column: span var(--card-col-span);
-            grid-row: span var(--card-row-span);
-          }
           .gallery-image-frame {
             flex: 1;
             display: flex;
@@ -1020,12 +1069,18 @@ export default function TopOrdersGalleryPage() {
             position: relative;
             min-height: 0;
             overflow: hidden;
-            padding: clamp(18px, 2.2vw, 34px);
+            padding: 0;
           }
           .gallery-img {
-            width: min(88%, var(--gallery-image-max-width, 520px));
-            height: min(88%, var(--gallery-image-max-height, 420px));
+            width: 100%;
+            height: 100%;
+            max-width: 100%;
+            max-height: 100%;
             object-fit: contain;
+            transition: transform 0.25s ease, opacity 0.15s ease;
+          }
+          .gallery-card-hover:hover .gallery-img {
+            transform: scale(1.04);
           }
           .gallery-preview-shell {
             width: min(94vw, 1480px);
@@ -1035,8 +1090,10 @@ export default function TopOrdersGalleryPage() {
             grid-template-columns: minmax(0, 1fr) minmax(340px, 380px);
           }
           .gallery-preview-image {
-            width: min(92%, 920px);
-            height: min(88%, 700px);
+            width: 100%;
+            height: 100%;
+            max-width: 100%;
+            max-height: 100%;
             object-fit: contain;
           }
           @media (min-width: 1800px) {
@@ -1307,36 +1364,11 @@ export default function TopOrdersGalleryPage() {
 
                   {/* Enterprise Image Container */}
                   <div className="gallery-image-frame">
-                    <div
-                      style={{
-                        position: "absolute",
-                        top: isFeaturedRank ? 18 : 14,
-                        left: isFeaturedRank ? 18 : 14,
-                        zIndex: 30,
-                        width: isFeaturedRank ? 42 : 34,
-                        height: isFeaturedRank ? 42 : 34,
-                        borderRadius: 999,
-                        border: "1px solid var(--color-border-light)",
-                        background: "color-mix(in srgb, var(--color-surface-0) 92%, transparent)",
-                        color: "var(--color-text-primary)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontFamily: "var(--font-display)",
-                        fontSize: isFeaturedRank ? "1.12rem" : "0.92rem",
-                        fontWeight: 950,
-                        lineHeight: 1,
-                        boxShadow: "0 8px 18px color-mix(in srgb, var(--color-surface-900) 12%, transparent)",
-                        pointerEvents: "none",
-                      }}
-                    >
-                      {displayRank}
-                    </div>
                     <img
                       src={`/api/photos/ps/${row.topItem}`}
                       alt={row.topItem}
                       className="gallery-img"
-                      style={{ objectFit: 'cover', width: '100%', height: '100%' }}
+                      style={{ objectFit: 'contain', width: '100%', height: '100%' }}
                       onError={(event: SyntheticEvent<HTMLImageElement>) => {
                         const image = event.currentTarget;
                         if (!image.dataset.triedCad) {
@@ -1369,68 +1401,92 @@ export default function TopOrdersGalleryPage() {
                   {/* Static Bottom Bar */}
                   <div
                     style={{
-                      padding: isFeaturedRank ? "18px 22px" : "16px 20px",
+                      padding: "14px 18px",
                       display: "flex",
                       justifyContent: "space-between",
                       alignItems: "center",
-                      gap: 12,
+                      gap: 10,
                       background: isFeaturedRank
-                      ? "color-mix(in srgb, var(--color-brand-500) 5%, var(--color-surface-0))"
-                      : "var(--color-surface-0)",
+                        ? "color-mix(in srgb, var(--color-brand-500) 4%, var(--color-surface-0))"
+                        : "var(--color-surface-0)",
+                      borderTop: "1px solid var(--color-border-light)",
                       zIndex: 10,
                       position: "relative",
                     }}
                   >
-                    <span
+                    <div
                       style={{
                         minWidth: 0,
                         display: "flex",
                         alignItems: "center",
                         gap: 8,
                         fontFamily: "var(--font-display)",
+                        flexWrap: "nowrap",
+                        overflow: "hidden",
                       }}
                     >
-                      <Award
-                        size={isFeaturedRank ? 22 : 18}
-                        style={{ color: rankStyle.bg, flexShrink: 0 }}
-                      />
+                      {/* Rank Number Badge */}
                       <span
                         style={{
-                          fontSize: isFeaturedRank ? "1.18rem" : "1.05rem",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          padding: "2px 7px",
+                          borderRadius: 5,
+                          background: isFeaturedRank
+                            ? "var(--color-brand-500)"
+                            : "color-mix(in srgb, var(--color-surface-2) 80%, var(--color-surface-1))",
+                          color: isFeaturedRank ? "#fff" : "var(--color-text-primary)",
+                          fontSize: "0.78rem",
                           fontWeight: 900,
-                          color: "var(--color-text-primary)",
+                          lineHeight: 1.2,
+                          flexShrink: 0,
+                        }}
+                      >
+                        #{displayRank}
+                      </span>
+
+                      {/* Customer / Group Label */}
+                      <span
+                        style={{
+                          fontSize: "0.92rem",
+                          fontWeight: 800,
+                          color: "var(--color-text-secondary)",
                           flexShrink: 0,
                         }}
                       >
                         {row.label}
                       </span>
+
+                      <span style={{ color: "var(--color-text-tertiary)", flexShrink: 0 }}>•</span>
+
+                      {/* Item SKU Name */}
                       <span
                         title={row.topItem}
                         style={{
-                          minWidth: 0,
+                          fontSize: "0.95rem",
+                          fontWeight: 900,
+                          color: "var(--color-text-primary)",
+                          whiteSpace: "nowrap",
                           overflow: "hidden",
                           textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                          fontSize: isFeaturedRank ? "0.9rem" : "0.82rem",
-                          fontWeight: 800,
-                          color: "var(--color-text-primary)",
                         }}
                       >
                         {row.topItem}
                       </span>
-                    </span>
+                    </div>
+
                     <span
                       className="opacity-0 group-hover:opacity-100 transition-opacity duration-300"
                       style={{
-                        fontSize: "0.85rem",
-                        color: "var(--color-text-primary)",
+                        fontSize: "0.78rem",
+                        color: "var(--color-brand-600)",
                         fontWeight: 800,
-                        textTransform: 'capitalize',
-                        letterSpacing: "0.05em",
+                        whiteSpace: "nowrap",
                         flexShrink: 0,
                       }}
                     >
-                      Click to View
+                      View Detail
                     </span>
                   </div>
                 </div>
@@ -1618,7 +1674,7 @@ export default function TopOrdersGalleryPage() {
                     src={`/api/photos/ps/${previewItem.id}`}
                     alt={`${previewItem.id}`}
                     className="gallery-preview-image"
-                    style={{ objectFit: 'cover', width: '100%', height: '100%' }}
+                    style={{ objectFit: 'contain', width: '100%', height: '100%' }}
                     onError={(event: SyntheticEvent<HTMLImageElement>) => {
                       const container = event.currentTarget.parentElement?.parentElement;
                       if (container) container.style.display = "none";

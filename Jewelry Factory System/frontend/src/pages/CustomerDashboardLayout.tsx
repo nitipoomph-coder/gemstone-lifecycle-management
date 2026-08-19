@@ -214,15 +214,12 @@ export default function CustomerDashboardLayout() {
     return active.length > 0 ? active : ACTIVE_GROUP_IDS; // fallback if no data
   }, [custData, selectedYears]);
 
-  // Update default groups if URL has no groups param
+  // Set default active groups (4 main groups) if URL has no groups param
   useEffect(() => {
-    if (!hasGroupsParam && custData.length > 0) {
-      setSelGroups(dynamicActiveGroups);
+    if (!hasGroupsParam) {
+      setSelGroups(ACTIVE_GROUP_IDS);
     }
-    // We explicitly don't want this to run every time dynamicActiveGroups changes
-    // if the user has manually interacted with the filter, but since hasGroupsParam 
-    // will be true once they interact, it's safe.
-  }, [hasGroupsParam, custData.length, dynamicActiveGroups]);
+  }, [hasGroupsParam]);
 
   // Popover States
   const [showPeriodPopover, setShowPeriodPopover] = useState(false);

@@ -299,7 +299,77 @@ The \CustomerReportPage.tsx\ component originally had its own local sidebar filt
 pm run build\ completed successfully.
 
 ### Prevention & Lessons Learned:
-1. **Context Mapping After UI Refactors:** When moving local component filters to a global layout toolbar, always ensure child Outlets are updated to consume the new \useOutletContext\ instead of relying on stale local state or one-time URL parsing.
-2. **Comprehensive Build Checks:** Always run \
-pm run build\ in addition to \	sc --noEmit\ to catch unused imports and variables across the entire project after deleting files.
+1. **Context Mapping After UI Refactors:** When moving local component filters to a global layout toolbar, always ensure child Outlets are updated to consume the new `useOutletContext` instead of relying on stale local state or one-time URL parsing.
+2. **Comprehensive Build Checks:** Always run `npm run build` in addition to `tsc --noEmit` to catch unused imports and variables across the entire project after deleting files.
+
+## Issue: Popover Dropdown Clipped inside Topbar by Responsive `overflow-x: auto`
+**Date:** 2026-08-24
+**Component:** `index.css`, `CustomerDashboardLayout.tsx`, `Topbar.tsx`
+
+### Symptoms:
+The "Customer Groups" and "Period" dropdown popovers were trapped and vertically cropped inside the Topbar frame on smaller screen widths, whereas the "UI Themes" dropdown floated normally.
+
+### Root Cause:
+In responsive `@container` media queries, `.app-topbar__page-actions` had `overflow-x: auto` applied. In CSS, any non-visible overflow creates a scroll/clip boundary that traps `position: absolute` child elements. The `.app-topbar__system-actions` container where "UI Themes" lived had `overflow: visible`, which is why it floated freely.
+
+### Fix:
+1. Changed `overflow-x: auto` to `overflow: visible` on `.app-topbar__page-actions`.
+2. Ensured `.sales-summary-popover` and `.sales-gallery-period-menu` have `z-index: 1000` to float above all table and card elements.
+
+### Prevention & Lessons Learned:
+1. **Never place `overflow-x: auto` or `overflow: hidden` on a toolbar container that hosts absolute popovers.** If scrolling is needed, wrap only the non-popover buttons in a dedicated scroll track.
+2. **Test popovers at multiple viewport widths (mobile, tablet container, desktop) to ensure stacking contexts are not broken by container queries.**
+
+## Issue: Metric Toggle ($ Sales vs # Qty) Caused Full Page Remount & Chart Flickering
+**Date:** 2026-08-24
+**Component:** `CustomerDashboard.tsx`
+
+### Symptoms:
+Clicking the `$ Sales` / `# Qty` segmented control caused the entire chart and KPI cards to violently flicker and blink without smooth transition.
+
+### Root Cause:
+1. `switchMetric` invoked `navigate('/dashboard/customer?...')`, triggering a full route navigation that unmounted the page component.
+2. The KPI card container had `key={`kpis-...-${metric}`}`, forcing React to destroy and recreate the DOM on every metric switch.
+3. The Recharts `<Bar>` components lacked explicit `isAnimationActive` and `animationDuration` configuration.
+
+### Fix:
+1. Changed `switchMetric` to use `setSearchParams(nextParams, { replace: true })` in-place without page remount.
+2. Removed `-${metric}` from the KPI card key so React updates values smoothly.
+3. Added `isAnimationActive={true}`, `animationDuration={600}`, and `animationEasing="ease-in-out"` to `<Bar>` components.
+
+## Issue: Color Token Linter Failures (Hex & Literal Colors in UI)
+**Date:** 2026-08-24
+**Component:** `DeliveryAndDepartmentOutlook.tsx`, `OrderVolumeSummaryPage.tsx`, `SalesCustomerGroupDetail.tsx`, `SalesDashboard.tsx`, `TopOrdersGalleryPage.tsx`, `Sidebar.tsx`
+
+### Symptoms:
+`npm run lint` failed due to `scripts/check-color-tokens.mjs` catching hardcoded hex colors (`#f59e0b`, `#10b981`, `#fff`), named colors (`white`), and Tailwind palette utility classes (`hover:text-white`).
+
+### Root Cause:
+New component development introduced direct literal colors instead of referencing CSS variable tokens defined in `src/index.css`.
+
+### Fix:
+1. Replaced all literal hex and named colors with design tokens:
+   - Warning: `var(--color-warning-50)`, `var(--color-warning-500)`, `var(--color-warning-600)`
+   - Success: `var(--color-success-50)`, `var(--color-success-500)`, `var(--color-success-600)`
+   - Danger: `var(--color-danger-50)`, `var(--color-danger-500)`, `var(--color-danger-600)`
+   - Text & Inverse: `var(--color-text-primary)`, `var(--color-text-inverse)`, `var(--color-overlay-text)`, `var(--color-sidebar-text-active)`
+## Issue: Sales Monthly Analytics API 500 Error (`Invalid column name 'ExportAmnt'`)
+**Date:** 2026-08-24
+**Component:** `backend/routes/orderVolumeSummary.js` and `dbo.VW_Web_OrderTrends`
+
+### Symptoms:
+The Order Trends page displayed a red banner: `Sales monthly analytics API error: 500`.
+
+### Root Cause:
+The backend route was querying `v.ExportAmnt` and `v.ProductType`. However, the physical database view `dbo.VW_Web_OrderTrends` created on MS SQL Server contains `ItemPrice`, `ItemAmnt`, `ItemQty`, and `ExportQty`, but not `ExportAmnt` or `ProductType`. SQL Server threw `RequestError: Invalid column name 'ExportAmnt'`.
+
+### Fix:
+1. Updated `backend/routes/orderVolumeSummary.js` to compute `shippedAmount` inline using `ISNULL(v.ExportQty * v.ItemPrice, 0)`.
+2. Extracted `productTypeCode` dynamically using `CASE WHEN LEFT(v.ItemNo, 3) IN ('BBS', 'BES', 'BNS', 'BRS') THEN LEFT(v.ItemNo, 3) ELSE 'OTHERS' END`.
+3. Verified all 5 endpoints (`sales-monthly-analytics`, `sales-type-analytics`, `sales-weekly-analytics`, `sales-delivery-outlook`, `sales-orders`) returning HTTP 200 with authentic data.
+
+### Prevention & Lessons Learned:
+1. **Always verify physical columns on MS SQL Server via `INFORMATION_SCHEMA.COLUMNS` before referencing them in backend query templates.**
+2. **When views are updated or simplified, ensure all query projections match the exact column schema.**
+
 

@@ -1,21 +1,22 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
-import { RefreshCw, DollarSign, Hash, Calendar, CalendarDays, Layers, Users, Eye, EyeOff, ChevronRight } from 'lucide-react';
+import { RefreshCw, DollarSign, Hash, Calendar, CalendarDays, Layers, Users, Eye, EyeOff, ChevronRight, Printer } from 'lucide-react';
 import { fetchCustomerSummary } from '../services/customerSummaryAPI';
 import { ALL_GROUPS, getCustomerGroupId } from '../config/customerGroups';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList } from 'recharts';
 import { ErpSegmentedControl } from '../components/ui/ErpButtons';
-  // @ts-ignore
+import { printChartDashboard } from '../utils/printChart';
+// @ts-ignore
 import { buildCustomerTrendsPath } from '../utils/customerTrendsUrl';
 import { useTheme } from '../contexts/useTheme';
 import './CustomerDashboard.css';
 
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  // @ts-ignore
+// @ts-ignore
 const MONTH_PARAM_IDS = MONTHS.map((_, index) => String(index + 1));
 const ALL_GROUP_IDS = ALL_GROUPS.map(group => group.id);
-  // @ts-ignore
+// @ts-ignore
 const SUMMARY_DEFAULT_GROUP_IDS = ALL_GROUP_IDS.slice(0, 4);
 const YEAR_COLORS = ['var(--color-chart-1)', 'var(--color-chart-2)', 'var(--color-chart-3)', 'var(--color-chart-4)', 'var(--color-chart-5)', 'var(--color-chart-6)'];
 
@@ -31,7 +32,7 @@ type RawSummary = Record<string, Record<string, Record<string, number>>>;
 type ChartDatum = { label: string; sortKey?: string } & Record<string, string | number | undefined>;
 type TooltipPayloadEntry = { value?: number; color?: string; dataKey?: string | number; name?: string };
 type CustomTooltipProps = { active?: boolean; payload?: TooltipPayloadEntry[]; label?: string; metric: Metric; chartData?: any[]; mode?: string; monthlySeries?: string; };
-  // @ts-ignore
+// @ts-ignore
 function defaultYearSelection(years: string[]) {
   const latest = years[years.length - 1];
   const prev = years[years.length - 2];
@@ -49,7 +50,7 @@ const CustomTooltip = ({ active, payload, label, metric, chartData, mode, monthl
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {payload.map((entry, index) => {
             if (entry.value === 0) return null;
-            
+
             let diff = null;
             let pct = null;
             const currVal = Number(entry.value || 0);
@@ -113,7 +114,7 @@ const CustomTooltip = ({ active, payload, label, metric, chartData, mode, monthl
 
 export default function CustomerDashboard({ metric: propMetric = 'amount' }: { metric?: Metric }) {
   const { theme } = useTheme();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const metric = (searchParams.get('metric') as Metric) || propMetric;
   const { selectedYears, selectedMonths, selGroups, availableYears, kpiCompareYear } = useOutletContext<any>();
   const [custData, setCustData] = useState<CustomerSummaryRow[]>([]);
@@ -132,6 +133,12 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
   }, [monthlySeries]);
 
   const navigate = useNavigate();
+
+  const handlePrint = () => {
+    const scopeYears = activeYears.join('-');
+    const title = `Customer_Sales_Chart_${mode}_${metric}_${scopeYears || 'all'}`;
+    printChartDashboard(title);
+  };
 
 
   // Fetch all data for available years
@@ -163,7 +170,7 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
   // Convert customer data into RAW[year][month][groupId] structure
   const RAW = useMemo(() => {
     const raw: RawSummary = {};
-  // @ts-ignore
+    // @ts-ignore
     availableYears.forEach(y => {
       raw[y] = {};
       MONTHS.forEach((m) => {
@@ -175,7 +182,7 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
     custData.forEach(cust => {
       const gId = getCustomerGroupId(cust.id || '');
 
-  // @ts-ignore
+      // @ts-ignore
       availableYears.forEach(y => {
         MONTHS.forEach((m, mi) => {
           const mStr = (mi + 1).toString();
@@ -199,7 +206,7 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
           const g = ALL_GROUPS.find(x => x.id === gId)!;
           const r: ChartDatum = { label: g.label };
           activeYears.forEach(y => {
-  // @ts-ignore
+            // @ts-ignore
             r[y] = selectedMonths.reduce((s, mStr) => s + (RAW[y]?.[MONTHS[parseInt(mStr) - 1]]?.[gId] || 0), 0);
           });
           return r;
@@ -207,7 +214,7 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
       } else {
         return activeYears.map(y => {
           const r: ChartDatum = { label: String(y) };
-  // @ts-ignore
+          // @ts-ignore
           sortedSel.forEach(g => { r[g] = selectedMonths.reduce((s, mStr) => s + (RAW[y]?.[MONTHS[parseInt(mStr) - 1]]?.[g] || 0), 0); });
           return r;
         });
@@ -248,7 +255,7 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
     const sortedDesc = [...activeYears].sort((a, b) => Number(b) - Number(a));
     const baseYear = sortedDesc.length > 0 ? sortedDesc[0] : null;
     const targetCompYear = kpiCompareYear && activeYears.includes(kpiCompareYear) && kpiCompareYear !== baseYear
-      ? kpiCompareYear 
+      ? kpiCompareYear
       : (sortedDesc.length > 1 ? sortedDesc.find(y => y !== baseYear) || null : null);
 
     return sortedSel.map(gId => {
@@ -256,7 +263,7 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
 
       const yearTotals: Record<string, number> = {};
       activeYears.forEach(y => {
-  // @ts-ignore
+        // @ts-ignore
         yearTotals[y] = selectedMonths.reduce((s, mStr) => s + (RAW[y]?.[MONTHS[parseInt(mStr) - 1]]?.[gId] || 0), 0);
       });
 
@@ -281,12 +288,12 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
     const sortedDesc = [...activeYears].sort((a, b) => Number(b) - Number(a));
     const baseYear = sortedDesc.length > 0 ? sortedDesc[0] : null;
     const targetCompYear = kpiCompareYear && activeYears.includes(kpiCompareYear) && kpiCompareYear !== baseYear
-      ? kpiCompareYear 
+      ? kpiCompareYear
       : (sortedDesc.length > 1 ? sortedDesc.find(y => y !== baseYear) || null : null);
 
     const yearTotals: Record<string, number> = {};
     activeYears.forEach(y => yearTotals[y] = 0);
-    
+
     activeYears.forEach(y => {
       sortedSel.forEach(gId => {
         // @ts-ignore
@@ -315,7 +322,13 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
 
   const switchMetric = (nextMetric: Metric) => {
     if (nextMetric === metric) return;
-    navigate(`/dashboard/customer${nextMetric === 'qty' ? '?metric=qty' : ''}`);
+    const nextParams = new URLSearchParams(searchParams);
+    if (nextMetric === 'qty') {
+      nextParams.set('metric', 'qty');
+    } else {
+      nextParams.delete('metric');
+    }
+    setSearchParams(nextParams, { replace: true });
   };
 
   const handleGroupClick = (groupId: string) => {
@@ -358,7 +371,7 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
     }
 
     const gYoy: { currYr: string, prevYr: string, pct: number | null }[] = [];
-    
+
     // Always show the comparison against the comparison year
     if (latestYear && targetCompYear && latestYear !== targetCompYear) {
       const currVal = grandYearTotals[latestYear] || 0;
@@ -399,7 +412,7 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
     return (
       <div className="content-scrollbar flex-1 overflow-y-auto" style={{ background: 'var(--color-surface-1)' }}>
         <div className="app-content-frame app-content-frame--workspace app-page-content sales-summary-page" style={{ paddingTop: 16 }}>
-          
+
           {/* Top Filter Bar Skeleton */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', background: 'var(--color-surface-0)', borderBottom: '1px solid var(--color-border-light)', borderRadius: '8px 8px 0 0', marginBottom: 16 }}>
             <div className="app-skeleton" style={{ width: 140, height: 22, borderRadius: 4 }} />
@@ -544,21 +557,45 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
 
       <div className="content-scrollbar flex-1 overflow-y-auto" style={{ background: 'var(--color-surface-1)' }}>
         <div className="app-content-frame app-content-frame--workspace app-page-content sales-summary-page" style={{ paddingTop: 16 }}>
-          
+
           {/* Internal Dashboard Filter Bar */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', background: 'var(--color-surface-0)', borderBottom: '1px solid var(--color-border-light)', borderRadius: '8px 8px 0 0', marginBottom: 16 }}>
             <h2 style={{ fontSize: 'var(--erp-text-section)', fontWeight: 900, color: 'var(--color-text-primary)', margin: 0 }}>
               Sales Summary
             </h2>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <ErpSegmentedControl ariaLabel="Metric" value={metric} onChange={(v) => switchMetric(v as Metric)} options={[ { value: 'amount', label: 'Sales', icon: <DollarSign size={13} /> }, { value: 'qty', label: 'Qty', icon: <Hash size={13} /> } ]} />
+              <ErpSegmentedControl ariaLabel="Metric" value={metric} onChange={(v) => switchMetric(v as Metric)} options={[{ value: 'amount', label: 'Sales', icon: <DollarSign size={13} /> }, { value: 'qty', label: 'Qty', icon: <Hash size={13} /> }]} />
               <div style={{ width: 1, height: 16, background: 'var(--color-border-light)' }} />
-              <ErpSegmentedControl ariaLabel="View" value={mode} onChange={(v) => setMode(v as 'yearly' | 'monthly')} options={[ { value: 'yearly', label: 'Year', icon: <CalendarDays size={13} /> }, { value: 'monthly', label: 'Month', icon: <Calendar size={13} /> } ]} />
+              <ErpSegmentedControl ariaLabel="View" value={mode} onChange={(v) => setMode(v as 'yearly' | 'monthly')} options={[{ value: 'yearly', label: 'Year', icon: <CalendarDays size={13} /> }, { value: 'monthly', label: 'Month', icon: <Calendar size={13} /> }]} />
               <div style={{ width: 1, height: 16, background: 'var(--color-border-light)' }} />
-              <ErpSegmentedControl ariaLabel="Series" value={monthlySeries} onChange={(v) => setMonthlySeries(v as 'year' | 'group')} options={[ { value: 'year', label: 'By Year', icon: <Layers size={13} /> }, { value: 'group', label: 'By Group', icon: <Users size={13} /> } ]} />
+              <ErpSegmentedControl ariaLabel="Series" value={monthlySeries} onChange={(v) => setMonthlySeries(v as 'year' | 'group')} options={[{ value: 'year', label: 'By Year', icon: <Layers size={13} /> }, { value: 'group', label: 'By Group', icon: <Users size={13} /> }]} />
               <div style={{ width: 1, height: 16, background: 'var(--color-border-light)' }} />
-              <ErpSegmentedControl ariaLabel="Labels" value={showLabels ? 'on' : 'off'} onChange={(v) => setShowLabels(v === 'on')} options={[ { value: 'on', label: 'Show Labels', icon: <Eye size={13} /> }, { value: 'off', label: 'Hide Labels', icon: <EyeOff size={13} /> } ]} />
-              <button onClick={resetSummaryView} style={{ background: "none", border: "none", padding: "6px", color: "var(--color-text-tertiary)", cursor: "pointer", marginLeft: 8 }}><RefreshCw size={14} /></button>
+              <ErpSegmentedControl ariaLabel="Labels" value={showLabels ? 'on' : 'off'} onChange={(v) => setShowLabels(v === 'on')} options={[{ value: 'on', label: 'Show Labels', icon: <Eye size={13} /> }, { value: 'off', label: 'Hide Labels', icon: <EyeOff size={13} /> }]} />
+              <div style={{ width: 1, height: 16, background: 'var(--color-border-light)' }} />
+              <button
+                type="button"
+                disabled={loading}
+                onClick={handlePrint}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '5px 12px',
+                  borderRadius: 6,
+                  background: 'var(--color-surface-0)',
+                  border: '1px solid var(--color-border-light)',
+                  fontSize: 'var(--erp-text-control)',
+                  fontWeight: 800,
+                  color: 'var(--color-text-primary)',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+                title="Print current page or Save as PDF (Ctrl+P)"
+              >
+                <Printer size={13} style={{ color: 'var(--color-brand-600)' }} />
+                <span>Print / PDF</span>
+              </button>
+              <button onClick={resetSummaryView} style={{ background: "none", border: "none", padding: "6px", color: "var(--color-text-tertiary)", cursor: "pointer", marginLeft: 8 }} title="Reset View"><RefreshCw size={14} /></button>
             </div>
           </div>
           {/* Main Content Grid: Chart on Left, YoY Cards on Right */}
@@ -651,7 +688,17 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
                     {monthlySeries === 'group' ? sortedSel.map((gId) => {
                       const g = ALL_GROUPS.find(x => x.id === gId)!;
                       return (
-                        <Bar key={gId} dataKey={gId} name={g.label} fill={g.color} radius={[4, 4, 0, 0]} maxBarSize={40}>
+                        <Bar
+                          key={gId}
+                          dataKey={gId}
+                          name={g.label}
+                          fill={g.color}
+                          radius={[4, 4, 0, 0]}
+                          maxBarSize={40}
+                          isAnimationActive={true}
+                          animationDuration={600}
+                          animationEasing="ease-in-out"
+                        >
                           {showLabels && (
                             <LabelList dataKey={gId} position="top" formatter={(val: unknown) => Number(val) > 0 ? formatAxisValue(Number(val)).replace('$', '') : ''} style={{ fontSize: 10, fill: 'var(--color-text-primary)', fontWeight: 800 }} />
                           )}
@@ -660,7 +707,17 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
                     }) : activeYears.map((y, idx) => {
                       const color = YEAR_COLORS[idx % YEAR_COLORS.length];
                       return (
-                        <Bar key={y} dataKey={y} name={`Year ${y}`} fill={color} radius={[4, 4, 0, 0]} maxBarSize={40}>
+                        <Bar
+                          key={y}
+                          dataKey={y}
+                          name={`Year ${y}`}
+                          fill={color}
+                          radius={[4, 4, 0, 0]}
+                          maxBarSize={40}
+                          isAnimationActive={true}
+                          animationDuration={600}
+                          animationEasing="ease-in-out"
+                        >
                           {showLabels && (
                             <LabelList dataKey={y} position="top" formatter={(val: unknown) => Number(val) > 0 ? formatAxisValue(Number(val)).replace('$', '') : ''} style={{ fontSize: 10, fill: 'var(--color-text-primary)', fontWeight: 800 }} />
                           )}
@@ -673,11 +730,11 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
             </div>
 
             {/* Side-by-Side Summary Cards */}
-            <div className="sales-summary-cards" key={`kpis-${activeYears.join(',')}-${sortedSel.join(',')}-${monthlySeries}-${metric}`}>
+            <div className="sales-summary-cards" key={`kpis-${activeYears.join(',')}-${sortedSel.join(',')}-${monthlySeries}`}>
               {/* Year KPIs */}
               {yearSummaries.map((yData) => {
                 const color = YEAR_COLORS[activeYears.indexOf(yData.year) % YEAR_COLORS.length];
-                
+
                 const diff = yData.diff;
                 const pct = yData.pct;
                 const cardCompYear = yData.compYear;
@@ -825,4 +882,5 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
     </>
   );
 }
+
 

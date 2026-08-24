@@ -3,13 +3,10 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Filter,
   Search,
-  Award,
   X,
   BarChart3,
   CalendarDays,
   ChevronDown,
-  Camera,
-  Box,
 } from "lucide-react";
 import { fetchAvailableYearsMeta } from "../services/dashboardAPI";
 import { fetchCustomerSummary } from "../services/customerSummaryAPI";
@@ -1436,7 +1433,7 @@ export default function TopOrdersGalleryPage() {
                           background: isFeaturedRank
                             ? "var(--color-brand-500)"
                             : "color-mix(in srgb, var(--color-surface-2) 80%, var(--color-surface-1))",
-                          color: isFeaturedRank ? "#fff" : "var(--color-text-primary)",
+                          color: isFeaturedRank ? "var(--color-text-inverse)" : "var(--color-text-primary)",
                           fontSize: "0.78rem",
                           fontWeight: 900,
                           lineHeight: 1.2,

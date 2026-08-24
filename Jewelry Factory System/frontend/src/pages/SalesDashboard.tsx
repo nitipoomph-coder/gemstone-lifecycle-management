@@ -209,7 +209,7 @@ export default function SalesDashboard() {
   }, [rows, search]);
   const summary = useMemo(() => monthlySummary(data.monthly, activeMonths), [data.monthly, activeMonths]);
   const todayOrders = useMemo(() => data.currentMonthOrders.filter(row => asDateKey(row.ordDate) === todayLabel), [data.currentMonthOrders, todayLabel]);
-  const todayAmount = todayOrders.reduce((sum, row) => sum + Number(row.amount || 0), 0);
+  const todayAmount = todayOrders.reduce((sum, row) => sum + Number(row.itemAmnt || 0), 0);
   const periodLabel = periodMode === 'month' ? MONTHS[currentMonthNumber() - 1] + ' ' + REPORT_YEAR : MONTHS[Number(activeMonths[0]) - 1] + ' - ' + MONTHS[Number(activeMonths[activeMonths.length - 1]) - 1] + ' ' + REPORT_YEAR;
 
   return (
@@ -363,7 +363,7 @@ const activeToolButton: CSSProperties = { ...toolButton, color: 'var(--color-bra
 const periodButton: CSSProperties = { ...toolButton, minWidth: 210, justifyContent: 'space-between' };
 const searchBox: CSSProperties = { height: 30, maxWidth: 420, minWidth: 220, flex: '0 1 420px', display: 'flex', alignItems: 'center', gap: 7, border: '1px solid var(--color-border-light)', borderRadius: 7, background: 'var(--color-surface-1)', color: 'var(--color-text-tertiary)', padding: '0 10px' };
 const searchInput: CSSProperties = { flex: 1, minWidth: 0, border: 0, outline: 'none', background: 'transparent', color: 'var(--color-text-primary)', fontSize: 'var(--erp-text-control)', fontWeight: 700 };
-const filterPanel: CSSProperties = { position: 'absolute', right: 10, top: 42, width: 'min(520px, calc(100vw - 36px))', display: 'grid', gridTemplateColumns: '112px 1fr', border: '1px solid var(--color-border-default)', borderRadius: 8, background: 'var(--color-surface-0)', boxShadow: '0 16px 42px rgba(0,0,0,0.22)', overflow: 'hidden' };
+const filterPanel: CSSProperties = { position: 'absolute', right: 10, top: 42, width: 'min(520px, calc(100vw - 36px))', display: 'grid', gridTemplateColumns: '112px 1fr', border: '1px solid var(--color-border-default)', borderRadius: 8, background: 'var(--color-surface-0)', boxShadow: 'var(--shadow-dropdown)', overflow: 'hidden' };
 const periodList: CSSProperties = { display: 'flex', flexDirection: 'column', padding: 8, gap: 4, borderRight: '1px solid var(--color-border-light)', background: 'var(--color-surface-1)' };
 const periodOption: CSSProperties = { height: 30, textAlign: 'left', border: 0, borderRadius: 6, background: 'transparent', color: 'var(--color-text-secondary)', fontSize: 'var(--erp-text-control)', fontWeight: 800, padding: '0 9px', cursor: 'pointer' };
 const activePeriodOption: CSSProperties = { ...periodOption, background: 'color-mix(in oklch, var(--color-brand-500) 14%, var(--color-surface-0))', color: 'var(--color-text-primary)' };

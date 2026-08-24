@@ -355,7 +355,7 @@ export default function CustomerDashboardLayout() {
 
               {showPeriodPopover && (
                 /* ตัวกรองตัวใหม่: Period Setup สำหรับทุกหน้าจอ */
-                <div className="sales-gallery-period-menu absolute right-0 z-[110] mt-2 period-popover-animate" style={{ width: 480, position: 'absolute', top: '100%' }}>
+                <div className="sales-gallery-period-menu absolute right-0 z-[1000] mt-2 period-popover-animate" style={{ width: 480 }}>
                     <div className="flex items-center justify-between border-b border-[var(--color-border-light)] pb-2.5 mb-3">
                       <span className="text-xs font-black capitalize tracking-wider text-[var(--color-text-primary)]">
                         Period Setup

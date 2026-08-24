@@ -233,7 +233,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
             {role}
           </div>
         </div>
-        <button onClick={handleLogout} className="relative z-10 text-[var(--color-sidebar-text)] hover:text-white transition-colors" title="Logout">
+        <button onClick={handleLogout} className="relative z-10 text-[var(--color-sidebar-text)] hover:text-[var(--color-sidebar-text-active)] transition-colors" title="Logout">
           <LogOut size={16} />
         </button>
       </div>

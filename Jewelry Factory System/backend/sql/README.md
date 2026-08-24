@@ -9,6 +9,7 @@ Target: **SQL Server 2012 Enterprise** · DB `dbGeneration` · server `192.168.5
 
 ```
 sql/
+├── ERP_DATA_MAPPING_AND_LOGIC.md   # คู่มืออธิบายฟิลด์ที่กรอกใน ERP และ Business Logic ทั้งหมด
 ├── indexes.sql                     # 22 covering indexes (9 SP + 13 Web App)
 ├── views/                          # Database Views สำหรับระบบเว็บ (SSOT)
 │   └── VW_Web_SalesDashboard.sql   # Central View สำหรับ Customer Dashboard, Matrix & Order Trends

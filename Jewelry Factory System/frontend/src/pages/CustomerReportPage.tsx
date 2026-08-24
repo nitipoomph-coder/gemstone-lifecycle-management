@@ -412,7 +412,7 @@ export default function CustomerReportPage() {
 
               {/* Group KPI Skeletons */}
               <div className="sales-report-kpis flex-wrap" style={{ display: 'flex', gap: 12 }}>
-                {selGroups.map((gId) => {
+                {selGroups.map((gId: string) => {
                   const group = ALL_GROUPS.find(x => x.id === gId);
                   const color = group?.color || 'var(--color-border-light)';
                   const label = group?.label || gId;

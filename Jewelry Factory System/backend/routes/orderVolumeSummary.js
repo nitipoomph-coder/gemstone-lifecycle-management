@@ -9,7 +9,7 @@ const express = require('express');
 const router = express.Router();
 const { getPool, sql } = require('../db');
 
-const SALES_ANALYTICS_VIEW = 'dbo.VW_Web_SalesDashboard';
+const SALES_ANALYTICS_VIEW = 'dbo.VW_Web_OrderTrends';
 
 function parseCsvInts(value, fallback = []) {
   const parsed = String(value || '')
@@ -110,7 +110,7 @@ function buildSalesFilters(req, request, viewAlias = 'v', dateExpr = null) {
 
   if (types.length > 0) {
     const typeParams = addInParams(request, 'st', types, sql.NVarChar);
-    filters.push(`UPPER(ISNULL(${viewAlias}.ProductType, 'OTHERS')) IN (${typeParams})`);
+    filters.push(`(CASE WHEN LEFT(${viewAlias}.ItemNo, 3) IN ('BBS', 'BES', 'BNS', 'BRS') THEN LEFT(${viewAlias}.ItemNo, 3) ELSE 'OTHERS' END) IN (${typeParams})`);
   }
 
   return { years, months, customers, types, whereSql: filters.join('\n        AND ') };
@@ -133,7 +133,7 @@ router.get('/sales-monthly-analytics', async (req, res) => {
         SUM(v.ExportQty) AS shippedQty,
         SUM(v.OpenQty) AS gapQty,
         SUM(v.ItemAmnt) AS amount,
-        SUM(ISNULL(v.ExportAmnt, 0)) AS shippedAmount,
+        SUM(ISNULL(v.ExportQty * v.ItemPrice, 0)) AS shippedAmount,
         CASE WHEN COUNT(DISTINCT v.OrdNo) = 0 THEN 0 ELSE CAST(SUM(v.ItemQty) AS FLOAT) / COUNT(DISTINCT v.OrdNo) END AS avgQtyPerOrder,
         CASE WHEN COUNT(DISTINCT v.OrdNo) = 0 THEN 0 ELSE CAST(SUM(v.ItemAmnt) AS FLOAT) / COUNT(DISTINCT v.OrdNo) END AS avgAmountPerOrder
       FROM ${SALES_ANALYTICS_VIEW} v
@@ -155,7 +155,7 @@ router.get('/sales-type-analytics', async (req, res) => {
     const pool = await getPool();
     const request = pool.request();
     const { dateExpr } = salesDateBasis(req, 'v');
-    const typeExpr = `UPPER(ISNULL(v.ProductType, 'OTHERS'))`;
+    const typeExpr = `CASE WHEN LEFT(v.ItemNo, 3) IN ('BBS', 'BES', 'BNS', 'BRS') THEN LEFT(v.ItemNo, 3) ELSE 'OTHERS' END`;
     const { whereSql } = buildSalesFilters(req, request, 'v', dateExpr);
 
     const result = await request.query(`
@@ -166,7 +166,10 @@ router.get('/sales-type-analytics', async (req, res) => {
           ${typeExpr} AS typeCode,
           v.OrdNo AS orderNo,
           v.ItemQty AS qty,
-          v.ItemAmnt AS amount
+          v.ExportQty AS shippedQty,
+          v.OpenQty AS openQty,
+          v.ItemAmnt AS amount,
+          ISNULL(v.ExportQty * v.ItemPrice, 0) AS shippedAmount
         FROM ${SALES_ANALYTICS_VIEW} v
         WHERE ${whereSql}
       )
@@ -177,7 +180,10 @@ router.get('/sales-type-analytics', async (req, res) => {
         ${salesProductTypeNameSql('typeCode')} AS typeName,
         COUNT(DISTINCT orderNo) AS orderCount,
         SUM(qty) AS qty,
-        SUM(amount) AS amount
+        SUM(shippedQty) AS shippedQty,
+        SUM(openQty) AS openQty,
+        SUM(amount) AS amount,
+        SUM(shippedAmount) AS shippedAmount
       FROM Lines
       GROUP BY year, month, typeCode
       ORDER BY year, month, typeCode
@@ -207,7 +213,7 @@ router.get('/sales-weekly-analytics', async (req, res) => {
         SUM(v.ExportQty) AS shippedQty,
         SUM(v.OpenQty) AS gapQty,
         SUM(v.ItemAmnt) AS amount,
-        SUM(ISNULL(v.ExportAmnt, 0)) AS shippedAmount
+        SUM(ISNULL(v.ExportQty * v.ItemPrice, 0)) AS shippedAmount
       FROM ${SALES_ANALYTICS_VIEW} v
       WHERE ${whereSql}
       GROUP BY YEAR(${dateExpr}), DATEPART(iso_week, ${dateExpr})
@@ -221,13 +227,91 @@ router.get('/sales-weekly-analytics', async (req, res) => {
   }
 });
 
+// [DELIVERY & DEPARTMENT OUTLOOK] GET /api/dashboard/sales-delivery-outlook
+router.get('/sales-delivery-outlook', async (req, res) => {
+  try {
+    const pool = await getPool();
+    const request = pool.request();
+    const { dateExpr } = salesDateBasis(req, 'v');
+    const { whereSql } = buildSalesFilters(req, request, 'v', dateExpr);
+
+    const result = await request.query(`
+      -- 1. Delivery Risk Buckets
+      SELECT 
+        v.DueRiskBucket AS bucket,
+        COUNT(DISTINCT v.OrdNo) AS orderCount,
+        COUNT(1) AS lineCount,
+        SUM(v.ItemQty) AS totalQty,
+        SUM(v.ExportQty) AS shippedQty,
+        SUM(v.OpenQty) AS openQty,
+        SUM(v.ItemAmnt) AS totalAmount,
+        SUM(ISNULL(v.ExportQty * v.ItemPrice, 0)) AS shippedAmount,
+        SUM(CASE WHEN v.ItemQty > 0 THEN v.ItemAmnt * (CAST(v.OpenQty AS FLOAT) / v.ItemQty) ELSE 0 END) AS openAmount
+      FROM ${SALES_ANALYTICS_VIEW} v
+      WHERE ${whereSql}
+      GROUP BY v.DueRiskBucket;
+
+      -- 2. Department Breakdown for Open/Pending items
+      SELECT 
+        v.CurrentDepartment AS department,
+        COUNT(DISTINCT v.OrdNo) AS orderCount,
+        COUNT(1) AS lineCount,
+        SUM(v.OpenQty) AS openQty,
+        SUM(CASE WHEN v.ItemQty > 0 THEN v.ItemAmnt * (CAST(v.OpenQty AS FLOAT) / v.ItemQty) ELSE 0 END) AS openAmount
+      FROM ${SALES_ANALYTICS_VIEW} v
+      WHERE ${whereSql} AND v.OpenQty > 0 AND v.CurrentDepartment <> 'Shipped'
+      GROUP BY v.CurrentDepartment
+      ORDER BY openQty DESC;
+
+      -- 3. Customer Code Backlog Summary (Confidential - No CustName)
+      SELECT 
+        v.CustCode AS custCode,
+        COUNT(DISTINCT v.OrdNo) AS orderCount,
+        SUM(v.ItemQty) AS totalQty,
+        SUM(v.ExportQty) AS shippedQty,
+        SUM(v.OpenQty) AS openQty,
+        SUM(v.ItemAmnt) AS totalAmount,
+        SUM(CASE WHEN v.DueRiskBucket = 'Overdue' THEN v.OpenQty ELSE 0 END) AS overdueQty,
+        SUM(CASE WHEN v.DueRiskBucket = 'Due in 15 Days' THEN v.OpenQty ELSE 0 END) AS due15Qty
+      FROM ${SALES_ANALYTICS_VIEW} v
+      WHERE ${whereSql}
+      GROUP BY v.CustCode
+      ORDER BY openQty DESC;
+    `);
+
+    res.json({
+      ok: true,
+      data: {
+        buckets: result.recordsets[0] || [],
+        departments: result.recordsets[1] || [],
+        customers: result.recordsets[2] || []
+      }
+    });
+  } catch (err) {
+    console.error('[API ERROR] /api/dashboard/sales-delivery-outlook:', err.message);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 // [SALES ORDER DETAIL] GET /api/dashboard/sales-orders
 router.get('/sales-orders', async (req, res) => {
   try {
     const pool = await getPool();
     const request = pool.request();
     const { dateExpr } = salesDateBasis(req, 'v');
-    const { whereSql } = buildSalesFilters(req, request, 'v', dateExpr);
+    let { whereSql } = buildSalesFilters(req, request, 'v', dateExpr);
+
+    const bucket = req.query.bucket;
+    const department = req.query.department;
+
+    if (bucket) {
+      request.input('paramBucket', sql.NVarChar, bucket);
+      whereSql += ` AND v.DueRiskBucket = @paramBucket`;
+    }
+    if (department) {
+      request.input('paramDept', sql.NVarChar, department);
+      whereSql += ` AND v.CurrentDepartment = @paramDept`;
+    }
 
     const result = await request.query(`
       SELECT
@@ -238,28 +322,25 @@ router.get('/sales-orders', async (req, res) => {
         v.DueDate AS dueDate,
         v.CustDueDate AS custDate,
         v.CustCode AS customerCode,
-        v.SalesName AS salesName,
-        v.ShipTo AS shipTo,
-        v.OrdStamp AS ordStamp,
-        v.OrdMaker AS ordMaker,
+        '' AS shipTo,
         v.ItemNo AS itemNo,
-        v.[Cust Item] AS custItem,
-        v.ItemType AS itemType,
-        v.ProductType AS productTypeCode,
-        v.ItemMat AS itemMat,
-        v.ItemSize AS itemSize,
-        v.ItemStone AS itemStone,
-        v.ItemDesc AS itemDesc,
-        v.ItemPlate AS itemPlate,
-        v.SetType AS setType,
+        '' AS itemSku,
+        '' AS custItem,
+        '' AS itemType,
+        CASE WHEN LEFT(v.ItemNo, 3) IN ('BBS', 'BES', 'BNS', 'BRS') THEN LEFT(v.ItemNo, 3) ELSE 'OTHERS' END AS productTypeCode,
+        '' AS itemMat,
+        '' AS itemSize,
+        '' AS itemStone,
+        '' AS itemPlate,
         v.ItemQty AS orderQty,
         v.ExportQty AS shippedQty,
         v.OpenQty AS openQty,
         v.ItemPrice AS itemPrice,
         v.ItemAmnt AS itemAmnt,
-        v.ExportAmnt AS shippedAmnt,
-        v.OrdStatus AS ordStatus,
-        v.CloseStatus AS closeStatus
+        ISNULL(v.ExportQty * v.ItemPrice, 0) AS shippedAmnt,
+        v.DaysToCustDue AS daysToCustDue,
+        v.DueRiskBucket AS dueRiskBucket,
+        v.CurrentDepartment AS currentDepartment
       FROM ${SALES_ANALYTICS_VIEW} v
       WHERE ${whereSql}
       ORDER BY v.OrdDate DESC, v.OrdNo

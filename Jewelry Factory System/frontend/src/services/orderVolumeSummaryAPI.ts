@@ -36,7 +36,47 @@ export interface SalesTypePoint {
   typeName: string;
   orderCount: number;
   qty: number;
+  shippedQty?: number;
+  openQty?: number;
   amount?: number;
+  shippedAmount?: number;
+}
+
+export interface DeliveryRiskBucket {
+  bucket: string;
+  orderCount: number;
+  lineCount: number;
+  totalQty: number;
+  shippedQty: number;
+  openQty: number;
+  totalAmount: number;
+  shippedAmount: number;
+  openAmount: number;
+}
+
+export interface DepartmentBacklogItem {
+  department: string;
+  orderCount: number;
+  lineCount: number;
+  openQty: number;
+  openAmount: number;
+}
+
+export interface CustomerBacklogItem {
+  custCode: string;
+  orderCount: number;
+  totalQty: number;
+  shippedQty: number;
+  openQty: number;
+  totalAmount: number;
+  overdueQty: number;
+  due15Qty: number;
+}
+
+export interface DeliveryOutlookResponse {
+  buckets: DeliveryRiskBucket[];
+  departments: DepartmentBacklogItem[];
+  customers: CustomerBacklogItem[];
 }
 
 export interface SalesOrderRow {
@@ -47,27 +87,31 @@ export interface SalesOrderRow {
   custDate: string | null;
   customerCode: string;
   customerName?: string;
-  salesName: string | null;
+  salesName?: string | null;
   po2: string | null;
   shipTo: string | null;
-  ordStamp: string | null;
-  ordMaker: string | null;
+  ordStamp?: string | null;
+  ordMaker?: string | null;
   itemNo: string;
+  itemSku?: string;
   itemType: string;
   productTypeCode?: string;
   custItem: string | null;
   itemMat: string | null;
   itemSize: string | null;
   itemStone: string | null;
-  itemDesc: string | null;
+  itemDesc?: string | null;
   itemPlate: string | null;
-  setType: string | null;
+  setType?: string | null;
   orderQty: number;
   shippedQty: number;
   openQty: number;
   itemPrice?: number;
   itemAmnt?: number;
   shippedAmnt?: number;
+  daysToCustDue?: number;
+  dueRiskBucket?: string;
+  currentDepartment?: string;
   ordStatus: string | null;
   closeStatus: string | null;
 }
@@ -88,7 +132,7 @@ export interface TopItemRow {
 }
 
 // Shared filters for Customer Trends boxes and tables.
-interface SalesAnalyticsParams {
+export interface SalesAnalyticsParams {
   years?: string[];
   months?: string[];
   customers?: string[];
@@ -96,6 +140,8 @@ interface SalesAnalyticsParams {
   dateView?: SalesDateView;
   startDate?: string;
   endDate?: string;
+  bucket?: string;
+  department?: string;
 }
 
 // Builds the query string used by every Customer Trends endpoint.
@@ -108,7 +154,18 @@ const salesAnalyticsQuery = (params: SalesAnalyticsParams = {}) => {
   if (params.dateView) qs.set('dateView', params.dateView);
   if (params.startDate) qs.set('startDate', params.startDate);
   if (params.endDate) qs.set('endDate', params.endDate);
+  if (params.bucket) qs.set('bucket', params.bucket);
+  if (params.department) qs.set('department', params.department);
   return qs;
+};
+
+// Delivery Outlook & Department Bottlenecks API
+export const fetchSalesDeliveryOutlook = async (params: SalesAnalyticsParams = {}): Promise<DeliveryOutlookResponse> => {
+  const qs = salesAnalyticsQuery(params);
+  const res = await fetchWithAuth(`${BASE_URL}/dashboard/sales-delivery-outlook?${qs.toString()}`);
+  if (!res.ok) throw new Error(`Sales delivery outlook API error: ${res.status}`);
+  const json = await res.json();
+  return json.data || { buckets: [], departments: [], customers: [] };
 };
 
 // KPI and customer group rows for Customer Sales Overview.

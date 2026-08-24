@@ -110,10 +110,10 @@ export default function SalesCustomerGroupDetail() {
 
   const filteredRows = useMemo(() => {
     const q = search.trim().toLowerCase();
-    const baseRows = q ? rows.filter(row => [row.orderNo, row.poNo, row.itemNo, row.customerCode, row.customerName, row.brand, row.itemType, row.itemTypeName, row.market].some(value => String(value || '').toLowerCase().includes(q))) : rows;
+    const baseRows = q ? rows.filter(row => [row.orderNo, row.poNo, row.itemNo, row.customerCode, row.customerName, row.itemType].some(value => String(value || '').toLowerCase().includes(q))) : rows;
     return [...baseRows].sort((a, b) => {
       if (metric === 'qty') return Number(b.orderQty || 0) - Number(a.orderQty || 0);
-      return Number(b.amount || 0) - Number(a.amount || 0);
+      return Number(b.itemAmnt || 0) - Number(a.itemAmnt || 0);
     });
   }, [rows, search, metric]);
 
@@ -124,7 +124,7 @@ export default function SalesCustomerGroupDetail() {
   const totals = useMemo(() => ({
     qty: filteredRows.reduce((sum, row) => sum + Number(row.orderQty || 0), 0),
     shipped: filteredRows.reduce((sum, row) => sum + Number(row.shippedQty || 0), 0),
-    amount: filteredRows.reduce((sum, row) => sum + Number(row.amount || 0), 0),
+    amount: filteredRows.reduce((sum, row) => sum + Number(row.itemAmnt || 0), 0),
   }), [filteredRows]);
 
   const overviewPath = useMemo(() => {
@@ -170,7 +170,7 @@ export default function SalesCustomerGroupDetail() {
       'SalesName': row.salesName || '',
       'PONo': row.poNo || '',
       'PO2': row.po2 || '',
-      'Ship T': row.shipT || '',
+      'Ship T': row.shipTo || '',
       'OrdStamp': row.ordStamp || '',
       'OrdMaker': row.ordMaker || '',
       'ItemNo': row.itemNo || '',
@@ -183,12 +183,12 @@ export default function SalesCustomerGroupDetail() {
       'ItemDesc': row.itemDesc || '',
       'Itemplate': row.itemPlate || '',
       'SetType': row.setType || '',
-      'ItemWeight': row.itemWeight || 0,
+      'ItemWeight': 0,
       'ItemQTY': row.orderQty || 0,
       'ItemPrice': row.itemPrice || 0,
-      'ItemAmt': row.amount || 0,
+      'ItemAmt': row.itemAmnt || 0,
       'ExportQTY': row.shippedQty || 0,
-      'ExportAmt': row.shippedAmount || 0,
+      'ExportAmt': row.shippedAmnt || 0,
     }));
     const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
@@ -244,7 +244,7 @@ export default function SalesCustomerGroupDetail() {
               <button
                 type="button"
                 onClick={exportToExcel}
-                style={{ ...chipButton, display: 'flex', alignItems: 'center', gap: 6, background: 'var(--color-success-500)', color: 'white', borderColor: 'var(--color-success-600)' }}
+                style={{ ...chipButton, display: 'flex', alignItems: 'center', gap: 6, background: 'var(--color-success-500)', color: 'var(--color-overlay-text)', borderColor: 'var(--color-success-600)' }}
               >
                 <Download size={14} /> Export Excel
               </button>
@@ -275,7 +275,7 @@ export default function SalesCustomerGroupDetail() {
                         <td style={td}>{row.salesName}</td>
                         <td style={td}>{row.poNo || '-'}</td>
                         <td style={td}>{row.po2 || '-'}</td>
-                        <td style={td}>{row.shipT || '-'}</td>
+                        <td style={td}>{row.shipTo || '-'}</td>
                         <td style={td}>{row.ordStamp || '-'}</td>
                         <td style={td}>{row.ordMaker || '-'}</td>
                         <td style={tdStrong}><button onClick={() => navigate(`/item-detail/${encodeURIComponent(row.itemNo)}`)} style={linkButton}>{row.itemNo}</button></td>
@@ -288,12 +288,12 @@ export default function SalesCustomerGroupDetail() {
                         <td style={td}>{row.itemDesc || '-'}</td>
                         <td style={td}>{row.itemPlate || '-'}</td>
                         <td style={td}>{row.setType || '-'}</td>
-                        <td style={tdRight}>{fmtQty(row.itemWeight || 0)}</td>
+                        <td style={tdRight}>{fmtQty(0)}</td>
                         <td style={tdRight}>{fmtQty(row.orderQty)}</td>
                         <td style={tdRight}>{fmtTableAmount(row.itemPrice || 0)}</td>
-                        <td style={tdRight}>{fmtTableAmount(row.amount)}</td>
+                        <td style={tdRight}>{fmtTableAmount(row.itemAmnt || 0)}</td>
                         <td style={tdRight}>{fmtQty(row.shippedQty)}</td>
-                        <td style={tdRight}>{fmtTableAmount(row.shippedAmount)}</td>
+                        <td style={tdRight}>{fmtTableAmount(row.shippedAmnt || 0)}</td>
                       </tr>
                     );
                   })}

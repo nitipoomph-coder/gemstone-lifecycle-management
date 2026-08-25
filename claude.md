@@ -21,15 +21,15 @@
 | Authentication         | JWT + Role-based (admin/sales)       | ✅ Live             |
 | ภาพรวม (Dashboard)      | —                                    | ✅ Live (admin only) |
 | Sales Analytics        | —                                    | ✅ Live (admin + sales) |
-| Customer Dashboard     | — (Amount + Qty modes)               | ✅ Live (admin + sales) |
-| Customer Report        | — (Matrix Table)                     | ✅ Live             |
-| Top Orders Gallery     | —                                    | ✅ Live             |
+| Sales Summary          | — (Amount + Qty modes)               | ✅ Live (admin + sales) |
+| Customer Report Matrix | — (Matrix Table)                     | ✅ Live             |
+| Top Item Gallery       | —                                    | ✅ Live             |
 | จัดซื้อและรับเข้า        | SPA, SRA, SRB, SIR                   | 🟡 DocumentLayout done |
 | ออเดอร์และการเบิก       | SOA, SIA, SIB, SIP, SIS             | 🟡 DocumentLayout done |
 | ห้องตัวอย่าง            | SSA, SIM                             | 🟡 DocumentLayout done |
 | ตรวจสอบและนับสต็อก      | Check Dispatch/Sample/Purchase/Stock | ⬜ Placeholder      |
 | Production / PO Tracker | —                                  | ✅ Live (core feature, admin only) |
-| Customer Trends | —                              | ✅ Customer movement overview + order list detail |
+| Order Trends           | —                                    | ✅ Order volume trends and evidence |
 | สต็อกอะไหล่             | SP-Order, SP-Issue, SP-Receive, …    | ⬜ Placeholder      |
 | งานเหมา (Subcontract Management) | —                           | 🟡 UI Preview (1/3, ไม่มี Backend) |
 

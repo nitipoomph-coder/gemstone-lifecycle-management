@@ -63,19 +63,23 @@ Data quality notes:
 The views should support these current frontend pages and backend routes.
 
 Frontend:
-- `CustomerDashboard.tsx`
-- `CustomerReportPage.tsx`
-- `SalesCustomerGroupAnalytics.tsx`
-- `SalesCustomerGroupDetail.tsx`
+- `CustomerDashboardLayout.tsx` (Container)
+- `CustomerDashboard.tsx` (Sales Summary)
+- `CustomerReportPage.tsx` (Matrix)
+- `OrderVolumeSummaryPage.tsx` (Order Trends)
 - `TopOrdersGalleryPage.tsx`
 - `TopOrdersAnalyticsPage.tsx`
-- `SalesDashboard.tsx`
+- `POTrackerAdvanced.tsx`
+- (Legacy: `SalesDashboard.tsx`, `SalesCustomerGroupDetail.tsx`)
 
 Backend routes currently querying sales/order data:
-- `backend/routes/salesAnalytics.js`
-- `backend/routes/topOrdersGallery.js`
+- `backend/routes/customerSummary.js`
 - `backend/routes/customerReportMatrix.js`
-- Some dashboard summary queries may still live in dashboard or production dashboard route files.
+- `backend/routes/orderVolumeSummary.js`
+- `backend/routes/topOrdersGallery.js`
+- `backend/routes/topOrdersAnalytics.js`
+- `backend/routes/poTrackerAdvanced.js`
+- `backend/routes/salesAnalytics.js` (legacy)
 
 ## Verified Source Tables
 

@@ -4,12 +4,19 @@ import { ArrowRight, CalendarDays, Search, RefreshCw, ChevronDown, X } from 'luc
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import CustomSelect from '../ui/CustomSelect';
   // @ts-ignore
-import { fmtMetric, fmtQty, fmtPercent, fmtSignedMetric, SALES_TYPE_COLORS, SALES_TYPE_OPTIONS, ORDER_DETAIL_COLUMNS, fmtAxis } from '../../pages/OrderVolumeSummaryPage';
+import { fmtMetric, fmtQty, fmtPercent, fmtSignedMetric, SALES_TYPE_COLORS, SALES_TYPE_OPTIONS, ORDER_DETAIL_COLUMNS, fmtAxis } from '../../hooks/useOrderVolumeSummaryData';
 import type { 
-  Metric, SalesTypeCode, TrendGranularity, 
-  TrendComparisonDatum, WeeklyComparisonGroup, TooltipPayloadEntry, 
-  DueOutlookDatum, TypeContributionRow, KpiTypeSelection, ViewMode 
-} from '../../pages/OrderVolumeSummaryPage';
+  Metric,
+  SalesTypeCode,
+  TrendGranularity,
+  TrendComparisonDatum,
+  WeeklyComparisonGroup,
+  TooltipPayloadEntry,
+  DueOutlookDatum,
+  TypeContributionRow,
+  KpiTypeSelection,
+  ViewMode
+} from '../../hooks/useOrderVolumeSummaryData';
 
 
 // Constants from original file
@@ -123,7 +130,7 @@ export function CustomerTrendsLoadingState({
             <table className="sales-dense-table" style={{ width: '100%', minWidth: 1536 }}>
               <thead>
                 <tr>
-                  {ORDER_DETAIL_COLUMNS.map(([head, width], index) => (
+                  {ORDER_DETAIL_COLUMNS.map(([head, width]: any, index: any) => (
                     <th
                       key={head}
                       className={index >= 21 ? 'sales-dense-table__number' : undefined}
@@ -244,8 +251,8 @@ export function WeeklyComparisonList({ groups, reportYear, compareYear, metric, 
       <div className="customer-trends-weekly__months">
         {groups.map(group => {
           const isExpanded = expandedMonth === group.monthNumber;
-          const reportTotal = group.weeks.reduce((sum, week) => sum + week.report, 0);
-          const compareTotal = hasCompare ? group.weeks.reduce((sum, week) => sum + week.compare, 0) : 0;
+            const primaryTotal = group.weeks.reduce((sum: any, week: any) => sum + week.report, 0);
+            const compareTotal = hasCompare ? group.weeks.reduce((sum: any, week: any) => sum + week.compare, 0) : 0;
 
           const panelId = `weekly-month-panel-${group.monthNumber}`;
           const triggerId = `weekly-month-trigger-${group.monthNumber}`;
@@ -256,7 +263,7 @@ export function WeeklyComparisonList({ groups, reportYear, compareYear, metric, 
                 id={triggerId}
                 type="button"
                 className="customer-trends-weekly__month-toggle"
-                data-tone={hasCompare && reportTotal !== compareTotal ? (reportTotal > compareTotal ? 'up' : 'down') : 'flat'}
+                data-tone={hasCompare && primaryTotal !== compareTotal ? (primaryTotal > compareTotal ? 'up' : 'down') : 'flat'}
                 aria-expanded={isExpanded}
                 aria-controls={panelId}
                 onClick={() => setExpandedMonth(current => current === group.monthNumber ? null : group.monthNumber)}
@@ -267,7 +274,7 @@ export function WeeklyComparisonList({ groups, reportYear, compareYear, metric, 
                 </span>
                 <span className="customer-trends-weekly__metric">
                   <small>{reportYear}</small>
-                  <strong>{fmtMetric(reportTotal, metric)}</strong>
+                  <strong>{fmtMetric(primaryTotal, metric)}</strong>
                 </span>
                 {hasCompare && (
                   <span className="customer-trends-weekly__metric">
@@ -280,7 +287,7 @@ export function WeeklyComparisonList({ groups, reportYear, compareYear, metric, 
 
               {isExpanded && (
                 <div id={panelId} className="customer-trends-weekly__week-list" role="region" aria-labelledby={triggerId}>
-                  {group.weeks.map(week => {
+                  {group.weeks.map((week: any) => {
                     const weekDelta = hasCompare ? week.report - week.compare : 0;
 
                     return (
@@ -480,7 +487,7 @@ export function SummaryMetric({ label, value, hint, tone, muted, control }: { la
 export function KpiTypeSelect({ value, onChange }: { value: KpiTypeSelection; onChange: (value: KpiTypeSelection) => void }) {
   const options = [
     { value: 'ALL', label: 'All Types' },
-    ...SALES_TYPE_OPTIONS.map(opt => ({ value: opt.value, label: opt.label }))
+    ...SALES_TYPE_OPTIONS.map((opt: any) => ({ value: opt.value, label: opt.label }))
   ];
   return (
     <div style={{ width: 125 }}>

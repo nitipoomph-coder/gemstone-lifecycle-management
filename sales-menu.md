@@ -10,10 +10,12 @@ Sales Analytics sidebar must stay flat. Do not add a nested `Summary` sub-parent
 
 Current `Sales Analytics` sidebar items:
 - `Sales Summary` -> `/dashboard/customer`
+- `Customer Report Matrix` -> `/dashboard/customer/matrix`
+- `Order Trends` -> `/dashboard/customer/trends`
 - `Top Item Gallery` -> `/dashboard/top-orders`
-- `Customer Trends` -> `/dashboard/customer/trends`
+- `Top Items Qty` -> `/dashboard/top-orders/analytics`
 
-Customer Trends is now a sidebar item under Sales Analytics. The sidebar keeps `Customer Trends` active while users are on Customer Trends or its Order List detail (`/dashboard/sales-customer-detail`).
+Order Trends is now a sidebar item under Sales Analytics. The sidebar keeps `Order Trends` active while users are on Order Trends.
 Direct/detail Sales routes may exist without being sidebar items. Do not add them to the sidebar unless the user explicitly asks.
 
 Avoid this confusing hierarchy:
@@ -24,14 +26,13 @@ Menu structure must be defined in `src/config/menuConfig.ts`. Do not hardcode me
 
 ## User-Facing Naming
 Use these names consistently in sidebar, page title, breadcrumb, and buttons:
-- Combined summary page: `Sales & Qty Summary`
+- Combined summary page: `Sales Summary`
 - Metric segment labels: `Sales`, `Qty`
-- Amount matrix page: `Sales Matrix`
-- Quantity matrix page: `Quantity Matrix`
+- Matrix report page: `Customer Report Matrix`
 - Top item overview page: `Top Item Gallery`
-- Top item quantity/detail analysis page: `Top Items Qty` or button label `Qty Analysis`
-- Customer movement/order evidence page: `Customer Trends`
-- Drilldown order table from Customer Trends: `Order List`
+- Top item quantity analysis page: `Top Items Qty`
+- Order volume trends and evidence page: `Order Trends`
+- Drilldown order table from PO Tracker / Trends: `Order List`
 - Sales rep/dashboard page: `Sales Dashboard`
 
 Do not use these old names in UI:
@@ -50,22 +51,20 @@ Do not use these old names in UI:
 Breadcrumbs must represent the real navigation path and current screen location. Keep `JEWELRY FACTORY SYSTEM` as the root, then `Sales Analytics`, then the source page when applicable.
 
 Required breadcrumb paths:
-- Sales & Qty Summary: `JEWELRY FACTORY SYSTEM > Sales Analytics > Sales & Qty Summary`
-- Sales Matrix: `JEWELRY FACTORY SYSTEM > Sales Analytics > Sales & Qty Summary > Sales Matrix`
-- Quantity Matrix: `JEWELRY FACTORY SYSTEM > Sales Analytics > Sales & Qty Summary > Quantity Matrix`
+- Sales Summary: `JEWELRY FACTORY SYSTEM > Sales Analytics > Sales Summary`
+- Customer Report Matrix: `JEWELRY FACTORY SYSTEM > Sales Analytics > Customer Report Matrix`
+- Order Trends: `JEWELRY FACTORY SYSTEM > Sales Analytics > Order Trends`
 - Top Item Gallery: `JEWELRY FACTORY SYSTEM > Sales Analytics > Top Item Gallery`
 - Top Items Qty: `JEWELRY FACTORY SYSTEM > Sales Analytics > Top Item Gallery > Top Items Qty`
-- Customer Trends: `JEWELRY FACTORY SYSTEM > Sales Analytics > Sales & Qty Summary > Customer Trends`
-- Customer Trends detail: `JEWELRY FACTORY SYSTEM > Sales Analytics > Sales & Qty Summary > Customer Trends > Order List`
-- Sales Dashboard: `JEWELRY FACTORY SYSTEM > Sales Analytics > Sales Dashboard`
+- Sales Dashboard (legacy): `JEWELRY FACTORY SYSTEM > Sales Analytics > Sales Dashboard`
 
-Known follow-up: if a page currently shows a shorter breadcrumb such as `JEWELRY FACTORY SYSTEM > Top Items Gallery`, align it to this standard the next time that page is touched.
+Known follow-up: if a page currently shows a shorter breadcrumb such as `JEWELRY FACTORY SYSTEM > Top Item Gallery`, align it to this standard the next time that page is touched.
 
 ## Route Map
 Sales Analytics routes (nested under `CustomerDashboardLayout` at `/dashboard/customer`):
 - `/dashboard/customer`: `Sales Summary`, default amount metric (index route)
-- `/dashboard/customer/matrix`: `Customer Matrix` (nested route)
-- `/dashboard/customer/trends`: `Customer Trends` / `Order Volume Summary` (nested route)
+- `/dashboard/customer/matrix`: `Customer Report Matrix` (nested route)
+- `/dashboard/customer/trends`: `Order Trends` / `Order Volume Summary` (nested route)
 
 Standalone Sales Analytics routes:
 - `/dashboard/top-orders`: `Top Item Gallery`

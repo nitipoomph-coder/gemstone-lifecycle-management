@@ -49,19 +49,19 @@ sql/
 
 | # | Index Name | Table | Route ที่ใช้ | วัตถุประสงค์ |
 |---|-----------|-------|-----------|-------------|
-| 10 | `IX_OrdHD_OrdDate_Status` | OrdHD | dashboard.js | stat cards, trend, month count, YOY |
-| 11 | `IX_OrdHD_DueDate_Status` | OrdHD | dashboard.js | delay orders, overdue drill-down |
-| 12 | `IX_OrdDT_OrdNo_Process` | OrdDT | dashboard.js | process distribution, stone/finding |
-| 13 | `IX_GMEmp_SalesName` | GMEmp | dashboard.js | sales summary JOIN |
-| 14 | `IX_OrdHD_PONo` | OrdHD | search.js, orders.js | PONo prefix search, by-po lookup |
-| 15 | `IX_OrdHD_CustCode` | OrdHD | search.js, orders.js, customerSales.js | CustCode lookup (wide covering) |
-| 16 | `IX_OrdDT_ItemNo` | OrdDT | search.js, itemYearlySummary.js | ItemNo prefix search |
+| 10 | `IX_OrdHD_OrdDate_Status` | OrdHD | productionDashboard.js | stat cards, trend, month count, YOY |
+| 11 | `IX_OrdHD_DueDate_Status` | OrdHD | productionDashboard.js | delay orders, overdue drill-down |
+| 12 | `IX_OrdDT_OrdNo_Process` | OrdDT | productionDashboard.js | process distribution, stone/finding |
+| 13 | `IX_GMEmp_SalesName` | GMEmp | productionDashboard.js | sales summary JOIN |
+| 14 | `IX_OrdHD_PONo` | OrdHD | search.js, poTrackerAdvanced.js | PONo prefix search, by-po lookup |
+| 15 | `IX_OrdHD_CustCode` | OrdHD | search.js, poTrackerAdvanced.js, orderVolumeSummary.js | CustCode lookup (wide covering) |
+| 16 | `IX_OrdDT_ItemNo` | OrdDT | search.js, topOrdersGallery.js | ItemNo prefix search |
 | 17 | `IX_GMCust_CustName` | GMCust | search.js | CustName contains search |
-| 18 | `IX_OrdDT_OrdNo_Sales` | OrdDT | customerSummary.js, customerSales.js | SUM(ItemQty/ExportQty/Amnt) |
-| 19 | `IX_GMGoodType_Code` | GMGoodType | customerSales.js | item type name lookup |
-| 20 | `IX_OrdHD_Group` | OrdHD | orders.js | group endpoint filter (CustCode+Addr+Mat+DueDate) |
-| 21 | `IX_OrdDT_OrdNo_Detail` | OrdDT | orders.js | detail lines ครบทุก qty/status field |
-| 22 | *(covered by above)* | — | itemYearlySummary.js | ใช้ #10+#16+#18 ร่วมกัน |
+| 18 | `IX_OrdDT_OrdNo_Sales` | OrdDT | customerSummary.js, orderVolumeSummary.js | SUM(ItemQty/ExportQty/Amnt) |
+| 19 | `IX_GMGoodType_Code` | GMGoodType | orderVolumeSummary.js | item type name lookup |
+| 20 | `IX_OrdHD_Group` | OrdHD | poTrackerAdvanced.js | group endpoint filter (CustCode+Addr+Mat+DueDate) |
+| 21 | `IX_OrdDT_OrdNo_Detail` | OrdDT | poTrackerAdvanced.js | detail lines ครบทุก qty/status field |
+| 22 | *(covered by above)* | — | topOrdersGallery.js | ใช้ #10+#16+#18 ร่วมกัน |
 
 ## การเปลี่ยนแปลงหลัก (2026-07-02)
 

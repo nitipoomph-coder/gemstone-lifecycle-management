@@ -1,116 +1,18 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
-import { RefreshCw, DollarSign, Hash, Calendar, CalendarDays, Layers, Users, Eye, EyeOff, ChevronRight, Printer } from 'lucide-react';
+import { useOutletContext, useSearchParams } from 'react-router-dom';
+import { RefreshCw, DollarSign, Hash, Calendar, CalendarDays, Layers, Users, Eye, EyeOff, Printer } from 'lucide-react';
 import { fetchCustomerSummary } from '../services/customerSummaryAPI';
-import { ALL_GROUPS, getCustomerGroupId } from '../config/customerGroups';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList } from 'recharts';
+import { ALL_GROUPS } from '../config/customerGroups';
 import { ErpSegmentedControl } from '../components/ui/ErpButtons';
 import { printChartDashboard } from '../utils/printChart';
-// @ts-ignore
-import { buildCustomerTrendsPath } from '../utils/customerTrendsUrl';
 import { useTheme } from '../contexts/useTheme';
+import { useCustomerSalesData, type Metric, type CustomerSummaryRow } from '../hooks/useCustomerSalesData';
+import { CustomerSalesChart } from '../components/dashboard/CustomerSalesChart';
+import { CustomerKpiCards } from '../components/dashboard/CustomerKpiCards';
+import { CustomerDashboardSkeleton } from '../components/dashboard/CustomerDashboardSkeleton';
 import './CustomerDashboard.css';
 
-
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-// @ts-ignore
-const MONTH_PARAM_IDS = MONTHS.map((_, index) => String(index + 1));
-const ALL_GROUP_IDS = ALL_GROUPS.map(group => group.id);
-// @ts-ignore
-const SUMMARY_DEFAULT_GROUP_IDS = ALL_GROUP_IDS.slice(0, 4);
 const YEAR_COLORS = ['var(--color-chart-1)', 'var(--color-chart-2)', 'var(--color-chart-3)', 'var(--color-chart-4)', 'var(--color-chart-5)', 'var(--color-chart-6)'];
-
-
-type Metric = 'amount' | 'qty';
-type MonthlySummaryMap = Record<string, Record<string, number>>;
-type CustomerSummaryRow = {
-  id?: string;
-  monthly?: MonthlySummaryMap;
-  monthlyQty?: MonthlySummaryMap;
-};
-type RawSummary = Record<string, Record<string, Record<string, number>>>;
-type ChartDatum = { label: string; sortKey?: string } & Record<string, string | number | undefined>;
-type TooltipPayloadEntry = { value?: number; color?: string; dataKey?: string | number; name?: string };
-type CustomTooltipProps = { active?: boolean; payload?: TooltipPayloadEntry[]; label?: string; metric: Metric; chartData?: any[]; mode?: string; monthlySeries?: string; };
-// @ts-ignore
-function defaultYearSelection(years: string[]) {
-  const latest = years[years.length - 1];
-  const prev = years[years.length - 2];
-  return prev ? [prev, latest] : latest ? [latest] : [];
-}
-
-// Custom Tooltip for Recharts
-const CustomTooltip = ({ active, payload, label, metric, chartData, mode, monthlySeries }: CustomTooltipProps) => {
-  if (active && payload && payload.length) {
-    return (
-      <div style={{ padding: '12px 16px', borderRadius: 8, border: '1px solid var(--color-border-light)', minWidth: 200, background: 'var(--color-ui-surface)', boxShadow: 'var(--shadow-dropdown)' }}>
-        <p style={{ fontSize: 'var(--erp-text-panel)', fontWeight: 900, color: 'var(--color-text-primary)', marginBottom: 8, borderBottom: '1px solid var(--color-border-light)', paddingBottom: 6 }}>
-          {label}
-        </p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {payload.map((entry, index) => {
-            if (entry.value === 0) return null;
-
-            let diff = null;
-            let pct = null;
-            const currVal = Number(entry.value || 0);
-
-            if (monthlySeries === 'year' && String(entry.dataKey).length === 4) {
-              const prevYear = String(Number(entry.dataKey) - 1);
-              const prevEntry = payload.find((p: any) => String(p.dataKey) === prevYear);
-              if (prevEntry) {
-                const prevVal = Number(prevEntry.value || 0);
-                if (prevVal > 0 || currVal > 0) {
-                  diff = currVal - prevVal;
-                  if (prevVal > 0) pct = ((currVal - prevVal) / prevVal) * 100;
-                }
-              }
-            } else if (mode === 'yearly' && monthlySeries === 'group' && chartData) {
-              const prevYear = String(Number(label) - 1);
-              const prevData = chartData.find(d => String(d.label) === prevYear);
-              if (prevData && prevData[entry.dataKey!]) {
-                const prevVal = Number(prevData[entry.dataKey!]);
-                if (prevVal > 0 || currVal > 0) {
-                  diff = currVal - prevVal;
-                  if (prevVal > 0) pct = ((currVal - prevVal) / prevVal) * 100;
-                }
-              }
-            }
-
-            const isUp = diff !== null && diff > 0;
-            const isDown = diff !== null && diff < 0;
-
-            return (
-              <div key={index} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 'var(--erp-text-control)', fontWeight: 800 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--color-text-secondary)' }}>
-                    <span style={{ width: 8, height: 8, borderRadius: 2, background: entry.color }} />
-                    {ALL_GROUPS.find(g => g.id === entry.dataKey)?.label || (String(entry.dataKey).length === 4 ? `Year ${entry.dataKey}` : entry.name)}
-                  </div>
-                  <span style={{ color: 'var(--color-text-primary)', fontVariantNumeric: 'tabular-nums' }}>
-                    {metric === 'qty'
-                      ? currVal.toLocaleString(undefined, { maximumFractionDigits: 0 })
-                      : '$' + currVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </span>
-                </div>
-                {diff !== null && (
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', fontSize: '0.72rem', fontWeight: 900, color: isUp ? 'var(--color-success-500)' : isDown ? 'var(--color-danger-500)' : 'var(--color-text-tertiary)' }}>
-                    <span>
-                      {isUp ? '↑ ' : isDown ? '↓ ' : ''}
-                      {metric === 'qty' ? Math.abs(diff).toLocaleString(undefined, { maximumFractionDigits: 0 }) : '$' + Math.abs(diff).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      {pct !== null && ` (${Math.abs(pct).toFixed(2)}%)`}
-                    </span>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  }
-  return null;
-};
 
 export default function CustomerDashboard({ metric: propMetric = 'amount' }: { metric?: Metric }) {
   const { theme } = useTheme();
@@ -132,14 +34,14 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
     }
   }, [monthlySeries]);
 
-  const navigate = useNavigate();
+
+  const activeYears = [...selectedYears].sort();
 
   const handlePrint = () => {
     const scopeYears = activeYears.join('-');
     const title = `Customer_Sales_Chart_${mode}_${metric}_${scopeYears || 'all'}`;
     printChartDashboard(title);
   };
-
 
   // Fetch all data for available years
   useEffect(() => {
@@ -167,158 +69,26 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
     [selGroups]
   );
 
-  // Convert customer data into RAW[year][month][groupId] structure
-  const RAW = useMemo(() => {
-    const raw: RawSummary = {};
-    // @ts-ignore
-    availableYears.forEach(y => {
-      raw[y] = {};
-      MONTHS.forEach((m) => {
-        raw[y][m] = {};
-        ALL_GROUPS.forEach(g => { raw[y][m][g.id] = 0; });
-      });
-    });
+  const {
+    chartData,
+    summaries,
+    yearSummaries,
+    grandTotal,
+    grandYoy,
+    grandLatestYear
+  } = useCustomerSalesData({
+    custData,
+    availableYears,
+    activeYears,
+    selectedMonths,
+    sortedSel,
+    metric,
+    mode,
+    monthlySeries,
+    kpiCompareYear
+  });
 
-    custData.forEach(cust => {
-      const gId = getCustomerGroupId(cust.id || '');
-
-      // @ts-ignore
-      availableYears.forEach(y => {
-        MONTHS.forEach((m, mi) => {
-          const mStr = (mi + 1).toString();
-          const source = metric === 'qty' ? cust.monthlyQty : cust.monthly;
-          const val = Number(source?.[y]?.[mStr]) || 0;
-          raw[y][m][gId] += val;
-        });
-      });
-    });
-    return raw;
-  }, [custData, availableYears, metric]);
-
-  const activeYears = [...selectedYears].sort();
   const usesGroupSeriesColors = monthlySeries === 'group';
-
-  // Build chartData based on mode
-  const chartData = useMemo(() => {
-    if (mode === "yearly") {
-      if (monthlySeries === 'year') {
-        return sortedSel.map(gId => {
-          const g = ALL_GROUPS.find(x => x.id === gId)!;
-          const r: ChartDatum = { label: g.label };
-          activeYears.forEach(y => {
-            // @ts-ignore
-            r[y] = selectedMonths.reduce((s, mStr) => s + (RAW[y]?.[MONTHS[parseInt(mStr) - 1]]?.[gId] || 0), 0);
-          });
-          return r;
-        });
-      } else {
-        return activeYears.map(y => {
-          const r: ChartDatum = { label: String(y) };
-          // @ts-ignore
-          sortedSel.forEach(g => { r[g] = selectedMonths.reduce((s, mStr) => s + (RAW[y]?.[MONTHS[parseInt(mStr) - 1]]?.[g] || 0), 0); });
-          return r;
-        });
-      }
-    } else {
-      const sortedMonths = [...selectedMonths].sort((a, b) => parseInt(a) - parseInt(b));
-      if (monthlySeries === 'year') {
-        // mode monthly: X-axis = Month, Series = Years (YoY Comparison)
-        return sortedMonths.map(mStr => {
-          const m = MONTHS[parseInt(mStr) - 1];
-          const r: ChartDatum = { label: m };
-          activeYears.forEach(y => {
-            r[y] = sortedSel.reduce((sum, g) => sum + (RAW[y]?.[m]?.[g] || 0), 0);
-          });
-          return r;
-        });
-      } else {
-        // mode monthly: Alternating Years for the same month (Jan 25, Jan 26, Feb 25...), Series = Groups
-        const list: ChartDatum[] = [];
-        sortedMonths.forEach(mStr => {
-          activeYears.forEach(y => {
-            const m = MONTHS[parseInt(mStr) - 1];
-            const label = activeYears.length > 1 ? `${m} ${String(y).slice(2)}` : m;
-            const r: ChartDatum = { label, sortKey: `${mStr.padStart(2, '0')}-${y}` };
-            sortedSel.forEach(g => {
-              r[g] = RAW[y]?.[m]?.[g] || 0;
-            });
-            list.push(r);
-          });
-        });
-        return list;
-      }
-    }
-  }, [mode, monthlySeries, activeYears, selectedMonths, sortedSel, RAW]);
-
-  // Summary Cards computation
-  const summaries = useMemo(() => {
-    const sortedDesc = [...activeYears].sort((a, b) => Number(b) - Number(a));
-    const baseYear = sortedDesc.length > 0 ? sortedDesc[0] : null;
-    const targetCompYear = kpiCompareYear && activeYears.includes(kpiCompareYear) && kpiCompareYear !== baseYear
-      ? kpiCompareYear
-      : (sortedDesc.length > 1 ? sortedDesc.find(y => y !== baseYear) || null : null);
-
-    return sortedSel.map(gId => {
-      const g = ALL_GROUPS.find(x => x.id === gId)!;
-
-      const yearTotals: Record<string, number> = {};
-      activeYears.forEach(y => {
-        // @ts-ignore
-        yearTotals[y] = selectedMonths.reduce((s, mStr) => s + (RAW[y]?.[MONTHS[parseInt(mStr) - 1]]?.[gId] || 0), 0);
-      });
-
-      const totalLatestYear = baseYear ? (yearTotals[baseYear] || 0) : 0;
-
-      let diff = null;
-      let pct = null;
-      if (baseYear && targetCompYear && baseYear !== targetCompYear) {
-        const curr = yearTotals[baseYear] || 0;
-        const prev = yearTotals[targetCompYear] || 0;
-        if (prev > 0 || curr > 0) {
-          diff = curr - prev;
-          if (prev > 0) pct = ((curr - prev) / prev) * 100;
-        }
-      }
-
-      return { ...g, yearTotals, totalLatestYear, diff, pct, maxYear: baseYear, minYear: targetCompYear, latestYear: baseYear };
-    });
-  }, [sortedSel, activeYears, selectedMonths, RAW, kpiCompareYear]);
-
-  const yearSummaries = useMemo(() => {
-    const sortedDesc = [...activeYears].sort((a, b) => Number(b) - Number(a));
-    const baseYear = sortedDesc.length > 0 ? sortedDesc[0] : null;
-    const targetCompYear = kpiCompareYear && activeYears.includes(kpiCompareYear) && kpiCompareYear !== baseYear
-      ? kpiCompareYear
-      : (sortedDesc.length > 1 ? sortedDesc.find(y => y !== baseYear) || null : null);
-
-    const yearTotals: Record<string, number> = {};
-    activeYears.forEach(y => yearTotals[y] = 0);
-
-    activeYears.forEach(y => {
-      sortedSel.forEach(gId => {
-        // @ts-ignore
-        yearTotals[y] += selectedMonths.reduce((s, mStr) => s + (RAW[y]?.[MONTHS[parseInt(mStr) - 1]]?.[gId] || 0), 0);
-      });
-    });
-
-    return sortedDesc.map(y => {
-      let diff = null;
-      let pct = null;
-      let compYear = null;
-
-      if (y === baseYear && targetCompYear) {
-        const curr = yearTotals[y] || 0;
-        const prev = yearTotals[targetCompYear] || 0;
-        if (prev > 0 || curr > 0) {
-          diff = curr - prev;
-          compYear = targetCompYear;
-          if (prev > 0) pct = ((curr - prev) / prev) * 100;
-        }
-      }
-
-      return { year: y, total: yearTotals[y], diff, pct, compYear };
-    });
-  }, [sortedSel, activeYears, selectedMonths, RAW, kpiCompareYear]);
 
   const switchMetric = (nextMetric: Metric) => {
     if (nextMetric === metric) return;
@@ -331,235 +101,23 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
     setSearchParams(nextParams, { replace: true });
   };
 
-  const handleGroupClick = (groupId: string) => {
-    const params = new URLSearchParams(searchParams);
-    params.set('groups', groupId);
-    params.delete('customers');
-    params.delete('search');
-    navigate(`/dashboard/customer/matrix?${params.toString()}`);
-  };
-
   const resetSummaryView = () => {
     setMode('yearly');
     setMonthlySeries('year');
     setShowLabels(true);
   };
 
-  // Grand Total computation
-  const { grandTotal, grandYoy, grandLatestYear } = useMemo(() => {
-    let gTotal = 0;
-
-    const grandYearTotals: Record<string, number> = {};
-    activeYears.forEach(y => {
-      grandYearTotals[y] = 0;
-    });
-
-    summaries.forEach(g => {
-      activeYears.forEach(y => {
-        grandYearTotals[y] += (g.yearTotals[y] || 0);
-      });
-    });
-
-    const reversedYears = [...activeYears].sort((a, b) => Number(b) - Number(a));
-    const latestYear = reversedYears.length > 0 ? reversedYears[0] : null;
-    const targetCompYear = kpiCompareYear && activeYears.includes(kpiCompareYear) && kpiCompareYear !== latestYear
-      ? kpiCompareYear
-      : (reversedYears.length > 1 ? reversedYears.find(y => y !== latestYear) || null : null);
-
-    if (latestYear) {
-      gTotal = grandYearTotals[latestYear] || 0;
-    }
-
-    const gYoy: { currYr: string, prevYr: string, pct: number | null }[] = [];
-
-    // Always show the comparison against the comparison year
-    if (latestYear && targetCompYear && latestYear !== targetCompYear) {
-      const currVal = grandYearTotals[latestYear] || 0;
-      const prevVal = grandYearTotals[targetCompYear] || 0;
-      let pct = null;
-      if (prevVal > 0) {
-        pct = ((currVal - prevVal) / prevVal) * 100;
-      }
-      gYoy.push({ currYr: latestYear, prevYr: targetCompYear, pct });
-    }
-
-    return { grandTotal: gTotal, grandYoy: gYoy, grandLatestYear: latestYear };
-  }, [summaries, activeYears, kpiCompareYear]);
-
-  const formatAxisValue = (value: number): string => {
-    if (value >= 1000000) return (value / 1000000).toFixed(1) + 'M';
-    if (value >= 1000) return (value / 1000).toFixed(1) + 'K';
-    if (metric === 'qty') return value.toLocaleString(undefined, { maximumFractionDigits: 0 });
-    return value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  };
-
-  // @ts-ignore
-  const summaryTitle = 'Sales Summary';
-
-
-
-
-
-  // @ts-ignore
-  const periodButtonLabel = useMemo(() => {
-    const monthText = selectedMonths.length === 12 ? 'All Months' : `${selectedMonths.length} Mths`;
-    return `(${monthText})`;
-  }, [selectedMonths]);
-
   if (loading) {
-    const sortedGroups = sortedSel.map(gId => ALL_GROUPS.find(x => x.id === gId)).filter(Boolean);
-
-    return (
-      <div className="content-scrollbar flex-1 overflow-y-auto" style={{ background: 'var(--color-surface-1)' }}>
-        <div className="app-content-frame app-content-frame--workspace app-page-content sales-summary-page" style={{ paddingTop: 16 }}>
-
-          {/* Top Filter Bar Skeleton */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', background: 'var(--color-surface-0)', borderBottom: '1px solid var(--color-border-light)', borderRadius: '8px 8px 0 0', marginBottom: 16 }}>
-            <div className="app-skeleton" style={{ width: 140, height: 22, borderRadius: 4 }} />
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div className="app-skeleton" style={{ width: 130, height: 32, borderRadius: 7 }} />
-              <div style={{ width: 1, height: 16, background: 'var(--color-border-light)' }} />
-              <div className="app-skeleton" style={{ width: 130, height: 32, borderRadius: 7 }} />
-              <div style={{ width: 1, height: 16, background: 'var(--color-border-light)' }} />
-              <div className="app-skeleton" style={{ width: 160, height: 32, borderRadius: 7 }} />
-              <div style={{ width: 1, height: 16, background: 'var(--color-border-light)' }} />
-              <div className="app-skeleton" style={{ width: 170, height: 32, borderRadius: 7 }} />
-            </div>
-          </div>
-
-          {/* Main Content Grid: Chart on Left, YoY Cards on Right */}
-          <div className="sales-summary-main-grid">
-
-            {/* Main Chart Section Skeleton */}
-            <div className="sales-summary-chart" style={{ background: 'var(--color-surface-0)', borderRadius: 8, padding: 18, border: '1px solid var(--color-border-light)', boxShadow: 'none' }}>
-              {/* Dynamic Chart Header Skeleton */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, marginBottom: 14, flexWrap: 'wrap' }}>
-                <div>
-                  <div className="app-skeleton" style={{ width: 280, height: 24, borderRadius: 6, marginBottom: 8 }} />
-                  <div className="app-skeleton" style={{ width: 340, height: 14, borderRadius: 4 }} />
-
-                  {/* Chart Legend Skeleton */}
-                  <div style={{ display: 'flex', gap: 10, marginTop: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-                    <div className="app-skeleton" style={{ width: 80, height: 14, borderRadius: 4 }} />
-                    {(sortedGroups.length > 0 ? sortedGroups : Array.from({ length: 6 })).map((g: any, idx) => (
-                      <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{ width: 10, height: 10, borderRadius: 2, background: g?.color || 'var(--color-surface-3)' }} />
-                        <div className="app-skeleton" style={{ width: 65, height: 14, borderRadius: 4 }} />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
-                  <div className="app-skeleton" style={{ width: 130, height: 14, borderRadius: 4 }} />
-                  <div className="app-skeleton" style={{ width: 180, height: 32, borderRadius: 6 }} />
-                  <div className="app-skeleton" style={{ width: 110, height: 20, borderRadius: 12 }} />
-                </div>
-              </div>
-
-              {/* Chart Body Simulated Bar Graph Skeleton */}
-              <div className="sales-summary-chart-body" style={{ padding: '20px 8px 8px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-around', gap: 16, borderTop: '1px solid var(--color-border-light)', minHeight: 320 }}>
-                {Array.from({ length: 7 }).map((_, colIdx) => (
-                  <div key={colIdx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, height: '100%', justifyContent: 'flex-end', flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: '80%', width: '100%', justifyContent: 'center' }}>
-                      <div className="app-skeleton" style={{ width: '40%', height: `${30 + (colIdx * 13) % 60}%`, borderRadius: '4px 4px 0 0' }} />
-                      <div className="app-skeleton" style={{ width: '40%', height: `${40 + (colIdx * 17) % 55}%`, borderRadius: '4px 4px 0 0', opacity: 0.7 }} />
-                    </div>
-                    <div className="app-skeleton" style={{ width: 40, height: 12, borderRadius: 4 }} />
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Side-by-Side Summary Cards Skeleton */}
-            <div className="sales-summary-cards">
-              {/* Year KPI Skeletons */}
-              {(activeYears.length > 0 ? activeYears : ['2025', '2024']).map((y, idx) => {
-                const color = YEAR_COLORS[idx % YEAR_COLORS.length];
-                return (
-                  <div
-                    key={`skel-yr-${y}`}
-                    style={{
-                      background: 'var(--color-surface-0)',
-                      border: '1px solid var(--color-border-light)',
-                      borderLeft: `4px solid ${color}`,
-                      borderRadius: 8,
-                      padding: '12px 16px',
-                      boxShadow: '0 8px 20px -16px color-mix(in srgb, var(--color-surface-900) 25%, transparent)',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: 12
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div className="app-skeleton" style={{ width: 90, height: 16, borderRadius: 4 }} />
-                      <div className="app-skeleton" style={{ width: 40, height: 14, borderRadius: 4 }} />
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      <div className="app-skeleton" style={{ width: 140, height: 24, borderRadius: 6 }} />
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div className="app-skeleton" style={{ width: 110, height: 14, borderRadius: 4 }} />
-                        <div className="app-skeleton" style={{ width: 50, height: 12, borderRadius: 4 }} />
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-
-              {/* Group KPI Skeletons */}
-              {(sortedGroups.length > 0 ? sortedGroups : Array.from({ length: 6 })).map((g: any, idx) => {
-                const color = g?.color || 'var(--color-border-light)';
-                const label = g?.label || `Group ${idx + 1}`;
-                return (
-                  <div
-                    key={`skel-grp-${idx}`}
-                    style={{
-                      background: 'var(--color-surface-0)',
-                      border: '1px solid var(--color-border-light)',
-                      borderLeft: `4px solid ${color}`,
-                      borderRadius: 8,
-                      padding: '12px 16px',
-                      boxShadow: '0 8px 20px -16px color-mix(in srgb, var(--color-surface-900) 25%, transparent)',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: 4
-                    }}
-                  >
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <span style={{ fontSize: 'var(--erp-text-dense)', fontWeight: 900, color: 'var(--color-text-secondary)', opacity: 0.7 }}>{label}</span>
-                        </div>
-                        <div className="app-skeleton" style={{ width: 35, height: 14, borderRadius: 4 }} />
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        <div className="app-skeleton" style={{ width: 130, height: 24, borderRadius: 6 }} />
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <div className="app-skeleton" style={{ width: 110, height: 14, borderRadius: 4 }} />
-                          <div className="app-skeleton" style={{ width: 50, height: 12, borderRadius: 4 }} />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-          </div>
-        </div>
-      </div>
-    );
+    return <CustomerDashboardSkeleton sortedSel={sortedSel} activeYears={activeYears} />;
   }
 
   return (
     <>
-
-
       <div className="content-scrollbar flex-1 overflow-y-auto" style={{ background: 'var(--color-surface-1)' }}>
         <div className="app-content-frame app-content-frame--workspace app-page-content sales-summary-page" style={{ paddingTop: 16 }}>
 
           {/* Internal Dashboard Filter Bar */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', background: 'var(--color-surface-0)', borderBottom: '1px solid var(--color-border-light)', borderRadius: '8px 8px 0 0', marginBottom: 16 }}>
+          <div className="no-print" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', background: 'var(--color-surface-0)', borderBottom: '1px solid var(--color-border-light)', borderRadius: '8px 8px 0 0', marginBottom: 16 }}>
             <h2 style={{ fontSize: 'var(--erp-text-section)', fontWeight: 900, color: 'var(--color-text-primary)', margin: 0 }}>
               Sales Summary
             </h2>
@@ -679,202 +237,26 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
 
               {/* Recharts Component */}
               <div className="sales-summary-chart-body" style={{ padding: '10px 8px 8px' }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData} margin={{ top: 20, right: 24, left: 0, bottom: 5 }}>
-                    <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--color-border-light)" opacity={0.5} />
-                    <XAxis dataKey="label" tick={{ fontSize: 10, fill: 'var(--color-text-secondary)', fontWeight: 800 }} axisLine={false} tickLine={false} dy={10} />
-                    <YAxis tickFormatter={(val) => formatAxisValue(val)} tick={{ fontSize: 10, fill: 'var(--color-text-quaternary)', fontWeight: 700 }} axisLine={false} tickLine={false} dx={-5} width={70} />
-                    <Tooltip content={<CustomTooltip metric={metric} chartData={chartData} mode={mode} monthlySeries={monthlySeries} />} cursor={{ fill: 'var(--color-surface-1)', opacity: 0.4 }} />
-                    {monthlySeries === 'group' ? sortedSel.map((gId) => {
-                      const g = ALL_GROUPS.find(x => x.id === gId)!;
-                      return (
-                        <Bar
-                          key={gId}
-                          dataKey={gId}
-                          name={g.label}
-                          fill={g.color}
-                          radius={[4, 4, 0, 0]}
-                          maxBarSize={40}
-                          isAnimationActive={true}
-                          animationDuration={600}
-                          animationEasing="ease-in-out"
-                        >
-                          {showLabels && (
-                            <LabelList dataKey={gId} position="top" formatter={(val: unknown) => Number(val) > 0 ? formatAxisValue(Number(val)).replace('$', '') : ''} style={{ fontSize: 10, fill: 'var(--color-text-primary)', fontWeight: 800 }} />
-                          )}
-                        </Bar>
-                      );
-                    }) : activeYears.map((y, idx) => {
-                      const color = YEAR_COLORS[idx % YEAR_COLORS.length];
-                      return (
-                        <Bar
-                          key={y}
-                          dataKey={y}
-                          name={`Year ${y}`}
-                          fill={color}
-                          radius={[4, 4, 0, 0]}
-                          maxBarSize={40}
-                          isAnimationActive={true}
-                          animationDuration={600}
-                          animationEasing="ease-in-out"
-                        >
-                          {showLabels && (
-                            <LabelList dataKey={y} position="top" formatter={(val: unknown) => Number(val) > 0 ? formatAxisValue(Number(val)).replace('$', '') : ''} style={{ fontSize: 10, fill: 'var(--color-text-primary)', fontWeight: 800 }} />
-                          )}
-                        </Bar>
-                      );
-                    })}
-                  </BarChart>
-                </ResponsiveContainer>
+                <CustomerSalesChart 
+                  chartData={chartData} 
+                  metric={metric} 
+                  mode={mode} 
+                  monthlySeries={monthlySeries} 
+                  showLabels={showLabels} 
+                  sortedSel={sortedSel} 
+                  activeYears={activeYears} 
+                />
               </div>
             </div>
 
-            {/* Side-by-Side Summary Cards */}
-            <div className="sales-summary-cards" key={`kpis-${activeYears.join(',')}-${sortedSel.join(',')}-${monthlySeries}`}>
-              {/* Year KPIs */}
-              {yearSummaries.map((yData) => {
-                const color = YEAR_COLORS[activeYears.indexOf(yData.year) % YEAR_COLORS.length];
-
-                const diff = yData.diff;
-                const pct = yData.pct;
-                const cardCompYear = yData.compYear;
-                const isUp = diff !== null && diff > 0;
-                const isDown = diff !== null && diff < 0;
-
-                return (
-                  <div
-                    key={`year-${yData.year}`}
-                    className="kpi-card"
-                    style={{
-                      background: 'var(--color-surface-0)',
-                      border: '1px solid var(--color-border-light)',
-                      borderLeft: `4px solid ${color}`,
-                      borderRadius: 8,
-                      padding: '12px 16px',
-                      boxShadow: '0 8px 20px -16px color-mix(in srgb, var(--color-surface-900) 25%, transparent)',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: 4,
-                      transition: 'all 140ms ease-in-out',
-                    }}
-                  >
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                      <div style={{ fontSize: 'var(--erp-text-dense)', fontWeight: 900, color: 'var(--color-text-primary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                          Year {yData.year}
-                        </span>
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        <div style={{ fontSize: 'var(--erp-text-panel)', fontWeight: 900, color: 'var(--color-text-secondary)', fontFamily: 'var(--font-display)' }}>
-                          {metric === 'qty'
-                            ? yData.total.toLocaleString(undefined, { maximumFractionDigits: 0 })
-                            : '$' + yData.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                          }
-                        </div>
-                        {diff !== null && cardCompYear && (
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span
-                              style={{
-                                fontSize: '0.72rem',
-                                fontWeight: 900,
-                                color: isUp ? 'var(--color-success-500)' : isDown ? 'var(--color-danger-500)' : 'var(--color-text-tertiary)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 4
-                              }}
-                            >
-                              <span>
-                                {isUp ? '↑ ' : isDown ? '↓ ' : ''}
-                                {metric === 'qty' ? Math.abs(diff).toLocaleString(undefined, { maximumFractionDigits: 0 }) : '$' + Math.abs(diff).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                {pct !== null && ` (${pct > 0 ? '+' : ''}${pct.toFixed(2)}%)`}
-                              </span>
-                            </span>
-                            <span style={{ fontSize: '0.62rem', opacity: 0.75, color: 'var(--color-text-quaternary)', fontWeight: 800 }}>
-                              vs {cardCompYear}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-
-              {summaries.map((g) => {
-                const groupInfo = ALL_GROUPS.find(x => x.id === g.id);
-                const sortedDesc = [...activeYears].map(String).sort((a, b) => Number(b) - Number(a));
-                const cardBaseYear = g.latestYear || sortedDesc[0];
-                const cardCompYear = g.minYear || (sortedDesc.length > 1 ? sortedDesc[1] : null);
-                const bTotal = g.totalLatestYear;
-                const diff = g.diff;
-                const pct = g.pct;
-                const isUp = diff !== null && diff > 0;
-                const isDown = diff !== null && diff < 0;
-
-                return (
-                  <div
-                    key={g.id}
-                    onClick={() => handleGroupClick(g.id)}
-                    title={`Click to view ${g.label} Matrix breakdown (By Customer)`}
-                    className="kpi-card"
-                    style={{
-                      cursor: 'pointer',
-                      background: 'var(--color-surface-0)',
-                      border: '1px solid var(--color-border-light)',
-                      borderLeft: `4px solid ${groupInfo?.color || 'var(--color-border-light)'}`,
-                      borderRadius: 8,
-                      padding: '12px 16px',
-                      boxShadow: '0 8px 20px -16px color-mix(in srgb, var(--color-surface-900) 25%, transparent)',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: 4,
-                      transition: 'all 140ms ease-in-out',
-                    }}
-                  >
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                      <div style={{ fontSize: 'var(--erp-text-dense)', fontWeight: 900, color: 'var(--color-text-primary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                          {g.label}
-                          <ChevronRight size={13} style={{ opacity: 0.6, color: 'var(--color-text-tertiary)' }} />
-                        </span>
-                        <span style={{ fontSize: '0.72rem', color: 'var(--color-text-tertiary)', fontWeight: 800 }}>{cardBaseYear}</span>
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        <div style={{ fontSize: 'var(--erp-text-panel)', fontWeight: 900, color: 'var(--color-text-secondary)', fontFamily: 'var(--font-display)' }}>
-                          {metric === 'qty'
-                            ? bTotal.toLocaleString(undefined, { maximumFractionDigits: 0 })
-                            : '$' + bTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                          }
-                        </div>
-                        {diff !== null && cardCompYear && (
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span
-                              style={{
-                                fontSize: '0.72rem',
-                                fontWeight: 900,
-                                color: isUp ? 'var(--color-success-500)' : isDown ? 'var(--color-danger-500)' : 'var(--color-text-tertiary)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 4
-                              }}
-                            >
-                              <span>
-                                {isUp ? '↑ ' : isDown ? '↓ ' : ''}
-                                {metric === 'qty' ? Math.abs(diff).toLocaleString(undefined, { maximumFractionDigits: 0 }) : '$' + Math.abs(diff).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                {pct !== null && ` (${pct > 0 ? '+' : ''}${pct.toFixed(2)}%)`}
-                              </span>
-                            </span>
-                            <span style={{ fontSize: '0.62rem', opacity: 0.75, color: 'var(--color-text-quaternary)', fontWeight: 800 }}>
-                              vs {cardCompYear}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            <CustomerKpiCards 
+              yearSummaries={yearSummaries} 
+              groupSummaries={summaries} 
+              activeYears={activeYears} 
+              metric={metric} 
+              monthlySeries={monthlySeries} 
+              sortedSel={sortedSel} 
+            />
 
           </div>
         </div>
@@ -882,5 +264,3 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
     </>
   );
 }
-
-

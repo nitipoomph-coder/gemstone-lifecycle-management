@@ -22,30 +22,13 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
   const isMenuPathActive = (path?: string) => {
     if (!path) return false;
     if (location.pathname === path) return true;
-    if (path === '/dashboard/customer') {
-      return (
-        location.pathname === '/dashboard/qty' ||
-        (location.pathname === '/dashboard/customer-report' && new URLSearchParams(location.search).get('metric') !== 'qty')
-      );
-    }
-    if (path === '/dashboard/customer/trends' || path === '/dashboard/sales-customer-groups') {
-      return (
-        location.pathname === '/dashboard/customer/trends' ||
-        location.pathname === '/dashboard/sales-customer-groups' ||
-        location.pathname === '/dashboard/sales-customer-detail'
-      );
-    }
-    if (path === '/dashboard/qty') {
-      return location.pathname === '/dashboard/customer-report' && new URLSearchParams(location.search).get('metric') === 'qty';
-    }
-    if (path === '/dashboard/top-orders') {
-      return location.pathname === '/dashboard/top-orders/analytics';
-    }
-    if (path === '/dashboard/top-orders/analytics') {
-      return location.pathname === '/dashboard/top-orders/analytics';
-    }
+    
+    // Nested or detail pages matching
     if (path === '/po-tracker') {
-      return location.pathname.startsWith('/po-tracker/');
+      return location.pathname.startsWith('/po-tracker');
+    }
+    if (path === '/dashboard/customer') {
+      return location.pathname.startsWith('/dashboard/sales-customer-detail');
     }
     return false;
   };

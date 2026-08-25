@@ -1,379 +1,52 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
-import { useSearchParams, useOutletContext } from 'react-router-dom';
+import { useCallback } from 'react';
 import { DollarSign, Hash } from 'lucide-react';
 import './SalesResponsive.css';
-import { fetchAvailableYearsMeta } from '../services/dashboardAPI';
-import { fetchCustomerSummary } from '../services/customerSummaryAPI';
-import { ALL_GROUPS, getCustomerGroupId } from '../config/customerGroups';
+import { ALL_GROUPS } from '../config/customerGroups';
 
 import CustomerReportTable from '../components/report/CustomerReportTable';
-import { useTheme } from '../contexts/useTheme';
-
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const YEAR_COLORS = ['var(--color-chart-1)', 'var(--color-chart-2)', 'var(--color-chart-3)', 'var(--color-chart-4)', 'var(--color-chart-5)', 'var(--color-chart-6)'];
-
-interface CustomerSummaryRecord {
-  id: string;
-  name?: string;
-  topItem?: string;
-  topItemQty?: number | string;
-  monthly?: Record<string, Record<string, number | string>>;
-  monthlyQty?: Record<string, Record<string, number | string>>;
-}
-
-interface CustomerReportMatrixRow extends Record<string, unknown> {
-  id: string;
-  label: string;
-  topItem?: string;
-  topItemQty?: number;
-}
-
-function csv(value: string | null) {
-  return String(value || '')
-    .split(',')
-    .map(item => item.trim())
-    .filter(Boolean);
-}
+import { useCustomerReportData, YEAR_COLORS } from '../hooks/useCustomerReportData';
+import { renderGrowthAmt, renderGrowthPct } from '../components/dashboard/customerReport/GrowthHelpers';
 
 export default function CustomerReportPage() {
-  const { theme } = useTheme();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const { selectedYears, selectedMonths, selGroups, kpiCompareYear } = useOutletContext<any>();
-  const metric = searchParams.get('metric') || 'amount';
+  const {
+    theme,
+    metric,
+    handleSetMetric,
+    fmt,
+    fmtCurr,
+    baseYear,
+    activeYears,
+    displayYears,
+    displayMonths,
+    selMonths,
+    selGroups,
+    kpiCompareYear,
+    loading,
+    isFilterOpen,
+    setIsFilterOpen,
+    viewMode,
+    setViewMode,
+    aggregationMode,
+    setAggregationMode,
+    searchQuery,
+    setSearchQuery,
+    sortOrder,
+    setSortOrder,
+    growthComparisons,
+    resetMatrixView,
+    currentYearStr,
+    currentMonthIdx,
+    tableData,
+    groupKpis
+  } = useCustomerReportData();
 
-  const handleSetMetric = useCallback((nextMetric: 'amount' | 'qty') => {
-    const newParams = new URLSearchParams(searchParams);
-    if (nextMetric === 'qty') {
-      newParams.set('metric', 'qty');
-    } else {
-      newParams.delete('metric');
-    }
-    setSearchParams(newParams, { replace: true });
-  }, [searchParams, setSearchParams]);
-
-  const requestedCustomers = useMemo(() => csv(searchParams.get('customers')).map(customer => customer.toUpperCase()), [searchParams]);
-  const requestedViewMode: 'ytd' | 'quarterly' | 'monthly' = searchParams.get('view') === 'monthly' ? 'monthly' : searchParams.get('view') === 'quarterly' ? 'quarterly' : 'ytd';
-
-  const fmt = useCallback((val: number) => {
-    if (metric === 'qty') return val.toLocaleString(undefined, { maximumFractionDigits: 0 });
-    return `$${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  }, [metric]);
-  const fmtCurr = fmt;
-
-  const activeYears: string[] = selectedYears;
-  const baseYear = selectedYears[0] || '';
-  const selMonths = useMemo(() => {
-    return selectedMonths.map((mIdx: string) => MONTHS[Number(mIdx) - 1]);
-  }, [selectedMonths]);
-
-  const [custData, setCustData] = useState<CustomerSummaryRecord[]>([]);
-  const [firstDataYear, setFirstDataYear] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [isFilterOpen, setIsFilterOpen] = useState(true);
-
-  const [viewMode, setViewMode] = useState<'ytd' | 'quarterly' | 'monthly'>(requestedViewMode);
-  const [aggregationMode, setAggregationMode] = useState<'group' | 'customer'>('group');
-
-  useEffect(() => {
-    setAggregationMode(selGroups.length === 1 ? 'customer' : 'group');
-  }, [selGroups.length]);
-
-  const searchQuery = searchParams.get('search') || '';
-  const setSearchQuery = () => { }; // Mock to satisfy table props
-  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
-  const [growthComparisons, setGrowthComparisons] = useState<{ a: string; b: string }[]>([]);
-  const resetMatrixView = useCallback(() => {
-    setSortOrder('desc');
-    setViewMode('ytd');
-  }, []);
-
-
-
-
-
-  const renderGrowthAmt = useCallback((baseVal: number, compVal: number) => {
-    const diff = baseVal - compVal;
-    if (diff === 0) return {
-      bgColor: 'transparent',
-      node: (
-        <div style={{ width: '100%', textAlign: 'right' }}>
-          <span style={{ color: 'var(--color-text-tertiary)', fontWeight: 900, fontSize: 'var(--erp-text-panel)', fontVariantNumeric: 'tabular-nums' }}>{fmt(0)}</span>
-        </div>
-      )
-    };
-    const isUp = diff > 0;
-    const isDown = diff < 0;
-    const isRoyal = theme === 'royal-white';
-    const bgColor = isRoyal
-      ? (isUp ? 'color-mix(in srgb, var(--color-success-500) 15%, transparent)' : isDown ? 'color-mix(in srgb, var(--color-danger-500) 15%, transparent)' : 'transparent')
-      : 'transparent';
-    const textColor = isUp ? 'var(--color-success-500)' : isDown ? 'var(--color-danger-500)' : 'var(--color-text-tertiary)';
-    const sign = isUp ? '+' : isDown ? '\u2212' : '';
-    const signedValue = `${sign}${fmt(Math.abs(diff))}`;
-    return {
-      bgColor,
-      node: (
-        <div style={{ width: '100%', textAlign: 'right' }}>
-          <span style={{ color: textColor, fontWeight: 900, fontSize: 'var(--erp-text-panel)', fontVariantNumeric: 'tabular-nums' }}>{signedValue}</span>
-        </div>
-      )
-    };
+  const handleRenderGrowthAmt = useCallback((baseVal: number, compVal: number) => {
+    return renderGrowthAmt(baseVal, compVal, fmt, theme);
   }, [fmt, theme]);
 
-  const renderGrowthPct = useCallback((baseVal: number, compVal: number, isTrulyNew = false) => {
-    if (compVal === 0 && baseVal === 0) return {
-      bgColor: 'transparent',
-      node: (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', width: '100%' }}>
-          <span style={{ color: 'var(--color-text-tertiary)', fontWeight: 900, fontSize: 'var(--erp-text-panel)', fontVariantNumeric: 'tabular-nums' }}>0.00%</span>
-        </div>
-      )
-    };
-    if (compVal === 0 && baseVal > 0 && isTrulyNew) return {
-      bgColor: theme === 'royal-white' ? 'color-mix(in srgb, var(--color-success-500) 8%, var(--color-surface-0))' : 'transparent',
-      node: (
-        <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
-          <span style={{ background: 'color-mix(in srgb, var(--color-success-500) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--color-success-500) 45%, var(--color-border-light))', color: 'var(--color-success-500)', padding: '2px 6px', borderRadius: '4px', fontWeight: 900, fontSize: 'var(--erp-text-meta)', letterSpacing: 0 }}>NEW</span>
-        </div>
-      )
-    };
-    if (compVal === 0 && baseVal > 0) return {
-      bgColor: 'transparent',
-      node: (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', width: '100%' }}>
-          <span style={{ color: 'var(--color-text-tertiary)', fontWeight: 900, fontSize: 'var(--erp-text-panel)', fontVariantNumeric: 'tabular-nums' }}>0.00%</span>
-        </div>
-      )
-    };
-    const pct = ((baseVal - compVal) / compVal) * 100;
-    if (pct === 0) return {
-      bgColor: 'transparent',
-      node: (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', width: '100%' }}>
-          <span style={{ color: 'var(--color-text-tertiary)', fontWeight: 900, fontSize: 'var(--erp-text-panel)', fontVariantNumeric: 'tabular-nums' }}>0.00%</span>
-        </div>
-      )
-    };
-    const isUp = pct > 0;
-    const isDown = pct < 0;
-    const isRoyal = theme === 'royal-white';
-    const bgColor = isRoyal
-      ? (isUp ? 'color-mix(in srgb, var(--color-success-500) 15%, transparent)' : isDown ? 'color-mix(in srgb, var(--color-danger-500) 15%, transparent)' : 'transparent')
-      : 'transparent';
-    const textColor = isUp ? 'var(--color-success-500)' : isDown ? 'var(--color-danger-500)' : 'var(--color-text-tertiary)';
-    const sign = isUp ? '+' : isDown ? '\u2212' : '';
-    const arrow = isUp ? '↑ ' : isDown ? '↓ ' : '';
-    return {
-      bgColor,
-      node: (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', width: '100%', gap: 2 }}>
-          <span style={{ color: textColor, fontWeight: 900, fontSize: 'var(--erp-text-panel)', fontVariantNumeric: 'tabular-nums' }}>
-            {arrow}{sign}{Math.abs(pct).toFixed(2)}%
-          </span>
-        </div>
-      )
-    };
+  const handleRenderGrowthPct = useCallback((baseVal: number, compVal: number, isTrulyNew = false) => {
+    return renderGrowthPct(baseVal, compVal, theme, isTrulyNew);
   }, [theme]);
-
-  const currentDate = useMemo(() => new Date(), []);
-  const currentYearStr = String(currentDate.getFullYear());
-  const currentMonthIdx = currentDate.getMonth();
-  const displayMonths = useMemo(() => MONTHS.filter(m => selMonths.includes(m)), [selMonths]);
-
-  const dataYears = useMemo(() => {
-    if (firstDataYear === null) return [];
-    const startYear = Number(firstDataYear);
-    const maxYear = Math.max(...activeYears.map(Number).filter(Boolean));
-    if (!Number.isFinite(startYear) || !Number.isFinite(maxYear) || maxYear < startYear) return [];
-    return Array.from({ length: maxYear - startYear + 1 }, (_, index) => String(startYear + index));
-  }, [activeYears, firstDataYear]);
-
-  const displayYears = activeYears;
-
-  useEffect(() => {
-    fetchAvailableYearsMeta()
-      .then(({ firstDataYear }) => {
-        setFirstDataYear(firstDataYear);
-      })
-      .catch(err => console.error('Error fetching available years:', err));
-  }, []);
-
-  useEffect(() => {
-    if (dataYears.length === 0) return;
-    let cancelled = false;
-    const loadTimer = window.setTimeout(() => {
-      setLoading(true);
-      fetchCustomerSummary(dataYears, selMonths)
-        .then(cData => { if (!cancelled) setCustData(cData); })
-        .catch(err => console.error('Error fetching customer summary data:', err))
-        .finally(() => { if (!cancelled) setLoading(false); });
-    }, 0);
-    return () => {
-      cancelled = true;
-      window.clearTimeout(loadTimer);
-    };
-  }, [dataYears, selMonths]);
-
-  const groupCustomers = useMemo(() => {
-    return custData
-      .filter(c => selGroups.includes(getCustomerGroupId(c.id || '')))
-      .map(c => c.id as string)
-      .sort();
-  }, [custData, selGroups]);
-
-  const activeCustomers = requestedCustomers.length > 0 ? requestedCustomers.filter((id: string) => id !== '__NONE__') : groupCustomers;
-
-  useEffect(() => {
-    if (activeYears.length < 2) {
-      setGrowthComparisons(prev => (prev.length === 0 ? prev : []));
-      return;
-    }
-    const sortedDesc = [...activeYears].map(String).sort((y1, y2) => Number(y2) - Number(y1));
-    const newestYear = sortedDesc[0];
-    const pairs: { a: string; b: string }[] = [];
-    for (let i = 1; i < sortedDesc.length; i++) {
-      if (sortedDesc[i] && sortedDesc[i] !== newestYear) {
-        pairs.push({ a: newestYear, b: sortedDesc[i] });
-      }
-    }
-    setGrowthComparisons(prev => {
-      const isSame = prev.length === pairs.length && prev.every((p, idx) => p.a === pairs[idx].a && p.b === pairs[idx].b);
-      return isSame ? prev : pairs;
-    });
-  }, [activeYears]);
-
-  const tableData = useMemo(() => {
-    if (!baseYear || activeYears.length === 0) return { rows: [], colTotals: {} as Record<string, number>, activeYears: [] as string[] };
-
-    let rows: CustomerReportMatrixRow[] = [];
-
-    const QUARTERS = ['Q1', 'Q2', 'Q3', 'Q4'];
-    const Q_MAP: Record<string, string[]> = {
-      Q1: ['Jan', 'Feb', 'Mar'],
-      Q2: ['Apr', 'May', 'Jun'],
-      Q3: ['Jul', 'Aug', 'Sep'],
-      Q4: ['Oct', 'Nov', 'Dec']
-    };
-
-    if (aggregationMode === 'group') {
-      const groupRows: Record<string, CustomerReportMatrixRow> = {};
-      selGroups.forEach((gId: string) => {
-        const group = ALL_GROUPS.find(g => g.id === gId);
-        if (!group) return;
-        groupRows[gId] = { id: gId, label: group.label, topItem: '', topItemQty: 0 };
-        activeYears.forEach((yr: string) => {
-          groupRows[gId][`isTrulyNew_${yr}`] = false;
-          displayMonths.forEach((m: string) => { groupRows[gId][`${yr}_${m}`] = 0; });
-          QUARTERS.forEach(q => { groupRows[gId][`${yr}_${q}`] = 0; });
-          groupRows[gId][`${yr}_total`] = 0;
-        });
-      });
-
-      custData.forEach(cust => {
-        const gId = getCustomerGroupId(cust.id || '');
-        if (!selGroups.includes(gId)) return;
-
-        const row = groupRows[gId];
-        if (!row) return;
-        const source = metric === 'qty' ? cust.monthlyQty : cust.monthly;
-
-        activeYears.forEach((yr: string) => {
-          displayMonths.forEach((m: string) => {
-            const idx = MONTHS.indexOf(m);
-            const val = source?.[yr]?.[String(idx + 1)] || 0;
-            row[`${yr}_${m}`] = Number(row[`${yr}_${m}`]) + Number(val);
-            row[`${yr}_total`] = Number(row[`${yr}_total`]) + Number(val);
-          });
-          QUARTERS.forEach(q => {
-            row[`${yr}_${q}`] = Q_MAP[q].reduce((s, m) => s + Number(row[`${yr}_${m}`] || 0), 0);
-          });
-        });
-      });
-
-      rows = Object.values(groupRows).filter((r: any) => activeYears.some((yr: string) => Number(r[`${yr}_total`]) > 0));
-    } else {
-      const custRows: Record<string, CustomerReportMatrixRow> = {};
-
-      custData.forEach(cust => {
-        const gId = getCustomerGroupId(cust.id || '');
-        if (!selGroups.includes(gId)) return;
-        const cId = cust.id || '';
-
-        if (!custRows[cId]) {
-          custRows[cId] = { id: cId, label: cId, topItem: '', topItemQty: 0 };
-          activeYears.forEach((yr: string) => {
-            custRows[cId][`isTrulyNew_${yr}`] = false;
-            displayMonths.forEach((m: string) => { custRows[cId][`${yr}_${m}`] = 0; });
-            QUARTERS.forEach(q => { custRows[cId][`${yr}_${q}`] = 0; });
-            custRows[cId][`${yr}_total`] = 0;
-          });
-        }
-
-        const row = custRows[cId];
-        const source = metric === 'qty' ? cust.monthlyQty : cust.monthly;
-
-        activeYears.forEach((yr: string) => {
-          displayMonths.forEach((m: string) => {
-            const idx = MONTHS.indexOf(m);
-            const val = source?.[yr]?.[String(idx + 1)] || 0;
-            row[`${yr}_${m}`] = Number(row[`${yr}_${m}`]) + Number(val);
-            row[`${yr}_total`] = Number(row[`${yr}_total`]) + Number(val);
-          });
-          QUARTERS.forEach(q => {
-            row[`${yr}_${q}`] = Q_MAP[q].reduce((s, m) => s + Number(row[`${yr}_${m}`] || 0), 0);
-          });
-        });
-      });
-
-      rows = Object.values(custRows).filter((r: any) => activeYears.some((yr: string) => Number(r[`${yr}_total`]) > 0));
-    }
-
-    rows.sort((a, b) => {
-      const valA = Number(a[`${activeYears[0]}_total`] || 0);
-      const valB = Number(b[`${activeYears[0]}_total`] || 0);
-      return sortOrder === 'desc' ? valB - valA : valA - valB;
-    });
-
-    const colTotals: Record<string, number> = {};
-    activeYears.forEach((yr: string) => {
-      colTotals[`${yr}_total`] = 0;
-      displayMonths.forEach((m: string) => { colTotals[`${yr}_${m}`] = 0; });
-      QUARTERS.forEach(q => { colTotals[`${yr}_${q}`] = 0; });
-    });
-    rows.forEach(r => {
-      activeYears.forEach((yr: string) => {
-        colTotals[`${yr}_total`] += Number(r[`${yr}_total`] || 0);
-        displayMonths.forEach((m: string) => { colTotals[`${yr}_${m}`] += Number(r[`${yr}_${m}`] || 0); });
-        QUARTERS.forEach(q => { colTotals[`${yr}_${q}`] += Number(r[`${yr}_${q}`] || 0); });
-      });
-    });
-
-    return { rows, colTotals, activeYears };
-  }, [custData, baseYear, activeYears, activeCustomers, searchQuery, displayMonths, metric, sortOrder, aggregationMode]);
-
-
-
-  const groupKpis = useMemo(() => {
-    if (tableData.rows.length <= 1 && activeYears.length <= 1) return [];
-
-    const groupTotals: Record<string, Record<string, number>> = {};
-    selGroups.forEach((gId: string) => {
-      groupTotals[gId] = {};
-      activeYears.forEach((yr: string) => { groupTotals[gId][yr] = 0; });
-    });
-
-    tableData.rows.forEach(row => {
-      const gId = getCustomerGroupId(row.id);
-      if (!groupTotals[gId]) return;
-      activeYears.forEach((yr: string) => {
-        groupTotals[gId][yr] += Number(row[`${yr}_total`] || 0);
-      });
-    });
-
-    return ALL_GROUPS
-      .filter(g => selGroups.includes(g.id) && groupTotals[g.id])
-      .map(g => ({ ...g, totals: groupTotals[g.id] }));
-  }, [tableData, selGroups, activeYears]);
 
   return (
     <>
@@ -587,8 +260,8 @@ export default function CustomerReportPage() {
                 metric={metric}
                 setMetric={handleSetMetric}
                 fmt={fmt}
-                renderGrowthAmt={renderGrowthAmt}
-                renderGrowthPct={renderGrowthPct}
+                renderGrowthAmt={handleRenderGrowthAmt}
+                renderGrowthPct={handleRenderGrowthPct}
                 searchQuery={searchQuery}
                 setSearchQuery={setSearchQuery}
                 showFilters={isFilterOpen}

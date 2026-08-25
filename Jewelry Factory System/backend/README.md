@@ -9,14 +9,16 @@ The codebase has been refactored (July 2026) to separate routing logic from comp
 
 ### 1. Routes (`/routes/`)
 Route files define the API endpoints. They have been renamed to match their functional domains in the frontend:
-- `productionDashboard.js` (formerly `dashboard.js`) — Main dashboard stats and trends.
-- `poTracker.js` (formerly `orders.js`) — Production order details and groupings.
-- `customerReportMatrix.js` (formerly `customerSummary.js`) — Customer yearly sales aggregations.
-- `salesAnalytics.js` (formerly `customerSales.js`) — Deep dive sales analytics.
-- `topOrdersGallery.js` (formerly `itemYearlySummary.js`) — Top selling items.
-- `procurementReceiving.js` (formerly `procurement.js`) — Purchasing and receiving (SPA/SRA).
-- `orderLinesIssues.js` (formerly `requisition.js`) — Requisitions and issues (SOA/SIA).
-- `sampleDepartment.js` (formerly `sample.js`) — Sample room tracking (SSA/SIM).
+- `productionDashboard.js` — Main dashboard stats and trends.
+- `poTrackerAdvanced.js` / `poTracker.js` — Production order details and groupings.
+- `customerSummary.js` — Customer dashboard overview (Sales Summary).
+- `customerReportMatrix.js` — Customer yearly sales aggregations (Matrix).
+- `orderVolumeSummary.js` — Order volume trends and evidence.
+- `topOrdersGallery.js` — Top selling items overview.
+- `topOrdersAnalytics.js` — Top selling items quantity breakdown.
+- `procurementReceiving.js` — Purchasing and receiving (SPA/SRA).
+- `orderLinesIssues.js` — Requisitions and issues (SOA/SIA).
+- `sampleDepartment.js` — Sample room tracking (SSA/SIM).
 
 > **Visual Banners**: Every major route file now contains a clear ASCII banner at the top, explaining its purpose and distinguishing whether it fetches data using the Legacy Stored Procedures or queries the DB directly.
 

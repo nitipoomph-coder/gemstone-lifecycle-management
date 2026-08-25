@@ -32,9 +32,15 @@ router.post('/login', async (req, res) => {
       .input('id', sql.Int, user.id)
       .query('UPDATE system_users SET last_login = GETDATE() WHERE id = @id');
 
+    // Ensure JWT_SECRET is configured — refuse to run with a weak fallback
+    if (!process.env.JWT_SECRET) {
+      console.error('[FATAL] JWT_SECRET is not set in .env — refusing to issue tokens');
+      return res.status(500).json({ success: false, message: 'Server configuration error' });
+    }
+
     const token = jwt.sign(
       { id: user.id, username: user.username, role: user.role, name: user.full_name },
-      process.env.JWT_SECRET || 'secret_key',
+      process.env.JWT_SECRET,
       { expiresIn: '12h' }
     );
 
@@ -51,14 +57,23 @@ router.post('/verify-admin', async (req, res) => {
     return res.status(400).json({ success: false, message: 'Password is required' });
   }
 
-  const adminPwd = process.env.APP_ADMIN_PASSWORD || 'admin';
-  if (password === adminPwd) {
+  const adminPwd = process.env.APP_ADMIN_PASSWORD;
+  if (!adminPwd) {
+    return res.status(500).json({ success: false, message: 'Admin password not configured' });
+  }
+  // Constant-time comparison to prevent timing attacks
+  const crypto = require('crypto');
+  const a = Buffer.from(password);
+  const b = Buffer.from(adminPwd);
+  if (a.length === b.length && crypto.timingSafeEqual(a, b)) {
     return res.json({ success: true });
   }
   return res.status(401).json({ success: false, message: 'Invalid Admin Password' });
 });
 
-router.post('/register', async (req, res) => {
+// Register — restricted to admin users only
+const { authMiddleware: regAuth, requireRole: regRole } = require('../middleware/authMiddleware');
+router.post('/register', regAuth, regRole('admin'), async (req, res) => {
   const { fullName, username, password, department } = req.body;
 
   if (!fullName || !username || !password || !department) {

@@ -117,6 +117,7 @@ export default function CustomerDashboardLayout() {
               </button>
 
               {showPeriodPopover && (
+<<<<<<< Updated upstream
                 <div className="sales-gallery-period-menu absolute right-0 z-[1000] mt-2 period-popover-animate" style={{ width: 480 }}>
                     <div className="flex items-center justify-between border-b border-[var(--color-border-light)] pb-2.5 mb-3">
                       <span className="text-xs font-black capitalize tracking-wider text-[var(--color-text-primary)]">
@@ -126,180 +127,192 @@ export default function CustomerDashboardLayout() {
                         {selectedYears[0]} {monthStart === 1 && monthEnd === 12 ? 'Full Year' : `(${MONTHS[monthStart - 1]}-${MONTHS[monthEnd - 1]})`}
                         {compareActive1 && ` vs ${compareYearVal1}`}
                       </span>
+=======
+                /* ตัวกรองตัวใหม่: Period Setup สำหรับทุกหน้าจอ */
+                <div className="sales-gallery-period-menu absolute right-0 z-[110] mt-2 period-popover-animate" style={{ width: 480, position: 'absolute', top: '100%' }}>
+                  <div className="flex items-center justify-between border-b border-[var(--color-border-light)] pb-2.5 mb-3">
+                    <span className="text-xs font-black capitalize tracking-wider text-[var(--color-text-primary)]">
+                      Period Setup
+                    </span>
+                    <span className="text-[11px] font-bold text-[var(--color-text-secondary)]">
+                      {selectedYears[0]} {monthStart === 1 && monthEnd === 12 ? 'Full Year' : `(${MONTHS[monthStart - 1]}-${MONTHS[monthEnd - 1]})`}
+                      {compareActive1 && ` vs ${compareYearVal1}`}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-[140px_1fr] gap-4">
+                    {/* Left: Quick Presets */}
+                    <div className="flex flex-col gap-2 border-r border-[var(--color-border-light)] pr-3">
+                      <div className="text-[10px] font-black capitalize tracking-wider text-[var(--color-text-tertiary)]">
+                        Quick Presets
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        {[
+                          { id: 'full-year', label: 'Full Year' },
+                          { id: 'ytd', label: 'YTD' },
+                          { id: 'this-month', label: 'This Month' },
+                          { id: 'last-month', label: 'Last Month' }
+                        ].map((preset) => {
+                          const active = draftPreset === preset.id;
+                          return (
+                            <button
+                              key={preset.id}
+                              type="button"
+                              onClick={() => applyPeriodPresetLayout(preset.id as any)}
+                              className={`rounded-lg border px-3 py-2 text-left text-xs font-black transition-colors ${active ? "border-[var(--color-brand-300)] bg-[color-mix(in_srgb,var(--color-brand-500)_9%,var(--color-surface-0))] text-[var(--color-brand-600)]" : "border-[var(--color-border-light)] bg-[var(--color-surface-0)] text-[var(--color-text-primary)] hover:border-[var(--color-brand-400)] hover:text-[var(--color-brand-600)]"}`}
+                            >
+                              {preset.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+>>>>>>> Stashed changes
                     </div>
 
-                    <div className="grid grid-cols-[140px_1fr] gap-4">
-                      {/* Left: Quick Presets */}
-                      <div className="flex flex-col gap-2 border-r border-[var(--color-border-light)] pr-3">
-                        <div className="text-[10px] font-black capitalize tracking-wider text-[var(--color-text-tertiary)]">
-                          Quick Presets
-                        </div>
-                        <div className="flex flex-col gap-1.5">
-                          {[
-                            { id: 'full-year', label: 'Full Year' },
-                            { id: 'ytd', label: 'YTD' },
-                            { id: 'this-month', label: 'This Month' },
-                            { id: 'last-month', label: 'Last Month' }
-                          ].map((preset) => {
-                            const active = draftPreset === preset.id;
-                            return (
-                              <button
-                                key={preset.id}
-                                type="button"
-                                onClick={() => applyPeriodPresetLayout(preset.id as any)}
-                                className={`rounded-lg border px-3 py-2 text-left text-xs font-black transition-colors ${active ? "border-[var(--color-brand-300)] bg-[color-mix(in_srgb,var(--color-brand-500)_9%,var(--color-surface-0))] text-[var(--color-brand-600)]" : "border-[var(--color-border-light)] bg-[var(--color-surface-0)] text-[var(--color-text-primary)] hover:border-[var(--color-brand-400)] hover:text-[var(--color-brand-600)]"}`}
-                              >
-                                {preset.label}
-                              </button>
-                            );
-                          })}
-                        </div>
+                    {/* Right: Custom Options & Base Year */}
+                    <div className="flex flex-col gap-3">
+                      <div className="text-[10px] font-black capitalize tracking-wider text-[var(--color-text-tertiary)]">
+                        Custom Month Range
                       </div>
 
-                      {/* Right: Custom Options & Base Year */}
-                      <div className="flex flex-col gap-3">
-                        <div className="text-[10px] font-black capitalize tracking-wider text-[var(--color-text-tertiary)]">
-                          Custom Month Range
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-2.5">
-                          <PeriodSelect
-                            label="Start Month"
-                            value={draftStart}
-                            options={MONTHS.map((month, index) => ({ value: index + 1, label: month }))}
-                            onChange={(value) => {
-                              setDraftPreset('custom');
-                              setDraftStart(Number(value));
-                            }}
-                          />
-                          <PeriodSelect
-                            label="End Month"
-                            value={draftEnd}
-                            options={MONTHS.map((month, index) => ({ value: index + 1, label: month }))}
-                            onChange={(value) => {
-                              setDraftPreset('custom');
-                              setDraftEnd(Number(value));
-                            }}
-                          />
-                        </div>
-
+                      <div className="grid grid-cols-2 gap-2.5">
                         <PeriodSelect
-                          label="Year (Base Year)"
-                          value={draftYear}
-                          options={availableYears.filter(yr => {
-                            if (draftCompareActive1 && yr === draftCompareYearVal1) return false;
-                            if (draftCompareActive2 && yr === draftCompareYearVal2 && yr !== 'none') return false;
-                            return true;
-                          }).map(yr => ({ value: yr, label: yr }))}
-                          onChange={(value) => setDraftYear(String(value))}
+                          label="Start Month"
+                          value={draftStart}
+                          options={MONTHS.map((month, index) => ({ value: index + 1, label: month }))}
+                          onChange={(value) => {
+                            setDraftPreset('custom');
+                            setDraftStart(Number(value));
+                          }}
+                        />
+                        <PeriodSelect
+                          label="End Month"
+                          value={draftEnd}
+                          options={MONTHS.map((month, index) => ({ value: index + 1, label: month }))}
+                          onChange={(value) => {
+                            setDraftPreset('custom');
+                            setDraftEnd(Number(value));
+                          }}
                         />
                       </div>
-                    </div>
 
-                    {/* Compare Years Section (แถวแนวนอนเดียวกันเพื่อประหยัดพื้นที่อย่างคุ้มค่า) */}
-                    <div className="mt-4 pt-3.5 border-t border-[var(--color-border-light)]">
-                      <div className="mb-2.5 text-[10px] font-black capitalize tracking-wider text-[var(--color-text-tertiary)]">
-                        Compare Target Years
-                      </div>
-
-                      <div className="grid grid-cols-3 gap-2.5">
-                        {/* Compare Year 1 */}
-                        <div className="flex flex-col gap-1 bg-[var(--color-surface-1)] p-2 rounded-lg border border-[var(--color-border-light)]">
-                          <label className="flex items-center gap-1.5 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={draftCompareActive1}
-                              onChange={(e) => setDraftCompareActive1(e.target.checked)}
-                              className="rounded border-[var(--color-border-light)] text-[var(--color-brand-600)] focus:ring-[var(--color-brand-400)]"
-                            />
-                            <span className="text-[10px] font-black text-[var(--color-text-secondary)]">Compare 1</span>
-                          </label>
-                          <div className="mt-1">
-                            <CustomSelect
-                              value={draftCompareYearVal1}
-                              disabled={!draftCompareActive1}
-                              onChange={(val: string) => {
-                                setDraftCompareYearVal1(val);
-                                setDraftKpiCompareYear(val);
-                              }}
-                              options={availableYears.filter(yr => {
-                                if (yr === draftYear) return false;
-                                if (draftCompareActive2 && yr === draftCompareYearVal2 && yr !== 'none') return false;
-                                return true;
-                              }).map(yr => ({ value: yr, label: yr }))}
-                              ariaLabel="Compare Year 1"
-                            />
-                          </div>
-                        </div>
-
-                        {/* Compare Year 2 */}
-                        <div className="flex flex-col gap-1 bg-[var(--color-surface-1)] p-2 rounded-lg border border-[var(--color-border-light)]">
-                          <label className="flex items-center gap-1.5 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={draftCompareActive2}
-                              onChange={(e) => setDraftCompareActive2(e.target.checked)}
-                              className="rounded border-[var(--color-border-light)] text-[var(--color-brand-600)] focus:ring-[var(--color-brand-400)]"
-                            />
-                            <span className="text-[10px] font-black text-[var(--color-text-secondary)]">Compare 2</span>
-                          </label>
-                          <div className="mt-1">
-                            <CustomSelect
-                              value={draftCompareYearVal2}
-                              disabled={!draftCompareActive2}
-                              onChange={(val: string) => {
-                                setDraftCompareYearVal2(val);
-                                if (val !== 'none') setDraftKpiCompareYear(val);
-                              }}
-                              options={[
-                                { value: 'none', label: 'None' },
-                                ...availableYears.filter(yr => {
-                                  if (yr === draftYear) return false;
-                                  if (draftCompareActive1 && yr === draftCompareYearVal1) return false;
-                                  return true;
-                                }).map(yr => ({ value: yr, label: yr }))
-                              ]}
-                              ariaLabel="Compare Year 2"
-                            />
-                          </div>
-                        </div>
-
-                        {/* KPI YoY Base (ตัวสลับปีเปรียบเทียบของ KPI) */}
-                        <div className="flex flex-col gap-1 bg-[var(--color-surface-1)] p-2 rounded-lg border border-[var(--color-border-light)]">
-                          <span className="text-[10px] font-black text-[var(--color-text-secondary)]">KPI YoY Base</span>
-                          <div className="mt-4">
-                            <CustomSelect
-                              value={draftKpiCompareYear}
-                              disabled={!draftCompareActive1 && !draftCompareActive2}
-                              onChange={(val: string) => setDraftKpiCompareYear(val)}
-                              options={[
-                                ...(draftCompareActive1 && draftCompareYearVal1 && draftCompareYearVal1 !== 'none' ? [{ value: draftCompareYearVal1, label: draftCompareYearVal1 }] : []),
-                                ...(draftCompareActive2 && draftCompareYearVal2 && draftCompareYearVal2 !== 'none' ? [{ value: draftCompareYearVal2, label: draftCompareYearVal2 }] : [])
-                              ].filter((opt, index, self) => self.findIndex(t => t.value === opt.value) === index)}
-                              ariaLabel="KPI YoY Base Year"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="mt-4 pt-3 border-t border-[var(--color-border-light)] flex justify-end gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setShowPeriodPopover(false)}
-                        className="rounded-lg border border-[var(--color-border-light)] bg-[var(--color-surface-0)] px-4 py-2 text-xs font-black text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="button"
-                        onClick={applyPeriodChangesLayout}
-                        className="rounded-lg border border-[var(--color-brand-300)] bg-[color-mix(in_srgb,var(--color-brand-500)_12%,var(--color-surface-0))] px-4 py-2 text-xs font-black text-[var(--color-brand-600)] hover:bg-[color-mix(in_srgb,var(--color-brand-500)_16%,var(--color-surface-0))]"
-                      >
-                        Apply
-                      </button>
+                      <PeriodSelect
+                        label="Year (Base Year)"
+                        value={draftYear}
+                        options={availableYears.filter(yr => {
+                          if (draftCompareActive1 && yr === draftCompareYearVal1) return false;
+                          if (draftCompareActive2 && yr === draftCompareYearVal2 && yr !== 'none') return false;
+                          return true;
+                        }).map(yr => ({ value: yr, label: yr }))}
+                        onChange={(value) => setDraftYear(String(value))}
+                      />
                     </div>
                   </div>
+
+                  {/* Compare Years Section (แถวแนวนอนเดียวกันเพื่อประหยัดพื้นที่อย่างคุ้มค่า) */}
+                  <div className="mt-4 pt-3.5 border-t border-[var(--color-border-light)]">
+                    <div className="mb-2.5 text-[10px] font-black capitalize tracking-wider text-[var(--color-text-tertiary)]">
+                      Compare Target Years
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2.5">
+                      {/* Compare Year 1 */}
+                      <div className="flex flex-col gap-1 bg-[var(--color-surface-1)] p-2 rounded-lg border border-[var(--color-border-light)]">
+                        <label className="flex items-center gap-1.5 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={draftCompareActive1}
+                            onChange={(e) => setDraftCompareActive1(e.target.checked)}
+                            className="rounded border-[var(--color-border-light)] text-[var(--color-brand-600)] focus:ring-[var(--color-brand-400)]"
+                          />
+                          <span className="text-[10px] font-black text-[var(--color-text-secondary)]">Compare 1</span>
+                        </label>
+                        <div className="mt-1">
+                          <CustomSelect
+                            value={draftCompareYearVal1}
+                            disabled={!draftCompareActive1}
+                            onChange={(val: string) => {
+                              setDraftCompareYearVal1(val);
+                              setDraftKpiCompareYear(val);
+                            }}
+                            options={availableYears.filter(yr => {
+                              if (yr === draftYear) return false;
+                              if (draftCompareActive2 && yr === draftCompareYearVal2 && yr !== 'none') return false;
+                              return true;
+                            }).map(yr => ({ value: yr, label: yr }))}
+                            ariaLabel="Compare Year 1"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Compare Year 2 */}
+                      <div className="flex flex-col gap-1 bg-[var(--color-surface-1)] p-2 rounded-lg border border-[var(--color-border-light)]">
+                        <label className="flex items-center gap-1.5 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={draftCompareActive2}
+                            onChange={(e) => setDraftCompareActive2(e.target.checked)}
+                            className="rounded border-[var(--color-border-light)] text-[var(--color-brand-600)] focus:ring-[var(--color-brand-400)]"
+                          />
+                          <span className="text-[10px] font-black text-[var(--color-text-secondary)]">Compare 2</span>
+                        </label>
+                        <div className="mt-1">
+                          <CustomSelect
+                            value={draftCompareYearVal2}
+                            disabled={!draftCompareActive2}
+                            onChange={(val: string) => {
+                              setDraftCompareYearVal2(val);
+                              if (val !== 'none') setDraftKpiCompareYear(val);
+                            }}
+                            options={[
+                              { value: 'none', label: 'None' },
+                              ...availableYears.filter(yr => {
+                                if (yr === draftYear) return false;
+                                if (draftCompareActive1 && yr === draftCompareYearVal1) return false;
+                                return true;
+                              }).map(yr => ({ value: yr, label: yr }))
+                            ]}
+                            ariaLabel="Compare Year 2"
+                          />
+                        </div>
+                      </div>
+
+                      {/* KPI YoY Base (ตัวสลับปีเปรียบเทียบของ KPI) */}
+                      <div className="flex flex-col gap-1 bg-[var(--color-surface-1)] p-2 rounded-lg border border-[var(--color-border-light)]">
+                        <span className="text-[10px] font-black text-[var(--color-text-secondary)]">KPI YoY Base</span>
+                        <div className="mt-4">
+                          <CustomSelect
+                            value={draftKpiCompareYear}
+                            disabled={!draftCompareActive1 && !draftCompareActive2}
+                            onChange={(val: string) => setDraftKpiCompareYear(val)}
+                            options={[
+                              ...(draftCompareActive1 && draftCompareYearVal1 && draftCompareYearVal1 !== 'none' ? [{ value: draftCompareYearVal1, label: draftCompareYearVal1 }] : []),
+                              ...(draftCompareActive2 && draftCompareYearVal2 && draftCompareYearVal2 !== 'none' ? [{ value: draftCompareYearVal2, label: draftCompareYearVal2 }] : [])
+                            ].filter((opt, index, self) => self.findIndex(t => t.value === opt.value) === index)}
+                            ariaLabel="KPI YoY Base Year"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 pt-3 border-t border-[var(--color-border-light)] flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowPeriodPopover(false)}
+                      className="rounded-lg border border-[var(--color-border-light)] bg-[var(--color-surface-0)] px-4 py-2 text-xs font-black text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={applyPeriodChangesLayout}
+                      className="rounded-lg border border-[var(--color-brand-300)] bg-[color-mix(in_srgb,var(--color-brand-500)_12%,var(--color-surface-0))] px-4 py-2 text-xs font-black text-[var(--color-brand-600)] hover:bg-[color-mix(in_srgb,var(--color-brand-500)_16%,var(--color-surface-0))]"
+                    >
+                      Apply
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
 

@@ -117,19 +117,8 @@ export default function CustomerDashboardLayout() {
               </button>
 
               {showPeriodPopover && (
-<<<<<<< Updated upstream
-                <div className="sales-gallery-period-menu absolute right-0 z-[1000] mt-2 period-popover-animate" style={{ width: 480 }}>
-                    <div className="flex items-center justify-between border-b border-[var(--color-border-light)] pb-2.5 mb-3">
-                      <span className="text-xs font-black capitalize tracking-wider text-[var(--color-text-primary)]">
-                        Period Setup
-                      </span>
-                      <span className="text-[11px] font-bold text-[var(--color-text-secondary)]">
-                        {selectedYears[0]} {monthStart === 1 && monthEnd === 12 ? 'Full Year' : `(${MONTHS[monthStart - 1]}-${MONTHS[monthEnd - 1]})`}
-                        {compareActive1 && ` vs ${compareYearVal1}`}
-                      </span>
-=======
-                /* ตัวกรองตัวใหม่: Period Setup สำหรับทุกหน้าจอ */
                 <div className="sales-gallery-period-menu absolute right-0 z-[110] mt-2 period-popover-animate" style={{ width: 480, position: 'absolute', top: '100%' }}>
+                  {/* ตัวกรองตัวใหม่: Period Setup สำหรับทุกหน้าจอ */}
                   <div className="flex items-center justify-between border-b border-[var(--color-border-light)] pb-2.5 mb-3">
                     <span className="text-xs font-black capitalize tracking-wider text-[var(--color-text-primary)]">
                       Period Setup
@@ -166,7 +155,6 @@ export default function CustomerDashboardLayout() {
                           );
                         })}
                       </div>
->>>>>>> Stashed changes
                     </div>
 
                     {/* Right: Custom Options & Base Year */}

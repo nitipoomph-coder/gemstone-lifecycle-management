@@ -1,4 +1,5 @@
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList, Cell } from 'recharts';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ALL_GROUPS } from '../../config/customerGroups';
 import type { Metric, ChartDatum } from '../../hooks/useCustomerSalesData';
 
@@ -98,6 +99,23 @@ export function CustomerSalesChart({
   sortedSel,
   activeYears
 }: CustomerSalesChartProps) {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  const handleBarClick = (seriesId: string, seriesType: 'group' | 'year') => {
+    const params = new URLSearchParams(searchParams);
+    
+    // If they click a specific group bar, we isolate the filter to that group
+    if (seriesType === 'group') {
+      params.set('groups', seriesId);
+    } 
+    // If they click a specific year bar, we isolate the filter to that year
+    else if (seriesType === 'year') {
+      params.set('years', seriesId);
+    }
+    
+    navigate(`/dashboard/customer/matrix?${params.toString()}`);
+  };
   const formatAxisValue = (value: number): string => {
     if (value >= 1000000) return (value / 1000000).toFixed(1) + 'M';
     if (value >= 1000) return (value / 1000).toFixed(1) + 'K';
@@ -125,9 +143,11 @@ export function CustomerSalesChart({
               isAnimationActive={true}
               animationDuration={600}
               animationEasing="ease-in-out"
+              onClick={() => handleBarClick(gId, 'group')}
+              style={{ cursor: 'pointer' }}
             >
               {showLabels && (
-                <LabelList dataKey={gId} position="top" formatter={(val: unknown) => Number(val) > 0 ? formatAxisValue(Number(val)).replace('$', '') : ''} style={{ fontSize: 10, fill: 'var(--color-text-primary)', fontWeight: 800 }} />
+                <LabelList dataKey={gId} position="top" formatter={(val: unknown) => Number(val) > 0 ? formatAxisValue(Number(val)).replace('$', '') : ''} style={{ fontSize: 10, fill: 'var(--color-text-primary)', fontWeight: 800, pointerEvents: 'none' }} />
               )}
             </Bar>
           );
@@ -144,9 +164,11 @@ export function CustomerSalesChart({
               isAnimationActive={true}
               animationDuration={600}
               animationEasing="ease-in-out"
+              onClick={() => handleBarClick(y, 'year')}
+              style={{ cursor: 'pointer' }}
             >
               {showLabels && (
-                <LabelList dataKey={y} position="top" formatter={(val: unknown) => Number(val) > 0 ? formatAxisValue(Number(val)).replace('$', '') : ''} style={{ fontSize: 10, fill: 'var(--color-text-primary)', fontWeight: 800 }} />
+                <LabelList dataKey={y} position="top" formatter={(val: unknown) => Number(val) > 0 ? formatAxisValue(Number(val)).replace('$', '') : ''} style={{ fontSize: 10, fill: 'var(--color-text-primary)', fontWeight: 800, pointerEvents: 'none' }} />
               )}
             </Bar>
           );

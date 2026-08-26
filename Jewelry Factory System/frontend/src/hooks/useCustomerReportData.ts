@@ -15,6 +15,8 @@ export interface CustomerSummaryRecord {
   topItemQty?: number | string;
   monthly?: Record<string, Record<string, number | string>>;
   monthlyQty?: Record<string, Record<string, number | string>>;
+  weekly?: Record<string, Record<string, number | string>>;
+  weeklyQty?: Record<string, Record<string, number | string>>;
 }
 
 export interface CustomerReportMatrixRow extends Record<string, unknown> {
@@ -48,7 +50,7 @@ export function useCustomerReportData() {
   }, [searchParams, setSearchParams]);
 
   const requestedCustomers = useMemo(() => csv(searchParams.get('customers')).map(customer => customer.toUpperCase()), [searchParams]);
-  const requestedViewMode: 'ytd' | 'quarterly' | 'monthly' = searchParams.get('view') === 'monthly' ? 'monthly' : searchParams.get('view') === 'quarterly' ? 'quarterly' : 'ytd';
+  const requestedViewMode: 'ytd' | 'quarterly' | 'monthly' | 'weekly' = searchParams.get('view') === 'monthly' ? 'monthly' : searchParams.get('view') === 'quarterly' ? 'quarterly' : searchParams.get('view') === 'weekly' ? 'weekly' : 'ytd';
 
   const fmt = useCallback((val: number) => {
     if (metric === 'qty') return val.toLocaleString(undefined, { maximumFractionDigits: 0 });
@@ -67,7 +69,7 @@ export function useCustomerReportData() {
   const [loading, setLoading] = useState(true);
   const [isFilterOpen, setIsFilterOpen] = useState(true);
 
-  const [viewMode, setViewMode] = useState<'ytd' | 'quarterly' | 'monthly'>(requestedViewMode);
+  const [viewMode, setViewMode] = useState<'ytd' | 'quarterly' | 'monthly' | 'weekly'>(requestedViewMode);
   const [aggregationMode, setAggregationMode] = useState<'group' | 'customer'>('group');
 
   useEffect(() => {
@@ -173,6 +175,7 @@ export function useCustomerReportData() {
           groupRows[gId][`isTrulyNew_${yr}`] = false;
           displayMonths.forEach((m: string) => { groupRows[gId][`${yr}_${m}`] = 0; });
           QUARTERS.forEach(q => { groupRows[gId][`${yr}_${q}`] = 0; });
+          for (let w = 1; w <= 53; w++) { groupRows[gId][`${yr}_W${w}`] = 0; }
           groupRows[gId][`${yr}_total`] = 0;
         });
       });
@@ -195,6 +198,11 @@ export function useCustomerReportData() {
           QUARTERS.forEach(q => {
             row[`${yr}_${q}`] = Q_MAP[q].reduce((s, m) => s + Number(row[`${yr}_${m}`] || 0), 0);
           });
+          const weekSource = metric === 'qty' ? cust.weeklyQty : cust.weekly;
+          for (let w = 1; w <= 53; w++) {
+            const wVal = weekSource?.[yr]?.[String(w)] || 0;
+            row[`${yr}_W${w}`] = Number(row[`${yr}_W${w}`]) + Number(wVal);
+          }
         });
       });
 
@@ -213,6 +221,7 @@ export function useCustomerReportData() {
             custRows[cId][`isTrulyNew_${yr}`] = false;
             displayMonths.forEach((m: string) => { custRows[cId][`${yr}_${m}`] = 0; });
             QUARTERS.forEach(q => { custRows[cId][`${yr}_${q}`] = 0; });
+            for (let w = 1; w <= 53; w++) { custRows[cId][`${yr}_W${w}`] = 0; }
             custRows[cId][`${yr}_total`] = 0;
           });
         }
@@ -230,6 +239,11 @@ export function useCustomerReportData() {
           QUARTERS.forEach(q => {
             row[`${yr}_${q}`] = Q_MAP[q].reduce((s, m) => s + Number(row[`${yr}_${m}`] || 0), 0);
           });
+          const weekSource = metric === 'qty' ? cust.weeklyQty : cust.weekly;
+          for (let w = 1; w <= 53; w++) {
+            const wVal = weekSource?.[yr]?.[String(w)] || 0;
+            row[`${yr}_W${w}`] = Number(row[`${yr}_W${w}`]) + Number(wVal);
+          }
         });
       });
 
@@ -247,12 +261,14 @@ export function useCustomerReportData() {
       colTotals[`${yr}_total`] = 0;
       displayMonths.forEach((m: string) => { colTotals[`${yr}_${m}`] = 0; });
       QUARTERS.forEach(q => { colTotals[`${yr}_${q}`] = 0; });
+      for (let w = 1; w <= 53; w++) { colTotals[`${yr}_W${w}`] = 0; }
     });
     rows.forEach(r => {
       activeYears.forEach((yr: string) => {
         colTotals[`${yr}_total`] += Number(r[`${yr}_total`] || 0);
         displayMonths.forEach((m: string) => { colTotals[`${yr}_${m}`] += Number(r[`${yr}_${m}`] || 0); });
         QUARTERS.forEach(q => { colTotals[`${yr}_${q}`] += Number(r[`${yr}_${q}`] || 0); });
+        for (let w = 1; w <= 53; w++) { colTotals[`${yr}_W${w}`] += Number(r[`${yr}_W${w}`] || 0); }
       });
     });
 

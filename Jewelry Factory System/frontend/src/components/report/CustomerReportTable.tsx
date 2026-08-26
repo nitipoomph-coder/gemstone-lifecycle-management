@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowDown, ArrowUp, DollarSign, Hash, RefreshCw, RotateCcw, Search } from 'lucide-react';
 import { ErpButton, ErpSegmentedControl } from '../ui/ErpButtons';
 import './CustomerReportTable.css';
@@ -15,8 +16,8 @@ interface CustomerReportRow extends Record<string, unknown> {
 interface CustomerReportTableProps {
   loading: boolean;
   baseYear: string;
-  viewMode: 'ytd' | 'quarterly' | 'monthly';
-  setViewMode?: (v: 'ytd' | 'quarterly' | 'monthly') => void;
+  viewMode: 'ytd' | 'quarterly' | 'monthly' | 'weekly';
+  setViewMode?: (v: 'ytd' | 'quarterly' | 'monthly' | 'weekly') => void;
   aggregationMode?: 'group' | 'customer';
   setAggregationMode?: (v: 'group' | 'customer') => void;
   tableData: {
@@ -72,6 +73,8 @@ export default function CustomerReportTable({
   setSearchQuery,
   onResetMatrix,
 }: CustomerReportTableProps) {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const activeGrowthCount = displayYears.length > 1 ? growthComparisons.length : 0;
   const [searchDraft, setSearchDraft] = React.useState(searchQuery);
   const [resetPending, setResetPending] = React.useState(false);
@@ -118,7 +121,20 @@ export default function CustomerReportTable({
     setSortOrder('desc');
   };
 
-
+  const handleCustomerClick = (custId: string) => {
+    const params = new URLSearchParams(searchParams);
+    
+    // Drop the opposing filter to avoid contradictions
+    if (aggregationMode === 'group') {
+      params.set('groups', custId);
+      params.delete('customers');
+    } else {
+      params.set('customers', custId);
+      params.delete('groups');
+    }
+    
+    navigate(`/dashboard/sales-customer-detail?${params.toString()}`);
+  };
 
   const skeletonYearCount = Math.max(displayYears.length, 2);
   const skeletonMonthCount = MONTHS.length;
@@ -270,7 +286,8 @@ export default function CustomerReportTable({
             options={[
               { value: 'ytd', label: 'Yearly' },
               { value: 'quarterly', label: 'Quarterly' },
-              { value: 'monthly', label: 'Monthly' }
+              { value: 'monthly', label: 'Monthly' },
+              { value: 'weekly', label: 'Weekly' }
             ]}
           />
         )}
@@ -363,7 +380,15 @@ export default function CustomerReportTable({
                       <tr><td colSpan={6} className="customer-matrix-empty">No customers match the current filter.</td></tr>
                     ) : tableData.rows.map((row) => (
                       <tr key={row.id} className="customer-matrix-row">
-                        <td className="customer-matrix-td customer-matrix-td--customer">{row.label}</td>
+                        <td className="customer-matrix-td customer-matrix-td--customer">
+                          <button 
+                            onClick={() => handleCustomerClick(row.id)} 
+                            style={{ background: 'none', border: 'none', color: 'var(--color-brand-600)', fontWeight: 900, cursor: 'pointer', padding: 0, textAlign: 'left', fontFamily: 'inherit', maxWidth: '100%' }}
+                            title={`View details for ${row.label}`}
+                          >
+                            {row.label}
+                          </button>
+                        </td>
                         {['Q1', 'Q2', 'Q3', 'Q4'].map((q) => (
                           <td key={q} className="customer-matrix-td customer-matrix-td--number">{renderCell(Number(row[`${displayYears[0]}_${q}`] || 0))}</td>
                         ))}
@@ -534,7 +559,15 @@ export default function CustomerReportTable({
                   <tr><td colSpan={1 + displayYears.length * (displayMonths.length + 1) + activeGrowthCount * 2} className="customer-matrix-empty">No customers match the current filter.</td></tr>
                 ) : tableData.rows.map((row) => (
                   <tr key={row.id} className="customer-matrix-row">
-                    <td className="customer-matrix-td customer-matrix-td--customer">{row.label}</td>
+                    <td className="customer-matrix-td customer-matrix-td--customer">
+                      <button 
+                        onClick={() => handleCustomerClick(row.id)} 
+                        style={{ background: 'none', border: 'none', color: 'var(--color-brand-600)', fontWeight: 900, cursor: 'pointer', padding: 0, textAlign: 'left', fontFamily: 'inherit', maxWidth: '100%' }}
+                        title={`View details for ${row.label}`}
+                      >
+                        {row.label}
+                      </button>
+                    </td>
                     {displayYears.map((yr) => (
                       <React.Fragment key={yr}>
                         {displayMonths.map((m) => {
@@ -591,7 +624,7 @@ export default function CustomerReportTable({
 
 
             </>
-          ) : (
+          ) : viewMode === 'monthly' ? (
             <>
               <thead>
                 <tr>
@@ -633,7 +666,13 @@ export default function CustomerReportTable({
                 ) : tableData.rows.map((row) => (
                   <tr key={row.id} className="customer-matrix-row">
                     <td className="customer-matrix-td customer-matrix-td--customer">
-                      <span>{row.label}</span>
+                      <button 
+                        onClick={() => handleCustomerClick(row.id)} 
+                        style={{ background: 'none', border: 'none', color: 'var(--color-brand-600)', fontWeight: 900, cursor: 'pointer', padding: 0, textAlign: 'left', fontFamily: 'inherit', maxWidth: '100%' }}
+                        title={`View details for ${row.label}`}
+                      >
+                        {row.label}
+                      </button>
                       {metric === 'qty' && row.topItem && displayYears.some(yr => Number(row[`${yr}_total`] || 0) > 0) && <span className="customer-matrix-top-item">Top: {row.topItem} ({fmt(Number(row.topItemQty || 0))} pcs)</span>}
                     </td>
                     {displayMonths.map((m) => (
@@ -685,6 +724,74 @@ export default function CustomerReportTable({
                     ))}
                     {displayYears.map((yr) => (
                       <td key={`tot_row_m_tot_${yr}`} className={totalCellClassName(yr)} style={{ textAlign: 'center' }}>
+                        {renderCell(totalsRow[`${yr}_total`] || 0)}
+                      </td>
+                    ))}
+                  </tr>
+                </tfoot>
+              )}
+            </>
+          ) : (
+            <>
+              <thead>
+                <tr>
+                  {customerIdTh(2)}
+                  {Array.from({ length: 53 }, (_, i) => i + 1).map((w) => (
+                    <th key={`w_${w}`} colSpan={displayYears.length} className="customer-matrix-th customer-matrix-th--top">W{w}</th>
+                  ))}
+                  <th colSpan={displayYears.length} className="customer-matrix-th customer-matrix-th--top">{metric === 'qty' ? 'Grand Total QTY' : 'Grand Total Sales'}</th>
+                </tr>
+                <tr>
+                  {Array.from({ length: 53 }, (_, i) => i + 1).map((w) => (
+                    <React.Fragment key={`w_sub_${w}`}>
+                      {displayYears.map((yr) => <th key={`${w}_${yr}`} className={`customer-matrix-th customer-matrix-th--sub customer-matrix-td--number`}>{yr}</th>)}
+                    </React.Fragment>
+                  ))}
+                  {displayYears.map((yr) => <th key={`tot_hdr_${yr}`} className={totalHeaderClassName(yr)}>{yr} Total</th>)}
+                </tr>
+              </thead>
+
+              <tbody>
+                {tableData.rows.length === 0 ? (
+                  <tr><td colSpan={1 + 53 * displayYears.length + displayYears.length} className="customer-matrix-empty">No customers match the current filter.</td></tr>
+                ) : tableData.rows.map((row) => (
+                  <tr key={row.id} className="customer-matrix-row">
+                    <td className="customer-matrix-td customer-matrix-td--customer">
+                      <button 
+                        onClick={() => handleCustomerClick(row.id)} 
+                        style={{ background: 'none', border: 'none', color: 'var(--color-brand-600)', fontWeight: 900, cursor: 'pointer', padding: 0, textAlign: 'left', fontFamily: 'inherit', maxWidth: '100%' }}
+                        title={`View details for ${row.label}`}
+                      >
+                        {row.label}
+                      </button>
+                    </td>
+                    {Array.from({ length: 53 }, (_, i) => i + 1).map((w) => (
+                      <React.Fragment key={`w_cell_${w}`}>
+                        {displayYears.map((yr) => {
+                          const val = Number(row[`${yr}_W${w}`] || 0);
+                          return <td key={`${w}_${yr}`} className={`customer-matrix-td customer-matrix-td--number`}>{renderCell(val)}</td>;
+                        })}
+                      </React.Fragment>
+                    ))}
+                    {displayYears.map((yr) => <td key={`total_${yr}`} className={totalCellClassName(yr)}>{renderCell(Number(row[`${yr}_total`] || 0))}</td>)}
+                  </tr>
+                ))}
+              </tbody>
+              {totalsRow && (
+                <tfoot className="customer-matrix-footer">
+                  <tr className="customer-matrix-row customer-matrix-row--total">
+                    <td className="customer-matrix-td customer-matrix-td--customer customer-matrix-footer-label" style={{ textAlign: 'center' }}>Total Row</td>
+                    {Array.from({ length: 53 }, (_, i) => i + 1).map((w) => (
+                      <React.Fragment key={`tot_row_w_${w}`}>
+                        {displayYears.map((yr) => (
+                          <td key={`tot_row_${w}_${yr}`} className={`customer-matrix-td customer-matrix-td--number`} style={{ textAlign: 'center' }}>
+                            {renderCell(totalsRow[`${yr}_W${w}`] || 0)}
+                          </td>
+                        ))}
+                      </React.Fragment>
+                    ))}
+                    {displayYears.map((yr) => (
+                      <td key={`tot_row_w_tot_${yr}`} className={totalCellClassName(yr)} style={{ textAlign: 'center' }}>
                         {renderCell(totalsRow[`${yr}_total`] || 0)}
                       </td>
                     ))}

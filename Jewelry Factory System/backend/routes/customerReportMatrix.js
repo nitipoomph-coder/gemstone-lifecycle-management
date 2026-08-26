@@ -76,6 +76,7 @@ router.get('/customer-summary', async (req, res) => {
         SalesName,
         OrdYear,
         OrdMonth,
+        OrdWeek,
         ItemAmnt,
         ItemQty,
         ItemNo,
@@ -95,10 +96,11 @@ router.get('/customer-summary', async (req, res) => {
         MAX(SalesName) AS salesName,
         OrdYear AS yr,
         OrdMonth AS mth,
+        OrdWeek AS wk,
         SUM(ItemAmnt) AS totalSales,
         SUM(ItemQty) AS totalQty
       FROM #FilteredSales
-      GROUP BY CustCode, OrdYear, OrdMonth;
+      GROUP BY CustCode, OrdYear, OrdMonth, OrdWeek;
 
       -- [Recordset 1] Top Item All-time
       WITH ItemTotals AS (
@@ -196,8 +198,10 @@ router.get('/customer-summary', async (req, res) => {
           salesName: row.salesName,
           data: {},
           monthly: {},
+          weekly: {},
           dataQty: {},
           monthlyQty: {},
+          weeklyQty: {},
           currentMonthSales: 0,
           topItem: topItemMap[row.id]?.topItem || null,
           topItemQty: topItemMap[row.id]?.topItemQty || 0,
@@ -228,6 +232,16 @@ router.get('/customer-summary', async (req, res) => {
         custMap[row.id].monthlyQty[yrStr] = {};
       }
       custMap[row.id].monthlyQty[yrStr][mthStr] = row.totalQty;
+
+      // Weekly Data
+      const wkStr = row.wk ? row.wk.toString() : 'Unknown';
+      if (!custMap[row.id].weekly[yrStr]) custMap[row.id].weekly[yrStr] = {};
+      if (!custMap[row.id].weekly[yrStr][wkStr]) custMap[row.id].weekly[yrStr][wkStr] = 0;
+      custMap[row.id].weekly[yrStr][wkStr] += row.totalSales;
+
+      if (!custMap[row.id].weeklyQty[yrStr]) custMap[row.id].weeklyQty[yrStr] = {};
+      if (!custMap[row.id].weeklyQty[yrStr][wkStr]) custMap[row.id].weeklyQty[yrStr][wkStr] = 0;
+      custMap[row.id].weeklyQty[yrStr][wkStr] += row.totalQty;
 
       if (row.yr === curYear && row.mth === curMonth) {
         custMap[row.id].currentMonthSales += row.totalSales;

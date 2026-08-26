@@ -5,7 +5,7 @@
 -- Business Logic: 100% Aligned with Production "Yearly Sales Summary By Customer"
 -- =========================================================================
 
-CREATE OR ALTER VIEW dbo.VW_Web_SalesDashboard
+ALTER VIEW dbo.VW_Web_SalesDashboard
 AS
 SELECT        
     HD.OrdID, 
@@ -13,6 +13,7 @@ SELECT
     HD.OrdDate, 
     YEAR(HD.OrdDate) AS OrdYear, 
     MONTH(HD.OrdDate) AS OrdMonth, 
+    DATEPART(isowk, HD.OrdDate) AS OrdWeek,
     HD.DueDate,
     ISNULL(HD.CustDueDate, HD.DueDate) AS CustDueDate,
     HD.CustCode, 

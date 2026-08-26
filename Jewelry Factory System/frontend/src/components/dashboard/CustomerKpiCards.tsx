@@ -1,4 +1,5 @@
 import type { Metric } from '../../hooks/useCustomerSalesData';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 const YEAR_COLORS = ['var(--color-chart-1)', 'var(--color-chart-2)', 'var(--color-chart-3)', 'var(--color-chart-4)', 'var(--color-chart-5)', 'var(--color-chart-6)'];
 
@@ -40,6 +41,19 @@ export function CustomerKpiCards({
   monthlySeries,
   sortedSel
 }: CustomerKpiCardsProps) {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  const handleCardClick = (id: string, type: 'year' | 'group') => {
+    const params = new URLSearchParams(searchParams);
+    if (type === 'year') {
+      params.set('years', id);
+    } else if (type === 'group') {
+      params.set('groups', id);
+    }
+    navigate(`/dashboard/customer/matrix?${params.toString()}`);
+  };
+
   return (
     <div className="sales-summary-cards" key={`kpis-${activeYears.join(',')}-${sortedSel.join(',')}-${monthlySeries}`}>
       {/* Year KPIs */}
@@ -55,6 +69,7 @@ export function CustomerKpiCards({
           <div
             key={`year-${yData.year}`}
             className="kpi-card"
+            onClick={() => handleCardClick(yData.year, 'year')}
             style={{
               background: 'var(--color-surface-0)',
               border: '1px solid var(--color-border-light)',
@@ -66,6 +81,7 @@ export function CustomerKpiCards({
               flexDirection: 'column',
               gap: 4,
               transition: 'all 140ms ease-in-out',
+              cursor: 'pointer'
             }}
           >
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -123,6 +139,7 @@ export function CustomerKpiCards({
           <div
             key={`grp-${gData.id}`}
             className="kpi-card"
+            onClick={() => handleCardClick(gData.id, 'group')}
             style={{
               background: 'var(--color-surface-0)',
               border: '1px solid var(--color-border-light)',
@@ -134,6 +151,7 @@ export function CustomerKpiCards({
               flexDirection: 'column',
               gap: 4,
               transition: 'all 140ms ease-in-out',
+              cursor: 'pointer'
             }}
           >
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>

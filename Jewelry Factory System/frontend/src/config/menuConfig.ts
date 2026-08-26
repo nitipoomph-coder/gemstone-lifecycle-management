@@ -51,7 +51,7 @@ export const menuConfig: NavMenuGroup[] = [
     label: 'Production',
     icon: 'layout-list',
     accentColor: 'var(--color-brand-500)',
-    roles: ['admin'],
+    roles: ['admin', 'sales'],
     items: [
       { id: 'po-tracker', label: 'PO Tracker', path: '/po-tracker' },
     ],

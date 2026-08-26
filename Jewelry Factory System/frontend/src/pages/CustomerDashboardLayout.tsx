@@ -1,11 +1,11 @@
 import { Outlet } from 'react-router-dom';
 import Topbar from '../components/layout/Topbar';
 import CustomSelect from '../components/ui/CustomSelect';
-import { CalendarDays, ChevronDown, Users, BarChart3, Table2, LineChart } from 'lucide-react';
+import { CalendarDays, ChevronDown, Users, BarChart3, Table2, LineChart, Clock, Package } from 'lucide-react';
 import { ALL_GROUPS } from '../config/customerGroups';
 import { ErpSegmentedControl } from '../components/ui/ErpButtons';
 import './CustomerDashboard.css';
-import { useCustomerDashboardLayout, MONTHS } from '../hooks/useCustomerDashboardLayout';
+import { useCustomerDashboardLayout, MONTHS, DATE_BASIS_OPTIONS, PRODUCT_TYPES } from '../hooks/useCustomerDashboardLayout';
 
 export default function CustomerDashboardLayout() {
   const {
@@ -49,8 +49,15 @@ export default function CustomerDashboardLayout() {
     setShowGroupPopover,
     periodPopoverRef,
     groupPopoverRef,
+    typePopoverRef,
+    showTypePopover,
+    setShowTypePopover,
     toggleGroup,
-    setSelGroups
+    setSelGroups,
+    dateBasis,
+    setDateBasis,
+    productType,
+    setProductType
   } = useCustomerDashboardLayout();
 
   const summaryBreadcrumb = [
@@ -82,7 +89,12 @@ export default function CustomerDashboardLayout() {
               />
             </div>
 
-            <div style={{ width: 1, height: 24, background: 'var(--color-border-light)', margin: '0 4px' }} />
+
+          </div>
+        }
+        bottomContent={
+          <div className="sales-global-filters flex items-center flex-wrap gap-2 py-1 px-4 w-full">
+            <div className="flex items-center gap-2">
 
             {/* Period Dropdown Popover */}
             <div style={{ position: 'relative' }} ref={periodPopoverRef}>
@@ -95,13 +107,14 @@ export default function CustomerDashboardLayout() {
                   setShowPeriodPopover(!showPeriodPopover);
                 }}
                 style={{
-                  display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px',
-                  background: showPeriodPopover ? 'var(--color-surface-1)' : 'var(--color-surface-0)',
-                  border: '1px solid var(--color-border-light)', borderRadius: 8,
+                  display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px',
+                  background: showPeriodPopover ? 'var(--color-surface-2)' : 'transparent',
+                  border: 'none', borderRadius: 6,
                   fontSize: '0.85rem', fontWeight: 900, color: 'var(--color-text-primary)',
                   cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'var(--font-display)',
-                  boxShadow: "0 2px 4px color-mix(in srgb, var(--color-surface-900) 3%, transparent)"
+                  transition: 'background 0.15s'
                 }}
+                className="hover:bg-[var(--color-surface-1)]"
               >
                 <CalendarDays size={14} style={{ color: 'var(--color-brand-500)' }} />
                 <>
@@ -117,7 +130,7 @@ export default function CustomerDashboardLayout() {
               </button>
 
               {showPeriodPopover && (
-                <div className="sales-gallery-period-menu absolute right-0 z-[110] mt-2 period-popover-animate" style={{ width: 480, position: 'absolute', top: '100%' }}>
+                <div className="sales-gallery-period-menu absolute left-0 z-[110] mt-2 period-popover-animate" style={{ width: 480, position: 'absolute', top: '100%' }}>
                   {/* ตัวกรองตัวใหม่: Period Setup สำหรับทุกหน้าจอ */}
                   <div className="flex items-center justify-between border-b border-[var(--color-border-light)] pb-2.5 mb-3">
                     <span className="text-xs font-black capitalize tracking-wider text-[var(--color-text-primary)]">
@@ -310,13 +323,14 @@ export default function CustomerDashboardLayout() {
                 type="button"
                 onClick={() => setShowGroupPopover(!showGroupPopover)}
                 style={{
-                  display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px',
-                  background: showGroupPopover ? 'var(--color-surface-1)' : 'var(--color-surface-0)',
-                  border: '1px solid var(--color-border-light)', borderRadius: 8,
+                  display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px',
+                  background: showGroupPopover ? 'var(--color-surface-2)' : 'transparent',
+                  border: 'none', borderRadius: 6,
                   fontSize: '0.85rem', fontWeight: 900, color: 'var(--color-text-primary)',
                   cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'var(--font-display)',
-                  boxShadow: "0 2px 4px color-mix(in srgb, var(--color-surface-900) 3%, transparent)"
+                  transition: 'background 0.15s'
                 }}
+                className="hover:bg-[var(--color-surface-1)]"
               >
                 <Users size={14} style={{ color: 'var(--color-brand-500)' }} />
                 <span>Groups: <strong>{selGroups.length}/{ALL_GROUPS.length}</strong></span>
@@ -380,12 +394,70 @@ export default function CustomerDashboardLayout() {
               )}
             </div>
 
+            {/* Date Basis Toggle */}
+            <div style={{ display: 'flex', alignItems: 'center', padding: '0 4px' }}>
+              <ErpSegmentedControl
+                ariaLabel="Date Basis"
+                value={dateBasis}
+                onChange={(v) => setDateBasis(v as any)}
+                options={DATE_BASIS_OPTIONS.map(o => ({ value: o.value, label: o.label, icon: <Clock size={12} /> }))}
+              />
+            </div>
+
+            {/* Product Type Filter */}
+            <div style={{ position: 'relative' }} ref={typePopoverRef}>
+              <button
+                type="button"
+                onClick={() => setShowTypePopover(!showTypePopover)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px',
+                  background: showTypePopover ? 'var(--color-surface-2)' : 'transparent',
+                  border: 'none', borderRadius: 6,
+                  fontSize: '0.85rem', fontWeight: 900, color: productType !== 'ALL' ? 'var(--color-brand-600)' : 'var(--color-text-primary)',
+                  cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'var(--font-display)',
+                  transition: 'background 0.15s'
+                }}
+                className="hover:bg-[var(--color-surface-1)]"
+              >
+                <Package size={14} style={{ color: productType !== 'ALL' ? 'var(--color-brand-600)' : 'var(--color-text-secondary)' }} />
+                <span>
+                  {PRODUCT_TYPES.find(t => t.value === productType)?.label || 'All Types'}
+                </span>
+                <ChevronDown size={14} style={{ color: 'var(--color-text-tertiary)', transform: showTypePopover ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
+              </button>
+
+              {showTypePopover && (
+                <div className="absolute left-0 z-[110] mt-1 w-48 rounded-xl border border-[var(--color-border-light)] bg-[var(--color-surface-0)] p-1.5" style={{ boxShadow: '0 8px 20px -8px color-mix(in srgb, var(--color-surface-900) 40%, transparent)' }}>
+                  {PRODUCT_TYPES.map(t => (
+                    <button
+                      key={t.value}
+                      type="button"
+                      onClick={() => { setProductType(t.value); setShowTypePopover(false); }}
+                      className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-[0.85rem] font-bold transition-colors"
+                      style={{ 
+                        color: productType === t.value ? 'var(--color-brand-600)' : 'var(--color-text-primary)',
+                        background: productType === t.value ? 'var(--color-brand-50)' : 'transparent'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (productType !== t.value) e.currentTarget.style.background = 'var(--color-surface-1)';
+                      }}
+                      onMouseLeave={(e) => {
+                        if (productType !== t.value) e.currentTarget.style.background = 'transparent';
+                      }}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            </div>
           </div>
         }
       />
 
       {/* Shared Layout Main Content Area */}
-      <Outlet context={{ selectedYears, selectedMonths, selGroups, availableYears, kpiCompareYear, setKpiCompareYear }} />
+      <Outlet context={{ selectedYears, selectedMonths, selGroups, availableYears, kpiCompareYear, setKpiCompareYear, dateBasis, productType }} />
     </>
   );
 }

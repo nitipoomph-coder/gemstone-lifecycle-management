@@ -140,7 +140,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       <div className="flex items-center gap-2 px-5 pt-5 pb-3">
         <button
           onClick={() => navigate('/')}
-          className="min-w-0 flex-1 text-left transition-opacity hover:opacity-80"
+          className="min-w-0 flex-1 text-left transition-opacity hover:opacity-80 select-none cursor-pointer"
         >
           <div
             className="truncate text-[20px] font-bold tracking-wider"
@@ -167,7 +167,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         </button>
       </div>
 
-      <div className="brand-accent-line mx-5 mb-3" />
+      <div style={{ height: 1, background: 'var(--color-border-light)', margin: '0 20px 12px 20px', opacity: 0.5 }} />
 
       {/* Navigation with scroll fade wrapper */}
       <div className={`flex-1 overflow-hidden scroll-fade-container ${scrollState !== 'top' ? 'fade-top' : ''} ${scrollState !== 'bottom' ? 'fade-bottom' : ''}`}>

@@ -237,25 +237,25 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
 
               {/* Recharts Component */}
               <div className="sales-summary-chart-body" style={{ padding: '10px 8px 8px' }}>
-                <CustomerSalesChart 
-                  chartData={chartData} 
-                  metric={metric} 
-                  mode={mode} 
-                  monthlySeries={monthlySeries} 
-                  showLabels={showLabels} 
-                  sortedSel={sortedSel} 
-                  activeYears={activeYears} 
+                <CustomerSalesChart
+                  chartData={chartData}
+                  metric={metric}
+                  mode={mode}
+                  monthlySeries={monthlySeries}
+                  showLabels={showLabels}
+                  sortedSel={sortedSel}
+                  activeYears={activeYears}
                 />
               </div>
             </div>
 
-            <CustomerKpiCards 
-              yearSummaries={yearSummaries} 
-              groupSummaries={summaries} 
-              activeYears={activeYears} 
-              metric={metric} 
-              monthlySeries={monthlySeries} 
-              sortedSel={sortedSel} 
+            <CustomerKpiCards
+              yearSummaries={yearSummaries}
+              groupSummaries={summaries}
+              activeYears={activeYears}
+              metric={metric}
+              monthlySeries={monthlySeries}
+              sortedSel={sortedSel}
             />
 
           </div>

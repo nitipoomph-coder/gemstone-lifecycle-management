@@ -104,16 +104,16 @@ export function CustomerSalesChart({
 
   const handleBarClick = (seriesId: string, seriesType: 'group' | 'year') => {
     const params = new URLSearchParams(searchParams);
-    
+
     // If they click a specific group bar, we isolate the filter to that group
     if (seriesType === 'group') {
       params.set('groups', seriesId);
-    } 
+    }
     // If they click a specific year bar, we isolate the filter to that year
     else if (seriesType === 'year') {
       params.set('years', seriesId);
     }
-    
+
     navigate(`/dashboard/customer/matrix?${params.toString()}`);
   };
   const formatAxisValue = (value: number): string => {

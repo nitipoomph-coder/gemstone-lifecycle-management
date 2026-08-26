@@ -41,6 +41,14 @@ router.get('/customer-summary', async (req, res) => {
     const years = (req.query.years || '').split(',').map(y => parseInt(y)).filter(y => !isNaN(y));
     if (years.length === 0) years.push(new Date().getFullYear());
     const months = req.query.months ? req.query.months.split(',').map(m => parseInt(m)).filter(m => !isNaN(m)) : [];
+    
+    // Parse filters
+    const dateBasisParam = (req.query.dateBasis || 'orddate').toLowerCase();
+    let dateColumn = 'OrdDate';
+    if (dateBasisParam === 'duedate') dateColumn = 'DueDate';
+    if (dateBasisParam === 'custdate') dateColumn = 'CustDueDate';
+    
+    const typeParam = req.query.type || 'ALL';
 
     const request = pool.request();
     // SARGable date range helper
@@ -62,7 +70,13 @@ router.get('/customer-summary', async (req, res) => {
       return '(' + conditions.join(' OR ') + ')';
     }
 
-    const sargableDateCondition = buildDateRangeCondition('OrdDate', years, months);
+    const sargableDateCondition = buildDateRangeCondition(dateColumn, years, months);
+    
+    let typeCondition = '';
+    if (typeParam !== 'ALL') {
+      typeCondition = ` AND ProductType = @productType`;
+      request.input('productType', sql.NVarChar, typeParam);
+    }
 
     // ✅ OPTIMIZED: สร้าง Temporary Table และดึงข้อมูล 4 ชุดในคำสั่งเดียว
     const multiQuery = `
@@ -74,9 +88,9 @@ router.get('/customer-summary', async (req, res) => {
         CustName,
         CustStatus,
         SalesName,
-        OrdYear,
-        OrdMonth,
-        OrdWeek,
+        YEAR(${dateColumn}) AS OrdYear,
+        MONTH(${dateColumn}) AS OrdMonth,
+        DATEPART(isowk, ${dateColumn}) AS OrdWeek,
         ItemAmnt,
         ItemQty,
         ItemNo,
@@ -84,7 +98,8 @@ router.get('/customer-summary', async (req, res) => {
       INTO #FilteredSales
       FROM VW_Web_SalesDashboard
       WHERE ${sargableDateCondition}
-        AND ISNULL(CustStatus, 'Y') = 'Y';
+        AND ISNULL(CustStatus, 'Y') = 'Y'
+        ${typeCondition};
 
       -- 2. ดึงข้อมูล 4 ชุด จาก Temporary Table
 

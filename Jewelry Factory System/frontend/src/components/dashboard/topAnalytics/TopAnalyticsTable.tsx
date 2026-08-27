@@ -51,7 +51,7 @@ function AnalyticsTableRow({ row, index }: { row: AnalyticsRow; index: number })
       <Td>
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           <div className="sales-dense-table__code">{row.itemNo}</div>
-          <div style={{ color: "var(--color-text-primary)", fontSize: "11px", fontWeight: 800 }}>{row.customer} / {row.productType || "Type unknown"}</div>
+          <div style={{ color: "var(--color-text-primary)", fontSize: "11px", fontWeight: 800 }}>{row.customer}</div>
         </div>
       </Td>
       <Td align="right">{fmtQty(comparison?.compareQty || 0)}</Td>

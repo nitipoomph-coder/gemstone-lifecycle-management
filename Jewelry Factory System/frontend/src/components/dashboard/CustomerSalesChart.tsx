@@ -1,4 +1,4 @@
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList } from 'recharts';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ALL_GROUPS } from '../../config/customerGroups';
 import type { Metric, ChartDatum } from '../../hooks/useCustomerSalesData';

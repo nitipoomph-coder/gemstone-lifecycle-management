@@ -83,7 +83,6 @@ export function CustomerDashboardSkeleton({ sortedSel, activeYears }: CustomerDa
                   style={{
                     background: 'var(--color-surface-0)',
                     border: '1px solid var(--color-border-light)',
-                    borderLeft: `4px solid ${color}`,
                     borderRadius: 8,
                     padding: '12px 16px',
                     boxShadow: '0 8px 20px -16px color-mix(in srgb, var(--color-surface-900) 25%, transparent)',
@@ -93,7 +92,10 @@ export function CustomerDashboardSkeleton({ sortedSel, activeYears }: CustomerDa
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div className="app-skeleton" style={{ width: 90, height: 16, borderRadius: 4 }} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span style={{ width: 8, height: 8, borderRadius: 2, background: color, marginRight: 2 }} />
+                      <div className="app-skeleton" style={{ width: 76, height: 16, borderRadius: 4 }} />
+                    </div>
                     <div className="app-skeleton" style={{ width: 40, height: 14, borderRadius: 4 }} />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -117,7 +119,6 @@ export function CustomerDashboardSkeleton({ sortedSel, activeYears }: CustomerDa
                   style={{
                     background: 'var(--color-surface-0)',
                     border: '1px solid var(--color-border-light)',
-                    borderLeft: `4px solid ${color}`,
                     borderRadius: 8,
                     padding: '12px 16px',
                     boxShadow: '0 8px 20px -16px color-mix(in srgb, var(--color-surface-900) 25%, transparent)',
@@ -128,7 +129,8 @@ export function CustomerDashboardSkeleton({ sortedSel, activeYears }: CustomerDa
                 >
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span style={{ width: 8, height: 8, borderRadius: 2, background: color, marginRight: 2 }} />
                         <span style={{ fontSize: 'var(--erp-text-dense)', fontWeight: 900, color: 'var(--color-text-secondary)', opacity: 0.7 }}>{label}</span>
                       </div>
                       <div className="app-skeleton" style={{ width: 35, height: 14, borderRadius: 4 }} />

@@ -22,8 +22,6 @@ export default function TopOrdersGalleryPage() {
     setSearchDraft,
     searchQuery,
     setSearchQuery,
-    selectedProductType,
-    setSelectedProductType,
     periodDraft,
     setPeriodDraft,
     compareEnabled,
@@ -107,8 +105,6 @@ export default function TopOrdersGalleryPage() {
             selectedPeriodLabel={selectedPeriodLabel}
             selGroups={selGroups}
             setSelGroups={setSelGroups}
-            selectedProductType={selectedProductType}
-            setSelectedProductType={setSelectedProductType}
             toggleGroup={(gId) => setSelGroups(prev => prev.includes(gId) ? prev.filter(x => x !== gId) : [...prev, gId])}
           />
         }
@@ -180,7 +176,6 @@ export default function TopOrdersGalleryPage() {
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10, marginTop: 28, position: "relative", zIndex: 1 }}>
                 <EmptyFilterPill label="Period" value={`${baseYear || "-"} / ${selectedPeriodLabel}`} />
-                <EmptyFilterPill label="Type" value={selectedProductType} />
                 <EmptyFilterPill label="Groups" value={selGroups.length ? selGroups.map(getGroupLabel).join(", ") : "All Groups"} />
                 <EmptyFilterPill label="Search" value={searchQuery || "None"} />
               </div>

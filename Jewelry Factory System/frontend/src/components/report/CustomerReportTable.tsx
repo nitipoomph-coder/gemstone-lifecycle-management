@@ -167,6 +167,10 @@ export default function CustomerReportTable({
         const key = `${yr}_${q}`;
         tot[key] = tableData.rows.reduce((sum, r) => sum + Number(r[key] || 0), 0);
       });
+      for (let w = 1; w <= 53; w++) {
+        const key = `${yr}_W${w}`;
+        tot[key] = tableData.rows.reduce((sum, r) => sum + Number(r[key] || 0), 0);
+      }
       const totKey = `${yr}_total`;
       tot[totKey] = tableData.rows.reduce((sum, r) => sum + Number(r[totKey] || 0), 0);
     });
@@ -737,7 +741,7 @@ export default function CustomerReportTable({
                 <tr>
                   {customerIdTh(2)}
                   {Array.from({ length: 53 }, (_, i) => i + 1).map((w) => (
-                    <th key={`w_${w}`} colSpan={displayYears.length} className="customer-matrix-th customer-matrix-th--top">W{w}</th>
+                    <th key={`w_${w}`} colSpan={displayYears.length + activeGrowthCount * 2} className="customer-matrix-th customer-matrix-th--top">W{w}</th>
                   ))}
                   <th colSpan={displayYears.length} className="customer-matrix-th customer-matrix-th--top">{metric === 'qty' ? 'Grand Total QTY' : 'Grand Total Sales'}</th>
                 </tr>
@@ -745,6 +749,22 @@ export default function CustomerReportTable({
                   {Array.from({ length: 53 }, (_, i) => i + 1).map((w) => (
                     <React.Fragment key={`w_sub_${w}`}>
                       {displayYears.map((yr) => <th key={`${w}_${yr}`} className={`customer-matrix-th customer-matrix-th--sub customer-matrix-td--number`}>{yr}</th>)}
+                      {displayYears.length > 1 && growthComparisons.map((comp, idx) => (
+                        <React.Fragment key={`growth_w_hdr_${idx}`}>
+                          <th className="customer-matrix-th customer-matrix-th--sub customer-matrix-td--growth" title={`Growth Amount (${comp.a} vs ${comp.b})`}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 2, paddingRight: 4 }}>
+                              <span>Growth</span>
+                              <span style={{ fontSize: '0.65rem', color: 'var(--color-success-500)', fontWeight: 900 }}>↑</span>
+                            </div>
+                          </th>
+                          <th className="customer-matrix-th customer-matrix-th--sub customer-matrix-td--growth" title={`Growth Rate % (${comp.a} vs ${comp.b})`}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 2, paddingRight: 4 }}>
+                              <span>Growth %</span>
+                              <span style={{ fontSize: '0.65rem', color: 'var(--color-brand-500)', fontWeight: 900 }}>↑↓</span>
+                            </div>
+                          </th>
+                        </React.Fragment>
+                      ))}
                     </React.Fragment>
                   ))}
                   {displayYears.map((yr) => <th key={`tot_hdr_${yr}`} className={totalHeaderClassName(yr)}>{yr} Total</th>)}
@@ -771,6 +791,16 @@ export default function CustomerReportTable({
                           const val = Number(row[`${yr}_W${w}`] || 0);
                           return <td key={`${w}_${yr}`} className={`customer-matrix-td customer-matrix-td--number`}>{renderCell(val)}</td>;
                         })}
+                        {displayYears.length > 1 && growthComparisons.map((comp, gIdx) => {
+                          const amt = renderGrowthAmt(Number(row[`${comp.a}_W${w}`] || 0), Number(row[`${comp.b}_W${w}`] || 0));
+                          const pct = renderGrowthPct(Number(row[`${comp.a}_W${w}`] || 0), Number(row[`${comp.b}_W${w}`] || 0), Boolean(row[`isTrulyNew_${comp.a}`]));
+                          return (
+                            <React.Fragment key={`growth_w_row_${w}_${gIdx}`}>
+                              <td className="customer-matrix-td customer-matrix-td--growth" style={{ background: amt.bgColor }}>{amt.node}</td>
+                              <td className="customer-matrix-td customer-matrix-td--growth" style={{ background: pct.bgColor }}>{pct.node}</td>
+                            </React.Fragment>
+                          );
+                        })}
                       </React.Fragment>
                     ))}
                     {displayYears.map((yr) => <td key={`total_${yr}`} className={totalCellClassName(yr)}>{renderCell(Number(row[`${yr}_total`] || 0))}</td>)}
@@ -788,6 +818,18 @@ export default function CustomerReportTable({
                             {renderCell(totalsRow[`${yr}_W${w}`] || 0)}
                           </td>
                         ))}
+                        {displayYears.length > 1 && growthComparisons.map((comp, gIdx) => {
+                          const valA = totalsRow[`${comp.a}_W${w}`] || 0;
+                          const valB = totalsRow[`${comp.b}_W${w}`] || 0;
+                          const amt = renderGrowthAmt(valA, valB);
+                          const pct = renderGrowthPct(valA, valB);
+                          return (
+                            <React.Fragment key={`tot_row_growth_w_${w}_${gIdx}`}>
+                              <td className="customer-matrix-td customer-matrix-td--growth" style={{ background: amt.bgColor }}>{amt.node}</td>
+                              <td className="customer-matrix-td customer-matrix-td--growth" style={{ background: pct.bgColor }}>{pct.node}</td>
+                            </React.Fragment>
+                          );
+                        })}
                       </React.Fragment>
                     ))}
                     {displayYears.map((yr) => (

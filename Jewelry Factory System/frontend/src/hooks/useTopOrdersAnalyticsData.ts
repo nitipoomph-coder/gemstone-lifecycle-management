@@ -8,8 +8,6 @@ import type { ItemCustomerYearlySummaryItem, ItemCustomerYearlySummaryPair } fro
 import { getCustomerGroupId } from "../config/customerGroups";
 
 export const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-export const PRODUCT_TYPE_OPTIONS = ["ALL", "BBS", "BES", "BNS", "BRS"] as const;
-export type ProductTypeFilter = typeof PRODUCT_TYPE_OPTIONS[number];
 export const TOP_CUSTOMER_ITEM_LIMIT = 50;
 
 export interface CompareSummary {
@@ -35,7 +33,6 @@ export interface CustomerSummaryRecord {
   id?: string;
   monthlyQty?: Record<string, Record<string, number | string>>;
   topItemsByYear?: Record<string, CustomerTopItemSummary>;
-  topItemsByYearByType?: Record<string, Partial<Record<ProductTypeFilter, CustomerTopItemSummary>>>;
   topItem?: string;
   topItemQty?: number | string;
 }
@@ -44,7 +41,6 @@ export interface AnalyticsRow {
   id: string;
   customer: string;
   itemNo: string;
-  productType: string;
   sortValue: number;
   fallbackCurrentQty: number;
   comparison?: CompareSummary;
@@ -60,8 +56,7 @@ export const parseQueryList = (value: string | null) =>
     .map((item) => item.trim())
     .filter(Boolean);
 
-export const parseProductType = (value: string | null): ProductTypeFilter =>
-  PRODUCT_TYPE_OPTIONS.includes(value as ProductTypeFilter) ? (value as ProductTypeFilter) : "ALL";
+
 
 export const parseMonthParam = (value: string | null) => {
   const months = parseQueryList(value)
@@ -92,7 +87,6 @@ export function useTopOrdersAnalyticsData() {
   const [searchParams] = useSearchParams();
   const monthParam = searchParams.get("months");
   const groupParam = searchParams.get("groups");
-  const typeParam = searchParams.get("type");
   const requestedYearParam = searchParams.get("year");
   const requestedCompareYearParam = searchParams.get("compareYear");
 
@@ -106,7 +100,6 @@ export function useTopOrdersAnalyticsData() {
   const [searchDraft, setSearchDraft] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [selGroups, setSelGroups] = useState<string[]>(() => parseQueryList(groupParam));
-  const [selectedProductType, setSelectedProductType] = useState<ProductTypeFilter>(() => parseProductType(typeParam));
   const [itemsYearlyByPair, setItemsYearlyByPair] = useState<Record<string, ItemCustomerYearlySummaryItem>>({});
 
   const selectedMonthNumbers = useMemo(() => parseMonthParam(monthParam), [monthParam]);
@@ -116,10 +109,9 @@ export function useTopOrdersAnalyticsData() {
   useEffect(() => {
     const syncTimer = window.setTimeout(() => {
       setSelGroups(parseQueryList(groupParam));
-      setSelectedProductType(parseProductType(typeParam));
     }, 0);
     return () => window.clearTimeout(syncTimer);
-  }, [groupParam, typeParam]);
+  }, [groupParam]);
 
   const loadAnalyticsData = useCallback(async (cancelled: () => boolean) => {
     setLoading(true);
@@ -175,12 +167,9 @@ export function useTopOrdersAnalyticsData() {
 
       const source = cust.monthlyQty;
       const yearQty = selectedMonthNumbers.reduce((sum, month) => sum + Number(source?.[baseYear]?.[String(month)] || 0), 0);
-      const yearlyTopItem = selectedProductType === "ALL"
-        ? cust.topItemsByYear?.[baseYear]
-        : cust.topItemsByYearByType?.[baseYear]?.[selectedProductType];
+      const yearlyTopItem = cust.topItemsByYear?.[baseYear];
       const topItem = yearlyTopItem?.topItem || (cust.topItemsByYear ? null : cust.topItem);
       const topItemQty = Number(yearlyTopItem?.topItemQty || (cust.topItemsByYear ? 0 : cust.topItemQty) || 0);
-      const productType = yearlyTopItem?.productType || selectedProductType;
 
       const customerCode = cust.id || "";
       if (customerCode && yearQty > 0 && topItem && topItemQty > 0) {
@@ -188,7 +177,6 @@ export function useTopOrdersAnalyticsData() {
           id: `${customerCode}-${topItem}`,
           customer: customerCode,
           itemNo: topItem,
-          productType,
           sortValue: topItemQty,
           fallbackCurrentQty: topItemQty,
         });
@@ -197,11 +185,11 @@ export function useTopOrdersAnalyticsData() {
 
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toLowerCase();
-      rows = rows.filter((row) => [row.customer, row.itemNo, row.productType].join(" ").toLowerCase().includes(q));
+      rows = rows.filter((row) => [row.customer, row.itemNo].join(" ").toLowerCase().includes(q));
     }
 
     return rows.sort((a, b) => b.sortValue - a.sortValue).slice(0, TOP_CUSTOMER_ITEM_LIMIT);
-  }, [baseYear, custData, searchQuery, selGroups, selectedMonthNumbers, selectedProductType]);
+  }, [baseYear, custData, searchQuery, selGroups, selectedMonthNumbers]);
 
   const visibleItemPairs = useMemo<ItemCustomerYearlySummaryPair[]>(() => {
     const pairs = new Map<string, ItemCustomerYearlySummaryPair>();
@@ -333,8 +321,6 @@ export function useTopOrdersAnalyticsData() {
     setSearchQuery,
     selGroups,
     setSelGroups,
-    selectedProductType,
-    setSelectedProductType,
     selectedPeriodLabel,
     applySearch,
     handleSearchKeyDown,

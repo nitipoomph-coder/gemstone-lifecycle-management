@@ -101,31 +101,6 @@ export const MASTER_COLS: Record<string, ColDef> = {
     render: (o) => o.ShipTo,
     cellStyle: () => ({ fontWeight: 500, color: 'var(--color-text-secondary)' }),
   },
-  photo: {
-    label: 'Picture', w: 130, align: 'center',
-    render: (o) => (
-      <div style={{
-        position: 'relative',
-        width: 100, height: 60, borderRadius: 6,
-        background: 'var(--color-surface-1)', overflow: 'hidden',
-        margin: '0 auto', border: '1px solid var(--color-border-light)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        boxShadow: '0 2px 8px color-mix(in srgb, var(--color-surface-900) 5%, transparent)'
-      }}>
-        <ImageIcon size={30} style={{ color: 'var(--color-text-quaternary)', position: 'absolute' }} />
-        {o.SampleItemNo && (
-          <img
-            key={o.SampleItemNo}
-            src={psPhotoUrl(o.SampleItemNo)}
-            alt="item"
-            loading="lazy"
-            onError={(e) => attachPhotoFallback(e, o.SampleItemNo)}
-            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
-          />
-        )}
-      </div>
-    ),
-  },
   orddate: {
     label: 'Order Date', w: 95, align: 'center',
     render: (o) => formatDate(o.OrdDate),
@@ -273,12 +248,12 @@ export const GROUP_PRESETS: Record<string, string[]> = {
     'prodRisk', 'pqc', 'receiveTicket', 'remark', 'amount', 'arrow'
   ],
   N008: [
-    'no', 'week', 'cust', 'po', 'newReplen', 'shipto', 'photo', 'orddate', 'due', 'qa', 'sgs', 'qcdate', 'custdue', 'oor', 'sku', 'qty',
+    'no', 'week', 'cust', 'po', 'newReplen', 'shipto', 'orddate', 'due', 'qa', 'sgs', 'qcdate', 'custdue', 'oor', 'sku', 'qty',
     'controlPen', 'polishPen', 'platePen',
     'prodRisk', 'pqc', 'cardBox', 'orderTicket', 'receiveTicket', 'packScan', 'remark', 'amount', 'arrow'
   ],
   N044: [
-    'no', 'week', 'cust', 'po', 'po2', 'newReplen', 'metal', 'shipto', 'photo', 'orddate', 'due', 'qcdate', 'bookInspect', 'qa_n044', 'bookShip', 'custdue', 'oor',
+    'no', 'week', 'cust', 'po', 'po2', 'newReplen', 'metal', 'shipto', 'orddate', 'due', 'qcdate', 'bookInspect', 'qa_n044', 'bookShip', 'custdue', 'oor',
     'sku', 'qty', 'controlPen', 'polishPen', 'platePen', 'prodRisk', 'pqc',
     'receiveTicket_n044', 'sample_n044', 'custCT_n044', 'mf_n044',
     'packScanDo_n044', 'packScanSen_n044', 'packScan_n044', 'packScanMF_n044',
@@ -293,7 +268,7 @@ export const GROUP_PRESETS: Record<string, string[]> = {
     'prodRisk', 'pqc', 'remark', 'amount', 'arrow'
   ],
   N051: [
-    'no', 'week', 'cust', 'po', 'po2', 'newReplen', 'metal', 'photo', 'orddate', 'custdue', 'sku', 'qty',
+    'no', 'week', 'cust', 'po', 'po2', 'newReplen', 'metal', 'orddate', 'custdue', 'sku', 'qty',
     'controlPen', 'polishPen', 'platePen', 'exportQty', 'balQty', 'expPct',
     'prodRisk', 'pqc', 'remark', 'amount', 'arrow'
   ],
@@ -307,7 +282,7 @@ export const GROUP_PRESETS: Record<string, string[]> = {
 
 // หมวดหมู่คอลัมน์สำหรับ View Columns picker (ให้หาง่าย) — ไม่รวม always-on (no/week/cust/po/arrow)
 export const COLUMN_GROUPS: { label: string; keys: string[] }[] = [
-  { label: 'Customer Data', keys: ['po2', 'ordno', 'newReplen', 'metal', 'shipto', 'photo', 'orddate', 'due', 'qa', 'sgs', 'qcdate', 'custdue', 'oor', 'sku', 'qty', 'amount', 'remark'] },
+  { label: 'Customer Data', keys: ['po2', 'ordno', 'newReplen', 'metal', 'shipto', 'orddate', 'due', 'qa', 'sgs', 'qcdate', 'custdue', 'oor', 'sku', 'qty', 'amount', 'remark'] },
   { label: 'Production — Stage', keys: ['stonePen', 'fitPen', 'wijPen', 'castPen', 'controlPen', 'grindPen', 'polishPen', 'platePen', 'exportQty', 'balQty', 'expPct'] },
   { label: 'Production — Book / QC', keys: ['bookInspect', 'bookShip', 'qc1qty', 'qc1date', 'qc1fail', 'qc2qty', 'qc2date', 'qc2fail', 'qc3qty', 'qc3date'] },
   { label: 'Production — Pack / Tag', keys: ['cardBox', 'orderTicket', 'receiveTicket', 'sample', 'custCT', 'mf', 'packScanDo', 'packScanSen', 'packScan', 'packScanMF', 'polyOrd', 'polyRec', 'tagRcyRec'] },

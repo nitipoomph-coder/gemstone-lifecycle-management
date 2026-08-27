@@ -4,7 +4,7 @@ import { ALL_GROUPS } from "../config/customerGroups";
 import Topbar from "../components/layout/Topbar";
 import CompareYearDropdown from "../components/topOrders/CompareYearDropdown";
 import "../components/sales/SalesDenseTable.css";
-import { useTopOrdersAnalyticsData, PRODUCT_TYPE_OPTIONS, fmtQty, fmtSignedQty, TOP_CUSTOMER_ITEM_LIMIT } from "../hooks/useTopOrdersAnalyticsData";
+import { useTopOrdersAnalyticsData, fmtQty, fmtSignedQty, TOP_CUSTOMER_ITEM_LIMIT } from "../hooks/useTopOrdersAnalyticsData";
 import { TopAnalyticsTable } from "../components/dashboard/topAnalytics/TopAnalyticsTable";
 
 export default function TopOrdersAnalyticsPage() {
@@ -20,8 +20,6 @@ export default function TopOrdersAnalyticsPage() {
     setSearchQuery,
     selGroups,
     setSelGroups,
-    selectedProductType,
-    setSelectedProductType,
     selectedPeriodLabel,
     handleSearchKeyDown,
     rows,
@@ -84,21 +82,14 @@ export default function TopOrdersAnalyticsPage() {
           </div>
 
           <div className="content-scrollbar" style={filterRailStyle}>
-            <span style={filterRailLabelStyle}>Type</span>
-            {PRODUCT_TYPE_OPTIONS.map((type) => (
-              <button key={type} type="button" onClick={() => setSelectedProductType(type)} style={chipStyle(selectedProductType === type)}>
-                {type === "ALL" ? "All types" : type}
-              </button>
-            ))}
-            <div style={filterDividerStyle} />
             <span style={filterRailLabelStyle}>Group</span>
             {ALL_GROUPS.map((group) => (
               <button key={group.id} type="button" onClick={() => toggleGroup(group.id)} style={chipStyle(selGroups.includes(group.id))}>
                 {group.label}
               </button>
             ))}
-            {(selGroups.length > 0 || selectedProductType !== "ALL") && (
-              <button type="button" onClick={() => { setSelGroups([]); setSelectedProductType("ALL"); }} style={resetButtonStyle}>
+            {selGroups.length > 0 && (
+              <button type="button" onClick={() => { setSelGroups([]); }} style={resetButtonStyle}>
                 Reset
               </button>
             )}
@@ -195,13 +186,7 @@ const filterRailLabelStyle: React.CSSProperties = {
   flexShrink: 0,
 };
 
-const filterDividerStyle: React.CSSProperties = {
-  width: 1,
-  height: 22,
-  background: "var(--color-border-light)",
-  margin: "0 2px",
-  flexShrink: 0,
-};
+
 
 const summaryStripStyle: React.CSSProperties = {
   display: "grid",

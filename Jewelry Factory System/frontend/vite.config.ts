@@ -24,5 +24,3 @@ export default defineConfig({
   }
 })
 // trigger reload
-// force reload 2
-// remove custom group 

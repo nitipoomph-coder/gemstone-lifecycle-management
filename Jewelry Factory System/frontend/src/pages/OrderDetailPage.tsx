@@ -28,7 +28,7 @@ const VIEW_PARAM_TO_PRESET: Record<string, ColumnPreset> = { sales: 'Sales', pro
 
 // ── Shared flat styles (theme-variable, no gradients/hardcoded hex) ──
 const LBL: CSSProperties = { fontSize: '0.7rem', fontWeight: 800, color: 'var(--color-text-tertiary)', textTransform: 'capitalize', letterSpacing: '0.05em' };
-const ACT_ICON: CSSProperties = { width: 36, height: 36, borderRadius: '8px', border: '1px solid var(--color-border-light)', background: 'var(--color-surface-1)', color: 'var(--color-text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease' };
+const ACT_ICON: CSSProperties = { width: 32, height: 32, borderRadius: '8px', border: '1px solid var(--color-border-strong)', background: 'var(--color-surface-0)', color: 'var(--color-text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease' };
 const ACT_BTN: CSSProperties = { display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 12px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer', transition: 'color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease', letterSpacing: 0 };
 const ACT_NEUTRAL: CSSProperties = { border: '1px solid var(--color-border-strong)', background: 'var(--color-surface-0)', color: 'var(--color-text-primary)' };
 const ACT_DANGER: CSSProperties = { border: '1px solid color-mix(in srgb, var(--color-danger-500) 35%, transparent)', background: 'color-mix(in srgb, var(--color-danger-500) 10%, var(--color-surface-0))', color: 'var(--color-danger-600)' };
@@ -282,22 +282,22 @@ export default function OrderDetailPage() {
 
       {/* ══ Toolbar Row 1 — identity · KPIs · actions ══ */}
       <div className="order-detail-summarybar" style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px',
-        padding: '14px 24px', background: 'var(--color-surface-0)', borderBottom: '1px solid var(--color-border-light)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px',
+        padding: '10px 20px', background: 'var(--color-surface-0)', borderBottom: '1px solid var(--color-border-light)',
       }}>
-        <div className="order-detail-summarybar__identity" style={{ display: 'flex', alignItems: 'center', gap: '28px', flexWrap: 'wrap' }}>
+        <div className="order-detail-summarybar__identity" style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-            <div style={{ fontSize: '0.62rem', fontWeight: 900, color: 'var(--color-text-tertiary)', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+            <div style={{ fontSize: '0.6rem', fontWeight: 900, color: 'var(--color-text-tertiary)', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
               {isGroup ? (searchParams.get('po') ? 'Purchase Order' : 'Grouped Orders') : (isPo ? 'Purchase Order' : 'Order Document')}
             </div>
-            <div style={{ fontWeight: 900, fontSize: '1.35rem', color: 'var(--color-text-primary)', fontFamily: 'var(--font-display)', lineHeight: 1 }}>
+            <div style={{ fontWeight: 900, fontSize: '1.15rem', color: 'var(--color-text-primary)', fontFamily: 'var(--font-display)', lineHeight: 1 }}>
               {pageTitle}
             </div>
           </div>
 
           {h && (
             <>
-              <div style={{ width: '1px', height: '34px', background: 'var(--color-border-light)' }} />
+              <div style={{ width: '1px', height: '28px', background: 'var(--color-border-light)' }} />
               <Stat label="Customer" value={String(h.CustCode ?? '')} />
               <Stat label="Total Qty" value={<>{fQty(headerTotalQty)} <span style={{ fontSize: '0.75rem', opacity: 0.6 }}>pcs</span></>} />
               <Stat label="Orders" value={<>{ordersCount.toLocaleString()} <span style={{ fontSize: '0.75rem', opacity: 0.6 }}>docs</span></>} />
@@ -308,7 +308,7 @@ export default function OrderDetailPage() {
 
         <div className="order-detail-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <button onClick={() => setRefreshVersion(version => version + 1)} title="Refresh Data" style={ACT_ICON}>
-            <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
           </button>
           <button
             onClick={() => exportOrderDetailExcel(lines, h as unknown as Record<string, unknown>, pageTitle, (filePath) => {
@@ -342,7 +342,7 @@ export default function OrderDetailPage() {
       {/* ══ Toolbar Row 2 — view mode · status · search · columns ══ */}
       <div className="order-detail-filterbar" style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px',
-        padding: '12px 24px', background: 'var(--color-surface-0)', borderBottom: '1px solid var(--color-border-light)', zIndex: 50,
+        padding: '10px 20px', background: 'var(--color-surface-0)', borderBottom: '1px solid var(--color-border-light)', zIndex: 50,
       }}>
         <div className="order-detail-filterbar__left" style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>

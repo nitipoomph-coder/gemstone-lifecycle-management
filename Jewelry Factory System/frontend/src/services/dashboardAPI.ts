@@ -174,7 +174,7 @@ export { fetchCustomerSummary } from './customerSummaryAPI';
 export {
   fetchSalesCustomerGroups,
   fetchSalesMonthlyAnalytics,
-  fetchSalesTypeAnalytics,
+  fetchSalesRiskAnalytics,
   fetchSalesOrders,
   fetchTopItems,
 } from './orderVolumeSummaryAPI';
@@ -183,7 +183,7 @@ export type {
   SalesDateView,
   SalesCustomerGroupPoint,
   SalesMonthlyPoint,
-  SalesTypePoint,
+  SalesRiskPoint,
   SalesOrderRow,
   TopItemRow,
 } from './orderVolumeSummaryAPI';

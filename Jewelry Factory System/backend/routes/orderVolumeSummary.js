@@ -9,7 +9,7 @@ const express = require('express');
 const router = express.Router();
 const { getPool, sql } = require('../db');
 
-const SALES_ANALYTICS_VIEW = 'dbo.VW_Web_OrderTrends';
+const SALES_ANALYTICS_VIEW = 'dbo.VW_Web_SalesDashboard';
 
 function parseCsvInts(value, fallback = []) {
   const parsed = String(value || '')
@@ -32,38 +32,11 @@ function addInParams(request, prefix, values, type) {
 }
 
 function salesProductTypeNameSql(codeExpr = 'typeCode') {
-  return `
-    CASE ${codeExpr}
-      WHEN 'BBS' THEN 'Bracelet / Bangle'
-      WHEN 'BES' THEN 'Earring'
-      WHEN 'BNS' THEN 'Necklace'
-      WHEN 'BRS' THEN 'Ring'
-      ELSE 'Others'
-    END
-  `;
+  return codeExpr;
 }
 
 function salesDateBasis(req, viewAlias = 'v') {
-  const raw = String(req.query.dateView || req.query.dateBasis || 'orddate').toLowerCase();
-  const aliases = {
-    order: 'orddate',
-    ord: 'orddate',
-    orddate: 'orddate',
-    due: 'duedate',
-    duedate: 'duedate',
-    cust: 'custdate',
-    custdate: 'custdate',
-    ship: 'orddate',
-    shipmonth: 'orddate',
-    ordmonth: 'orddate',
-  };
-  const basis = aliases[raw] || 'orddate';
-  const dateExprByBasis = {
-    orddate: viewAlias + '.OrdDate',
-    duedate: viewAlias + '.DueDate',
-    custdate: viewAlias + '.CustDueDate',
-  };
-  return { basis, dateExpr: dateExprByBasis[basis] || viewAlias + '.OrdDate' };
+  return { basis: 'orddate', dateExpr: viewAlias + '.OrdDate' };
 }
 
 // Applies the shared year/month/customer/type filters for sales endpoints.
@@ -110,7 +83,7 @@ function buildSalesFilters(req, request, viewAlias = 'v', dateExpr = null) {
 
   if (types.length > 0) {
     const typeParams = addInParams(request, 'st', types, sql.NVarChar);
-    filters.push(`(CASE WHEN LEFT(${viewAlias}.ItemNo, 3) IN ('BBS', 'BES', 'BNS', 'BRS') THEN LEFT(${viewAlias}.ItemNo, 3) ELSE 'OTHERS' END) IN (${typeParams})`);
+    filters.push(`${viewAlias}.ProductType IN (${typeParams})`);
   }
 
   return { years, months, customers, types, whereSql: filters.join('\n        AND ') };
@@ -149,13 +122,12 @@ router.get('/sales-monthly-analytics', async (req, res) => {
   }
 });
 
-// [SALES TYPE ANALYTICS] GET /api/dashboard/sales-type-analytics
-router.get('/sales-type-analytics', async (req, res) => {
+// [SALES RISK ANALYTICS] GET /api/dashboard/sales-risk-analytics
+router.get('/sales-risk-analytics', async (req, res) => {
   try {
     const pool = await getPool();
     const request = pool.request();
     const { dateExpr } = salesDateBasis(req, 'v');
-    const typeExpr = `CASE WHEN LEFT(v.ItemNo, 3) IN ('BBS', 'BES', 'BNS', 'BRS') THEN LEFT(v.ItemNo, 3) ELSE 'OTHERS' END`;
     const { whereSql } = buildSalesFilters(req, request, 'v', dateExpr);
 
     const result = await request.query(`
@@ -163,35 +135,31 @@ router.get('/sales-type-analytics', async (req, res) => {
         SELECT
           YEAR(${dateExpr}) AS year,
           MONTH(${dateExpr}) AS month,
-          ${typeExpr} AS typeCode,
-          v.OrdNo AS orderNo,
+          v.CustCode AS custCode,
           v.ItemQty AS qty,
-          v.ExportQty AS shippedQty,
           v.OpenQty AS openQty,
           v.ItemAmnt AS amount,
-          ISNULL(v.ExportQty * v.ItemPrice, 0) AS shippedAmount
+          v.CustDueDate AS custDueDate,
+          v.CloseStatus AS closeStatus
         FROM ${SALES_ANALYTICS_VIEW} v
-        WHERE ${whereSql}
+        WHERE ${whereSql} AND v.CloseStatus = 'N' AND v.OpenQty > 0
       )
       SELECT
         year,
         month,
-        typeCode,
-        ${salesProductTypeNameSql('typeCode')} AS typeName,
-        COUNT(DISTINCT orderNo) AS orderCount,
-        SUM(qty) AS qty,
-        SUM(shippedQty) AS shippedQty,
-        SUM(openQty) AS openQty,
-        SUM(amount) AS amount,
-        SUM(shippedAmount) AS shippedAmount
+        custCode,
+        SUM(openQty) AS wipQty,
+        SUM(CASE WHEN qty > 0 THEN (CAST(openQty AS FLOAT) / qty) * amount ELSE 0 END) AS wipAmount,
+        SUM(CASE WHEN custDueDate < GETDATE() THEN openQty ELSE 0 END) AS overdueQty,
+        SUM(CASE WHEN custDueDate < GETDATE() THEN (CASE WHEN qty > 0 THEN (CAST(openQty AS FLOAT) / qty) * amount ELSE 0 END) ELSE 0 END) AS overdueAmount
       FROM Lines
-      GROUP BY year, month, typeCode
-      ORDER BY year, month, typeCode
+      GROUP BY year, month, custCode
+      ORDER BY year, month, custCode
     `);
 
     res.json({ ok: true, data: result.recordset });
   } catch (err) {
-    console.error('[API ERROR] /api/dashboard/sales-type-analytics:', err.message);
+    console.error('[API ERROR] /api/dashboard/sales-risk-analytics:', err.message);
     res.status(500).json({ ok: false, error: err.message });
   }
 });
@@ -327,7 +295,7 @@ router.get('/sales-orders', async (req, res) => {
         '' AS itemSku,
         '' AS custItem,
         '' AS itemType,
-        CASE WHEN LEFT(v.ItemNo, 3) IN ('BBS', 'BES', 'BNS', 'BRS') THEN LEFT(v.ItemNo, 3) ELSE 'OTHERS' END AS productTypeCode,
+        v.ProductType AS productTypeCode,
         '' AS itemMat,
         '' AS itemSize,
         '' AS itemStone,

@@ -36,7 +36,7 @@ function csv(value: string | null) {
 export function useCustomerReportData() {
   const { theme } = useTheme();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { selectedYears, selectedMonths, selGroups, kpiCompareYear, dateBasis, productType } = useOutletContext<any>();
+  const { selectedYears, selectedMonths, selGroups, kpiCompareYear } = useOutletContext<any>();
   const metric = searchParams.get('metric') || 'amount';
 
   const handleSetMetric = useCallback((nextMetric: 'amount' | 'qty') => {
@@ -113,7 +113,7 @@ export function useCustomerReportData() {
     let cancelled = false;
     const loadTimer = window.setTimeout(() => {
       setLoading(true);
-      fetchCustomerSummary(dataYears, selMonths, dateBasis, productType)
+      fetchCustomerSummary(dataYears, selMonths)
         .then((cData: any) => { if (!cancelled) setCustData(cData as any[]); })
         .catch((err: any) => console.error('Error fetching customer summary data:', err))
         .finally(() => { if (!cancelled) setLoading(false); });
@@ -122,7 +122,7 @@ export function useCustomerReportData() {
       cancelled = true;
       window.clearTimeout(loadTimer);
     };
-  }, [dataYears, selMonths, dateBasis, productType]);
+  }, [dataYears, selMonths]);
 
   const groupCustomers = useMemo(() => {
     return custData

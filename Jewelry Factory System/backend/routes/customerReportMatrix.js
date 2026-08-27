@@ -42,11 +42,8 @@ router.get('/customer-summary', async (req, res) => {
     if (years.length === 0) years.push(new Date().getFullYear());
     const months = req.query.months ? req.query.months.split(',').map(m => parseInt(m)).filter(m => !isNaN(m)) : [];
     
-    // Parse filters
-    const dateBasisParam = (req.query.dateBasis || 'orddate').toLowerCase();
+    // Use OrdDate always
     let dateColumn = 'OrdDate';
-    if (dateBasisParam === 'duedate') dateColumn = 'DueDate';
-    if (dateBasisParam === 'custdate') dateColumn = 'CustDueDate';
     
     const typeParam = req.query.type || 'ALL';
 
@@ -236,7 +233,10 @@ router.get('/customer-summary', async (req, res) => {
       if (!custMap[row.id].monthly[yrStr]) {
         custMap[row.id].monthly[yrStr] = {};
       }
-      custMap[row.id].monthly[yrStr][mthStr] = row.totalSales;
+      if (!custMap[row.id].monthly[yrStr][mthStr]) {
+        custMap[row.id].monthly[yrStr][mthStr] = 0;
+      }
+      custMap[row.id].monthly[yrStr][mthStr] += row.totalSales;
 
       if (!custMap[row.id].dataQty[yrStr]) {
         custMap[row.id].dataQty[yrStr] = 0;
@@ -246,7 +246,10 @@ router.get('/customer-summary', async (req, res) => {
       if (!custMap[row.id].monthlyQty[yrStr]) {
         custMap[row.id].monthlyQty[yrStr] = {};
       }
-      custMap[row.id].monthlyQty[yrStr][mthStr] = row.totalQty;
+      if (!custMap[row.id].monthlyQty[yrStr][mthStr]) {
+        custMap[row.id].monthlyQty[yrStr][mthStr] = 0;
+      }
+      custMap[row.id].monthlyQty[yrStr][mthStr] += row.totalQty;
 
       // Weekly Data
       const wkStr = row.wk ? row.wk.toString() : 'Unknown';

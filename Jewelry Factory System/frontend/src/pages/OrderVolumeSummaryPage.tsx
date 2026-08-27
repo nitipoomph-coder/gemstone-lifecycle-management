@@ -1,19 +1,18 @@
 import { pageShell } from '../components/infographic/InfographicSalesTrends';
 import {
   CustomerTrendsLoadingState,
-  TrendComparisonChart,
-  TypeContribution,
   SummaryMetric,
-  KpiTypeSelect,
 } from '../components/infographic/InfographicSalesTrends';
 import { RefreshCw } from 'lucide-react';
 import '../components/sales/SalesDenseTable.css';
 import './OrderVolumeSummaryPage.css';
 import { printChartDashboard } from '../utils/printChart';
 import { DeliveryAndDepartmentOutlook } from '../components/sales/DeliveryAndDepartmentOutlook';
-import { useOrderVolumeSummaryData, fmtMetric, fmtSignedMetric, fmtQty, fmtPercent } from '../hooks/useOrderVolumeSummaryData';
+import { useOrderVolumeSummaryData, fmtMetric, fmtQty } from '../hooks/useOrderVolumeSummaryData';
 import { VolumeFilterBar } from '../components/dashboard/orderVolume/VolumeFilterBar';
 import { VolumeOrdersTable } from '../components/dashboard/orderVolume/VolumeOrdersTable';
+import { RiskCustomerChart } from '../components/dashboard/orderVolume/RiskCustomerChart';
+import { RiskMonthlyTable } from '../components/dashboard/orderVolume/RiskMonthlyTable';
 
 export default function OrderVolumeSummaryPage() {
   const data = useOrderVolumeSummaryData();
@@ -21,7 +20,7 @@ export default function OrderVolumeSummaryPage() {
     metric, switchMetric,
     activeView, setActiveView,
     drilldown, resetDrilldown,
-    monthlyData, typeData, deliveryOutlookData,
+    monthlyData, deliveryOutlookData,
     selectedBucket, handleSelectBucket,
     selectedDepartment, handleSelectDepartment,
     selectedCustCode, handleSelectCustCode,
@@ -30,23 +29,39 @@ export default function OrderVolumeSummaryPage() {
     search, setSearch, clearSearch, handleSearchKeyDown,
     page, setPage,
     primaryYear, compareYear, hasCompareYear,
-    primaryMetric, selectedTypeTotals,
-    kpiPrimaryMetric, kpiCompareMetric, kpiChangeAmount, kpiGrowthRate, kpiDeliveryRate, kpiOutstandingMetric,
-    selectedKpiType, setSelectedKpiType,
-    monthlyComparisonData, typeContribution,
     filteredOrderRows,
-    selectedGroups,
-    openChartDetail
+    selectedGroups
   } = data;
 
   const selectedYearSummary = hasCompareYear ? `${primaryYear} vs ${compareYear}` : primaryYear || '-';
   const selectedGroupSummary = selectedGroups.length === 0 ? 'All groups' : `${selectedGroups.length} groups`;
-  const hasOverviewData = monthlyData.length > 0 || typeData.length > 0;
+  const hasOverviewData = monthlyData.length > 0;
   const loadingScopeSummary = primaryYear ? `${selectedYearSummary} / ${selectedGroupSummary} / ${metric === 'amount' ? 'Sales ($)' : 'Quantity (PCS)'}` : 'Preparing available reporting periods';
   const loadFailure = !hasResolvedData ? error : '';
-  const orderCountHint = selectedTypeTotals.isFiltered
-    ? `${selectedTypeTotals.typeName}`
-    : `${fmtQty(typeData.filter(r => r.year === Number(primaryYear)).reduce((s, r) => s + r.orderCount, 0))} Total orders`;
+
+  // --- New Risk KPIs ---
+  const getBucketStats = (name: string) => {
+    const buckets = deliveryOutlookData?.buckets || [];
+    const b = buckets.find(x => x.bucket?.toLowerCase() === name.toLowerCase());
+    return {
+      qty: b?.openQty || 0,
+      amount: b?.openAmount || 0,
+      orders: b?.orderCount || 0
+    };
+  };
+
+  const overdue = getBucketStats('Overdue');
+  const due15 = getBucketStats('Due in 15 Days');
+  
+  const totalWIP = (deliveryOutlookData?.departments || []).reduce((acc, d) => {
+    return {
+      qty: acc.qty + (d.openQty || 0),
+      amount: acc.amount + (d.openAmount || 0)
+    };
+  }, { qty: 0, amount: 0 });
+
+  const sortedDepts = [...(deliveryOutlookData?.departments || [])].sort((a, b) => (b.openQty || 0) - (a.openQty || 0));
+  const topBottleneck = sortedDepts.length > 0 ? sortedDepts[0] : null;
 
   const handlePrint = () => {
     const title = `Order_Trends_${activeView}_${primaryYear}_${metric}`;
@@ -85,41 +100,28 @@ export default function OrderVolumeSummaryPage() {
           ) : (
             <>
               {activeView === 'overview' && (
-                <section className="customer-trends-summary" aria-label="Selected period summary">
+                <section className="customer-trends-summary" aria-label="Risk and WIP summary">
                   <SummaryMetric
-                    label={`Ordered ${metric === 'amount' ? 'Amount' : 'Qty'} ${primaryYear || '-'}`}
-                    value={fmtMetric(kpiPrimaryMetric, metric)}
-                    hint={selectedTypeTotals.isFiltered ? `${selectedTypeTotals.typeName}` : 'Primary year'}
+                    label="🔴 Total Overdue"
+                    value={metric === 'amount' ? fmtMetric(overdue.amount, 'amount') : fmtMetric(overdue.qty, 'qty')}
+                    hint={`${fmtQty(overdue.orders)} orders at risk`}
+                    tone="down"
                   />
                   <SummaryMetric
-                    label={`Ordered ${metric === 'amount' ? 'Amount' : 'Qty'} ${hasCompareYear ? compareYear : '-'}`}
-                    value={hasCompareYear ? fmtMetric(kpiCompareMetric, metric) : '-'}
-                    hint={selectedTypeTotals.isFiltered ? `${selectedTypeTotals.typeName}` : 'Compare year'}
-                    muted={!hasCompareYear}
+                    label="🟡 Due in 15 Days"
+                    value={metric === 'amount' ? fmtMetric(due15.amount, 'amount') : fmtMetric(due15.qty, 'qty')}
+                    hint={`${fmtQty(due15.orders)} orders pending`}
+                    tone="down"
                   />
                   <SummaryMetric
-                    label={hasCompareYear ? `Change vs ${compareYear}` : 'Change'}
-                    value={hasCompareYear ? fmtSignedMetric(kpiChangeAmount, metric) : '-'}
-                    hint={kpiGrowthRate === null ? 'No comparison baseline' : fmtPercent(kpiGrowthRate)}
-                    tone={!hasCompareYear || kpiChangeAmount === 0 ? undefined : kpiChangeAmount < 0 ? 'down' : 'up'}
-                    muted={!hasCompareYear}
+                    label="🔵 Total WIP (Factory)"
+                    value={metric === 'amount' ? fmtMetric(totalWIP.amount, 'amount') : fmtMetric(totalWIP.qty, 'qty')}
+                    hint="Open work-in-process"
                   />
                   <SummaryMetric
-                    label="Order Count"
-                    value={fmtQty(selectedTypeTotals.primary.orders)}
-                    hint={selectedTypeTotals.isFiltered ? `${selectedTypeTotals.typeName}` : orderCountHint}
-                    control={<KpiTypeSelect value={selectedKpiType} onChange={setSelectedKpiType} />}
-                  />
-                  <SummaryMetric
-                    label="Delivery Rate"
-                    value={`${kpiDeliveryRate.toFixed(1)}%`}
-                    hint={`${fmtQty(selectedTypeTotals.primary.shippedQty)} / ${fmtQty(selectedTypeTotals.primary.qty)} qty`}
-                    tone={kpiDeliveryRate >= 100 ? 'up' : undefined}
-                  />
-                  <SummaryMetric
-                    label={`Outstanding ${metric === 'amount' ? 'Balance' : 'Qty'}`}
-                    value={fmtMetric(kpiOutstandingMetric, metric)}
-                    hint={`${fmtQty(selectedTypeTotals.primary.orders)} orders`}
+                    label="🏭 Top Bottleneck"
+                    value={topBottleneck ? topBottleneck.department : '-'}
+                    hint={topBottleneck ? `${metric === 'amount' ? fmtMetric(topBottleneck.openAmount, 'amount') : fmtMetric(topBottleneck.openQty, 'qty')} pending` : 'No bottlenecks'}
                   />
                 </section>
               )}
@@ -135,7 +137,7 @@ export default function OrderVolumeSummaryPage() {
                 <section id="customer-trends-overview-panel" className="customer-trends-overview">
                   <div className="customer-trends-overview__header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
-                      <h2>Monthly Comparison & Product Type Breakdown</h2>
+                      <h2>WIP & Late Delivery Risk Analysis</h2>
                       <span>{selectedYearSummary} / {metric === 'amount' ? 'Sales Amount ($)' : 'Ordered Quantity (PCS)'}</span>
                     </div>
                   </div>
@@ -145,40 +147,40 @@ export default function OrderVolumeSummaryPage() {
                     </div>
                   ) : (
                     <>
-                      {hasOverviewData && (
-                        <div className="customer-trends-overview__body">
-                          <div className="customer-trends-chart-area">
-                            <TrendComparisonChart
-                              data={monthlyComparisonData}
-                              reportYear={primaryYear}
-                              compareYear={hasCompareYear ? compareYear : undefined}
+                      {hasOverviewData && data.riskData && (
+                        <div className="customer-trends-overview__body" style={{ flexDirection: 'column' }}>
+                          <div className="customer-trends-chart-area" style={{ width: '100%', marginBottom: '24px' }}>
+                            <RiskCustomerChart
+                              riskData={data.riskData}
                               metric={metric}
-                              granularity="monthly"
-                              onDrilldown={openChartDetail}
+                              selectedGroups={data.selectedGroups}
                             />
                           </div>
-                          <TypeContribution
-                            rows={typeContribution}
-                            metric={metric}
-                            year={primaryYear}
-                            compareYear={hasCompareYear ? compareYear : undefined}
-                            total={primaryMetric}
-                            onDrilldown={openChartDetail}
-                          />
+                          
+                          <div style={{ width: '100%' }}>
+                            <RiskMonthlyTable
+                              riskData={data.riskData}
+                              metric={metric}
+                              selectedGroups={data.selectedGroups}
+                            />
+                          </div>
                         </div>
                       )}
-                      <DeliveryAndDepartmentOutlook
-                        data={deliveryOutlookData}
-                        metric={metric}
-                        year={primaryYear}
-                        loading={loading}
-                        selectedBucket={selectedBucket}
-                        selectedDepartment={selectedDepartment}
-                        selectedCustCode={selectedCustCode}
-                        onSelectBucket={handleSelectBucket}
-                        onSelectDepartment={handleSelectDepartment}
-                        onSelectCustCode={handleSelectCustCode}
-                      />
+                      
+                      <div style={{ marginTop: '32px' }}>
+                        <DeliveryAndDepartmentOutlook
+                          data={deliveryOutlookData}
+                          metric={metric}
+                          year={primaryYear}
+                          loading={loading}
+                          selectedBucket={selectedBucket}
+                          selectedDepartment={selectedDepartment}
+                          selectedCustCode={selectedCustCode}
+                          onSelectBucket={handleSelectBucket}
+                          onSelectDepartment={handleSelectDepartment}
+                          onSelectCustCode={handleSelectCustCode}
+                        />
+                      </div>
                     </>
                   )}
                 </section>

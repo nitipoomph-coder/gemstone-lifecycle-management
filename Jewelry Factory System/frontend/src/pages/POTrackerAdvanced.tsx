@@ -58,8 +58,7 @@ export default function POTrackerAdvanced() {
     <div className="app-page font-body">
       <Topbar breadcrumb={[{ label: 'JEWELRY FACTORY SYSTEM', path: '/' }, { label: 'PO TRACKER' }]} contentLayout="dashboard-wide" />
 
-      <div className="app-page-scroll content-scrollbar">
-        <div className="app-content-frame app-content-frame--dashboard-wide app-page-content po-tracker-page flex min-h-full flex-col">
+      <div className="app-content-frame app-content-frame--dashboard-wide app-page-content po-tracker-page" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
 
           {/* ─── FILTERS: compact toolbar + popover + active chips ─── */}
           <div className="po-toolbar app-panel no-print" style={{
@@ -113,30 +112,30 @@ export default function POTrackerAdvanced() {
               </div>
             </div>
 
-            <div className="po-toolbar__actions" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div className="po-toolbar__actions" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <button
                 onClick={(e) => { e.stopPropagation(); setShowCustomViewModal(true); }}
                 style={{
-                  display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: '8px',
-                  background: 'var(--color-brand-500)',
-                  border: 'none', color: 'var(--color-ui-on-interactive)', fontSize: '0.8rem', fontWeight: 900, cursor: 'pointer', transition: 'background-color 0.2s ease'
+                  display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '8px',
+                  background: 'var(--color-surface-0)',
+                  border: '1px solid var(--color-border-strong)', color: 'var(--color-text-primary)', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s ease'
                 }}
-                className="hover:bg-[var(--color-brand-600)]"
+                className="hover:bg-[var(--color-surface-1)]"
               >
-                <Layers size={16} />
+                <Layers size={14} />
                 Custom View
               </button>
               <div style={{ position: 'relative' }}>
                 <button
                   onClick={(e) => { e.stopPropagation(); setShowFiltersPopover(!showFiltersPopover); }}
                   style={{
-                    display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: '8px',
-                    background: showFiltersPopover ? 'var(--color-surface-2)' : 'var(--color-surface-1)', border: '1px solid var(--color-border-light)',
-                    color: 'var(--color-text-secondary)', fontSize: '0.8rem', fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s'
+                    display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '8px',
+                    background: showFiltersPopover ? 'var(--color-surface-2)' : 'var(--color-surface-0)', border: '1px solid var(--color-border-strong)',
+                    color: 'var(--color-text-primary)', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s'
                   }}
-                  className="hover:bg-surface-2"
+                  className="hover:bg-[var(--color-surface-1)]"
                 >
-                  <Filter size={16} />
+                  <Filter size={14} />
                   Filters
                   {activeFilterCount > 0 && (
                     <span style={{ background: 'var(--color-brand-500)', color: 'var(--color-ui-on-interactive)', padding: '2px 6px', borderRadius: '10px', fontSize: '0.65rem' }}>
@@ -242,13 +241,13 @@ export default function POTrackerAdvanced() {
                 onClick={load}
                 disabled={loading}
                 style={{
-                  padding: '10px 18px', borderRadius: '8px', background: 'var(--color-brand-500)', color: 'var(--color-ui-on-interactive)',
-                  border: 'none', fontSize: '0.8rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px',
-                  cursor: 'pointer', transition: 'background-color 0.2s ease'
+                  padding: '8px 12px', borderRadius: '8px', background: 'var(--color-surface-0)', color: 'var(--color-text-primary)',
+                  border: '1px solid var(--color-border-strong)', fontSize: '0.75rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '6px',
+                  cursor: 'pointer', transition: 'all 0.2s ease'
                 }}
-                className="hover:bg-brand-600 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
+                className="hover:bg-[var(--color-surface-1)] active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+                <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
                 {loading ? 'REFRESHING...' : 'REFRESH'}
               </button>
             </div>
@@ -285,28 +284,28 @@ export default function POTrackerAdvanced() {
           {/* ─── KPI TILES (Flat icon-circle, static display — consistent with PCC Subcontract Management) ─── */}
           <div className="po-kpi-grid">
             {[
-              { id: 'total', label: 'ACTIVE ORDERS', value: filtered.length.toLocaleString(), color: 'var(--color-brand-500)', icon: <Package size={20} /> },
-              { id: 'qty', label: 'TOTAL QTY', value: totalQty.toLocaleString(), color: 'var(--color-brand-500)', icon: <LayoutGrid size={20} /> },
-              { id: 'amount', label: 'TOTAL AMOUNT', value: `$${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, color: 'var(--color-brand-500)', icon: <DollarSign size={20} /> },
-              { id: 'pending', label: 'PENDING', value: pendingCount.toLocaleString(), color: 'var(--color-warning-600)', icon: <AlertTriangle size={20} /> },
-              { id: 'late', label: 'LATE', value: delayedCount.toLocaleString(), color: 'var(--color-danger-600)', icon: <RefreshCw size={20} /> },
+              { id: 'total', label: 'ACTIVE ORDERS', value: filtered.length.toLocaleString(), color: 'var(--color-brand-500)', icon: <Package size={16} /> },
+              { id: 'qty', label: 'TOTAL QTY', value: totalQty.toLocaleString(), color: 'var(--color-brand-500)', icon: <LayoutGrid size={16} /> },
+              { id: 'amount', label: 'TOTAL AMOUNT', value: `$${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, color: 'var(--color-brand-500)', icon: <DollarSign size={16} /> },
+              { id: 'pending', label: 'PENDING', value: pendingCount.toLocaleString(), color: 'var(--color-warning-600)', icon: <AlertTriangle size={16} /> },
+              { id: 'late', label: 'LATE', value: delayedCount.toLocaleString(), color: 'var(--color-danger-600)', icon: <RefreshCw size={16} /> },
             ].map((stat) => (
               <div
                 key={stat.id}
                 style={{
                   background: 'var(--color-surface-0)',
-                  padding: '16px', borderRadius: '8px',
+                  padding: '10px 14px', borderRadius: '8px',
                   border: '1px solid var(--color-border-light)',
-                  display: 'flex', alignItems: 'center', gap: '14px',
+                  display: 'flex', alignItems: 'center', gap: '10px',
                   boxShadow: '0 2px 8px color-mix(in srgb, var(--color-surface-900) 4%, transparent)',
                 }}
               >
-                <div style={{ width: 38, height: 38, borderRadius: '8px', flexShrink: 0, background: `color-mix(in srgb, ${stat.color} 14%, var(--color-surface-1))`, color: stat.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: 32, height: 32, borderRadius: '8px', flexShrink: 0, background: `color-mix(in srgb, ${stat.color} 14%, var(--color-surface-1))`, color: stat.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {stat.icon}
                 </div>
                 <div>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--color-text-secondary)', letterSpacing: '0.02em' }}>{stat.label}</div>
-                  <div style={{ fontSize: '1.5rem', fontWeight: 800, color: stat.color, margin: '2px 0 0', fontFamily: 'var(--font-display)', letterSpacing: '-0.02em' }}>{stat.value}</div>
+                  <div style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--color-text-secondary)', letterSpacing: '0.02em' }}>{stat.label}</div>
+                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: stat.color, margin: '2px 0 0', fontFamily: 'var(--font-display)', letterSpacing: '-0.02em', lineHeight: 1 }}>{stat.value}</div>
                 </div>
               </div>
             ))}
@@ -315,8 +314,8 @@ export default function POTrackerAdvanced() {
           {/* ─── DATA TABLE — outer box owns the leftover viewport space (invisible, no chrome);
                inner card shrinks to its actual content and only grows up to that budget when the
                table is long enough to need it, so a short result set doesn't leave an empty box ─── */}
-          <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-            <div style={{ background: 'var(--color-surface-0)', borderRadius: '8px', border: '1px solid var(--color-border-light)', boxShadow: 'var(--shadow-panel)', overflow: 'hidden', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'auto' }} className="content-scrollbar">
+            <div style={{ background: 'var(--color-surface-0)', borderRadius: '8px', border: '1px solid var(--color-border-light)', boxShadow: 'var(--shadow-panel)', overflow: 'hidden', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
               {error && <div style={{ padding: '16px', background: 'var(--color-danger-50)', borderBottom: '1px solid var(--color-danger-500)', display: 'flex', alignItems: 'center', gap: '8px' }}><AlertTriangle size={16} style={{ color: 'var(--color-danger-600)' }} /> <span style={{ fontSize: '0.85rem', color: 'var(--color-danger-600)' }}>{error}</span></div>}
 
               <OrderTable
@@ -364,7 +363,6 @@ export default function POTrackerAdvanced() {
             </div>
           </div>
         </div>
-      </div>
       <style>{`
         @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
         .animate-spin{animation:spin 1s linear infinite}

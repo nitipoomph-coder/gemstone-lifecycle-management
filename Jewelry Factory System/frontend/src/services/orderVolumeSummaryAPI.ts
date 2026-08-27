@@ -29,17 +29,14 @@ export interface SalesMonthlyPoint {
   avgAmountPerOrder?: number;
 }
 
-export interface SalesTypePoint {
+export interface SalesRiskPoint {
   year: number;
   month: number;
-  typeCode: string;
-  typeName: string;
-  orderCount: number;
-  qty: number;
-  shippedQty?: number;
-  openQty?: number;
-  amount?: number;
-  shippedAmount?: number;
+  custCode: string;
+  wipQty: number;
+  wipAmount: number;
+  overdueQty: number;
+  overdueAmount: number;
 }
 
 export interface DeliveryRiskBucket {
@@ -185,10 +182,10 @@ export const fetchSalesMonthlyAnalytics = async (params: SalesAnalyticsParams = 
   return json.data || [];
 };
 
-export const fetchSalesTypeAnalytics = async (params: SalesAnalyticsParams = {}): Promise<SalesTypePoint[]> => {
+export const fetchSalesRiskAnalytics = async (params: SalesAnalyticsParams = {}): Promise<SalesRiskPoint[]> => {
   const qs = salesAnalyticsQuery(params);
-  const res = await fetchWithAuth(`${BASE_URL}/dashboard/sales-type-analytics?${qs.toString()}`);
-  if (!res.ok) throw new Error(`Sales type analytics API error: ${res.status}`);
+  const res = await fetchWithAuth(`${BASE_URL}/dashboard/sales-risk-analytics?${qs.toString()}`);
+  if (!res.ok) throw new Error(`Sales risk analytics API error: ${res.status}`);
   const json = await res.json();
   return json.data || [];
 };

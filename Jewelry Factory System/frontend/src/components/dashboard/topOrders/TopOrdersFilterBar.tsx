@@ -5,10 +5,8 @@ import { ALL_GROUPS } from '../../../config/customerGroups';
 import {
   PERIOD_PRESETS,
   MONTHS,
-  PRODUCT_TYPE_OPTIONS,
   type PeriodPreset,
-  type PeriodDraft,
-  type ProductTypeFilter
+  type PeriodDraft
 } from '../../../hooks/useTopOrdersGalleryData';
 
 interface SelectOption {
@@ -103,8 +101,6 @@ interface TopOrdersFilterBarProps {
   selectedPeriodLabel: string;
   selGroups: string[];
   setSelGroups: (g: string[]) => void;
-  selectedProductType: ProductTypeFilter;
-  setSelectedProductType: (t: ProductTypeFilter) => void;
   toggleGroup: (gId: string) => void;
 }
 
@@ -127,8 +123,6 @@ export function TopOrdersFilterBar({
   selectedPeriodLabel,
   selGroups,
   setSelGroups,
-  selectedProductType,
-  setSelectedProductType,
   toggleGroup
 }: TopOrdersFilterBarProps) {
   const navigate = useNavigate();
@@ -367,10 +361,10 @@ export function TopOrdersFilterBar({
         <button
           onClick={() => setShowGroupMenu(!showGroupMenu)}
           style={{
-            background: selGroups.length > 0 || selectedProductType !== "ALL" ? "var(--color-brand-50)" : "var(--color-surface-0)",
-            border: `1px solid ${selGroups.length > 0 || selectedProductType !== "ALL" ? "var(--color-brand-400)" : "var(--color-border-light)"}`,
+            background: selGroups.length > 0 ? "var(--color-brand-50)" : "var(--color-surface-0)",
+            border: `1px solid ${selGroups.length > 0 ? "var(--color-brand-400)" : "var(--color-border-light)"}`,
             borderRadius: 8, padding: "8px 16px", fontSize: "0.9rem", fontWeight: 800,
-            color: selGroups.length > 0 || selectedProductType !== "ALL" ? "var(--color-brand-700)" : "var(--color-text-primary)",
+            color: selGroups.length > 0 ? "var(--color-brand-700)" : "var(--color-text-primary)",
             outline: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 10, fontFamily: "var(--font-display)",
             boxShadow: "0 2px 4px color-mix(in srgb, var(--color-surface-900) 4%, transparent)", transition: "all 0.2s cubic-bezier(0.25, 1, 0.5, 1)",
           }}
@@ -378,9 +372,9 @@ export function TopOrdersFilterBar({
         >
           <Filter size={16} />
           <span className="font-medium text-[0.8rem] capitalize tracking-wider">Filters</span>
-          {(selGroups.length > 0 || selectedProductType !== "ALL") && (
+          {(selGroups.length > 0) && (
             <span className="flex items-center justify-center w-5 h-5 rounded-full border border-[var(--color-brand-300)] bg-[color-mix(in_srgb,var(--color-brand-500)_10%,var(--color-surface-0))] text-[var(--color-brand-600)] text-[10px]">
-              {selGroups.length + (selectedProductType !== "ALL" ? 1 : 0)}
+              {selGroups.length}
             </span>
           )}
         </button>
@@ -389,30 +383,16 @@ export function TopOrdersFilterBar({
           <div className="absolute right-0 z-[100] mt-2 w-80 rounded-lg border border-[var(--color-border-light)] bg-[var(--color-ui-surface)] p-4" style={{ boxShadow: 'var(--shadow-dropdown)' }}>
             <div className="mb-3 flex items-center justify-between border-b border-[var(--color-border-light)] pb-2">
               <span className="text-[10px] font-bold capitalize tracking-wider text-[var(--color-text-tertiary)]">Filters</span>
-              {(selGroups.length > 0 || selectedProductType !== "ALL") && (
+              {(selGroups.length > 0) && (
                 <button
-                  onClick={() => { setSelGroups([]); setSelectedProductType("ALL"); }}
+                  onClick={() => { setSelGroups([]); }}
                   className="text-[10px] font-bold capitalize text-[var(--color-danger-500)] hover:underline"
                 >
                   Clear All
                 </button>
               )}
             </div>
-            <div className="mb-4">
-              <div className="mb-2 text-[10px] font-bold capitalize tracking-wider text-[var(--color-text-tertiary)]">Item Type</div>
-              <div className="grid grid-cols-5 gap-1.5">
-                {PRODUCT_TYPE_OPTIONS.map((type) => (
-                  <button
-                    key={type}
-                    type="button"
-                    onClick={() => { startFilterTransition(); setSelectedProductType(type); }}
-                    className={`rounded-lg px-2 py-2 text-[11px] font-black transition-colors ${selectedProductType === type ? "border border-[var(--color-brand-300)] bg-[color-mix(in_srgb,var(--color-brand-500)_10%,var(--color-surface-0))] text-[var(--color-brand-600)]" : "border border-[var(--color-border-light)] bg-[var(--color-surface-0)] text-[var(--color-text-primary)] hover:border-[var(--color-brand-400)] hover:text-[var(--color-brand-600)]"}`}
-                  >
-                    {type}
-                  </button>
-                ))}
-              </div>
-            </div>
+
             <div className="mb-2 text-[10px] font-bold capitalize tracking-wider text-[var(--color-text-tertiary)]">Customer Groups</div>
             <div className="flex flex-wrap gap-2">
               {ALL_GROUPS.map((group) => (

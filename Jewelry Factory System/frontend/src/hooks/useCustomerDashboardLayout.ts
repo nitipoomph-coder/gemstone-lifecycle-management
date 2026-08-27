@@ -8,6 +8,8 @@ export const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', '
 export const MONTH_PARAM_IDS = MONTHS.map((_, index) => String(index + 1));
 export const ALL_GROUP_IDS = ALL_GROUPS.map((group: any) => group.id);
 
+
+
 export function csv(value: string | null) {
   return String(value || '').split(',').map(item => item.trim()).filter(Boolean);
 }

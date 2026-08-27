@@ -153,10 +153,10 @@ export default function Topbar({ breadcrumb, hideSearch, contentLayout = 'worksp
       </div>
 
       {/* Right: Tools & Search */}
-      <div className="app-topbar__right flex min-w-0 items-center gap-4">
+      <div className="app-topbar__right flex flex-1 justify-end min-w-0 items-center gap-4">
         {/* Universal Search Bar */}
         {!hideSearch && (
-          <div className="app-topbar__search relative" ref={searchRef}>
+          <div className="app-topbar__search relative w-full" style={{ maxWidth: '1200px' }} ref={searchRef}>
             <div
               className="flex items-center gap-2 rounded-lg py-1.5 pl-1 pr-3 transition-[border-color,box-shadow] duration-150"
               style={{
@@ -241,7 +241,11 @@ export default function Topbar({ breadcrumb, hideSearch, contentLayout = 'worksp
                               onClick={() => handleResultClick(res.path)}
                               className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors hover:bg-[var(--color-surface-0)] group"
                             >
-                              {res.itemNo ? (
+                              {res.type === 'customer' ? (
+                                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-[var(--color-surface-2)] text-[var(--color-text-secondary)]">
+                                  <User size={16} />
+                                </div>
+                              ) : res.itemNo ? (
                                 <img
                                   src={psPhotoUrl(res.itemNo)}
                                   alt={res.title}
@@ -251,7 +255,7 @@ export default function Topbar({ breadcrumb, hideSearch, contentLayout = 'worksp
                                 />
                               ) : (
                                 <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-[var(--color-surface-2)] text-[var(--color-text-secondary)] transition-colors">
-                                  {type === 'order' ? <Package size={20} /> : type === 'item' ? <Gem size={20} /> : <User size={20} />}
+                                  {type === 'order' ? <Package size={20} /> : <Gem size={20} />}
                                 </div>
                               )}
                               <div className="flex-1 min-w-0">

@@ -71,20 +71,20 @@ router.get('/', async (req, res) => {
       results.push(...itemResult.recordset);
     }
 
-    // Search Customers (GMCust)
+    // Search Customers (GMCust) — show CustCode only; never expose CustName
     if (!searchType || searchType === 'customer') {
       const custResult = await pool.request()
         .input('q', sql.NVarChar, likeQuery)
         .input('qPrefix', sql.NVarChar, prefixQuery)
         .query(`
-          SELECT TOP 10 
-            CustCode AS id, 
-            'customer' AS type, 
-            CustName AS title, 
-            'Customer Code: ' + CustCode AS sub, 
-            '/order-tracker?search=' + CustCode AS path
-          FROM GMCust
-          WHERE CustCode LIKE @qPrefix OR CustName LIKE @q
+          SELECT TOP 10
+            c.CustCode AS id,
+            'customer' AS type,
+            c.CustCode AS title,
+            '' AS sub,
+            '/order-tracker?search=' + c.CustCode AS path
+          FROM GMCust c
+          WHERE c.CustCode LIKE @qPrefix OR c.CustName LIKE @q
         `);
       results.push(...custResult.recordset.map(r => ({ ...r, itemNo: null })));
     }

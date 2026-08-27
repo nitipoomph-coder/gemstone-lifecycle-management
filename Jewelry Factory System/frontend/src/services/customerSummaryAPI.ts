@@ -23,12 +23,10 @@ export interface CustomerSummaryRecord {
 // Customer Summary data for Customer Dashboard and Top Orders first load.
 export const fetchCustomerSummary = async (
   years: string[], 
-  months?: string[],
-  dateBasis: string = 'orddate',
-  productType: string = 'ALL'
+  months?: string[]
 ): Promise<CustomerSummaryRecord[]> => {
   const yearsParam = years.join(',');
-  let url = `${BASE_URL}/dashboard/customer-summary?years=${yearsParam}&dateBasis=${dateBasis}&type=${productType}`;
+  let url = `${BASE_URL}/dashboard/customer-summary?years=${yearsParam}`;
   // Period/month filter changes the DB summary, so it is sent to the API.
   if (months && months.length > 0) {
     const monthsParam = months.map(m => MONTHS.indexOf(m) + 1).join(',');

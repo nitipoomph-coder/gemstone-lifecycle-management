@@ -73,7 +73,6 @@ export function CustomerKpiCards({
             style={{
               background: 'var(--color-surface-0)',
               border: '1px solid var(--color-border-light)',
-              borderLeft: `4px solid ${color}`,
               borderRadius: 8,
               padding: '12px 16px',
               boxShadow: '0 8px 20px -16px color-mix(in srgb, var(--color-surface-900) 25%, transparent)',
@@ -87,6 +86,7 @@ export function CustomerKpiCards({
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div style={{ fontSize: 'var(--erp-text-dense)', fontWeight: 900, color: 'var(--color-text-primary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span style={{ width: 8, height: 8, borderRadius: 2, background: color, marginRight: 2 }} />
                   Year {yData.year}
                 </span>
               </div>
@@ -143,7 +143,6 @@ export function CustomerKpiCards({
             style={{
               background: 'var(--color-surface-0)',
               border: '1px solid var(--color-border-light)',
-              borderLeft: `4px solid ${gData.color}`,
               borderRadius: 8,
               padding: '12px 16px',
               boxShadow: '0 8px 20px -16px color-mix(in srgb, var(--color-surface-900) 25%, transparent)',

@@ -33,22 +33,7 @@ SELECT
     LEFT(DT.ItemNo, 8) AS [Item SKU],
     DT.ItemCust AS [Cust Item],
 
-    -- Product Type Logic (BBS: Bracelet/Bangle, BES: Earring, BNS: Necklace, BRS: Ring, Others)
-    CASE 
-        WHEN UPPER(LEFT(ISNULL(DT.ItemNo, ''), 3)) IN ('BBS', 'BES', 'BNS', 'BRS') 
-            THEN UPPER(LEFT(ISNULL(DT.ItemNo, ''), 3)) 
-        WHEN UPPER(ISNULL(DT.ItemType, '')) IN ('BBS', 'BES', 'BNS', 'BRS') 
-            THEN UPPER(DT.ItemType) 
-        WHEN UPPER(LEFT(ISNULL(DT.ItemType, ''), 1)) IN ('B', 'T') 
-            THEN 'BBS' 
-        WHEN UPPER(LEFT(ISNULL(DT.ItemType, ''), 1)) = 'E' 
-            THEN 'BES' 
-        WHEN UPPER(LEFT(ISNULL(DT.ItemType, ''), 1)) = 'N' 
-            THEN 'BNS' 
-        WHEN UPPER(LEFT(ISNULL(DT.ItemType, ''), 1)) = 'R' 
-            THEN 'BRS' 
-        ELSE 'Others' 
-    END AS ProductType,
+    HD.OrdType AS ProductType,
 
     DT.ItemType,
     DT.ItemMat,

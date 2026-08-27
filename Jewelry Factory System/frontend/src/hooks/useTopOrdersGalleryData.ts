@@ -8,8 +8,6 @@ import { getCustomerGroupId, ALL_GROUPS, ACTIVE_GROUP_IDS } from '../config/cust
 
 // --- Shared Constants & Types ---
 export const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-export const PRODUCT_TYPE_OPTIONS = ["ALL", "BBS", "BES", "BNS", "BRS"] as const;
-export type ProductTypeFilter = typeof PRODUCT_TYPE_OPTIONS[number];
 export type GalleryDisplayMode = "group" | "list";
 export type PeriodPreset = "full-year" | "ytd" | "this-month" | "last-month" | "custom";
 
@@ -44,7 +42,6 @@ export interface GalleryRow {
   groupLabel: string;
   topItem: string;
   topItemQty: number;
-  productType: string;
   yrTotal: number;
   sortValue: number;
   displayMode: GalleryDisplayMode;
@@ -72,7 +69,7 @@ export const customerItemKey = (customerCode: unknown, styleNo: unknown) => `${n
 export const getGroupLabel = (groupId: string) => ALL_GROUPS.find((group: any) => group.id === groupId)?.label || groupId;
 
 export const galleryRowSearchText = (row: GalleryRow) =>
-  [row.label, row.customerCode, row.customerName, row.groupId, row.groupLabel, row.topItem, row.productType]
+  [row.label, row.customerCode, row.customerName, row.groupId, row.groupLabel, row.topItem]
     .filter(Boolean)
     .join(" ")
     .toLowerCase();
@@ -118,7 +115,6 @@ export function useTopOrdersGalleryData() {
   });
   const [searchDraft, setSearchDraft] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedProductType, setSelectedProductType] = useState<ProductTypeFilter>("ALL");
   const [monthStart, setMonthStart] = useState(1);
   const [monthEnd, setMonthEnd] = useState(12);
   const [periodPreset, setPeriodPreset] = useState<PeriodPreset>("full-year");
@@ -143,10 +139,9 @@ export function useTopOrdersGalleryData() {
     if (baseYear) params.set("year", baseYear);
     if (compareEnabled && compareYear) params.set("compareYear", compareYear);
     if (selectedMonthKey) params.set("months", selectedMonthKey);
-    if (selectedProductType !== "ALL") params.set("type", selectedProductType);
     if (selectedGroupsKey) params.set("groups", selectedGroupsKey);
     return `/dashboard/top-orders/analytics?${params.toString()}`;
-  }, [baseYear, compareEnabled, compareYear, metric, selectedGroupsKey, selectedMonthKey, selectedProductType]);
+  }, [baseYear, compareEnabled, compareYear, metric, selectedGroupsKey, selectedMonthKey]);
 
   const isInitialLoading = loading && custData.length === 0;
   const isFilterLoading = filterLoading || (loading && custData.length > 0);
@@ -233,72 +228,23 @@ export function useTopOrdersGalleryData() {
 
       if (yrTotal > 0) {
         const groupLabel = getGroupLabel(groupId);
-        if (selectedProductType === "ALL") {
-          const typeMap = cust.topItemsByYearByType?.[baseYear] || {};
-          const typeKeys = Object.keys(typeMap);
-          if (typeKeys.length > 0) {
-            typeKeys.forEach((pType) => {
-              const itemInfo = typeMap[pType as ProductTypeFilter];
-              const tItem = itemInfo?.topItem;
-              const tQty = Number(itemInfo?.topItemQty || 0);
-              if (tItem && tQty > 0) {
-                sourceRows.push({
-                  rowKey: `list-${customerCode}-${normalizeStyleNo(tItem)}-${baseYear}-${pType}`,
-                  id: customerCode,
-                  label: customerCode,
-                  customerCode,
-                  customerName: String(cust.name || ""),
-                  groupId,
-                  groupLabel,
-                  topItem: tItem,
-                  topItemQty: tQty,
-                  productType: pType,
-                  yrTotal,
-                  sortValue: tQty,
-                  displayMode: "list",
-                });
-              }
-            });
-          } else if (cust.topItemsByYear?.[baseYear]?.topItem) {
-            const yearlyTopItem = cust.topItemsByYear[baseYear];
-            const tItem = yearlyTopItem.topItem;
-            const tQty = Number(yearlyTopItem.topItemQty || 0);
-            if (tItem && tQty > 0) {
-              sourceRows.push({
-                rowKey: `list-${customerCode}-${normalizeStyleNo(tItem)}-${baseYear}-ALL`,
-                id: customerCode,
-                label: customerCode,
-                customerCode,
-                customerName: String(cust.name || ""),
-                groupId,
-                groupLabel,
-                topItem: tItem,
-                topItemQty: tQty,
-                productType: yearlyTopItem.productType || "ALL",
-                yrTotal,
-                sortValue: tQty,
-                displayMode: "list",
-              });
-            }
-          }
-        } else {
-          const yearlyTopItem = cust.topItemsByYearByType?.[baseYear]?.[selectedProductType];
-          const topItem = yearlyTopItem?.topItem;
-          const topItemQty = Number(yearlyTopItem?.topItemQty || 0);
-          if (topItem && topItemQty > 0) {
+        if (cust.topItemsByYear?.[baseYear]?.topItem) {
+          const yearlyTopItem = cust.topItemsByYear[baseYear];
+          const tItem = yearlyTopItem.topItem;
+          const tQty = Number(yearlyTopItem.topItemQty || 0);
+          if (tItem && tQty > 0) {
             sourceRows.push({
-              rowKey: `list-${customerCode}-${normalizeStyleNo(topItem)}-${baseYear}-${selectedProductType}`,
+              rowKey: `list-${customerCode}-${normalizeStyleNo(tItem)}-${baseYear}-ALL`,
               id: customerCode,
               label: customerCode,
               customerCode,
               customerName: String(cust.name || ""),
               groupId,
               groupLabel,
-              topItem,
-              topItemQty,
-              productType: selectedProductType,
+              topItem: tItem,
+              topItemQty: tQty,
               yrTotal,
-              sortValue: topItemQty,
+              sortValue: tQty,
               displayMode: "list",
             });
           }
@@ -336,7 +282,7 @@ export function useTopOrdersGalleryData() {
     const rows = sourceRows.filter((row) => selectedGroupSet.has(row.groupId));
     const totalRows = rows.length;
     return { rows: rows.slice(0, TOP_CUSTOMER_ITEM_LIMIT), totalRows };
-  }, [custData, baseYear, selGroups, searchQuery, metric, selectedProductType, selectedMonthNumbers]);
+  }, [custData, baseYear, selGroups, searchQuery, metric, selectedMonthNumbers]);
 
   useEffect(() => {
     if (!compareEnabled || !baseYear || availableYears.length === 0) return;
@@ -414,8 +360,6 @@ export function useTopOrdersGalleryData() {
     setSearchDraft,
     searchQuery,
     setSearchQuery,
-    selectedProductType,
-    setSelectedProductType,
     monthStart,
     setMonthStart,
     monthEnd,

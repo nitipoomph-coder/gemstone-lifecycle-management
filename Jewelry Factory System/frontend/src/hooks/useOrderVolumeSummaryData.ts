@@ -4,12 +4,12 @@ import { useOutletContext, useSearchParams } from 'react-router-dom';
 import {
   fetchSalesOrders,
   fetchSalesMonthlyAnalytics,
-  fetchSalesTypeAnalytics,
   fetchSalesDeliveryOutlook,
+  fetchSalesRiskAnalytics,
   type SalesOrderRow,
   type SalesMonthlyPoint,
-  type SalesTypePoint,
   type DeliveryOutlookResponse,
+  type SalesRiskPoint,
   type SalesAnalyticsParams
 } from '../services/orderVolumeSummaryAPI';
 import { CUSTOMER_GROUPS } from '../config/customerGroups';
@@ -17,25 +17,9 @@ import { CUSTOMER_GROUPS } from '../config/customerGroups';
 // --- Types ---
 export type Metric = 'amount' | 'qty';
 export type TrendGranularity = 'monthly' | 'weekly';
-export const SALES_TYPE_OPTIONS = [
-  { value: 'BBS', label: 'Bracelet / Bangle' },
-  { value: 'BES', label: 'Earring' },
-  { value: 'BNS', label: 'Necklace' },
-  { value: 'BRS', label: 'Ring' },
-  { value: 'OTHERS', label: 'Others' },
-] as const;
-export type SalesTypeCode = typeof SALES_TYPE_OPTIONS[number]['value'];
 
-export const SALES_TYPE_COLORS: Record<SalesTypeCode, string> = {
-  BBS: 'var(--color-chart-1)',
-  BES: 'var(--color-chart-2)',
-  BNS: 'var(--color-chart-3)',
-  BRS: 'var(--color-chart-4)',
-  OTHERS: 'var(--color-chart-6)',
-};
-export type KpiTypeSelection = 'ALL' | SalesTypeCode;
 export type ViewMode = 'overview' | 'details';
-export type DrilldownBasis = 'order' | 'due';
+export type DrilldownBasis = 'order' | 'due' | 'risk';
 export type Drilldown = { year: string; month?: string; week?: number; type?: string; basis?: DrilldownBasis; metric?: Metric };
 export type SalesTotals = {
   avgQtyPerOrder: number;
@@ -68,14 +52,7 @@ export type TooltipPayloadEntry = {
   payload?: TrendComparisonDatum;
   value?: number;
 };
-export type TypeContributionRow = {
-  code: SalesTypeCode;
-  label: string;
-  current: number;
-  compare: number;
-  orderCount: number;
-  share: number;
-};
+
 export type DueOutlookDatum = {
   monthNumber: number;
   monthLabel: string;
@@ -160,30 +137,7 @@ function buildMonthlyComparison(rows: SalesMonthlyPoint[], primaryYear: string, 
   return data;
 }
 
-function buildTypeContribution(rows: SalesTypePoint[], primaryYear: string, compareYear: string | undefined, primaryMetric: number, metric: Metric = 'amount'): TypeContributionRow[] {
-  const pYear = Number(primaryYear);
-  const cYear = compareYear ? Number(compareYear) : null;
-  return SALES_TYPE_OPTIONS.map(opt => {
-    const primaryRows = rows.filter(r => r.year === pYear && r.typeCode === opt.value);
-    const compareRows = cYear ? rows.filter(r => r.year === cYear && r.typeCode === opt.value) : [];
-    const current = metric === 'amount' ? primaryRows.reduce((s, r) => s + (r.amount || 0), 0) : primaryRows.reduce((s, r) => s + (r.qty || 0), 0);
-    const compare = metric === 'amount' ? compareRows.reduce((s, r) => s + (r.amount || 0), 0) : compareRows.reduce((s, r) => s + (r.qty || 0), 0);
-    const orderCount = primaryRows.reduce((s, r) => s + r.orderCount, 0);
-    return {
-      code: opt.value,
-      label: opt.label,
-      current,
-      compare,
-      orderCount,
-      share: primaryMetric > 0 ? (current / primaryMetric) * 100 : 0,
-    };
-  });
-}
 
-export function kpiTypeLabel(selectedType: KpiTypeSelection) {
-  if (selectedType === 'ALL') return 'All Types';
-  return SALES_TYPE_OPTIONS.find(option => option.value === selectedType)?.label || selectedType;
-}
 
 export function growthPercent(primary: number, compare: number) {
   if (compare === 0) return 0;
@@ -210,7 +164,6 @@ export function useOrderVolumeSummaryData() {
   }>();
 
   const loadRequestIdRef = useRef(0);
-  const [selectedKpiType, setSelectedKpiType] = useState<KpiTypeSelection>('ALL');
   const urlMetric = searchParams.get('metric') as Metric | null;
   const metric: Metric = urlMetric === 'qty' ? 'qty' : 'amount';
 
@@ -225,8 +178,8 @@ export function useOrderVolumeSummaryData() {
   const [drilldown, setDrilldown] = useState<Drilldown | null>(null);
 
   const [monthlyData, setMonthlyData] = useState<SalesMonthlyPoint[]>([]);
-  const [typeData, setTypeData] = useState<SalesTypePoint[]>([]);
   const [deliveryOutlookData, setDeliveryOutlookData] = useState<DeliveryOutlookResponse | null>(null);
+  const [riskData, setRiskData] = useState<SalesRiskPoint[]>([]);
 
   const [selectedBucket, setSelectedBucket] = useState<string | null>(null);
   const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);
@@ -244,8 +197,12 @@ export function useOrderVolumeSummaryData() {
   const [page, setPage] = useState(1);
 
   const customers = useMemo(() => selectedCustomerCodes(selectedGroups), [selectedGroups]);
+  const customersKey = customers.join('|');
+  const selectedYearsKey = selectedYears.join('|');
+  const selectedMonthsKey = selectedMonths.join('|');
+
   const drilldownKey = drilldown ? `${drilldown.basis || 'order'}|${drilldown.year}|${drilldown.month || 'all'}|${drilldown.week || 'all'}|${drilldown.type || 'all'}` : 'all';
-  const filterPageKey = `${selectedYears.join('|')}|${selectedGroups.join('|')}|${search}|${drilldownKey}|${selectedBucket || ''}|${selectedDepartment || ''}|${selectedCustCode || ''}`;
+  const filterPageKey = `${selectedYearsKey}|${selectedGroups.join('|')}|${search}|${drilldownKey}|${selectedBucket || ''}|${selectedDepartment || ''}|${selectedCustCode || ''}`;
 
   useEffect(() => {
     const resetTimer = window.setTimeout(() => setPage(1), 0);
@@ -255,9 +212,8 @@ export function useOrderVolumeSummaryData() {
   const loadOverviewData = useCallback(async () => {
     if (yearsLoading) return;
     const requestId = ++loadRequestIdRef.current;
-    if (selectedYears.length === 0) {
+    if (selectedYearsKey.length === 0) {
       setMonthlyData([]);
-      setTypeData([]);
       setDeliveryOutlookData(null);
       setHasResolvedData(true);
       setLoading(false);
@@ -268,16 +224,16 @@ export function useOrderVolumeSummaryData() {
     setError('');
 
     const apiParams = {
-      years: selectedYears,
-      months: selectedMonths,
-      customers,
+      years: selectedYearsKey ? selectedYearsKey.split('|') : [],
+      months: selectedMonthsKey ? selectedMonthsKey.split('|') : [],
+      customers: customersKey ? customersKey.split('|') : [],
     };
 
     try {
-      const [monthlyResult, typeResult, deliveryResult] = await Promise.allSettled([
+      const [monthlyResult, deliveryResult, riskResult] = await Promise.allSettled([
         fetchSalesMonthlyAnalytics(apiParams),
-        fetchSalesTypeAnalytics(apiParams),
         fetchSalesDeliveryOutlook(apiParams),
+        fetchSalesRiskAnalytics(apiParams)
       ]);
 
       if (requestId !== loadRequestIdRef.current) return;
@@ -285,25 +241,25 @@ export function useOrderVolumeSummaryData() {
       if (monthlyResult.status === 'fulfilled') setMonthlyData(monthlyResult.value);
       else { setMonthlyData([]); setError(monthlyResult.reason instanceof Error ? monthlyResult.reason.message : 'Failed to load monthly analytics'); }
 
-      if (typeResult.status === 'fulfilled') setTypeData(typeResult.value);
-      else setTypeData([]);
-
       if (deliveryResult.status === 'fulfilled') setDeliveryOutlookData(deliveryResult.value);
       else setDeliveryOutlookData(null);
+      
+      if (riskResult.status === 'fulfilled') setRiskData(riskResult.value);
+      else setRiskData([]);
 
-      if (monthlyResult.status === 'fulfilled' || typeResult.status === 'fulfilled' || deliveryResult.status === 'fulfilled') {
+      if (monthlyResult.status === 'fulfilled' || deliveryResult.status === 'fulfilled' || riskResult.status === 'fulfilled') {
         setHasResolvedData(true);
       }
     } catch (err) {
       if (requestId !== loadRequestIdRef.current) return;
       setMonthlyData([]);
-      setTypeData([]);
       setDeliveryOutlookData(null);
+      setRiskData([]);
       setError(err instanceof Error ? err.message : 'Failed to load order volume summary');
     } finally {
       if (requestId === loadRequestIdRef.current) setLoading(false);
     }
-  }, [customers, selectedYears, selectedMonths, yearsLoading]);
+  }, [customersKey, selectedYearsKey, selectedMonthsKey, yearsLoading]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => { void loadOverviewData(); }, 0);
@@ -325,49 +281,13 @@ export function useOrderVolumeSummaryData() {
   const primaryMetric = metric === 'amount' ? primaryTotals.amount : primaryTotals.qty;
 
   const selectedTypeTotals = useMemo(() => {
-    if (selectedKpiType === 'ALL') {
-      return {
-        primary: primaryTotals,
-        compare: compareTotals,
-        isFiltered: false,
-        typeName: 'All Types'
-      };
-    }
-    const pYear = Number(primaryYear);
-    const cYear = hasCompareYear ? Number(compareYear) : null;
-    const pRows = typeData.filter(r => r.year === pYear && r.typeCode === selectedKpiType);
-    const cRows = cYear ? typeData.filter(r => r.year === cYear && r.typeCode === selectedKpiType) : [];
-
-    const pQty = pRows.reduce((s, r) => s + (r.qty || 0), 0);
-    const pShippedQty = pRows.reduce((s, r) => s + (r.shippedQty || 0), 0);
-    const pOpenQty = pRows.reduce((s, r) => s + (r.openQty !== undefined ? r.openQty : Math.max(0, r.qty - (r.shippedQty || 0))), 0);
-    const pAmount = pRows.reduce((s, r) => s + (r.amount || 0), 0);
-    const pShippedAmount = pRows.reduce((s, r) => s + (r.shippedAmount || 0), 0);
-    const pOrders = pRows.reduce((s, r) => s + (r.orderCount || 0), 0);
-
-    const cQty = cRows.reduce((s, r) => s + (r.qty || 0), 0);
-    const cAmount = cRows.reduce((s, r) => s + (r.amount || 0), 0);
-
     return {
-      primary: {
-        qty: pQty,
-        shippedQty: pShippedQty,
-        gapQty: pOpenQty,
-        amount: pAmount,
-        shippedAmount: pShippedAmount,
-        gapAmount: Math.max(0, pAmount - pShippedAmount),
-        orders: pOrders,
-        avgQtyPerOrder: pOrders > 0 ? pQty / pOrders : 0,
-        avgAmountPerOrder: pOrders > 0 ? pAmount / pOrders : 0,
-      },
-      compare: {
-        qty: cQty,
-        amount: cAmount,
-      },
-      isFiltered: true,
-      typeName: kpiTypeLabel(selectedKpiType)
+      primary: primaryTotals,
+      compare: compareTotals,
+      isFiltered: false,
+      typeName: 'All Types'
     };
-  }, [selectedKpiType, primaryTotals, compareTotals, typeData, primaryYear, compareYear, hasCompareYear]);
+  }, [primaryTotals, compareTotals]);
 
   const kpiPrimaryMetric = metric === 'amount' ? selectedTypeTotals.primary.amount : selectedTypeTotals.primary.qty;
   const kpiCompareMetric = metric === 'amount' ? selectedTypeTotals.compare.amount : selectedTypeTotals.compare.qty;
@@ -448,10 +368,7 @@ export function useOrderVolumeSummaryData() {
     [monthlyData, primaryYear, compareYear, hasCompareYear, metric],
   );
 
-  const typeContribution = useMemo(
-    () => buildTypeContribution(typeData, primaryYear, hasCompareYear ? compareYear : undefined, primaryMetric, metric),
-    [typeData, primaryYear, compareYear, hasCompareYear, primaryMetric, metric],
-  );
+
 
   const filteredOrderRows = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -494,11 +411,10 @@ export function useOrderVolumeSummaryData() {
     setActiveView('overview');
   };
 
-  const openChartDetail = (year: string, periodNumber: number | undefined, type?: SalesTypeCode) => {
+  const openChartDetail = (year: string, periodNumber: number | undefined) => {
     const dd: Drilldown = {
       year,
       month: periodNumber ? String(periodNumber) : undefined,
-      type,
       basis: 'order',
       metric,
     };
@@ -513,7 +429,7 @@ export function useOrderVolumeSummaryData() {
     metric, switchMetric,
     activeView, setActiveView,
     drilldown, setDrilldown, resetDrilldown,
-    monthlyData, typeData, deliveryOutlookData,
+    monthlyData, deliveryOutlookData,
     selectedBucket, handleSelectBucket,
     selectedDepartment, handleSelectDepartment,
     selectedCustCode, handleSelectCustCode,
@@ -524,10 +440,10 @@ export function useOrderVolumeSummaryData() {
     primaryYear, compareYear, hasCompareYear,
     primaryMetric, selectedTypeTotals,
     kpiPrimaryMetric, kpiCompareMetric, kpiChangeAmount, kpiGrowthRate, kpiDeliveryRate, kpiOutstandingMetric,
-    selectedKpiType, setSelectedKpiType,
-    monthlyComparisonData, typeContribution,
+    monthlyComparisonData,
     filteredOrderRows,
     selectedYears, selectedGroups, availableYears,
-    openChartDetail
+    openChartDetail,
+    riskData
   };
 }

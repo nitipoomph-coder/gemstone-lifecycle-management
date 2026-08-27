@@ -279,3 +279,4 @@ Don't:
 - Do not hide exact Order No or Item No behind summary-only views.
 - Do not make filters so large that they push the table or key report below the fold.
 - Do not introduce a new font unless the whole system is intentionally migrating.
+- Do not use thick colored borders on one side of a card (`borderLeft: 4px solid...`). This is a recognizable tell of AI-generated UIs. Use subtler accents or remove them entirely.

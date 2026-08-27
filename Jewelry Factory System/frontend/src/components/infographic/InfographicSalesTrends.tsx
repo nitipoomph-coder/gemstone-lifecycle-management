@@ -2,19 +2,14 @@ import { type KeyboardEvent, type ReactNode, type CSSProperties, useState } from
   // @ts-ignore
 import { ArrowRight, CalendarDays, Search, RefreshCw, ChevronDown, X } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import CustomSelect from '../ui/CustomSelect';
-  // @ts-ignore
-import { fmtMetric, fmtQty, fmtPercent, fmtSignedMetric, SALES_TYPE_COLORS, SALES_TYPE_OPTIONS, ORDER_DETAIL_COLUMNS, fmtAxis } from '../../hooks/useOrderVolumeSummaryData';
-import type { 
+import { fmtMetric, fmtQty, fmtSignedMetric, ORDER_DETAIL_COLUMNS, fmtAxis } from '../../hooks/useOrderVolumeSummaryData';
+import type {
   Metric,
-  SalesTypeCode,
   TrendGranularity,
   TrendComparisonDatum,
   WeeklyComparisonGroup,
   TooltipPayloadEntry,
   DueOutlookDatum,
-  TypeContributionRow,
-  KpiTypeSelection,
   ViewMode
 } from '../../hooks/useOrderVolumeSummaryData';
 
@@ -171,7 +166,7 @@ export function InteractiveTrendBar({
   series: 'report' | 'compare';
   metric: Metric;
   fillColor: string;
-  onActivate: (year: string, periodNumber: number | undefined, type?: SalesTypeCode) => void;
+  onActivate: (year: string, periodNumber: number | undefined) => void;
 }) {
   const value = Number(payload?.[series] || 0);
   if (value <= 0 || width <= 0 || height <= 0 || !payload) return <g />;
@@ -234,7 +229,7 @@ export function TrendComparisonTooltip({ active, payload, label, metric, reportY
   );
 }
 
-export function WeeklyComparisonList({ groups, reportYear, compareYear, metric, onDrilldown }: { groups: WeeklyComparisonGroup[]; reportYear: string; compareYear?: string; metric: Metric; onDrilldown: (year: string, week: number | undefined, type?: SalesTypeCode) => void }) {
+export function WeeklyComparisonList({ groups, reportYear, compareYear, metric, onDrilldown }: { groups: WeeklyComparisonGroup[]; reportYear: string; compareYear?: string; metric: Metric; onDrilldown: (year: string, week: number | undefined) => void }) {
   const [expandedMonth, setExpandedMonth] = useState<number | null>(() => groups[0]?.monthNumber ?? null);
   const hasCompare = !!compareYear;
 
@@ -394,7 +389,7 @@ export function DueDateOutlook({ rows, year, metric, loading, error, onDrilldown
   );
 }
 
-export function TrendComparisonChart({ data, reportYear, compareYear, metric, granularity, onDrilldown }: { data: TrendComparisonDatum[]; reportYear: string; compareYear?: string; metric: Metric; granularity: TrendGranularity; onDrilldown: (year: string, periodNumber: number | undefined, type?: SalesTypeCode) => void }) {
+export function TrendComparisonChart({ data, reportYear, compareYear, metric, granularity, onDrilldown }: { data: TrendComparisonDatum[]; reportYear: string; compareYear?: string; metric: Metric; granularity: TrendGranularity; onDrilldown: (year: string, periodNumber: number | undefined) => void }) {
   const hasData = data.some(point => point.report > 0);
   const hasCompare = !!compareYear && data.some(point => point.compare > 0);
   const intervalLabel = granularity === 'monthly' ? 'Monthly' : 'Weekly';
@@ -427,40 +422,6 @@ export function TrendComparisonChart({ data, reportYear, compareYear, metric, gr
   );
 }
 
-export function TypeContribution({ rows, metric, year, compareYear, total, onDrilldown }: { rows: TypeContributionRow[]; metric: Metric; year: string; compareYear?: string; total: number; onDrilldown: (year: string, month: number | undefined, type: SalesTypeCode) => void }) {
-  const hasCompare = !!compareYear;
-
-  return (
-    <section className="customer-trends-contribution" aria-labelledby="customer-trends-contribution-title">
-      <div className="customer-trends-contribution__header">
-        <div><h3 id="customer-trends-contribution-title">Type Contribution</h3><span>{year || '-'}{hasCompare ? ` vs ${compareYear}` : ''}</span></div>
-        <strong>{fmtMetric(total, metric)}</strong>
-      </div>
-      <div className="customer-trends-contribution__columns" aria-hidden="true">
-        <span>Type</span><span>{year}</span>{hasCompare && <span>{compareYear}</span>}<span>Share</span><span>Orders</span><span />
-      </div>
-      <div className="customer-trends-contribution__rows">
-        {rows.map(row => {
-          const delta = hasCompare ? row.current - row.compare : 0;
-          const deltaTone = delta > 0 ? 'up' : delta < 0 ? 'down' : 'flat';
-
-          return (
-            <button key={row.code} type="button" onClick={() => onDrilldown(year, undefined, row.code)} aria-label={`Open ${row.code} order details for ${year}`}>
-              <span className="customer-trends-contribution__type"><i style={{ background: SALES_TYPE_COLORS[row.code] }} /><span><strong>{row.code}</strong><small>{row.label}</small></span></span>
-              <span className="customer-trends-contribution__value"><strong>{fmtMetric(row.current, metric)}</strong><small>{year} / {row.share.toFixed(1)}%</small></span>
-              {hasCompare && (
-                <span className="customer-trends-contribution__delta" data-tone={deltaTone}><strong>{fmtMetric(row.compare, metric)}</strong><small>{compareYear} / {fmtSignedMetric(delta, metric)}</small></span>
-              )}
-              <span className="customer-trends-contribution__delta" data-tone={'flat'}><strong>{fmtQty(row.orderCount)}</strong><small>orders</small></span>
-              <ArrowRight size={13} />
-            </button>
-          );
-        })}
-      </div>
-    </section>
-  );
-}
-
 export function SearchBox({ value, onChange, onKeyDown, onClear }: { value: string; onChange: (value: string) => void; onKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void; onClear: () => void }) {
   return (
     <label style={searchBox}>
@@ -484,22 +445,7 @@ export function SummaryMetric({ label, value, hint, tone, muted, control }: { la
   );
 }
 
-export function KpiTypeSelect({ value, onChange }: { value: KpiTypeSelection; onChange: (value: KpiTypeSelection) => void }) {
-  const options = [
-    { value: 'ALL', label: 'All Types' },
-    ...SALES_TYPE_OPTIONS.map((opt: any) => ({ value: opt.value, label: opt.label }))
-  ];
-  return (
-    <div style={{ width: 125 }}>
-      <CustomSelect
-        value={value}
-        onChange={(val) => onChange(val as KpiTypeSelection)}
-        options={options}
-        ariaLabel="Order count product type"
-      />
-    </div>
-  );
-}
+
 
 
 export function FilterChip({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) {

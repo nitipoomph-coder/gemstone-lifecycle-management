@@ -50,7 +50,6 @@ export default function POTrackerAdvanced() {
     pageStart,
     paged,
     pageNumbers,
-    activeChips,
     activeFilterCount
   } = usePOTrackerAdvanced();
 
@@ -64,7 +63,7 @@ export default function POTrackerAdvanced() {
           <div className="po-toolbar app-panel no-print" style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px',
             background: 'var(--color-surface-0)',
-            padding: '14px 20px', marginBottom: activeChips.length > 0 ? '12px' : '24px',
+            padding: '14px 20px', marginBottom: '24px',
           }}>
             {/* Left: Group + Status pill toggles */}
             <div className="po-toolbar__modes" style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
@@ -252,34 +251,6 @@ export default function POTrackerAdvanced() {
               </button>
             </div>
           </div>
-
-          {/* Active filter chips — only rendered when something is set, so the toolbar above stays the only thing visible by default */}
-          {activeChips.length > 0 && (
-            <div className="no-print" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '24px' }}>
-              {activeChips.map((chip: any) => (
-                <div
-                  key={chip.key}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '6px', borderRadius: '20px',
-                    background: 'var(--color-surface-1)', border: '1px solid var(--color-border-light)',
-                    padding: '6px 6px 6px 12px', fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-secondary)'
-                  }}
-                >
-                  <span>{chip.label}</span>
-                  <button
-                    onClick={chip.onClear}
-                    style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', width: 18, height: 18,
-                      borderRadius: '50%', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--color-text-tertiary)'
-                    }}
-                    className="hover:bg-danger-100 hover:text-danger-600"
-                  >
-                    <X size={12} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
 
           {/* ─── KPI TILES (Flat icon-circle, static display — consistent with PCC Subcontract Management) ─── */}
           <div className="po-kpi-grid">

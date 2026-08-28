@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { X, Search, Check, Layers, Filter } from 'lucide-react';
-import { MASTER_COLS, COLUMN_GROUPS } from './orderTableConfig';
+import { MASTER_COLS, COLUMN_GROUPS, GROUP_PRESETS } from './orderTableConfig';
 
 interface CustomViewModalProps {
   isOpen: boolean;
@@ -36,10 +36,40 @@ function CustomViewModalContent({ onClose, initialVisibleKeys, initialGroup, onA
   const [selectedKeys, setSelectedKeys] = useState<string[]>(initialVisibleKeys);
   const [searchCol, setSearchCol] = useState('');
 
+  const sortKeys = (keys: string[], presetGrp: string) => {
+    // Ensure mandatory keys are always present
+    const mandatory = ['no', 'week', 'cust', 'po', 'arrow'];
+    const withMandatory = Array.from(new Set([...keys, ...mandatory]));
+
+    const preset = GROUP_PRESETS[presetGrp] || [];
+    const masterKeys = Object.keys(MASTER_COLS);
+
+    const fullOrder = [...preset];
+    for (const mKey of masterKeys) {
+      if (!preset.includes(mKey)) {
+        const masterIdx = masterKeys.indexOf(mKey);
+        let inserted = false;
+        for (let i = masterIdx - 1; i >= 0; i--) {
+          const prevKey = masterKeys[i];
+          const fullIdx = fullOrder.indexOf(prevKey);
+          if (fullIdx !== -1) {
+            fullOrder.splice(fullIdx + 1, 0, mKey);
+            inserted = true;
+            break;
+          }
+        }
+        if (!inserted) fullOrder.unshift(mKey);
+      }
+    }
+    return withMandatory.sort((a, b) => fullOrder.indexOf(a) - fullOrder.indexOf(b));
+  };
+
   const handleToggleKey = (key: string) => {
-    setSelectedKeys(prev =>
-      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
-    );
+    setSelectedKeys(prev => {
+      const next = prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key];
+      return sortKeys(next, selectedGroup);
+    });
+
   };
 
   const handleApply = () => {
@@ -185,9 +215,9 @@ function CustomViewModalContent({ onClose, initialVisibleKeys, initialGroup, onA
                               <button
                                 onClick={() => {
                                   if (allSelected) {
-                                    setSelectedKeys(prev => prev.filter(k => !g.keys.includes(k)));
+                                    setSelectedKeys(prev => sortKeys(prev.filter(k => !g.keys.includes(k)), selectedGroup));
                                   } else {
-                                    setSelectedKeys(prev => Array.from(new Set([...prev, ...g.keys])));
+                                    setSelectedKeys(prev => sortKeys(Array.from(new Set([...prev, ...g.keys])), selectedGroup));
                                   }
                                 }}
                                 style={{ border: 'none', background: 'transparent', color: 'var(--color-brand-600)', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer' }}

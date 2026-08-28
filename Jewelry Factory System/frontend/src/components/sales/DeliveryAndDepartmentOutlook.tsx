@@ -4,10 +4,10 @@ import {
   Calendar,
   Layers,
   Flame,
-  Building2,
   Factory
 } from 'lucide-react';
 import type { DeliveryOutlookResponse, SalesMetric } from '../../services/orderVolumeSummaryAPI';
+import { CustomerBacklogTable } from '../dashboard/orderVolume/CustomerBacklogTable';
 
 interface Props {
   data: DeliveryOutlookResponse | null;
@@ -238,7 +238,7 @@ export const DeliveryAndDepartmentOutlook: React.FC<Props> = ({
       </div>
 
       {/* ─── 3. Main Operational Breakdown Grid ─── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 1.2fr) minmax(280px, 1fr)', gap: 16 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
 
         {/* Left Panel: Department Bottleneck Pipeline */}
         <div style={{ background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)', borderRadius: 8, padding: 16 }}>
@@ -289,6 +289,9 @@ export const DeliveryAndDepartmentOutlook: React.FC<Props> = ({
                         <span style={{ fontSize: '0.8rem', fontWeight: 900, color: 'var(--color-text-primary)' }}>
                           {fmtValue(dept.openQty, dept.openAmount)}
                         </span>
+                        <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--color-text-secondary)', minWidth: 60, textAlign: 'right' }}>
+                          {dept.orderCount} Orders
+                        </span>
                         <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--color-text-tertiary)', minWidth: 38, textAlign: 'right' }}>
                           {pct.toFixed(1)}%
                         </span>
@@ -313,87 +316,14 @@ export const DeliveryAndDepartmentOutlook: React.FC<Props> = ({
           </div>
         </div>
 
-        {/* Right Panel: Customer Code Backlog (Confidential) */}
-        <div style={{ background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)', borderRadius: 8, padding: 16 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <div>
-              <h4 style={{ margin: 0, fontSize: '0.88rem', fontWeight: 900, color: 'var(--color-text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                <Building2 size={16} style={{ color: 'var(--color-brand-500)' }} />
-                Customer Backlog (CustCode)
-              </h4>
-              <span style={{ fontSize: '0.72rem', color: 'var(--color-text-tertiary)', fontWeight: 700 }}>
-                Top Accounts with Open Quantity & Risk Profile
-              </span>
-            </div>
-            <span style={{ fontSize: '0.72rem', color: 'var(--color-text-secondary)', fontWeight: 800 }}>
-              {customers.length} Accounts
-            </span>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 380, overflowY: 'auto', paddingRight: 4 }} className="custom-scrollbar">
-            {customers.length === 0 ? (
-              <div style={{ padding: 20, textAlign: 'center', fontSize: '0.8rem', color: 'var(--color-text-tertiary)' }}>
-                No customer backlog found for selected period
-              </div>
-            ) : (
-              customers.slice(0, 15).map(cust => {
-                const isSelected = selectedCustCode === cust.custCode;
-                const fulfillment = cust.totalQty > 0 ? (cust.shippedQty / cust.totalQty) * 100 : 0;
-
-                return (
-                  <div
-                    key={cust.custCode}
-                    onClick={() => onSelectCustCode(isSelected ? null : cust.custCode)}
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      padding: '8px 10px',
-                      borderRadius: 6,
-                      background: isSelected ? 'var(--color-surface-1)' : 'var(--color-surface-0)',
-                      border: isSelected ? '1px solid var(--color-brand-500)' : '1px solid var(--color-border-light)',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{ fontSize: '0.82rem', fontWeight: 900, color: 'var(--color-text-primary)' }}>
-                          {cust.custCode}
-                        </span>
-                        {cust.overdueQty > 0 && (
-                          <span style={{ fontSize: '0.65rem', fontWeight: 900, padding: '1px 5px', borderRadius: 4, background: 'var(--color-danger-50)', color: 'var(--color-danger-600)' }}>
-                            {cust.overdueQty.toLocaleString()} Overdue
-                          </span>
-                        )}
-                        {cust.due15Qty > 0 && (
-                          <span style={{ fontSize: '0.65rem', fontWeight: 900, padding: '1px 5px', borderRadius: 4, background: 'var(--color-warning-50)', color: 'var(--color-warning-600)' }}>
-                            {cust.due15Qty.toLocaleString()} &lt;15D
-                          </span>
-                        )}
-                      </div>
-                      <div style={{ fontSize: '0.7rem', color: 'var(--color-text-tertiary)', fontWeight: 700 }}>
-                        {fulfillment.toFixed(0)}% Shipped ({cust.shippedQty.toLocaleString()} / {cust.totalQty.toLocaleString()} pcs)
-                      </div>
-                    </div>
-
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: '0.85rem', fontWeight: 900, color: cust.openQty > 0 ? 'var(--color-brand-600)' : 'var(--color-text-secondary)' }}>
-                        {metric === 'amount' ? '$' + Math.round(cust.totalAmount).toLocaleString() : cust.openQty.toLocaleString() + ' open'}
-                      </div>
-                      <div style={{ fontSize: '0.68rem', color: 'var(--color-text-tertiary)', fontWeight: 700 }}>
-                        {cust.orderCount} Orders
-                      </div>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </div>
-
+        {/* Right Panel: Customer Code Backlog Table */}
+        <CustomerBacklogTable 
+          customers={customers} 
+          metric={metric} 
+          selectedCustCode={selectedCustCode} 
+          onSelectCustCode={onSelectCustCode} 
+        />
       </div>
-
     </div>
   );
 };

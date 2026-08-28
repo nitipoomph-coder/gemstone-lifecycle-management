@@ -18,13 +18,34 @@ router.get('/', async (req, res) => {
     const prefixQuery = `${queryText}%`;
     const results = [];
 
-    // Search Orders (OrdHD)
-    if (!searchType || searchType === 'order' || searchType === 'po') {
-      let whereClause = 'h.OrdNo LIKE @qPrefix OR h.PONo LIKE @qPrefix OR h.CustCode LIKE @qPrefix OR c.SalesName LIKE @qPrefix';
-      if (searchType === 'po') {
-        whereClause = 'h.PONo LIKE @qPrefix';
-      }
+    // Search POs (OrdHD by PONo)
+    if (!searchType || searchType === 'po') {
+      const poResult = await pool.request()
+        .input('q', sql.NVarChar, likeQuery)
+        .input('qPrefix', sql.NVarChar, prefixQuery)
+        .query(`
+          WITH FilteredPOs AS (
+            SELECT TOP 10 h.OrdNo, h.PONo, h.EXNo, h.CustCode, c.SalesName,
+            (SELECT SUM(ISNULL(ItemQty, 0)) FROM OrdDT WHERE OrdNo = h.OrdNo) AS Qty
+            FROM OrdHD h
+            LEFT JOIN GMCust c ON c.CustCode = h.CustCode
+            WHERE h.PONo LIKE @qPrefix OR h.PONo LIKE @q OR h.EXNo LIKE @qPrefix OR h.EXNo LIKE @q
+          )
+          SELECT 
+            ISNULL(f.PONo, ISNULL(f.EXNo, '')) + '-' + f.OrdNo AS id, 
+            'po' AS type, 
+            'PONo: ' + ISNULL(f.PONo, ISNULL(f.EXNo, '-')) AS title, 
+            'Cust: ' + ISNULL(f.CustCode, '') + ' / Qty: ' + CAST(CAST(ISNULL(f.Qty, 0) AS INT) AS VARCHAR) AS sub, 
+            '/po-tracker?fPO=' + ISNULL(f.PONo, ISNULL(f.EXNo, f.OrdNo)) AS path,
+            d.ItemNo AS itemNo
+          FROM FilteredPOs f
+          LEFT JOIN OrdDT d ON d.OrdNo = f.OrdNo AND d.OrdLineNo = '1'
+        `);
+      results.push(...poResult.recordset);
+    }
 
+    // Search Orders (OrdHD by OrdNo)
+    if (!searchType || searchType === 'order') {
       const orderResult = await pool.request()
         .input('q', sql.NVarChar, likeQuery)
         .input('qPrefix', sql.NVarChar, prefixQuery)
@@ -33,14 +54,14 @@ router.get('/', async (req, res) => {
             SELECT TOP 10 h.OrdNo, h.PONo, h.CustCode, c.SalesName
             FROM OrdHD h
             LEFT JOIN GMCust c ON c.CustCode = h.CustCode
-            WHERE ${whereClause}
+            WHERE h.OrdNo LIKE @qPrefix
           )
           SELECT 
             f.OrdNo AS id, 
             'order' AS type, 
             f.OrdNo AS title, 
-            'Order No: ' + f.OrdNo + ' / PO: ' + ISNULL(f.PONo, '-') + ' / Cust: ' + ISNULL(f.CustCode, '') AS sub, 
-            '/order-tracker?search=' + f.OrdNo AS path,
+            'PO: ' + ISNULL(f.PONo, '-') + ' / Cust: ' + ISNULL(f.CustCode, '') AS sub, 
+            '/po-tracker/ord/' + f.OrdNo AS path,
             d.ItemNo AS itemNo
           FROM FilteredOrders f
           LEFT JOIN OrdDT d ON d.OrdNo = f.OrdNo AND d.OrdLineNo = '1'
@@ -55,16 +76,18 @@ router.get('/', async (req, res) => {
         .input('qPrefix', sql.NVarChar, prefixQuery)
         .query(`
           WITH FilteredItems AS (
-            SELECT DISTINCT TOP 10 d.ItemNo, d.ItemDesc, d.ItemMat
+            SELECT TOP 10 d.ItemNo, MAX(d.ItemMat) AS ItemMat, MAX(h.CustCode) AS CustCode
             FROM OrdDT d
+            JOIN OrdHD h ON h.OrdNo = d.OrdNo
             WHERE d.ItemNo LIKE @qPrefix OR d.ItemDesc LIKE @qPrefix
+            GROUP BY d.ItemNo
           )
           SELECT 
             f.ItemNo AS id, 
             'item' AS type, 
             f.ItemNo AS title, 
-            'Item Desc: ' + ISNULL(f.ItemDesc, '') + ' / Mat: ' + ISNULL(f.ItemMat, '') AS sub, 
-            '/order-tracker?search=' + f.ItemNo AS path,
+            'Mat: ' + ISNULL(f.ItemMat, '-') + ' / Cust: ' + ISNULL(f.CustCode, '') AS sub, 
+            '/item-detail/' + f.ItemNo AS path,
             f.ItemNo AS itemNo
           FROM FilteredItems f
         `);
@@ -82,7 +105,7 @@ router.get('/', async (req, res) => {
             'customer' AS type,
             c.CustCode AS title,
             '' AS sub,
-            '/order-tracker?search=' + c.CustCode AS path
+            '/po-tracker?fCust=' + c.CustCode AS path
           FROM GMCust c
           WHERE c.CustCode LIKE @qPrefix OR c.CustName LIKE @q
         `);

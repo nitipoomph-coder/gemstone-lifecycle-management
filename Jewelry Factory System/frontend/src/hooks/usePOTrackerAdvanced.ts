@@ -91,6 +91,16 @@ export function usePOTrackerAdvanced() {
   const orders = hasCurrentOrders ? ordersState.orders : EMPTY_ORDERS;
   const error = hasCurrentOrders ? ordersState.error : null;
   const loading = !hasCurrentOrders;
+  // Sync incoming URL changes to state (e.g. from Topbar global search)
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    
+    const newFPO = params.get('fPO') || '';
+    setFilterPO(prev => (prev !== newFPO ? newFPO : prev));
+
+    const newFCust = params.get('fCust') || '';
+    setFilterCust(prev => (prev !== newFCust ? newFCust : prev));
+  }, [location.search]);
 
   // Sync state back to URL automatically
   useEffect(() => {

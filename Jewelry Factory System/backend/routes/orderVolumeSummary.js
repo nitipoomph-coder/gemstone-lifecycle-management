@@ -9,7 +9,7 @@ const express = require('express');
 const router = express.Router();
 const { getPool, sql } = require('../db');
 
-const SALES_ANALYTICS_VIEW = 'dbo.VW_Web_SalesDashboard';
+const SALES_ANALYTICS_VIEW = 'dbo.VW_Web_OrderTrends';
 
 function parseCsvInts(value, fallback = []) {
   const parsed = String(value || '')
@@ -139,10 +139,9 @@ router.get('/sales-risk-analytics', async (req, res) => {
           v.ItemQty AS qty,
           v.OpenQty AS openQty,
           v.ItemAmnt AS amount,
-          v.CustDueDate AS custDueDate,
-          v.CloseStatus AS closeStatus
+          v.CustDueDate AS custDueDate
         FROM ${SALES_ANALYTICS_VIEW} v
-        WHERE ${whereSql} AND v.CloseStatus = 'N' AND v.OpenQty > 0
+        WHERE ${whereSql} AND v.OpenQty > 0
       )
       SELECT
         year,

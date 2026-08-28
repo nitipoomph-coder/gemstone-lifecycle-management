@@ -1,11 +1,9 @@
-import { ChevronRight, Image as ImageIcon } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import type { OrderSummary } from '../../services/orderAPI';
-import { psPhotoUrl, attachPhotoFallback } from '../../utils/photoUrl';
-
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 // ช่องที่ไม่มีข้อมูล = เว้นว่าง (ตามที่ผู้ใช้ระบุ ไม่ใส่ placeholder '-')
 const formatDate = (d: string | null) =>
-  d ? new Date(d).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '';
+  d ? new Date(d).toLocaleDateString('en-EN', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '';
 const formatQty = (n: number | null | undefined) => (n != null ? n.toLocaleString() : '');
 
 type ColDef = {
@@ -23,15 +21,14 @@ const txt = (label: string, key: keyof OrderSummary, w = 100, align: 'left' | 'c
   cellStyle: () => ({ fontWeight: 600, color: 'var(--color-text-secondary)', fontSize: 'var(--erp-text-control)' }),
 });
 
-// คอลัมน์จำนวนงานค้าง (Pending Qty) — ติดลบ = ค้าง แสดงสีแดง, ว่างถ้า null
+// คอลัมน์จำนวนงานค้าง (Pending Qty) — ติดลบ = ค้าง แสดงสีแดงพื้นแดงอ่อน, ว่างถ้า 0 หรือ null
 const pen = (label: string, key: keyof OrderSummary, w = 78): ColDef => ({
   label, w, align: 'right',
-  render: (o) => { const v = o[key] as number | null; return v != null ? v.toLocaleString() : ''; },
+  render: (o) => { const v = o[key] as number | null; return v != null && v !== 0 ? v.toLocaleString() : ''; },
   cellStyle: (o) => {
     const v = o[key] as number | null;
     return v != null && v < 0
-      ? { color: 'var(--color-danger-500)', fontWeight: 800, fontFamily: 'var(--font-display)', fontSize: 'var(--erp-text-control)' }
-      : { fontWeight: 700, color: 'var(--color-text-secondary)', fontFamily: 'var(--font-display)', fontSize: 'var(--erp-text-control)' };
+      ? { color: 'var(--color-danger-600)', background: 'var(--po-negative-bg, transparent)', fontWeight: 800, fontFamily: 'var(--font-display)', fontSize: 'var(--erp-text-control)' } : { fontWeight: 700, color: 'var(--color-text-secondary)', fontFamily: 'var(--font-display)', fontSize: 'var(--erp-text-control)' };
   },
 });
 
@@ -119,6 +116,8 @@ export const MASTER_COLS: Record<string, ColDef> = {
     label: 'QC Date', w: 95, align: 'center',
     render: (o) => formatDate(o.CustQCDate),
   },
+  bookInspect: txt('Book Inspect', 'BookDate', 110),
+  bookShip: txt('Book Ship', 'BookShip', 100),
   custdue: {
     label: 'Cust Due', w: 95, align: 'center',
     render: (o) => formatDate(o.CustDueDate),
@@ -127,22 +126,12 @@ export const MASTER_COLS: Record<string, ColDef> = {
   sku: {
     label: 'No. of SKU', w: 85, align: 'center',
     render: (o) => (o.NumSKU ? o.NumSKU.toLocaleString() : ''),
-    cellStyle: () => ({ fontWeight: 700, color: 'var(--color-text-primary)' }),
+    cellStyle: () => ({ fontWeight: 700, color: 'var(--color-brand-700)' }),
   },
   qty: {
     label: 'Qty', w: 80, align: 'right',
     render: (o) => formatQty(o.TotalQty),
-    cellStyle: () => ({ fontWeight: 800, color: 'var(--color-text-primary)', fontFamily: 'var(--font-display)', fontSize: 'var(--erp-text-control)' }),
-  },
-  amount: {
-    label: 'Amount ($)', w: 110, align: 'right',
-    render: (o) => o.Amount != null ? `$${o.Amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '',
-    cellStyle: () => ({ fontWeight: 800, color: 'var(--color-text-primary)', fontFamily: 'var(--font-display)', fontSize: 'var(--erp-text-control)' }),
-  },
-  remark: {
-    label: 'Remark', w: 150, align: 'left',
-    render: (o) => o.TrackRemark || '',
-    cellStyle: () => ({ fontSize: '0.7rem', color: 'var(--color-text-tertiary)' }),
+    cellStyle: () => ({ fontWeight: 800, color: 'var(--color-brand-700)', fontFamily: 'var(--font-display)', fontSize: 'var(--erp-text-control)' }),
   },
 
   // ── Production — Stage Pending Qty ──
@@ -163,8 +152,6 @@ export const MASTER_COLS: Record<string, ColDef> = {
   },
 
   // ── Production — Book / QC ──
-  bookInspect: txt('Book Inspect', 'BookDate', 110),
-  bookShip: txt('Book Ship', 'BookShip', 100),
   qc1qty: txt('1. QC Qty', 'QC1_Qty', 85),
   qc1date: txt('1. QC Date', 'QC1_Date', 95),
   qc1fail: txt('1. QC Fail Qty', 'QC1_Fail', 95),
@@ -208,12 +195,22 @@ export const MASTER_COLS: Record<string, ColDef> = {
 
   // ── Production — Issue / Plan ──
   prodRisk: {
-    label: 'Production Risky Issue', w: 170, align: 'left',
+    label: 'Production Risky Issue', w: 170, align: 'center',
     render: (o) => o.ProdRiskIssue || '',
     cellStyle: () => ({ color: 'var(--color-danger-600)', fontWeight: 600, fontSize: '0.78rem' }),
   },
   pqc: txt('PQC Plan Ship', 'PQCPlanShip', 115),
 
+  remark: {
+    label: 'Remark', w: 150, align: 'left',
+    render: (o) => o.TrackRemark || '',
+    cellStyle: () => ({ fontSize: '0.7rem', color: 'var(--color-text-tertiary)' }),
+  },
+  amount: {
+    label: 'Amount ($)', w: 110, align: 'right',
+    render: (o) => o.Amount != null ? `$${o.Amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '',
+    cellStyle: () => ({ fontWeight: 800, color: 'var(--color-brand-700)', fontFamily: 'var(--font-display)', fontSize: 'var(--erp-text-control)' }),
+  },
   arrow: {
     label: '', w: 40, align: 'left',
     render: () => <ChevronRight size={18} style={{ color: 'var(--color-text-quaternary)' }} />,
@@ -234,8 +231,16 @@ export const USER_INPUT_KEYS = new Set<string>([
   'polyOrd', 'polyRec', 'tagRcyRec',
   'prodRisk', 'pqc',
 ]);
-export const USER_INPUT_CELL_BG = 'color-mix(in srgb, var(--color-warning-500) 9%, transparent)';                 // พื้นเซลล์ (โปร่ง — ทับ row stripe ได้)
 export const USER_INPUT_HEAD_BG = 'color-mix(in srgb, var(--color-warning-500) 16%, var(--color-surface-1))';     // พื้นหัวตาราง (ทึบ — sticky)
+
+export const PENDING_QTY_KEYS = new Set<string>([
+  'stonePen', 'fitPen', 'wijPen', 'castPen', 'controlPen', 'grindPen', 'polishPen', 'platePen', 'exportQty', 'balQty'
+]);
+export const PENDING_QTY_HEAD_BG = 'color-mix(in srgb, var(--color-danger-500) 12%, var(--color-surface-1))';
+
+export const METRICS_KEYS = new Set<string>(['sku', 'qty', 'amount']);
+export const METRICS_BG = 'color-mix(in srgb, var(--color-brand-500) 10%, transparent)';
+export const METRICS_HEAD_BG = 'color-mix(in srgb, var(--color-brand-500) 12%, var(--color-surface-1))';
 
 // Default columns ต่อกลุ่ม (จากระบบเก่า — ดู PO_TRACKER_REVAMP_PLAN.md §4)
 // ลำดับใน array ไม่มีผล (เป็น membership set) — ลำดับแสดงผลมาจาก key order ของ MASTER_COLS
@@ -248,7 +253,7 @@ export const GROUP_PRESETS: Record<string, string[]> = {
     'prodRisk', 'pqc', 'receiveTicket', 'remark', 'amount', 'arrow'
   ],
   N008: [
-    'no', 'week', 'cust', 'po', 'newReplen', 'shipto', 'orddate', 'due', 'qa', 'sgs', 'qcdate', 'custdue', 'oor', 'sku', 'qty',
+    'no', 'week', 'cust', 'po', 'po2', 'newReplen', 'metal', 'shipto', 'orddate', 'due', 'qcdate', 'bookInspect', 'bookShip', 'custdue', 'oor', 'sku', 'qty',
     'controlPen', 'polishPen', 'platePen',
     'prodRisk', 'pqc', 'cardBox', 'orderTicket', 'receiveTicket', 'packScan', 'remark', 'amount', 'arrow'
   ],
@@ -268,7 +273,7 @@ export const GROUP_PRESETS: Record<string, string[]> = {
     'prodRisk', 'pqc', 'remark', 'amount', 'arrow'
   ],
   N051: [
-    'no', 'week', 'cust', 'po', 'po2', 'newReplen', 'metal', 'orddate', 'custdue', 'sku', 'qty',
+    'no', 'week', 'cust', 'po', 'newReplen', 'metal', 'orddate', 'custdue', 'sku', 'qty',
     'controlPen', 'polishPen', 'platePen', 'exportQty', 'balQty', 'expPct',
     'prodRisk', 'pqc', 'remark', 'amount', 'arrow'
   ],
@@ -276,6 +281,12 @@ export const GROUP_PRESETS: Record<string, string[]> = {
     'no', 'week', 'cust', 'po', 'newReplen', 'orddate', 'due', 'custdue', 'sku', 'qty',
     'qc1qty', 'qc1date', 'qc1fail', 'qc2qty', 'qc2date', 'qc2fail',
     'controlPen', 'polishPen', 'platePen',
+    'prodRisk', 'pqc', 'receiveTicket', 'remark', 'amount', 'arrow'
+  ],
+  N098: [
+    'no', 'week', 'cust', 'po', 'po2', 'newReplen', 'orddate', 'due', 'custdue', 'sku', 'qty',
+    'qc1qty', 'qc1date', 'qc1fail',
+    'controlPen', 'polishPen', 'platePen', 'exportQty', 'balQty', 'expPct',
     'prodRisk', 'pqc', 'receiveTicket', 'remark', 'amount', 'arrow'
   ],
 };

@@ -67,26 +67,16 @@ export type DueOutlookDatum = {
 };
 
 export const ORDER_DETAIL_COLUMNS = [
-  ['OrdNo', 105],
-  ['PONo', 140],
-  ['PO 2', 110],
+  ['Order No.', 105],
   ['CustCode', 85],
-  ['CustDueDate', 110],
-  ['Department', 110],
-  ['Due Risk', 110],
-  ['Ship To', 120],
-  ['ItemNo', 110],
-  ['Type', 80],
-  ['Cust Item', 110],
-  ['ItemMat', 70],
-  ['ItemSize', 90],
-  ['ItemStone', 110],
-  ['ItemPlate', 110],
-  ['OrdQTY', 85],
-  ['ExportQTY', 85],
-  ['OpenQTY', 85],
-  ['Price', 85],
-  ['Amount', 110]
+  ['Group', 90],
+  ['Order Date', 100],
+  ['Due Date', 100],
+  ['Status', 110],
+  ['Factory Stage', 110],
+  ['Open Qty', 85],
+  ['Open Value', 110],
+  ['Days +/-', 85]
 ] as const;
 
 // --- Helpers ---
@@ -294,6 +284,7 @@ export function useOrderVolumeSummaryData() {
   const kpiChangeAmount = hasCompareYear ? kpiPrimaryMetric - kpiCompareMetric : 0;
   const kpiGrowthRate = hasCompareYear && kpiCompareMetric !== 0 ? growthPercent(kpiPrimaryMetric, kpiCompareMetric) : null;
   const kpiDeliveryRate = selectedTypeTotals.primary.qty > 0 ? (selectedTypeTotals.primary.shippedQty / selectedTypeTotals.primary.qty) * 100 : 0;
+  const kpiCompareDeliveryRate = selectedTypeTotals.compare.qty > 0 ? (selectedTypeTotals.compare.shippedQty / selectedTypeTotals.compare.qty) * 100 : null;
   const kpiOutstandingMetric = metric === 'amount' ? selectedTypeTotals.primary.gapAmount : selectedTypeTotals.primary.gapQty;
 
   const loadDrilldownOrders = useCallback(async (dd: Drilldown) => {
@@ -383,9 +374,13 @@ export function useOrderVolumeSummaryData() {
       : drilldownOrders;
 
     return [...rows].sort((a, b) => {
-      const metricSort = Number(b.orderQty || 0) - Number(a.orderQty || 0);
-      const dateSort = (b.ordDate ? new Date(b.ordDate).getTime() : 0) - (a.ordDate ? new Date(a.ordDate).getTime() : 0);
-      return metricSort || dateSort || String(a.orderNo || '').localeCompare(String(b.orderNo || ''));
+      // most overdue first (daysToCustDue asc)
+      const daysA = a.daysToCustDue !== undefined && a.daysToCustDue !== null ? a.daysToCustDue : 99999;
+      const daysB = b.daysToCustDue !== undefined && b.daysToCustDue !== null ? b.daysToCustDue : 99999;
+      if (daysA !== daysB) return daysA - daysB;
+      // fallback
+      const dateSort = (a.ordDate ? new Date(a.ordDate).getTime() : 0) - (b.ordDate ? new Date(b.ordDate).getTime() : 0);
+      return dateSort || String(a.orderNo || '').localeCompare(String(b.orderNo || ''));
     });
   }, [drilldownOrders, search]);
 
@@ -439,7 +434,7 @@ export function useOrderVolumeSummaryData() {
     page, setPage,
     primaryYear, compareYear, hasCompareYear,
     primaryMetric, selectedTypeTotals,
-    kpiPrimaryMetric, kpiCompareMetric, kpiChangeAmount, kpiGrowthRate, kpiDeliveryRate, kpiOutstandingMetric,
+    kpiPrimaryMetric, kpiCompareMetric, kpiChangeAmount, kpiGrowthRate, kpiDeliveryRate, kpiCompareDeliveryRate, kpiOutstandingMetric,
     monthlyComparisonData,
     filteredOrderRows,
     selectedYears, selectedGroups, availableYears,

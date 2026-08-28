@@ -37,7 +37,7 @@ export const RiskCustomerChart: React.FC<Props> = ({ riskData, metric, selectedG
         
         groupMap[gId].wip += wipVal;
         groupMap[gId].overdue += overdueVal;
-        groupMap[gId].safe += (wipVal - overdueVal);
+        groupMap[gId].safe += Math.max(0, wipVal - overdueVal);
       }
     });
 
@@ -49,7 +49,7 @@ export const RiskCustomerChart: React.FC<Props> = ({ riskData, metric, selectedG
         wip: groupMap[gId].wip,
         overdue: groupMap[gId].overdue,
         safe: groupMap[gId].safe,
-        color: g?.color || 'var(--color-chart-1)'
+        color: g?.color || '#3b82f6'
       };
     });
   }, [riskData, metric, groupsToDisplay]);
@@ -62,20 +62,22 @@ export const RiskCustomerChart: React.FC<Props> = ({ riskData, metric, selectedG
   };
 
   return (
-    <div style={{ background: 'var(--color-surface-0)', borderRadius: 8, padding: 18, border: '1px solid var(--color-border-light)' }}>
-      <h3 style={{ margin: '0 0 4px 0', fontSize: 'var(--erp-text-section)', fontWeight: 900, color: 'var(--color-text-primary)' }}>
-        Delivery Risk by Customer Group
-      </h3>
-      <p style={{ margin: '0 0 16px 0', fontSize: 'var(--erp-text-control)', color: 'var(--color-text-tertiary)', fontWeight: 700 }}>
-        Comparing Safe WIP vs Overdue/Risk. Unit: {metric === 'amount' ? 'USD ($)' : 'Pieces (PCS)'}
-      </p>
+    <div style={{ background: 'var(--color-surface-0)', borderRadius: 8, padding: '14px 16px', border: '1px solid var(--color-border-light)', display: 'flex', flexDirection: 'column', width: '100%' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+        <h3 style={{ margin: 0, fontSize: '0.86rem', fontWeight: 900, color: 'var(--color-text-primary)' }}>
+          Delivery Risk by Customer Group
+        </h3>
+        <span style={{ fontSize: '0.7rem', color: 'var(--color-text-tertiary)', fontWeight: 700 }}>
+          On Schedule vs Overdue • {metric === 'amount' ? 'USD ($)' : 'Pieces (PCS)'}
+        </span>
+      </div>
 
-      <div style={{ height: 350, width: '100%' }}>
+      <div style={{ height: 210, width: '100%' }}>
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+          <BarChart data={chartData} margin={{ top: 8, right: 15, left: 5, bottom: 2 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border-light)" />
-            <XAxis dataKey="label" tick={{ fontSize: 11, fill: 'var(--color-text-secondary)', fontWeight: 700 }} axisLine={false} tickLine={false} dy={10} />
-            <YAxis tickFormatter={formatAxisValue} tick={{ fontSize: 11, fill: 'var(--color-text-quaternary)', fontWeight: 700 }} axisLine={false} tickLine={false} dx={-10} width={60} />
+            <XAxis dataKey="label" tick={{ fontSize: 10, fill: 'var(--color-text-secondary)', fontWeight: 700 }} axisLine={false} tickLine={false} dy={4} />
+            <YAxis tickFormatter={formatAxisValue} tick={{ fontSize: 10, fill: 'var(--color-text-quaternary)', fontWeight: 700 }} axisLine={false} tickLine={false} dx={-4} width={55} />
             <Tooltip
               content={({ active, payload, label }) => {
                 if (active && payload && payload.length) {
@@ -100,9 +102,9 @@ export const RiskCustomerChart: React.FC<Props> = ({ riskData, metric, selectedG
               }}
               cursor={{ fill: 'var(--color-surface-1)', opacity: 0.4 }}
             />
-            <Legend wrapperStyle={{ paddingTop: 10, fontSize: 'var(--erp-text-control)', fontWeight: 700 }} />
-            <Bar dataKey="safe" stackId="a" name="Safe WIP" fill="var(--color-chart-1)" radius={[0, 0, 4, 4]} />
-            <Bar dataKey="overdue" stackId="a" name="At Risk / Overdue" fill="var(--color-danger-500)" radius={[4, 4, 0, 0]} />
+            <Legend wrapperStyle={{ paddingTop: 2, fontSize: '11px', fontWeight: 700 }} />
+            <Bar dataKey="safe" stackId="a" name="On Schedule" fill="#3b82f6" radius={[0, 0, 4, 4]} />
+            <Bar dataKey="overdue" stackId="a" name="Overdue / At Risk" fill="#ef4444" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>

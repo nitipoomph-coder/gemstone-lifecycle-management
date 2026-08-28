@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Search, ChevronDown, ChevronRight, ChevronLeft, Palette, Package, Gem, User } from 'lucide-react';
+import { Search, ChevronDown, ChevronRight, ChevronLeft, Palette, Package, Gem, User, Layers } from 'lucide-react';
 import { useTheme } from '../../contexts/useTheme';
 import { useState, useRef, useEffect } from 'react';
 import { fetchSearch, type SearchResultItem } from '../../services/poTrackerAPI';
@@ -226,14 +226,14 @@ export default function Topbar({ breadcrumb, hideSearch, contentLayout = 'worksp
                   </div>
                 ) : (
                   <div className="overflow-y-auto p-2 flex flex-col gap-1 custom-scrollbar">
-                    {['order', 'item', 'customer'].map((type) => {
+                    {['po', 'order', 'item', 'customer'].map((type) => {
                       const typeResults = results.filter(r => r.type === type);
                       if (typeResults.length === 0) return null;
 
                       return (
                         <div key={type} className="mb-2 last:mb-0">
                           <div className="px-3 py-1 text-[length:var(--erp-text-meta)] font-bold capitalize text-[var(--color-text-tertiary)] opacity-60">
-                            {type === 'order' ? 'Orders' : type === 'item' ? 'Items' : 'Customers'}
+                            {type === 'po' ? 'PO No' : type === 'order' ? 'Orders' : type === 'item' ? 'Items' : 'Customers'}
                           </div>
                           {typeResults.map(res => (
                             <button
@@ -255,7 +255,7 @@ export default function Topbar({ breadcrumb, hideSearch, contentLayout = 'worksp
                                 />
                               ) : (
                                 <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-[var(--color-surface-2)] text-[var(--color-text-secondary)] transition-colors">
-                                  {type === 'order' ? <Package size={20} /> : <Gem size={20} />}
+                                  {type === 'po' ? <Layers size={20} /> : type === 'order' ? <Package size={20} /> : <Gem size={20} />}
                                 </div>
                               )}
                               <div className="flex-1 min-w-0">

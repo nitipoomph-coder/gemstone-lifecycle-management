@@ -1,9 +1,9 @@
 // src/components/dashboard/OrderTable.tsx
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ChevronRight, BarChart2, DollarSign, Layers, Package, X } from 'lucide-react';
 import { type OrderSummary } from '../../services/orderAPI';
-import { MASTER_COLS, USER_INPUT_CELL_BG, USER_INPUT_HEAD_BG, USER_INPUT_KEYS } from './orderTableConfig';
+import { MASTER_COLS, USER_INPUT_HEAD_BG, USER_INPUT_KEYS, PENDING_QTY_KEYS, PENDING_QTY_HEAD_BG, METRICS_KEYS, METRICS_HEAD_BG, METRICS_BG } from './orderTableConfig';
 
 
 // ─── View Selection Popup ─────────────────────────────────────────────────────
@@ -243,7 +243,7 @@ function ViewPickerModal({ order, onClose, onSelect }: ViewPickerProps) {
 
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
-function SkeletonRows({ activeCols }: { activeCols: { key: string; w: number }[] }) {
+function SkeletonRows({ activeCols, colWidths = {} }: { activeCols: { key: string; w: number }[], colWidths?: Record<string, number> }) {
   return (
     <>
       <style>{`
@@ -260,19 +260,19 @@ function SkeletonRows({ activeCols }: { activeCols: { key: string; w: number }[]
             const isPinned = ['no', 'week', 'cust', 'po', 'po2', 'ordno', 'newReplen'].includes(c.key);
             let leftPos = 0;
             if (isPinned) {
-              const prevPinned = activeCols.slice(0, idx);
-              leftPos = prevPinned.reduce((sum, col) => sum + col.w, 0);
+              const prevPinned = activeCols.slice(0, idx).filter(c => ['no', 'week', 'cust', 'po', 'po2', 'ordno', 'newReplen'].includes(c.key));
+              leftPos = prevPinned.reduce((sum, col) => sum + (colWidths[col.key] || col.w), 0);
             }
             return (
               <td key={c.key} style={{
                 padding: '8px',
                 borderRight: '1px solid var(--color-border-strong)',
                 background: isPinned ? 'var(--color-surface-0)' : 'transparent',
-                position: isPinned ? 'sticky' : 'static',
+                position: isPinned ? 'sticky' : 'relative',
                 left: isPinned ? leftPos : undefined,
                 zIndex: isPinned ? 15 : 1,
                 boxShadow: isPinned && c.key === 'newReplen' ? 'var(--shadow-pinned)' : 'none',
-                minWidth: c.w, width: c.w, maxWidth: c.w, boxSizing: 'border-box'
+                minWidth: colWidths[c.key] || c.w, width: colWidths[c.key] || c.w, maxWidth: colWidths[c.key] || c.w, boxSizing: 'border-box'
               }}>
                 {c.key === 'photo'
                   ? <div className="skeleton-cell" style={{ width: 100, height: 60, borderRadius: 6, margin: '0 auto' }} />
@@ -303,13 +303,38 @@ export default function OrderTable({
   const [searchParams] = useSearchParams();
   const [pickerOrder, setPickerOrder] = useState<OrderSummary | null>(null);
 
-  // Use visibleKeys order (from GROUP_PRESETS) to control column sequence
+  // Column Resizing State
+  const [colWidths, setColWidths] = useState<Record<string, number>>({});
+  const resizingColRef = useRef<string | null>(null);
+  const startXRef = useRef<number>(0);
+  const startWidthRef = useRef<number>(0);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!resizingColRef.current) return;
+      const deltaX = e.clientX - startXRef.current;
+      const newWidth = Math.max(40, startWidthRef.current + deltaX);
+      setColWidths(prev => ({ ...prev, [resizingColRef.current as string]: newWidth }));
+    };
+    const handleMouseUp = () => {
+      if (resizingColRef.current) {
+        resizingColRef.current = null;
+        document.body.style.cursor = 'default';
+      }
+    };
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, []);
+
   const mandatory = ['no', 'week', 'cust', 'po', 'arrow'];
   const orderedKeys = [
     ...visibleKeys.filter(key => key in MASTER_COLS),
     ...mandatory.filter(key => !visibleKeys.includes(key)),
   ];
-  // Remove duplicates while preserving order
   const uniqueKeys = [...new Set(orderedKeys)];
   const activeCols = uniqueKeys.map(key => ({ key, ...MASTER_COLS[key] }));
 
@@ -317,7 +342,6 @@ export default function OrderTable({
     setPickerOrder(order);
   };
 
-  // ใน OrderTable.tsx
   const handleViewSelect = (view: ViewMode) => {
     if (!pickerOrder) return;
     setPickerOrder(null);
@@ -334,8 +358,6 @@ export default function OrderTable({
     if (status) query.append('status', status);
     query.append('view', view);
 
-    // ทุกแถวยิงเข้า endpoint /group/ เดียว (กรองครบทุกแกนเหมือน SP → ยอด detail ตรงกับแถวใน list)
-    // แนบ ?po= เป็น "แกนที่ 6" เมื่อแถวผูกกับ PO จริง — ครอบคลุมลูกค้าทั่วไป + N008 หลาย PO (CTM)
     query.append('po', pickerOrder.PONo || '');
     const path = [
       pickerOrder.CustCode || '-',
@@ -349,7 +371,6 @@ export default function OrderTable({
 
   return (
     <>
-      {/* ── View Picker Modal ── */}
       {pickerOrder && (
         <ViewPickerModal
           order={pickerOrder}
@@ -366,13 +387,10 @@ export default function OrderTable({
         position: 'relative',
         borderLeft: '1px solid var(--color-border-light)',
       }}>
-        <table style={{ borderCollapse: 'separate', borderSpacing: 0, width: '100%', minWidth: 'max-content', tableLayout: 'fixed', fontFamily: 'var(--font-body)' }}>
+        <table style={{ borderCollapse: 'separate', borderSpacing: 0, minWidth: 'max-content', tableLayout: 'fixed', fontFamily: 'var(--font-body)' }}>
           <colgroup>
-            {activeCols.map((c, i) => (
-              // The last column ('arrow', always present per GROUP_PRESETS) gets no fixed
-              // width — CSS lets an unconstrained column absorb leftover horizontal space,
-              // so the table always fills the card's width instead of stopping short.
-              <col key={c.key} style={i === activeCols.length - 1 ? { minWidth: c.w } : { width: c.w, minWidth: c.w }} />
+            {activeCols.map((c) => (
+              <col key={c.key} style={{ width: colWidths[c.key] || c.w, minWidth: colWidths[c.key] || c.w }} />
             ))}
           </colgroup>
           <thead style={{ position: 'sticky', top: 0, zIndex: 30 }}>
@@ -381,30 +399,46 @@ export default function OrderTable({
                 const isPinned = ['no', 'week', 'cust', 'po', 'po2', 'ordno', 'newReplen'].includes(c.key);
                 let leftPos = 0;
                 if (isPinned) {
-                  const prevPinned = activeCols.slice(0, idx);
-                  leftPos = prevPinned.reduce((sum, col) => sum + col.w, 0);
+                  const prevPinned = activeCols.slice(0, idx).filter(c => ['no', 'week', 'cust', 'po', 'po2', 'ordno', 'newReplen'].includes(c.key));
+                  leftPos = prevPinned.reduce((sum, col) => sum + (colWidths[col.key] || col.w), 0);
                 }
 
                 return (
                   <th key={c.key} style={{
-                    background: USER_INPUT_KEYS.has(c.key) ? USER_INPUT_HEAD_BG : 'var(--color-surface-1)',
+                    background: USER_INPUT_KEYS.has(c.key) ? USER_INPUT_HEAD_BG :
+                      PENDING_QTY_KEYS.has(c.key) ? PENDING_QTY_HEAD_BG :
+                        METRICS_KEYS.has(c.key) ? METRICS_HEAD_BG : 'var(--color-surface-1)',
                     padding: '9px 8px', fontSize: 'var(--erp-text-dense)', fontWeight: 900,
                     color: c.key === 'arrow' ? 'var(--color-text-tertiary)' : 'var(--color-text-primary)',
                     textAlign: c.align,
                     borderBottom: '1px solid var(--color-border-strong)',
                     borderRight: '1px solid var(--color-border-light)',
                     textTransform: 'capitalize', letterSpacing: 0,
-                    position: isPinned ? 'sticky' : 'static',
+                    position: isPinned ? 'sticky' : 'relative',
                     left: isPinned ? leftPos : undefined,
-                    top: 0, // Make all headers stick to top
+                    top: 0,
                     zIndex: isPinned ? 35 : 20,
-                    minWidth: c.w, width: c.w, maxWidth: c.w, boxSizing: 'border-box',
+                    minWidth: colWidths[c.key] || c.w, width: colWidths[c.key] || c.w, maxWidth: colWidths[c.key] || c.w, boxSizing: 'border-box',
                     fontFamily: 'var(--font-display)',
                     transition: 'background-color 0.15s ease',
                     whiteSpace: 'pre-wrap', wordWrap: 'break-word', lineHeight: '1.2',
                     boxShadow: isPinned && c.key === 'newReplen' ? 'var(--shadow-pinned)' : 'none'
                   }}>
                     <span>{c.label}</span>
+                    <div 
+                      className="resize-handle hover:bg-[var(--color-brand-400)] transition-colors"
+                      style={{ 
+                        position: 'absolute', right: 0, top: 0, bottom: 0, width: '4px',
+                        cursor: 'col-resize', zIndex: 40
+                      }}
+                      onMouseDown={(e) => {
+                        e.preventDefault(); e.stopPropagation();
+                        resizingColRef.current = c.key;
+                        startXRef.current = e.clientX;
+                        startWidthRef.current = colWidths[c.key] || c.w;
+                        document.body.style.cursor = 'col-resize';
+                      }}
+                    />
                   </th>
                 );
               })}
@@ -412,7 +446,7 @@ export default function OrderTable({
           </thead>
           <tbody>
             {loading ? (
-              <SkeletonRows activeCols={activeCols} />
+              <SkeletonRows activeCols={activeCols} colWidths={colWidths} />
             ) : data.length === 0 ? (
               <tr>
                 <td colSpan={activeCols.length} style={{ padding: '64px 24px', textAlign: 'center', color: 'var(--color-text-quaternary)', fontSize: 'var(--erp-text-body)', borderBottom: '1px solid var(--color-border-strong)', borderRight: '1px solid var(--color-border-light)' }}>
@@ -436,8 +470,8 @@ export default function OrderTable({
                   const isPinned = ['no', 'week', 'cust', 'po', 'po2', 'ordno', 'newReplen'].includes(c.key);
                   let leftPos = 0;
                   if (isPinned) {
-                    const prevPinned = activeCols.slice(0, idx);
-                    leftPos = prevPinned.reduce((sum, col) => sum + col.w, 0);
+                    const prevPinned = activeCols.slice(0, idx).filter(c => ['no', 'week', 'cust', 'po', 'po2', 'ordno', 'newReplen'].includes(c.key));
+                    leftPos = prevPinned.reduce((sum, col) => sum + (colWidths[col.key] || col.w), 0);
                   }
 
                   return (
@@ -449,14 +483,14 @@ export default function OrderTable({
                         textAlign: c.align,
                         fontSize: 'var(--erp-text-control)',
                         fontWeight: 800,
-                        color: 'var(--color-text-primary)',
+                        color: USER_INPUT_KEYS.has(c.key) ? 'var(--color-warning-700)' : 'var(--color-text-primary)',
                         borderBottom: '1px solid var(--color-border-strong)',
                         borderRight: '1px solid var(--color-border-light)',
-                        background: isPinned ? 'var(--color-surface-0)' : (USER_INPUT_KEYS.has(c.key) ? USER_INPUT_CELL_BG : 'transparent'),
-                        position: isPinned ? 'sticky' : 'static',
+                        background: isPinned ? 'var(--color-surface-0)' : (METRICS_KEYS.has(c.key) ? METRICS_BG : 'transparent'),
+                        position: isPinned ? 'sticky' : 'relative',
                         left: isPinned ? leftPos : undefined,
                         zIndex: isPinned ? 15 : 1,
-                        minWidth: c.w, width: c.w, maxWidth: c.w, boxSizing: 'border-box',
+                        minWidth: colWidths[c.key] || c.w, width: colWidths[c.key] || c.w, maxWidth: colWidths[c.key] || c.w, boxSizing: 'border-box',
                         whiteSpace: 'nowrap',
                         textOverflow: 'ellipsis',
                         overflow: 'hidden',
@@ -479,6 +513,9 @@ export default function OrderTable({
         .table-row-hover {
           position: relative;
         }
+        .resize-handle:hover {
+          background: var(--color-brand-500) !important;
+        }
         .table-row-hover:hover {
           background: color-mix(in srgb, var(--color-brand-500), transparent 96%) !important;
           box-shadow: inset 4px 0 0 var(--color-brand-500);
@@ -491,29 +528,8 @@ export default function OrderTable({
           color: var(--color-text-primary) !important;
           background: color-mix(in srgb, var(--color-brand-500) 4%, var(--color-surface-0)) !important;
         }
-        .table-row-hover::after {
-          content: 'View Details';
-          position: absolute;
-          right: 20px;
-          top: 50%;
-          transform: translateY(-50%) translateX(10px);
-          opacity: 0;
-          background: var(--color-brand-500);
-          color: white;
-          padding: 6px 12px;
-          border-radius: 8px;
-          font-size: 0.75rem;
-          font-weight: 800;
-          white-space: nowrap;
-          pointer-events: none;
-          transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-          box-shadow: 0 4px 12px color-mix(in srgb, var(--color-brand-500) 30%, transparent);
-          z-index: 10;
-        }
-        .table-row-hover:hover::after {
-          opacity: 1;
-          transform: translateY(-50%) translateX(0);
-        }
+
+
         .custom-scrollbar::-webkit-scrollbar {
           height: 10px;
           width: 10px;

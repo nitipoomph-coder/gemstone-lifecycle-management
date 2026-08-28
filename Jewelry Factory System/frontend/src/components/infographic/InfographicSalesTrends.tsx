@@ -431,7 +431,7 @@ export function SearchBox({ value, onChange, onKeyDown, onClear }: { value: stri
     </label>
   );
 }
-export function SummaryMetric({ label, value, hint, tone, muted, control }: { label: string; value: string; hint: string; tone?: 'up' | 'down'; muted?: boolean; control?: ReactNode }) {
+export function SummaryMetric({ label, value, hint, tone, muted, control }: { label: ReactNode; value: string; hint: string; tone?: 'up' | 'down'; muted?: boolean; control?: ReactNode }) {
   const valueColor = muted ? 'var(--color-text-quaternary)' : tone === 'up' ? 'var(--color-success-500)' : tone === 'down' ? 'var(--color-danger-500)' : 'var(--color-text-primary)';
   return (
     <div className="customer-trends-summary__item">

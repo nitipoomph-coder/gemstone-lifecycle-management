@@ -1,14 +1,14 @@
-import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, X, RefreshCw } from 'lucide-react';
 import type { KeyboardEvent } from 'react';
 import {
   SearchBox,
   EmptyRow,
-  orderPanel, panelTitle, panelHeaderRight, panelMeta, tableScroll, tdStrongCenter, tdStrong, tdCenter, td, tdStrongRight, linkButton, paginationBar, paginationText, paginationButtons, pageButton, pageButtonDisabled, pageText
+  orderPanel, panelTitle, panelHeaderRight, panelMeta, tableScroll, tdStrongCenter, tdCenter, tdStrongRight, paginationBar, paginationText, paginationButtons, pageButton, pageButtonDisabled, pageText
 } from '../../infographic/InfographicSalesTrends';
 import type { SalesOrderRow } from '../../../services/orderVolumeSummaryAPI';
 import type { Drilldown } from '../../../hooks/useOrderVolumeSummaryData';
 import { fmtQty, ORDER_DETAIL_COLUMNS } from '../../../hooks/useOrderVolumeSummaryData';
+import { getCustomerGroupId } from '../../../config/customerGroups';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const PAGE_SIZE = 50;
@@ -40,7 +40,6 @@ export function VolumeOrdersTable({
   page,
   setPage
 }: VolumeOrdersTableProps) {
-  const navigate = useNavigate();
   const totalPages = Math.max(1, Math.ceil(filteredOrderRows.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
   const pageStart = (currentPage - 1) * PAGE_SIZE;
@@ -116,19 +115,35 @@ export function VolumeOrdersTable({
                   const isOverdue = row.dueRiskBucket === 'Overdue';
                   const isDue15 = row.dueRiskBucket === 'Due in 15 Days';
                   const isDue30 = row.dueRiskBucket === 'Due in 16-30 Days';
+                  const groupId = getCustomerGroupId(row.customerCode);
+                  const openValue = (row.itemPrice || 0) * (row.openQty || 0);
 
                   return (
                     <tr key={`${row.orderNo}-${row.itemNo}-${row.ordDate}-${row.custDate}`}>
                       <td style={tdStrongCenter}>{row.orderNo}</td>
-                      <td style={tdStrong}>{row.poNo || '-'}</td>
-                      <td style={tdStrong}>{row.po2 || '-'}</td>
                       <td style={tdStrongCenter}>
                         <span style={{ fontWeight: 900, color: 'var(--color-brand-600)' }}>
                           {row.customerCode}
                         </span>
                       </td>
+                      <td style={tdStrongCenter}>{groupId}</td>
+                      <td style={tdCenter}>
+                        {row.ordDate ? new Date(row.ordDate).toISOString().slice(0, 10) : '-'}
+                      </td>
                       <td style={{ ...tdCenter, fontWeight: isOverdue || isDue15 ? 900 : 700, color: isOverdue ? 'var(--color-danger-600)' : isDue15 ? 'var(--color-warning-600)' : 'inherit' }}>
                         {row.custDate ? new Date(row.custDate).toISOString().slice(0, 10) : '-'}
+                      </td>
+                      <td style={tdCenter}>
+                        <span style={{
+                          fontSize: '0.7rem',
+                          fontWeight: 900,
+                          padding: '2px 6px',
+                          borderRadius: 4,
+                          background: isOverdue ? 'var(--color-danger-50)' : isDue15 ? 'var(--color-warning-50)' : isDue30 ? 'var(--color-success-50)' : 'var(--color-brand-50)',
+                          color: isOverdue ? 'var(--color-danger-600)' : isDue15 ? 'var(--color-warning-600)' : isDue30 ? 'var(--color-success-600)' : 'var(--color-brand-700)'
+                        }}>
+                          {row.dueRiskBucket || 'Scheduled'}
+                        </span>
                       </td>
                       <td style={tdCenter}>
                         <span style={{
@@ -143,31 +158,11 @@ export function VolumeOrdersTable({
                           {row.currentDepartment || 'Wax'}
                         </span>
                       </td>
-                      <td style={tdCenter}>
-                        <span style={{
-                          fontSize: '0.7rem',
-                          fontWeight: 900,
-                          padding: '2px 6px',
-                          borderRadius: 4,
-                          background: isOverdue ? 'var(--color-danger-50)' : isDue15 ? 'var(--color-warning-50)' : isDue30 ? 'var(--color-success-50)' : 'var(--color-brand-50)',
-                          color: isOverdue ? 'var(--color-danger-600)' : isDue15 ? 'var(--color-warning-600)' : isDue30 ? 'var(--color-success-600)' : 'var(--color-brand-700)'
-                        }}>
-                          {row.dueRiskBucket || 'Scheduled'}
-                        </span>
-                      </td>
-                      <td style={tdStrong}>{row.shipTo || '-'}</td>
-                      <td style={tdStrongCenter}><button onClick={() => navigate(`/item-detail/${encodeURIComponent(row.itemNo)}`)} style={linkButton}>{row.itemNo}</button></td>
-                      <td style={tdStrongCenter}>{row.productTypeCode || '-'}</td>
-                      <td style={tdStrongCenter}>{row.custItem || '-'}</td>
-                      <td style={tdCenter}>{row.itemMat || '-'}</td>
-                      <td style={td}>{row.itemSize || '-'}</td>
-                      <td style={td}>{row.itemStone || '-'}</td>
-                      <td style={tdStrongRight}>{row.itemPlate || '-'}</td>
-                      <td style={tdStrongRight}>{row.orderQty}</td>
-                      <td style={tdStrongRight}>{row.shippedQty}</td>
                       <td style={{ ...tdStrongRight, color: row.openQty > 0 ? 'var(--color-brand-600)' : 'inherit' }}>{row.openQty || 0}</td>
-                      <td style={tdStrongRight}>{row.itemPrice !== undefined ? `$${Number(row.itemPrice).toFixed(2)}` : '-'}</td>
-                      <td style={tdStrongRight}>{row.itemAmnt !== undefined ? `$${Number(row.itemAmnt).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-'}</td>
+                      <td style={tdStrongRight}>{openValue > 0 ? `$${openValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-'}</td>
+                      <td style={{ ...tdStrongRight, color: row.daysToCustDue && row.daysToCustDue < 0 ? 'var(--color-danger-600)' : 'inherit' }}>
+                        {row.daysToCustDue !== undefined && row.daysToCustDue !== null ? row.daysToCustDue : '-'}
+                      </td>
                     </tr>
                   );
                 })}

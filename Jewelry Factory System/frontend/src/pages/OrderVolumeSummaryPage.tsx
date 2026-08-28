@@ -3,16 +3,26 @@ import {
   CustomerTrendsLoadingState,
   SummaryMetric,
 } from '../components/infographic/InfographicSalesTrends';
-import { RefreshCw } from 'lucide-react';
+import { 
+  RefreshCw,
+  AlertCircle,
+  Clock,
+  Factory,
+  Workflow,
+  CheckCircle2,
+  AlertTriangle,
+  X
+} from 'lucide-react';
 import '../components/sales/SalesDenseTable.css';
 import './OrderVolumeSummaryPage.css';
 import { printChartDashboard } from '../utils/printChart';
-import { DeliveryAndDepartmentOutlook } from '../components/sales/DeliveryAndDepartmentOutlook';
 import { useOrderVolumeSummaryData, fmtMetric, fmtQty } from '../hooks/useOrderVolumeSummaryData';
 import { VolumeFilterBar } from '../components/dashboard/orderVolume/VolumeFilterBar';
 import { VolumeOrdersTable } from '../components/dashboard/orderVolume/VolumeOrdersTable';
 import { RiskCustomerChart } from '../components/dashboard/orderVolume/RiskCustomerChart';
-import { RiskMonthlyTable } from '../components/dashboard/orderVolume/RiskMonthlyTable';
+import { OrderVolumeTrendChart } from '../components/dashboard/orderVolume/OrderVolumeTrendChart';
+import { FactoryDepartmentWIP } from '../components/dashboard/orderVolume/FactoryDepartmentWIP';
+import { CustomerBacklogTable } from '../components/dashboard/orderVolume/CustomerBacklogTable';
 
 export default function OrderVolumeSummaryPage() {
   const data = useOrderVolumeSummaryData();
@@ -63,6 +73,14 @@ export default function OrderVolumeSummaryPage() {
   const sortedDepts = [...(deliveryOutlookData?.departments || [])].sort((a, b) => (b.openQty || 0) - (a.openQty || 0));
   const topBottleneck = sortedDepts.length > 0 ? sortedDepts[0] : null;
 
+  const overdueMetric = metric === 'amount' ? overdue.amount : overdue.qty;
+  const overdueRate = data.kpiPrimaryMetric > 0 ? (overdueMetric / data.kpiPrimaryMetric) * 100 : 0;
+  
+  const onTimeDiff = data.kpiCompareDeliveryRate !== null ? data.kpiDeliveryRate - data.kpiCompareDeliveryRate : null;
+  const onTimeHint = onTimeDiff !== null 
+    ? `vs prior year (${onTimeDiff > 0 ? '▲' : onTimeDiff < 0 ? '▼' : ''}${Math.abs(onTimeDiff).toFixed(1)}%)`
+    : 'No compare year';
+
   const handlePrint = () => {
     const title = `Order_Trends_${activeView}_${primaryYear}_${metric}`;
     printChartDashboard(title);
@@ -102,26 +120,38 @@ export default function OrderVolumeSummaryPage() {
               {activeView === 'overview' && (
                 <section className="customer-trends-summary" aria-label="Risk and WIP summary">
                   <SummaryMetric
-                    label="🔴 Total Overdue"
+                    label={<span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><AlertCircle size={14} color="var(--color-danger-500)" /> Total Overdue</span>}
                     value={metric === 'amount' ? fmtMetric(overdue.amount, 'amount') : fmtMetric(overdue.qty, 'qty')}
-                    hint={`${fmtQty(overdue.orders)} orders at risk`}
+                    hint={`${fmtQty(overdue.orders)} orders past due`}
                     tone="down"
                   />
                   <SummaryMetric
-                    label="🟡 Due in 15 Days"
+                    label={<span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Clock size={14} color="var(--color-warning-500)" /> Due in 15 Days</span>}
                     value={metric === 'amount' ? fmtMetric(due15.amount, 'amount') : fmtMetric(due15.qty, 'qty')}
-                    hint={`${fmtQty(due15.orders)} orders pending`}
+                    hint={`${fmtQty(due15.orders)} orders due soon`}
                     tone="down"
                   />
                   <SummaryMetric
-                    label="🔵 Total WIP (Factory)"
+                    label={<span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Factory size={14} color="var(--color-brand-500)" /> Total In-Production</span>}
                     value={metric === 'amount' ? fmtMetric(totalWIP.amount, 'amount') : fmtMetric(totalWIP.qty, 'qty')}
-                    hint="Open work-in-process"
+                    hint="Active factory orders"
                   />
                   <SummaryMetric
-                    label="🏭 Top Bottleneck"
+                    label={<span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Workflow size={14} color="var(--color-text-secondary)" /> Busiest Department</span>}
                     value={topBottleneck ? topBottleneck.department : '-'}
-                    hint={topBottleneck ? `${metric === 'amount' ? fmtMetric(topBottleneck.openAmount, 'amount') : fmtMetric(topBottleneck.openQty, 'qty')} pending` : 'No bottlenecks'}
+                    hint={topBottleneck ? `${metric === 'amount' ? fmtMetric(topBottleneck.openAmount, 'amount') : fmtMetric(topBottleneck.openQty, 'qty')} pending` : 'All clear'}
+                  />
+                  <SummaryMetric
+                    label={<span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><CheckCircle2 size={14} color="var(--color-success-500)" /> On-Time Delivery Rate</span>}
+                    value={`${data.kpiDeliveryRate.toFixed(1)}%`}
+                    hint={onTimeHint}
+                    tone={onTimeDiff !== null ? (onTimeDiff >= 0 ? 'up' : 'down') : undefined}
+                  />
+                  <SummaryMetric
+                    label={<span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><AlertTriangle size={14} color="var(--color-danger-500)" /> Overdue Risk Rate</span>}
+                    value={`${overdueRate.toFixed(1)}%`}
+                    hint="Current Snapshot"
+                    tone={overdueRate > 0 ? 'down' : undefined}
                   />
                 </section>
               )}
@@ -134,54 +164,106 @@ export default function OrderVolumeSummaryPage() {
               )}
 
               {activeView === 'overview' && (
-                <section id="customer-trends-overview-panel" className="customer-trends-overview">
-                  <div className="customer-trends-overview__header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div>
-                      <h2>WIP & Late Delivery Risk Analysis</h2>
-                      <span>{selectedYearSummary} / {metric === 'amount' ? 'Sales Amount ($)' : 'Ordered Quantity (PCS)'}</span>
-                    </div>
-                  </div>
+                <section id="customer-trends-overview-panel" style={{ background: 'transparent', border: 'none', padding: 0 }}>
                   {!hasOverviewData && !deliveryOutlookData ? (
-                    <div className="customer-trends-empty">
+                    <div className="customer-trends-empty" style={{ background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)', borderRadius: 8, padding: 24 }}>
                       <strong>No data for the current scope</strong>
                     </div>
                   ) : (
-                    <>
-                      {hasOverviewData && data.riskData && (
-                        <div className="customer-trends-overview__body" style={{ flexDirection: 'column' }}>
-                          <div className="customer-trends-chart-area" style={{ width: '100%', marginBottom: '24px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                      {/* Active Filter Indicator */}
+                      {(selectedBucket || selectedDepartment || selectedCustCode) && (
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '6px 12px',
+                            background: 'var(--color-surface-2)',
+                            borderRadius: 6,
+                            border: '1px solid var(--color-border-light)'
+                          }}
+                        >
+                          <span style={{ fontSize: '0.74rem', fontWeight: 800, color: 'var(--color-text-secondary)' }}>
+                            Active Filter:{' '}
+                            {[
+                              selectedBucket && `Risk: ${selectedBucket}`,
+                              selectedDepartment && `Dept: ${selectedDepartment}`,
+                              selectedCustCode && `Cust: ${selectedCustCode}`
+                            ]
+                              .filter(Boolean)
+                              .join(' • ')}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              handleSelectBucket(null);
+                              handleSelectDepartment(null);
+                              handleSelectCustCode(null);
+                            }}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: 'var(--color-brand-600)',
+                              fontSize: '0.72rem',
+                              fontWeight: 800,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 4
+                            }}
+                          >
+                            <X size={12} /> Clear filter
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Unified 2-Column Dashboard Grid (Single Screen Layout) */}
+                      <div
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'minmax(0, 1.18fr) minmax(0, 0.82fr)',
+                          gap: 14,
+                          alignItems: 'start'
+                        }}
+                      >
+                        {/* Left Column: Trend Chart & Customer Group Risk */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                          <OrderVolumeTrendChart
+                            data={data.monthlyComparisonData}
+                            metric={metric}
+                            hasCompareYear={hasCompareYear}
+                            primaryYear={primaryYear}
+                            compareYear={compareYear}
+                          />
+
+                          {data.riskData && (
                             <RiskCustomerChart
                               riskData={data.riskData}
                               metric={metric}
                               selectedGroups={data.selectedGroups}
                             />
-                          </div>
-                          
-                          <div style={{ width: '100%' }}>
-                            <RiskMonthlyTable
-                              riskData={data.riskData}
-                              metric={metric}
-                              selectedGroups={data.selectedGroups}
-                            />
-                          </div>
+                          )}
                         </div>
-                      )}
-                      
-                      <div style={{ marginTop: '32px' }}>
-                        <DeliveryAndDepartmentOutlook
-                          data={deliveryOutlookData}
-                          metric={metric}
-                          year={primaryYear}
-                          loading={loading}
-                          selectedBucket={selectedBucket}
-                          selectedDepartment={selectedDepartment}
-                          selectedCustCode={selectedCustCode}
-                          onSelectBucket={handleSelectBucket}
-                          onSelectDepartment={handleSelectDepartment}
-                          onSelectCustCode={handleSelectCustCode}
-                        />
+
+                        {/* Right Column: Factory Dept WIP & Top Customer Backlog */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                          <FactoryDepartmentWIP
+                            departments={deliveryOutlookData?.departments || []}
+                            metric={metric}
+                            selectedDepartment={selectedDepartment}
+                            onSelectDepartment={handleSelectDepartment}
+                          />
+
+                          <CustomerBacklogTable
+                            customers={deliveryOutlookData?.customers || []}
+                            metric={metric}
+                            selectedCustCode={selectedCustCode}
+                            onSelectCustCode={handleSelectCustCode}
+                          />
+                        </div>
                       </div>
-                    </>
+                    </div>
                   )}
                 </section>
               )}

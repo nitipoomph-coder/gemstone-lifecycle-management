@@ -102,7 +102,14 @@ export const RiskCustomerChart: React.FC<Props> = ({ riskData, metric, selectedG
               }}
               cursor={{ fill: 'var(--color-surface-1)', opacity: 0.4 }}
             />
-            <Legend wrapperStyle={{ paddingTop: 2, fontSize: '11px', fontWeight: 700 }} />
+            <Legend
+              wrapperStyle={{ paddingTop: 4, fontSize: '11px' }}
+              formatter={(value) => (
+                <span style={{ color: 'var(--color-text-secondary)', fontWeight: 700, marginRight: 8 }}>
+                  {value}
+                </span>
+              )}
+            />
             <Bar dataKey="safe" stackId="a" name="On Schedule" fill="#3b82f6" radius={[0, 0, 4, 4]} />
             <Bar dataKey="overdue" stackId="a" name="Overdue / At Risk" fill="#ef4444" radius={[4, 4, 0, 0]} />
           </BarChart>

@@ -212,7 +212,7 @@
 .customer-trends-summary {
   position: relative;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   overflow: visible;
   border: 1px solid var(--color-border-light);
   border-radius: 8px;
@@ -227,15 +227,26 @@
   gap: 2px;
   padding: 8px 12px;
   border-right: 1px solid var(--color-border-light);
-  border-bottom: 1px solid var(--color-border-light);
+  border-bottom: none;
 }
 
-.customer-trends-summary__item:nth-child(3n) {
+.customer-trends-summary__item:last-child {
   border-right: 0;
 }
 
-.customer-trends-summary__item:nth-child(n+4) {
-  border-bottom: 0;
+@media (max-width: 1200px) {
+  .customer-trends-summary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .customer-trends-summary__item {
+    border-bottom: 1px solid var(--color-border-light);
+  }
+  .customer-trends-summary__item:nth-child(3n) {
+    border-right: 0;
+  }
+  .customer-trends-summary__item:nth-child(n+4) {
+    border-bottom: 0;
+  }
 }
 
 .customer-trends-order-actions {
@@ -1752,4 +1763,75 @@
   font-size: var(--erp-text-meta) !important;
   font-weight: 800 !important;
   color: var(--color-text-tertiary) !important;
+}
+
+/* =========================================================================
+   PRINT STYLES FOR ORDER VOLUME SUMMARY (A4 Landscape High Fidelity)
+   ========================================================================= */
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 8mm;
+  }
+
+  .customer-trends-page {
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+  }
+
+  .customer-trends-summary {
+    display: grid !important;
+    grid-template-columns: repeat(6, 1fr) !important;
+    gap: 8px !important;
+    margin-bottom: 10px !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .customer-trends-summary__item {
+    padding: 6px 10px !important;
+    min-width: 0 !important;
+  }
+
+  .customer-trends-grid {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr) !important;
+    gap: 12px !important;
+    align-items: start !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .customer-trends-col {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+
+  .customer-trends-col > div {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    overflow: visible !important;
+    max-height: none !important;
+  }
+
+  .custom-scrollbar {
+    overflow: visible !important;
+    max-height: none !important;
+  }
+
+  .recharts-responsive-container {
+    min-height: 200px !important;
+    height: 200px !important;
+  }
+
+  table {
+    page-break-inside: auto;
+  }
+
+  tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
 }

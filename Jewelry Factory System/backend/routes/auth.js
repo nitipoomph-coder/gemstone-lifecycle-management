@@ -15,22 +15,21 @@ router.post('/login', async (req, res) => {
     const pool = await getPool();
     const result = await pool.request()
       .input('username', sql.NVarChar, username.toUpperCase())
-      .query('SELECT * FROM system_users WHERE UPPER(username) = @username');
+      .query('SELECT UserID, UserName, Password, UserType FROM dbo.PCCUser WHERE UPPER(UserName) = @username');
 
     const user = result.recordset[0];
     if (!user) {
       return res.status(401).json({ success: false, message: 'Invalid username or password' });
     }
 
-    const isValid = await bcrypt.compare(password, user.password_hash);
-    if (!isValid) {
+    // Direct comparison for plain text password from legacy system
+    if (password !== user.Password) {
       return res.status(401).json({ success: false, message: 'Invalid username or password' });
     }
 
-    // Update last login
-    await pool.request()
-      .input('id', sql.Int, user.id)
-      .query('UPDATE system_users SET last_login = GETDATE() WHERE id = @id');
+    // Map role based on username: only "admin" or "sales"
+    const role = user.UserName.toUpperCase() === 'ADMIN' ? 'admin' : 'sales';
+    const fullName = user.UserName;
 
     // Ensure JWT_SECRET is configured — refuse to run with a weak fallback
     if (!process.env.JWT_SECRET) {
@@ -39,12 +38,12 @@ router.post('/login', async (req, res) => {
     }
 
     const token = jwt.sign(
-      { id: user.id, username: user.username, role: user.role, name: user.full_name },
+      { id: user.UserID, username: user.UserName, role: role, name: fullName },
       process.env.JWT_SECRET,
       { expiresIn: '12h' }
     );
 
-    return res.json({ success: true, role: user.role, username: user.username, name: user.full_name, token });
+    return res.json({ success: true, role: role, username: user.UserName, name: fullName, token });
   } catch (error) {
     console.error('Login error:', error);
     return res.status(500).json({ success: false, message: 'Internal server error' });

@@ -1,29 +1,78 @@
-import React from 'react';
-import { Building2, AlertTriangle, CheckCircle2, ChevronRight } from 'lucide-react';
+import React, { useMemo } from 'react';
+import { Users, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import type { CustomerBacklogItem, SalesMetric } from '../../../services/orderVolumeSummaryAPI';
-import { getCustomerGroupId } from '../../../config/customerGroups';
+import { CUSTOMER_GROUPS, getCustomerGroupId } from '../../../config/customerGroups';
 
 interface Props {
   customers: CustomerBacklogItem[];
   metric: SalesMetric;
   selectedCustCode: string | null;
   onSelectCustCode: (custCode: string | null) => void;
+  selectedGroups?: string[];
+}
+
+interface GroupSummary {
+  groupId: string;
+  groupLabel: string;
+  color: string;
+  totalOrders: number;
+  totalOpenQty: number;
+  totalAmount: number;
+  totalQty: number;
+  overdueQty: number;
+  due15Qty: number;
 }
 
 export const CustomerBacklogTable: React.FC<Props> = ({
   customers,
-  metric,
-  selectedCustCode,
-  onSelectCustCode
+  metric: _metric,
+  selectedGroups = []
 }) => {
-  const topCustomers = customers.slice(0, 10);
+  // Aggregate data by Customer Group
+  const groupSummaries: GroupSummary[] = useMemo(() => {
+    const activeGroups = CUSTOMER_GROUPS.filter(g => {
+      if (selectedGroups.length > 0) {
+        return selectedGroups.includes(g.id);
+      }
+      return true;
+    });
 
-  const fmtValue = (qty: number, amount: number) => {
-    if (metric === 'amount') {
-      return '$' + Math.round(amount).toLocaleString();
-    }
-    return qty.toLocaleString() + ' pcs';
-  };
+    const map = new Map<string, GroupSummary>();
+
+    activeGroups.forEach(g => {
+      map.set(g.id, {
+        groupId: g.id,
+        groupLabel: g.label,
+        color: g.color || 'var(--color-brand-500)',
+        totalOrders: 0,
+        totalOpenQty: 0,
+        totalAmount: 0,
+        totalQty: 0,
+        overdueQty: 0,
+        due15Qty: 0
+      });
+    });
+
+    customers.forEach(c => {
+      const gId = getCustomerGroupId(c.custCode);
+      if (map.has(gId)) {
+        const item = map.get(gId)!;
+        item.totalOrders += c.orderCount || 0;
+        item.totalOpenQty += c.openQty || 0;
+        item.totalAmount += c.totalAmount || 0;
+        item.totalQty += c.totalQty || 0;
+        item.overdueQty += c.overdueQty || 0;
+        item.due15Qty += c.due15Qty || 0;
+      }
+    });
+
+    return Array.from(map.values())
+      .filter(g => g.totalOrders > 0 || g.totalOpenQty > 0)
+      .sort((a, b) => b.totalOpenQty - a.totalOpenQty);
+  }, [customers, selectedGroups]);
+
+  const fmtCurrency = (val: number) => '$' + Math.round(val).toLocaleString();
+  const fmtQty = (val: number) => val.toLocaleString() + ' pcs';
 
   return (
     <div
@@ -34,12 +83,12 @@ export const CustomerBacklogTable: React.FC<Props> = ({
         padding: '14px 16px',
         display: 'flex',
         flexDirection: 'column',
-        height: '100%',
+        width: '100%',
         minHeight: 250
       }}
     >
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <div>
           <h4
             style={{
@@ -52,11 +101,11 @@ export const CustomerBacklogTable: React.FC<Props> = ({
               gap: 6
             }}
           >
-            <Building2 size={15} style={{ color: 'var(--color-brand-500)' }} />
-            Top Pending Customers (CustCode)
+            <Users size={15} style={{ color: 'var(--color-brand-500)' }} />
+            Pending Orders by Customer Group
           </h4>
           <span style={{ fontSize: '0.7rem', color: 'var(--color-text-tertiary)', fontWeight: 700 }}>
-            Ranked accounts by open order volume
+            Open orders overview by major customer groups
           </span>
         </div>
         <span
@@ -69,99 +118,70 @@ export const CustomerBacklogTable: React.FC<Props> = ({
             color: 'var(--color-text-secondary)'
           }}
         >
-          {customers.length} Accounts
+          {groupSummaries.length} Groups
         </span>
       </div>
 
-      {/* Customer List / Cards */}
-      <div
-        className="custom-scrollbar"
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 6,
-          overflowY: 'auto',
-          maxHeight: 280,
-          paddingRight: 2
-        }}
-      >
-        {topCustomers.length === 0 ? (
-          <div style={{ padding: '24px 0', textAlign: 'center', fontSize: '0.78rem', color: 'var(--color-text-tertiary)' }}>
-            No pending customer orders for selected period
-          </div>
-        ) : (
-          topCustomers.map((cust, idx) => {
-            const isSelected = selectedCustCode === cust.custCode;
-            const groupId = getCustomerGroupId(cust.custCode);
-            const riskQty = cust.overdueQty + cust.due15Qty;
-            const riskPct = cust.totalQty > 0 ? (riskQty / cust.totalQty) * 100 : 0;
-            const isAtRisk = riskQty > 0;
+      {/* Customer Group Table */}
+      <div className="custom-scrollbar" style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: 280 }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
+          <thead>
+            <tr style={{ color: 'var(--color-text-tertiary)', borderBottom: '2px solid var(--color-border-light)', textAlign: 'left' }}>
+              <th style={{ padding: '6px 8px', fontWeight: 850 }}>Customer Group</th>
+              <th style={{ padding: '6px 8px', fontWeight: 850, textAlign: 'right' }}>Orders</th>
+              <th style={{ padding: '6px 8px', fontWeight: 850, textAlign: 'right' }}>Amount ($)</th>
+              <th style={{ padding: '6px 8px', fontWeight: 850, textAlign: 'right' }}>Quantity (PCS)</th>
+              <th style={{ padding: '6px 8px', fontWeight: 850, textAlign: 'right' }}>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {groupSummaries.length === 0 ? (
+              <tr>
+                <td colSpan={5} style={{ padding: '24px 0', textAlign: 'center', color: 'var(--color-text-tertiary)' }}>
+                  No pending orders for selected customer groups
+                </td>
+              </tr>
+            ) : (
+              groupSummaries.map(group => {
+                const riskQty = group.overdueQty + group.due15Qty;
+                const riskPct = group.totalQty > 0 ? (riskQty / group.totalQty) * 100 : 0;
 
-            return (
-              <div
-                key={cust.custCode}
-                onClick={() => onSelectCustCode(isSelected ? null : cust.custCode)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '7px 10px',
-                  borderRadius: 6,
-                  background: isSelected
-                    ? 'color-mix(in srgb, var(--color-brand-500) 10%, var(--color-surface-0))'
-                    : 'var(--color-surface-1)',
-                  border: isSelected
-                    ? '1.5px solid var(--color-brand-500)'
-                    : '1px solid var(--color-border-light)',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                {/* Left: Rank + CustCode + Group */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                  <span
+                return (
+                  <tr
+                    key={group.groupId}
                     style={{
-                      fontSize: '0.68rem',
-                      fontWeight: 900,
-                      width: 18,
-                      height: 18,
-                      borderRadius: 4,
-                      background: idx < 3 ? 'var(--color-brand-500)' : 'var(--color-surface-2)',
-                      color: idx < 3 ? '#fff' : 'var(--color-text-secondary)',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0
+                      borderBottom: '1px solid var(--color-border-light)',
+                      transition: 'background 0.1s ease'
                     }}
                   >
-                    {idx + 1}
-                  </span>
-                  <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-                    <span style={{ fontSize: '0.8rem', fontWeight: 900, color: 'var(--color-text-primary)', whiteSpace: 'nowrap' }}>
-                      {cust.custCode}
-                    </span>
-                    <span style={{ fontSize: '0.65rem', color: 'var(--color-text-tertiary)', fontWeight: 700 }}>
-                      Group: {groupId} • {cust.orderCount} Orders
-                    </span>
-                  </div>
-                </div>
-
-                {/* Right: Value + Risk Tag */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, textAlign: 'right' }}>
-                  <div>
-                    <div style={{ fontSize: '0.82rem', fontWeight: 900, color: 'var(--color-text-primary)' }}>
-                      {fmtValue(cust.openQty, cust.totalAmount)}
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
-                      {isAtRisk ? (
+                    <td style={{ padding: '8px 8px', fontWeight: 900, color: 'var(--color-text-primary)' }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: group.color, flexShrink: 0 }} />
+                        {group.groupLabel}
+                      </span>
+                    </td>
+                    <td style={{ padding: '8px 8px', textAlign: 'right', fontWeight: 800, color: 'var(--color-text-secondary)' }}>
+                      {group.totalOrders.toLocaleString()}
+                    </td>
+                    <td style={{ padding: '8px 8px', textAlign: 'right', fontWeight: 800, color: 'var(--color-brand-600)' }}>
+                      {fmtCurrency(group.totalAmount)}
+                    </td>
+                    <td style={{ padding: '8px 8px', textAlign: 'right', fontWeight: 900, color: 'var(--color-text-primary)' }}>
+                      {fmtQty(group.totalOpenQty)}
+                    </td>
+                    <td style={{ padding: '8px 8px', textAlign: 'right' }}>
+                      {riskPct > 0 ? (
                         <span
                           style={{
-                            fontSize: '0.65rem',
+                            fontSize: '0.68rem',
                             fontWeight: 800,
                             color: 'var(--color-danger-600)',
+                            background: 'var(--color-danger-50)',
+                            padding: '2px 6px',
+                            borderRadius: 4,
                             display: 'inline-flex',
                             alignItems: 'center',
-                            gap: 2
+                            gap: 3
                           }}
                         >
                           <AlertTriangle size={11} /> {riskPct.toFixed(0)}% Overdue
@@ -169,25 +189,27 @@ export const CustomerBacklogTable: React.FC<Props> = ({
                       ) : (
                         <span
                           style={{
-                            fontSize: '0.65rem',
+                            fontSize: '0.68rem',
                             fontWeight: 800,
                             color: 'var(--color-success-600)',
+                            background: 'var(--color-success-50)',
+                            padding: '2px 6px',
+                            borderRadius: 4,
                             display: 'inline-flex',
                             alignItems: 'center',
-                            gap: 2
+                            gap: 3
                           }}
                         >
                           <CheckCircle2 size={11} /> On Schedule
                         </span>
                       )}
-                    </div>
-                  </div>
-                  <ChevronRight size={14} style={{ color: isSelected ? 'var(--color-brand-500)' : 'var(--color-text-quaternary)' }} />
-                </div>
-              </div>
-            );
-          })
-        )}
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   );

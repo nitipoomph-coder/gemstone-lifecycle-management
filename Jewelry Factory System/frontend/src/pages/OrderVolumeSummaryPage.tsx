@@ -3,7 +3,7 @@ import {
   CustomerTrendsLoadingState,
   SummaryMetric,
 } from '../components/infographic/InfographicSalesTrends';
-import { 
+import {
   RefreshCw,
   AlertCircle,
   Clock,
@@ -62,7 +62,7 @@ export default function OrderVolumeSummaryPage() {
 
   const overdue = getBucketStats('Overdue');
   const due15 = getBucketStats('Due in 15 Days');
-  
+
   const totalWIP = (deliveryOutlookData?.departments || []).reduce((acc, d) => {
     return {
       qty: acc.qty + (d.openQty || 0),
@@ -75,9 +75,9 @@ export default function OrderVolumeSummaryPage() {
 
   const overdueMetric = metric === 'amount' ? overdue.amount : overdue.qty;
   const overdueRate = data.kpiPrimaryMetric > 0 ? (overdueMetric / data.kpiPrimaryMetric) * 100 : 0;
-  
+
   const onTimeDiff = data.kpiCompareDeliveryRate !== null ? data.kpiDeliveryRate - data.kpiCompareDeliveryRate : null;
-  const onTimeHint = onTimeDiff !== null 
+  const onTimeHint = onTimeDiff !== null
     ? `vs prior year (${onTimeDiff > 0 ? '▲' : onTimeDiff < 0 ? '▼' : ''}${Math.abs(onTimeDiff).toFixed(1)}%)`
     : 'No compare year';
 
@@ -96,7 +96,7 @@ export default function OrderVolumeSummaryPage() {
             activeView={activeView}
             setActiveView={setActiveView}
             resetDrilldown={resetDrilldown}
-            setDrilldownOrders={() => {}} // Hook manages this, or pass a handler
+            setDrilldownOrders={() => { }} // Hook manages this, or pass a handler
             loading={loading}
             loadOverviewData={loadOverviewData}
             handlePrint={handlePrint}
@@ -122,33 +122,33 @@ export default function OrderVolumeSummaryPage() {
                   <SummaryMetric
                     label={<span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><AlertCircle size={14} color="var(--color-danger-500)" /> Total Overdue</span>}
                     value={metric === 'amount' ? fmtMetric(overdue.amount, 'amount') : fmtMetric(overdue.qty, 'qty')}
-                    hint={`${fmtQty(overdue.orders)} orders past due`}
+                    hint={`${fmtQty(overdue.orders)} orders at risk`}
                     tone="down"
                   />
                   <SummaryMetric
                     label={<span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Clock size={14} color="var(--color-warning-500)" /> Due in 15 Days</span>}
                     value={metric === 'amount' ? fmtMetric(due15.amount, 'amount') : fmtMetric(due15.qty, 'qty')}
-                    hint={`${fmtQty(due15.orders)} orders due soon`}
+                    hint={`${fmtQty(due15.orders)} orders pending`}
                     tone="down"
                   />
                   <SummaryMetric
-                    label={<span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Factory size={14} color="var(--color-brand-500)" /> Total In-Production</span>}
+                    label={<span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Factory size={14} color="var(--color-brand-500)" /> Total WIP (Factory)</span>}
                     value={metric === 'amount' ? fmtMetric(totalWIP.amount, 'amount') : fmtMetric(totalWIP.qty, 'qty')}
-                    hint="Active factory orders"
+                    hint="Open work-in-process"
                   />
                   <SummaryMetric
-                    label={<span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Workflow size={14} color="var(--color-text-secondary)" /> Busiest Department</span>}
+                    label={<span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Workflow size={14} color="var(--color-text-secondary)" /> Top Bottleneck</span>}
                     value={topBottleneck ? topBottleneck.department : '-'}
-                    hint={topBottleneck ? `${metric === 'amount' ? fmtMetric(topBottleneck.openAmount, 'amount') : fmtMetric(topBottleneck.openQty, 'qty')} pending` : 'All clear'}
+                    hint={topBottleneck ? `${metric === 'amount' ? fmtMetric(topBottleneck.openAmount, 'amount') : fmtMetric(topBottleneck.openQty, 'qty')} pending` : 'No bottlenecks'}
                   />
                   <SummaryMetric
-                    label={<span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><CheckCircle2 size={14} color="var(--color-success-500)" /> On-Time Delivery Rate</span>}
+                    label={<span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><CheckCircle2 size={14} color="var(--color-success-500)" /> On-Time Completion</span>}
                     value={`${data.kpiDeliveryRate.toFixed(1)}%`}
                     hint={onTimeHint}
                     tone={onTimeDiff !== null ? (onTimeDiff >= 0 ? 'up' : 'down') : undefined}
                   />
                   <SummaryMetric
-                    label={<span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><AlertTriangle size={14} color="var(--color-danger-500)" /> Overdue Risk Rate</span>}
+                    label={<span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><AlertTriangle size={14} color="var(--color-danger-500)" /> Overdue Rate</span>}
                     value={`${overdueRate.toFixed(1)}%`}
                     hint="Current Snapshot"
                     tone={overdueRate > 0 ? 'down' : undefined}
@@ -164,7 +164,7 @@ export default function OrderVolumeSummaryPage() {
               )}
 
               {activeView === 'overview' && (
-                <section id="customer-trends-overview-panel" style={{ background: 'transparent', border: 'none', padding: 0 }}>
+                <>
                   {!hasOverviewData && !deliveryOutlookData ? (
                     <div className="customer-trends-empty" style={{ background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)', borderRadius: 8, padding: 24 }}>
                       <strong>No data for the current scope</strong>
@@ -179,7 +179,7 @@ export default function OrderVolumeSummaryPage() {
                             alignItems: 'center',
                             justifyContent: 'space-between',
                             padding: '6px 12px',
-                            background: 'var(--color-surface-2)',
+                            background: 'var(--color-surface-0)',
                             borderRadius: 6,
                             border: '1px solid var(--color-border-light)'
                           }}
@@ -218,17 +218,18 @@ export default function OrderVolumeSummaryPage() {
                         </div>
                       )}
 
-                      {/* Unified 2-Column Dashboard Grid (Single Screen Layout) */}
+                      {/* Unified 2-Column Dashboard Grid (Single Screen Layout - 4 Peer Cards) */}
                       <div
+                        className="customer-trends-grid"
                         style={{
                           display: 'grid',
-                          gridTemplateColumns: 'minmax(0, 1.18fr) minmax(0, 0.82fr)',
+                          gridTemplateColumns: 'minmax(0, 1.15fr) minmax(0, 0.85fr)',
                           gap: 14,
                           alignItems: 'start'
                         }}
                       >
                         {/* Left Column: Trend Chart & Customer Group Risk */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                        <div className="customer-trends-col" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                           <OrderVolumeTrendChart
                             data={data.monthlyComparisonData}
                             metric={metric}
@@ -247,7 +248,7 @@ export default function OrderVolumeSummaryPage() {
                         </div>
 
                         {/* Right Column: Factory Dept WIP & Top Customer Backlog */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                        <div className="customer-trends-col" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                           <FactoryDepartmentWIP
                             departments={deliveryOutlookData?.departments || []}
                             metric={metric}
@@ -260,12 +261,13 @@ export default function OrderVolumeSummaryPage() {
                             metric={metric}
                             selectedCustCode={selectedCustCode}
                             onSelectCustCode={handleSelectCustCode}
+                            selectedGroups={data.selectedGroups}
                           />
                         </div>
                       </div>
                     </div>
                   )}
-                </section>
+                </>
               )}
 
               {activeView === 'details' && (

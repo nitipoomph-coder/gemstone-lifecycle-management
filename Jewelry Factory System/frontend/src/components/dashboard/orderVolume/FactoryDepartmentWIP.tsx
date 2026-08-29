@@ -47,7 +47,7 @@ export const FactoryDepartmentWIP: React.FC<Props> = ({
         padding: '14px 16px',
         display: 'flex',
         flexDirection: 'column',
-        height: '100%',
+        width: '100%',
         minHeight: 250
       }}
     >
@@ -113,14 +113,11 @@ export const FactoryDepartmentWIP: React.FC<Props> = ({
                 key={dept.department}
                 onClick={() => onSelectDepartment(isSelected ? null : dept.department)}
                 style={{
-                  padding: '6px 10px',
-                  borderRadius: 6,
-                  background: isSelected
-                    ? 'color-mix(in srgb, var(--color-brand-500) 10%, var(--color-surface-0))'
-                    : 'var(--color-surface-1)',
-                  border: isSelected ? `1.5px solid ${color}` : '1px solid var(--color-border-light)',
+                  padding: '6px 8px',
+                  borderRadius: 4,
+                  background: isSelected ? 'var(--color-ui-selected)' : 'transparent',
                   cursor: 'pointer',
-                  transition: 'all 0.15s ease'
+                  transition: 'background 0.12s ease'
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
@@ -142,7 +139,7 @@ export const FactoryDepartmentWIP: React.FC<Props> = ({
                       {fmtValue(dept.openQty, dept.openAmount)}
                     </span>
                     <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--color-text-tertiary)' }}>
-                      ({dept.orderCount} ord • {pct.toFixed(0)}%)
+                      ({dept.orderCount} ord • {pct > 0 && pct < 1 ? '< 1%' : `${pct.toFixed(0)}%`})
                     </span>
                   </div>
                 </div>

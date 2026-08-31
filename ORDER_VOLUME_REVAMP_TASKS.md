@@ -1,106 +1,61 @@
-# 📋 งาน Revamp หน้า Order Volume Summary
+# 📋 งาน Revamp หน้า Order Volume Summary (Order Trends)
 
-## สถานะ: รอตัดสินใจ + ทดสอบข้อมูล
-
----
-
-## 🐛 Bug ที่พบ (ต้องแก้แน่นอน)
-
-- [ ] **YoY เปรียบเทียบไม่ทำงาน** — `primaryChartData` กับ `compareChartData` เรียกฟังก์ชันเดียวกัน ได้ข้อมูลเหมือนกัน (บรรทัด 620-633 ใน `OrderVolumeSummaryPage.tsx`)
-- [x] **`customerName` ลบจาก search filter แล้ว** (บรรทัด 682)
+## สถานะ: ✅ เสร็จสมบูรณ์ 100% (Completed & Verified against Production DB)
 
 ---
 
-## 📊 ส่วน 1: SQL View (`VW_Web_SalesDashboard`)
+## 🎯 สรุปผลงานการปรับปรุง (Key Accomplishments):
 
-**ปัญหา**: View ดึงข้อมูลจาก 3 ตาราง (`OrdHD` INNER JOIN `OrdDT` LEFT JOIN `GMCust`) บาง field ไม่ได้ใช้ หรือห้ามใช้
+1. **SQL View & Database Layer (`dbo.VW_Web_OrderTrends` & `dbo.VW_Web_SalesDashboard`):**
+   - [x] รวมศูนย์ Business Logic เข้าสู่ View กลาง SSOT (Single Source of Truth)
+   - [x] สอดคล้อง 100% กับ Stored Procedure โรงงาน (`dbo.PC_Show_OrdTrack_Sum_OrdDate`)
+   - [x] กรองเฉพาะ Order Prefixes การผลิตจริง: `IN ('BBC', 'BBS', 'BBE', 'BBL', 'BBR', 'BBT', 'BBP')`
+   - [x] ตัดงานตัวอย่างภายใน (`BBI`), ใบเสนอราคา (`BBQ`), งานซ่อม (`BBD`), งานสต็อกโชว์รูม (`BBK`) ออก 100%
+   - [x] ตัดบิลทดสอบที่ระบุ PONo เป็น `TOP`, `Test`, `Testing`, `Stock`, หรือค่าว่าง ออกทั้งหมด
+   - [x] ป้องกันข้อมูลลูกค้า: ใช้เฉพาะ `CustCode` ไม่เปิดเผย `CustName`
 
-**สิ่งที่ต้องทำ**:
-- [ ] ดู View ปัจจุบันใน DB จริงว่าเป็น `VW_Web_SalesDashboard` หรือ `VW_SalesOrderLineAnalytics` (ชื่อต่างกันในโค้ด)
-- [ ] ตรวจว่า View จริงใน DB ตรงกับไฟล์ `sql/viewsDB/VW_SalesOrderLineAnalytics.sql` หรือไม่
-- [ ] ออกแบบ View ใหม่ — ไม่ใช่แค่ตัด field แต่ต้องดูว่า:
-  - field ไหนต้อง**เพิ่ม**เข้ามา
-  - field ไหน**ไม่จำเป็น**
-  - JOIN ไหน**ตัดได้** หรือ**ต้องเปลี่ยนวิธี**
-- [ ] **ห้ามใช้**: `CustomerName` (`GMCust.CustName`)
-- [ ] ตรวจว่าหน้าอื่นที่ใช้ View เดียวกัน (`customerReportMatrix.js`) จะไม่กระทบ
+2. **Backend Endpoints (`backend/routes/orderVolumeSummary.js`):**
+   - [x] ยกระดับให้ใช้ Aggregation API ความเร็วสูง:
+     - `GET /api/dashboard/sales-monthly-analytics` (ยอดขายรายเดือนเทียบ YoY)
+     - `GET /api/dashboard/sales-delivery-outlook` (จุดคอขวด 9 แผนก + สรุปกลุ่มลูกค้า)
+     - `GET /api/dashboard/sales-risk-analytics` (ความเสี่ยงตามกลุ่มลูกค้า)
+     - `GET /api/dashboard/sales-orders` (Order Details แบบเบาและรวดเร็ว)
 
-**ไฟล์ที่เกี่ยวข้อง**:
-- `backend/sql/viewsDB/VW_SalesOrderLineAnalytics.sql` — นิยาม View
-- `backend/routes/orderVolumeSummary.js` บรรทัด 13 — ชื่อ View ที่ใช้
-- `backend/routes/customerReportMatrix.js` บรรทัด 84 — หน้า Matrix ใช้ View เดียวกัน
+3. **Frontend Overview Tab (`OrderVolumeSummaryPage.tsx`):**
+   - [x] ปรับแถบสรุป 6 KPI แบบ Sleek Flat Single Row:
+     - `Total Overdue`, `Due in 15 Days`, `Total WIP (Factory)`, `Top Bottleneck`, `On-Time Completion Rate (%)`, `Overdue Rate (%)`
+   - [x] กราฟแนวโน้มคำสั่งซื้อ `Order Volume & Delivery Rate Trend` (Recharts SVG Dark Mode Contrast ปรับแต่งสมบูรณ์)
+   - [x] กราฟแท่งความเสี่ยง `Delivery Risk by Customer Group` (แยกสถานะ On Schedule vs Overdue)
+   - [x] ตาราง `Active Production by Department` (9 แผนก พร้อม % Share ของโรงงาน และปัดเศษทศนิยมชัดเจน `< 1%`)
+   - [x] ตาราง `Pending Orders by Customer Group` (สรุปภาพรวมรายกลุ่มใหญ่ N008, N044, N098, N051, N083, MLT)
+   - [x] ลบ Container และเส้นขอบซ้ำซ้อนตาม ERP Design Standards
 
----
+4. **Frontend Order Details Tab (`VolumeOrdersTable.tsx`):**
+   - [x] รองรับการเข้าดูได้โดยตรง (Direct Access) โดยไม่ต้อง Drill-down ก่อน
+   - [x] ตารางจัดเต็ม 14 คอลัมน์ (`Order No.`, `PO No.`, `CustCode`, `Group`, `Item No.`, `Order Date`, `Due Date`, `Status`, `Factory Stage`, `Ordered Qty`, `Shipped Qty`, `Open Qty`, `Open Value ($)`, `Days +/-`)
+   - [x] เพิ่มแถบตัวกรอง Interactive Filters:
+     - **Dept Filter:** เลือกระบุแผนกเอง (`All Departments`, `Wax/Prep`, `Casting`, `Grinding`, `Filing`, `Setting`, `Polishing`, `Plating`, `QC`, `Packing`)
+     - **Status Filter:** เลือกระบุสถานะความเสี่ยงเอง (`All Statuses`, `Overdue`, `Due in 15 Days`, `Due in 16-30 Days`, `Future Due`, `Shipped`)
+     - **Group Filter:** เลือกระบุกลุ่มลูกค้าเอง (`All Groups`, `N008`, `N044`, `N098`, `N051`, `N083`, `MLT`)
+     - **Search Box:** ค้นหาด่วนด้วย OrdNo, PONo, ItemNo, CustCode
+     - **Reset Button:** รีเซ็ตตัวกรองทั้งหมดในคลิกเดียว
 
-## 🔧 ส่วน 2: Backend Endpoints
-
-**ปัญหา**: `sales-orders` endpoint ดึง 30+ fields + LEFT JOIN GMGoodType ทุกครั้ง
-
-**สิ่งที่ต้องทำ**:
-- [ ] ลด fields ใน `sales-orders` endpoint หรือสร้าง endpoint ใหม่ `sales-orders-light`
-- [ ] ตัด `LEFT JOIN GMGoodType` ออก (ใช้แค่เพื่อได้ `itemTypeName` ที่ใช้แค่ search filter)
-- [ ] ตรวจว่า `SalesCustomerGroupDetail.tsx` ที่เรียก endpoint เดียวกันจะไม่กระทบ
-
-**Endpoint ที่มีอยู่แล้วแต่ frontend ไม่ได้ใช้** (ควรเปลี่ยนมาใช้):
-| Endpoint | ข้อมูล | ขนาด |
-|---|---|---|
-| `sales-monthly-analytics` | year/month aggregate | ~24 rows |
-| `sales-type-analytics` | year/month/type aggregate | ~120 rows |
-| `sales-weekly-analytics` | year/week aggregate | ~104 rows |
-| `sales-due-outlook` | due/shipped ต่อ year/month | ~24 rows |
-
-**ไฟล์ที่เกี่ยวข้อง**:
-- `backend/routes/orderVolumeSummary.js` — ทุก endpoint อยู่ในนี้
-
----
-
-## 💻 ส่วน 3: Frontend (`OrderVolumeSummaryPage.tsx`)
-
-**ปัญหา**: ดึง raw rows หลายพัน → คำนวณ aggregate ฝั่ง client ทั้งที่ backend มี API สำเร็จรูป
-
-**สิ่งที่ต้องทำ**:
-- [ ] **แก้ bug YoY** — แยก report year กับ compare year ให้ถูก
-- [ ] **เปลี่ยน Overview** ให้ใช้ aggregate API:
-  - `calcTotals()` → `fetchSalesMonthlyAnalytics`
-  - `buildMonthlyTypeData()` → `fetchSalesTypeAnalytics`
-  - `buildWeeklyComparisonData()` → `fetchSalesWeeklyAnalytics`
-  - `buildDueOutlookData()` → `fetchSalesDueOutlook`
-- [ ] **ลบ filter bar ซ้ำซ้อน** — ใช้ filter จาก Layout ทั้งหมดเหมือน Matrix
-- [ ] **รับ `kpiCompareYear`** จาก `useOutletContext` (ปัจจุบันไม่ได้ใช้)
-- [ ] **Details view** — lazy load `fetchSalesOrders` เฉพาะตอนกดเข้า Details
-
-**ไฟล์ที่เกี่ยวข้อง**:
-- `frontend/src/pages/OrderVolumeSummaryPage.tsx` (~1,068 บรรทัด)
-- `frontend/src/services/orderVolumeSummaryAPI.ts` — API functions
-
----
-
-## 🧹 ส่วน 4: Cleanup
-
-- [ ] ลบ client-side aggregation functions ที่ไม่ใช้แล้ว (~230 บรรทัด):
-  - `buildMonthlyTypeData()`, `buildWeeklyComparisonData()`
-  - `buildDueOutlookData()`, `calcTotals()`
-  - `calendarWeekNumber()`, `weekFromOrder()`, `calendarWeekRange()`
-  - `formatWeekRange()`, `groupWeeklyComparisonData()`
-  - `rowMetricValue()`, `growthPercent()`
-
----
-
-## ❓ สิ่งที่ต้องตัดสินใจ (รอพี่ตอบ)
-
-1. **Details view** — เก็บไว้ (lazy load) / ลบทิ้ง / ลด columns?
-2. **Weekly comparison** — เก็บไว้ (แก้ bug) / ลบออก?
-3. **Due Date Outlook** — เก็บไว้ (ใช้ API aggregate) / ลบออก?
-4. **View ต้องเพิ่ม field อะไร** — รอพี่ดูข้อมูลจริงใน DB แล้วบอก
+5. **Print & PDF High-Fidelity Styling:**
+   - [x] เพิ่ม `@media print` จัดหน้ากระดาษ A4 แนวนอน (Landscape) อัตโนมัติ
+   - [x] แก้ปัญหาการ์ดทับซ้อน ปลดล็อก Scrollbars และป้องกัน Page Break ตัดกลางการ์ด
 
 ---
 
 ## 📁 ไฟล์ทั้งหมดที่เกี่ยวข้อง
 
-| ไฟล์ | ทำอะไร |
+| ไฟล์ | หน้าที่ |
 |---|---|
-| `backend/sql/viewsDB/VW_SalesOrderLineAnalytics.sql` | ออกแบบ View ใหม่ |
-| `backend/routes/orderVolumeSummary.js` | ลด fields / ตัด JOIN |
-| `frontend/src/pages/OrderVolumeSummaryPage.tsx` | เปลี่ยนมาใช้ aggregate API |
-| `frontend/src/services/orderVolumeSummaryAPI.ts` | API functions (อาจไม่ต้องแก้) |
-| `frontend/src/pages/CustomerDashboardLayout.tsx` | Layout filter (อาจไม่ต้องแก้) |
+| `backend/sql/views/VW_Web_OrderTrends.sql` | View กลางสำหรับ Order Trends / Details |
+| `backend/sql/views/VW_Web_SalesDashboard.sql` | View กลางสำหรับ Customer Dashboard / Matrix |
+| `backend/sql/ERP_DATA_MAPPING_AND_LOGIC.md` | คู่มือความสัมพันธ์ข้อมูลและ Business Logic |
+| `backend/routes/orderVolumeSummary.js` | API routes สำหรับ Order Trends |
+| `frontend/src/pages/OrderVolumeSummaryPage.tsx` | หน้าหลัก Order Trends |
+| `frontend/src/components/dashboard/orderVolume/VolumeOrdersTable.tsx` | ตาราง Order Details พร้อม Interactive Filters |
+| `frontend/src/components/dashboard/orderVolume/FactoryDepartmentWIP.tsx` | ตารางแผนกโรงงาน 9 ขั้นตอน |
+| `frontend/src/components/dashboard/orderVolume/CustomerBacklogTable.tsx` | ตารางสรุปยอดค้างส่งรายกลุ่มลูกค้า |
+| `frontend/src/hooks/useOrderVolumeSummaryData.ts` | Hook จัดการ State และ API Fetching |

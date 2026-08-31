@@ -83,7 +83,7 @@ function buildSalesFilters(req, request, viewAlias = 'v', dateExpr = null) {
 
   if (types.length > 0) {
     const typeParams = addInParams(request, 'st', types, sql.NVarChar);
-    filters.push(`${viewAlias}.ProductType IN (${typeParams})`);
+    filters.push(`LEFT(ISNULL(${viewAlias}.ItemNo, ''), 3) IN (${typeParams})`);
   }
 
   return { years, months, customers, types, whereSql: filters.join('\n        AND ') };
@@ -282,6 +282,7 @@ router.get('/sales-orders', async (req, res) => {
 
     const result = await request.query(`
       SELECT
+        v.OrdWeek AS ordWeek,
         v.OrdNo AS orderNo,
         v.PONo AS poNo,
         v.PO2 AS po2,
@@ -289,16 +290,11 @@ router.get('/sales-orders', async (req, res) => {
         v.DueDate AS dueDate,
         v.CustDueDate AS custDate,
         v.CustCode AS customerCode,
-        '' AS shipTo,
+        v.OrdKind AS ordKind,
+        v.Metal AS metal,
+        v.ShipTo AS shipTo,
         v.ItemNo AS itemNo,
-        '' AS itemSku,
-        '' AS custItem,
-        '' AS itemType,
-        v.ProductType AS productTypeCode,
-        '' AS itemMat,
-        '' AS itemSize,
-        '' AS itemStone,
-        '' AS itemPlate,
+        LEFT(ISNULL(v.ItemNo, ''), 3) AS productTypeCode,
         v.ItemQty AS orderQty,
         v.ExportQty AS shippedQty,
         v.OpenQty AS openQty,

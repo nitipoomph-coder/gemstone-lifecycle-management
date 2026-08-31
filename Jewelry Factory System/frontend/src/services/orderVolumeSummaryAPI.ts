@@ -77,28 +77,31 @@ export interface DeliveryOutlookResponse {
 }
 
 export interface SalesOrderRow {
+  ordWeek?: number | string | null;
   orderNo: string;
   poNo: string | null;
+  po2: string | null;
   ordDate: string | null;
   dueDate: string | null;
   custDate: string | null;
   customerCode: string;
   customerName?: string;
   salesName?: string | null;
-  po2: string | null;
+  ordKind?: string | null;
+  metal?: string | null;
   shipTo: string | null;
   ordStamp?: string | null;
   ordMaker?: string | null;
   itemNo: string;
   itemSku?: string;
-  itemType: string;
+  itemType?: string;
   productTypeCode?: string;
-  custItem: string | null;
-  itemMat: string | null;
-  itemSize: string | null;
-  itemStone: string | null;
+  custItem?: string | null;
+  itemMat?: string | null;
+  itemSize?: string | null;
+  itemStone?: string | null;
   itemDesc?: string | null;
-  itemPlate: string | null;
+  itemPlate?: string | null;
   setType?: string | null;
   orderQty: number;
   shippedQty: number;
@@ -109,8 +112,8 @@ export interface SalesOrderRow {
   daysToCustDue?: number;
   dueRiskBucket?: string;
   currentDepartment?: string;
-  ordStatus: string | null;
-  closeStatus: string | null;
+  ordStatus?: string | null;
+  closeStatus?: string | null;
 }
 
 export interface TopItemRow {

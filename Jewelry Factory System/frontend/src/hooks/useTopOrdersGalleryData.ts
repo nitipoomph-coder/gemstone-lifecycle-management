@@ -1,15 +1,15 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { fetchAvailableYearsMeta } from '../services/dashboardAPI';
-import { fetchCustomerSummary } from '../services/customerSummaryAPI';
-import { fetchItemCustomerYearlySummary } from '../services/itemYearlySummaryAPI';
-import type { ItemCustomerYearlySummaryItem, ItemCustomerYearlySummaryPair } from '../services/itemYearlySummaryAPI';
-import { getCustomerGroupId, ALL_GROUPS, ACTIVE_GROUP_IDS } from '../config/customerGroups';
+import { fetchAvailableYears } from '../services/dashboardAPI';
+import { fetchTopItemsGallery, type TopGalleryItem, type TopGalleryResponse } from '../services/itemYearlySummaryAPI';
+import { ALL_GROUPS, ACTIVE_GROUP_IDS } from '../config/customerGroups';
 
 // --- Shared Constants & Types ---
 export const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-export type GalleryDisplayMode = "group" | "list";
 export type PeriodPreset = "full-year" | "ytd" | "this-month" | "last-month" | "custom";
+
+const CURRENT_YEAR = new Date().getFullYear();
+const DEFAULT_YEARS = [String(CURRENT_YEAR), String(CURRENT_YEAR - 1), String(CURRENT_YEAR - 2), String(CURRENT_YEAR - 3)];
 
 export const PERIOD_PRESETS: Array<{ id: PeriodPreset; label: string }> = [
   { id: "full-year", label: "Full Year" },
@@ -18,34 +18,23 @@ export const PERIOD_PRESETS: Array<{ id: PeriodPreset; label: string }> = [
   { id: "last-month", label: "Last Month" },
 ];
 
-export const LOW_BASE_QTY = 100;
-export const TOP_CUSTOMER_ITEM_LIMIT = 50;
-export const TOP_ITEMS_PER_GROUP_IN_ALL = 10;
-
-export interface PreviewItem {
-  id: string;
-  rank: number;
-  cust: string;
-  customerCode: string;
-  customerLabel: string;
-  total: number;
-  qty: number;
-}
-
-export interface GalleryRow {
-  rowKey: string;
-  id: string;
+export interface ProductTypeOption {
+  value: string;
   label: string;
-  customerCode: string;
-  customerName: string;
-  groupId: string;
-  groupLabel: string;
-  topItem: string;
-  topItemQty: number;
-  yrTotal: number;
-  sortValue: number;
-  displayMode: GalleryDisplayMode;
+  fullLabel: string;
+  description: string;
 }
+
+export const PRODUCT_TYPE_OPTIONS: ProductTypeOption[] = [
+  { value: 'ALL', label: 'All', fullLabel: 'All Product Types', description: 'ทุกประเภทสินค้า' },
+  { value: 'BBS', label: 'BBS', fullLabel: 'Bracelet & Bangle', description: 'สร้อยข้อมือ & กำไล' },
+  { value: 'BANGLE', label: 'Bangles', fullLabel: 'Bangles', description: 'กำไลข้อแข็ง' },
+  { value: 'NON_BANGLE', label: 'Non Bangles', fullLabel: 'Bracelet (Soft)', description: 'สร้อยข้อมือแบบนิ่ม/โซ่' },
+  { value: 'BES', label: 'BES', fullLabel: 'Earring', description: 'ต่างหู' },
+  { value: 'BNS', label: 'BNS', fullLabel: 'Necklace', description: 'สร้อยคอ / จี้' },
+  { value: 'BRS', label: 'BRS', fullLabel: 'Ring', description: 'แหวน' },
+  { value: 'OTH', label: 'Others', fullLabel: 'Others', description: 'เครื่องประดับอื่นๆ' },
+];
 
 export interface PeriodDraft {
   preset: PeriodPreset;
@@ -59,7 +48,7 @@ export interface PeriodDraft {
 // --- Helper Functions ---
 export const getDefaultCompareYear = (baseYear: string, years: string[]) => {
   const sortedYears = [...years].map(String).sort((a, b) => Number(a) - Number(b));
-  return [...sortedYears].reverse().find(year => Number(year) < Number(baseYear)) || '';
+  return [...sortedYears].reverse().find(year => Number(year) < Number(baseYear)) || (sortedYears[0] !== baseYear ? sortedYears[0] : '');
 };
 
 export const normalizeStyleNo = (value: unknown) => String(value || "").trim().toUpperCase();
@@ -67,12 +56,6 @@ export const normalizeCustomerCode = (value: unknown) => String(value || "").tri
 export const customerItemKey = (customerCode: unknown, styleNo: unknown) => `${normalizeCustomerCode(customerCode)}|${normalizeStyleNo(styleNo)}`;
 
 export const getGroupLabel = (groupId: string) => ALL_GROUPS.find((group: any) => group.id === groupId)?.label || groupId;
-
-export const galleryRowSearchText = (row: GalleryRow) =>
-  [row.label, row.customerCode, row.customerName, row.groupId, row.groupLabel, row.topItem]
-    .filter(Boolean)
-    .join(" ")
-    .toLowerCase();
 
 export const currentMonthNumber = () => new Date().getMonth() + 1;
 export const clampMonth = (month: number) => Math.min(12, Math.max(1, Number(month) || 1));
@@ -100,56 +83,58 @@ export const presetRange = (preset: PeriodPreset) => {
 // --- Custom Hook ---
 export function useTopOrdersGalleryData() {
   const [searchParams] = useSearchParams();
-  const metric = searchParams.get("metric") || "amount";
+  const metric = (searchParams.get("metric") || "amount") as 'qty' | 'amount';
 
-  const [custData, setCustData] = useState<any[]>([]);
-  const [availableYears, setAvailableYears] = useState<string[]>([]);
-  const [firstDataYear, setFirstDataYear] = useState<number | null>(null);
+  const [availableYears, setAvailableYears] = useState<string[]>(DEFAULT_YEARS);
   const [loading, setLoading] = useState(true);
   const [filterLoading, setFilterLoading] = useState(false);
 
-  const [baseYear, setBaseYear] = useState<string>("");
+  const [baseYear, setBaseYear] = useState<string>(String(CURRENT_YEAR));
+  const [compareYear, setCompareYear] = useState<string>(String(CURRENT_YEAR - 1));
+  const [compareEnabled, setCompareEnabled] = useState(true);
+
   const [selGroups, setSelGroups] = useState<string[]>(() => {
     const urlGroups = searchParams.get("groups");
     return urlGroups ? urlGroups.split(",").filter(Boolean) : ACTIVE_GROUP_IDS;
   });
+
+  const [productType, setProductType] = useState<string>(() => {
+    return searchParams.get("type") || "ALL";
+  });
+
   const [searchDraft, setSearchDraft] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+
   const [monthStart, setMonthStart] = useState(1);
   const [monthEnd, setMonthEnd] = useState(12);
   const [periodPreset, setPeriodPreset] = useState<PeriodPreset>("full-year");
-  const [compareEnabled, setCompareEnabled] = useState(true);
   const [periodDraft, setPeriodDraft] = useState<PeriodDraft | null>(null);
 
-  const [previewItem, setPreviewItem] = useState<PreviewItem | null>(null);
-  const [compareYear, setCompareYear] = useState<string>("");
-  const [itemsYearlyByPair, setItemsYearlyByPair] = useState<Record<string, ItemCustomerYearlySummaryItem>>({});
-  const [compareLoading, setCompareLoading] = useState(false);
+  const [galleryResponse, setGalleryResponse] = useState<TopGalleryResponse | null>(null);
+  const [previewItem, setPreviewItem] = useState<TopGalleryItem | null>(null);
+
   const filterTransitionTimer = useRef<ReturnType<typeof window.setTimeout> | null>(null);
-  const hasLoadedCustomerDataRef = useRef(false);
+  const hasLoadedInitialRef = useRef(false);
 
   const selectedMonthNumbers = useMemo(() => monthRange(monthStart, monthEnd), [monthStart, monthEnd]);
-  const selectedMonthNames = useMemo(() => selectedMonthNumbers.map((month) => MONTHS[month - 1]), [selectedMonthNumbers]);
-  const selectedMonthKey = selectedMonthNumbers.join(",");
   const selectedPeriodLabel = monthRangeLabel(monthStart, monthEnd);
   const selectedGroupsKey = selGroups.join(",");
+
   const analyticsPath = useMemo(() => {
     const params = new URLSearchParams();
     params.set("metric", metric);
     if (baseYear) params.set("year", baseYear);
     if (compareEnabled && compareYear) params.set("compareYear", compareYear);
-    if (selectedMonthKey) params.set("months", selectedMonthKey);
+    if (selectedMonthNumbers.length) params.set("months", selectedMonthNumbers.join(","));
     if (selectedGroupsKey) params.set("groups", selectedGroupsKey);
+    if (productType && productType !== 'ALL') params.set("type", productType);
     return `/dashboard/top-orders/analytics?${params.toString()}`;
-  }, [baseYear, compareEnabled, compareYear, metric, selectedGroupsKey, selectedMonthKey]);
+  }, [baseYear, compareEnabled, compareYear, metric, productType, selectedGroupsKey, selectedMonthNumbers]);
 
-  const isInitialLoading = loading && custData.length === 0;
-  const isFilterLoading = filterLoading || (loading && custData.length > 0);
-
-  const startFilterTransition = () => {
+  const startFilterTransition = (duration = 600) => {
     setFilterLoading(true);
     if (filterTransitionTimer.current) window.clearTimeout(filterTransitionTimer.current);
-    filterTransitionTimer.current = window.setTimeout(() => setFilterLoading(false), 800);
+    filterTransitionTimer.current = window.setTimeout(() => setFilterLoading(false), duration);
   };
 
   useEffect(() => {
@@ -158,204 +143,159 @@ export function useTopOrdersGalleryData() {
     };
   }, []);
 
+  // 1. Initial years load
   useEffect(() => {
     let cancelled = false;
-    const loadTimer = window.setTimeout(() => {
-      setLoading(true);
-      fetchAvailableYearsMeta()
-        .then(({ years, firstDataYear }: any) => {
-          if (cancelled) return;
-          const sortedYrs = years.map(String).sort((a: any, b: any) => Number(a) - Number(b));
-          setFirstDataYear(firstDataYear);
-          setAvailableYears(sortedYrs);
-          if (sortedYrs.length > 0) {
-            setBaseYear(sortedYrs[sortedYrs.length - 1]);
-          }
-        })
-        .catch((err: any) => {
-          console.error("Error fetching available years:", err);
-          if (!cancelled) setLoading(false);
-        });
-    }, 0);
+    fetchAvailableYears()
+      .then((years: any) => {
+        if (cancelled) return;
+        const stringYears = (years || []).map(String).sort((a: any, b: any) => b.localeCompare(a));
+        if (stringYears.length > 0) {
+          setAvailableYears(stringYears);
+          setBaseYear((prev) => (prev && stringYears.includes(prev) ? prev : stringYears[0]));
+          setCompareYear((prev) => (prev && stringYears.includes(prev) ? prev : (stringYears[1] || '')));
+        }
+      })
+      .catch((err) => {
+        console.error("Error fetching available years:", err);
+      });
+
     return () => {
       cancelled = true;
-      window.clearTimeout(loadTimer);
     };
   }, []);
 
+
+  // 2. Fetch Top Gallery items from API
   useEffect(() => {
-    if (availableYears.length === 0) return;
+    if (!baseYear || availableYears.length === 0) return;
+
     let cancelled = false;
-    const loadTimer = window.setTimeout(() => {
-      if (hasLoadedCustomerDataRef.current) setFilterLoading(true);
-      setLoading(true);
-      fetchCustomerSummary(availableYears, selectedMonthNames)
-        .then((cData: any) => {
-          if (cancelled) return;
-          setCustData(cData);
-          hasLoadedCustomerDataRef.current = true;
-        })
-        .catch((err) => console.error("Error fetching report data:", err))
-        .finally(() => {
-          if (!cancelled) {
-            setLoading(false);
-            if (!filterTransitionTimer.current) setFilterLoading(false);
-          }
-        });
-    }, 0);
-    return () => {
-      cancelled = true;
-      window.clearTimeout(loadTimer);
-    };
-  }, [availableYears, selectedMonthNames]);
+    if (hasLoadedInitialRef.current) {
+      setFilterLoading(true);
+    }
+    setLoading(true);
 
-  const tableData = useMemo(() => {
-    if (!baseYear) return { rows: [] as GalleryRow[], totalRows: 0 };
+    const yearsToFetch = compareEnabled && compareYear && compareYear !== baseYear
+      ? [compareYear, baseYear]
+      : [baseYear];
 
-    const selectedGroupSet = new Set(selGroups);
-    let sourceRows: GalleryRow[] = [];
+    const monthsToFetch = selectedMonthNumbers.map(String);
 
-    custData.forEach((cust) => {
-      const customerCode = normalizeCustomerCode(cust.id || "");
-      const groupId = getCustomerGroupId(customerCode);
-      const source = metric === "qty" ? cust.monthlyQty : cust.monthly;
-      let yrTotal = 0;
-
-      selectedMonthNumbers.forEach((month) => {
-        const val = source?.[baseYear]?.[String(month)] || 0;
-        yrTotal += Number(val) || 0;
-      });
-
-      if (yrTotal > 0) {
-        const groupLabel = getGroupLabel(groupId);
-        if (cust.topItemsByYear?.[baseYear]?.topItem) {
-          const yearlyTopItem = cust.topItemsByYear[baseYear];
-          const tItem = yearlyTopItem.topItem;
-          const tQty = Number(yearlyTopItem.topItemQty || 0);
-          if (tItem && tQty > 0) {
-            sourceRows.push({
-              rowKey: `list-${customerCode}-${normalizeStyleNo(tItem)}-${baseYear}-ALL`,
-              id: customerCode,
-              label: customerCode,
-              customerCode,
-              customerName: String(cust.name || ""),
-              groupId,
-              groupLabel,
-              topItem: tItem,
-              topItemQty: tQty,
-              yrTotal,
-              sortValue: tQty,
-              displayMode: "list",
-            });
-          }
+    fetchTopItemsGallery({
+      years: yearsToFetch,
+      months: monthsToFetch,
+      baseYear,
+      compareYear: compareEnabled ? compareYear : undefined,
+      groups: selGroups.length === ALL_GROUPS.length ? ['all'] : selGroups,
+      productType,
+      metric,
+      search: searchQuery,
+      limit: 100,
+    })
+      .then((data) => {
+        if (cancelled) return;
+        setGalleryResponse(data);
+        hasLoadedInitialRef.current = true;
+      })
+      .catch((err) => {
+        console.error("Error fetching top gallery items:", err);
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false);
+          setFilterLoading(false);
         }
-      }
-    });
-
-    const query = searchQuery.trim().toLowerCase();
-    if (query) {
-      sourceRows = sourceRows.filter((row) => galleryRowSearchText(row).includes(query));
-    }
-
-    sourceRows.sort((a, b) => (b.sortValue || 0) - (a.sortValue || 0));
-
-    if (selectedGroupSet.size === 0) {
-      const rowsByGroup = new Map<string, GalleryRow[]>();
-      sourceRows.forEach((row) => {
-        if (!rowsByGroup.has(row.groupId)) rowsByGroup.set(row.groupId, []);
-        rowsByGroup.get(row.groupId)!.push(row);
       });
 
-      const rows = ALL_GROUPS.flatMap((group: any) => {
-        const groupRows = rowsByGroup.get(group.id) || [];
-        return groupRows.slice(0, TOP_ITEMS_PER_GROUP_IN_ALL).map((row, index) => ({
-          ...row,
-          rowKey: `all-${row.groupId}-${row.customerCode}-${normalizeStyleNo(row.topItem)}-${index}`,
-          label: row.groupLabel,
-          displayMode: "group" as GalleryDisplayMode,
-        }));
-      }).sort((a: any, b: any) => (b.sortValue || 0) - (a.sortValue || 0));
-
-      return { rows, totalRows: rows.length };
-    }
-
-    const rows = sourceRows.filter((row) => selectedGroupSet.has(row.groupId));
-    const totalRows = rows.length;
-    return { rows: rows.slice(0, TOP_CUSTOMER_ITEM_LIMIT), totalRows };
-  }, [custData, baseYear, selGroups, searchQuery, metric, selectedMonthNumbers]);
-
-  useEffect(() => {
-    if (!compareEnabled || !baseYear || availableYears.length === 0) return;
-    if (compareYear && compareYear !== baseYear && availableYears.includes(compareYear)) return;
-    const syncTimer = window.setTimeout(() => {
-      setCompareYear(getDefaultCompareYear(baseYear, availableYears));
-    }, 0);
-    return () => window.clearTimeout(syncTimer);
-  }, [availableYears, baseYear, compareEnabled, compareYear]);
-
-  const visibleItemPairs = useMemo<ItemCustomerYearlySummaryPair[]>(() => {
-    const pairs = new Map<string, ItemCustomerYearlySummaryPair>();
-    tableData.rows.forEach((row: any) => {
-      const customerCode = normalizeCustomerCode(row.customerCode);
-      const styleNo = normalizeStyleNo(row.topItem);
-      const key = customerItemKey(customerCode, styleNo);
-      if (customerCode && styleNo && !pairs.has(key)) {
-        pairs.set(key, { customerCode, styleNo });
-      }
-    });
-    return Array.from(pairs.values());
-  }, [tableData.rows]);
-
-  const comparisonYears = useMemo(() => {
-    const base = Number(baseYear);
-    const start = Number(firstDataYear);
-    if (Number.isFinite(start) && Number.isFinite(base) && base >= start) {
-      return Array.from({ length: base - start + 1 }, (_, index) => String(start + index));
-    }
-    return availableYears.filter((year) => !base || Number(year) <= base).map(String);
-  }, [availableYears, baseYear, firstDataYear]);
-
-  useEffect(() => {
-    let cancelled = false;
-    const loadTimer = window.setTimeout(() => {
-      if (!compareEnabled || !visibleItemPairs.length || !baseYear || !compareYear || baseYear === compareYear) {
-        setItemsYearlyByPair({});
-        setCompareLoading(false);
-        return;
-      }
-      setCompareLoading(true);
-      fetchItemCustomerYearlySummary(visibleItemPairs, [baseYear, compareYear])
-        .then((result: any) => {
-          if (cancelled) return;
-          const dict: Record<string, ItemCustomerYearlySummaryItem> = {};
-          (result.data || []).forEach((it: any) => {
-            if (it.customerCode && it.styleNo) {
-              const key = customerItemKey(it.customerCode, it.styleNo);
-              dict[key] = it;
-            }
-          });
-          setItemsYearlyByPair(dict);
-        })
-        .catch((err: any) => console.error("Error fetching comparison data", err))
-        .finally(() => {
-          if (!cancelled) setCompareLoading(false);
-        });
-    }, 150);
     return () => {
       cancelled = true;
-      window.clearTimeout(loadTimer);
     };
-  }, [baseYear, compareYear, visibleItemPairs, compareEnabled]);
+  }, [availableYears, baseYear, compareEnabled, compareYear, metric, productType, searchQuery, selGroups, selectedMonthNumbers]);
+
+  const items = galleryResponse?.items || [];
+  const summary = galleryResponse?.summary || {
+    totalItemsCount: 0,
+    portfolioTotalQty: 0,
+    portfolioTotalAmnt: 0,
+    baseYearTotalQty: 0,
+    compareYearTotalQty: 0,
+  };
+
+  const buildPeriodDraft = (): PeriodDraft => {
+    const activeBase = baseYear || availableYears[0] || String(CURRENT_YEAR);
+    const activeComp = compareYear || getDefaultCompareYear(activeBase, availableYears);
+    return {
+      preset: periodPreset,
+      baseYear: activeBase,
+      startMonth: monthStart,
+      endMonth: monthEnd,
+      compareEnabled,
+      compareYear: activeComp,
+    };
+  };
+
+  const applyPeriodPreset = (preset: PeriodPreset) => {
+    const range = presetRange(preset);
+    setPeriodDraft((prev) =>
+      prev
+        ? { ...prev, preset, startMonth: range.startMonth, endMonth: range.endMonth }
+        : {
+            preset,
+            baseYear,
+            startMonth: range.startMonth,
+            endMonth: range.endMonth,
+            compareEnabled,
+            compareYear: compareYear || getDefaultCompareYear(baseYear, availableYears),
+          }
+    );
+  };
+
+  const updatePeriodDraft = (patch: Partial<PeriodDraft>) => {
+    setPeriodDraft((prev) => {
+      const base = prev || buildPeriodDraft();
+      const next = { ...base, ...patch };
+      if (patch.startMonth !== undefined || patch.endMonth !== undefined) {
+        next.preset = 'custom';
+      }
+      return next;
+    });
+  };
+
+  const applyPeriodDraft = () => {
+    if (!periodDraft) return;
+    startFilterTransition();
+    setPeriodPreset(periodDraft.preset);
+    setMonthStart(periodDraft.startMonth);
+    setMonthEnd(periodDraft.endMonth);
+    setBaseYear(periodDraft.baseYear);
+    setCompareEnabled(periodDraft.compareEnabled);
+    setCompareYear(periodDraft.compareYear);
+  };
+
+  const toggleGroup = (gId: string) => {
+    startFilterTransition();
+    setSelGroups((prev) =>
+      prev.includes(gId) ? prev.filter((x) => x !== gId) : [...prev, gId]
+    );
+  };
 
   return {
     metric,
-    isInitialLoading,
-    isFilterLoading,
+    isInitialLoading: loading && !galleryResponse,
+    isFilterLoading: filterLoading || (loading && !!galleryResponse),
     availableYears,
     baseYear,
     setBaseYear,
+    compareYear,
+    setCompareYear,
+    compareEnabled,
+    setCompareEnabled,
     selGroups,
     setSelGroups,
+    toggleGroup,
+    productType,
+    setProductType,
     searchDraft,
     setSearchDraft,
     searchQuery,
@@ -366,21 +306,20 @@ export function useTopOrdersGalleryData() {
     setMonthEnd,
     periodPreset,
     setPeriodPreset,
-    compareEnabled,
-    setCompareEnabled,
     periodDraft,
     setPeriodDraft,
+    buildPeriodDraft,
+    applyPeriodPreset,
+    updatePeriodDraft,
+    applyPeriodDraft,
+    getDefaultCompareYear,
+    items,
+    summary,
     previewItem,
     setPreviewItem,
-    compareYear,
-    setCompareYear,
-    itemsYearlyByPair,
-    compareLoading,
-    tableData,
-    comparisonYears,
     analyticsPath,
     selectedMonthNumbers,
     selectedPeriodLabel,
-    startFilterTransition
+    startFilterTransition,
   };
 }

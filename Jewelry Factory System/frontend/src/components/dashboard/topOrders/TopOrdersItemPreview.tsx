@@ -1,331 +1,458 @@
-import { X } from 'lucide-react';
-import type { SyntheticEvent } from 'react';
-import type { PreviewItem } from '../../../hooks/useTopOrdersGalleryData';
+import { useState, type SyntheticEvent } from 'react';
+import { X, TrendingUp, TrendingDown, Sparkles, Calendar, Users, BarChart2 } from 'lucide-react';
+import type { TopGalleryItem } from '../../../services/itemYearlySummaryAPI';
 
-// CompareSummary is from useTopOrdersGalleryData, but wait, it is not exported. Let me redefine it or I should export it.
-// I will just define it locally and then I can update useTopOrdersGalleryData.ts later if needed, but actually I didn't export it in useTopOrdersGalleryData.ts!
-// Let me just declare the interface here for now.
-export interface CompareSummary {
-  baseYear: string;
-  compareYear: string;
-  baseQty: number;
-  compareQty: number;
-  combinedQty: number;
-  combinedLabel: string;
-  diff: number;
-  pct: number | null;
-  isNew: boolean;
-  isLowBase: boolean;
-  hasAnyData: boolean;
-}
-
-export function EmptyFilterPill({ label, value }: { label: string; value: string }) {
-  return (
-    <div
-      style={{
-        border: "1px solid var(--color-border-light)",
-        borderRadius: 8,
-        background: "color-mix(in srgb, var(--color-surface-1) 68%, var(--color-surface-0))",
-        padding: "10px 12px",
-        minWidth: 0,
-      }}
-    >
-      <div style={{ fontSize: "0.68rem", color: "var(--color-text-tertiary)", fontWeight: 950, marginBottom: 3 }}>
-        {label}
-      </div>
-      <div
-        title={value}
-        style={{
-          fontSize: "0.84rem",
-          color: "var(--color-text-primary)",
-          fontWeight: 900,
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-        }}
-      >
-        {value}
-      </div>
-    </div>
-  );
-}
-
-function ModalSummaryValue({
-  label,
-  value,
-  color = "var(--color-text-primary)",
-  strong = false,
-}: {
-  label: string;
-  value: string;
-  color?: string;
-  strong?: boolean;
-}) {
-  return (
-    <div style={{ minWidth: strong ? 210 : 130 }}>
-      <div style={{ fontSize: "0.72rem", color: "var(--color-text-tertiary)", fontWeight: 900, marginBottom: 3 }}>
-        {label}
-      </div>
-      <div
-        style={{
-          fontSize: strong ? "1.35rem" : "1rem",
-          color,
-          fontWeight: 950,
-          fontFamily: "var(--font-display)",
-          whiteSpace: "nowrap",
-        }}
-      >
-        {value}
-      </div>
-    </div>
-  );
-}
-
-function ModalYearValue({ year, qty, fmtQty }: { year: string; qty: number; fmtQty: (value: number) => string }) {
-  return (
-    <div
-      style={{
-        minWidth: 150,
-        border: "1px solid var(--color-border-light)",
-        borderRadius: 8,
-        padding: "9px 14px",
-        background: "var(--color-surface-0)",
-        textAlign: "center",
-      }}
-    >
-      <div style={{ fontSize: "0.72rem", color: "var(--color-text-tertiary)", fontWeight: 900 }}>{year}</div>
-      <div style={{ fontSize: "1rem", color: "var(--color-text-primary)", fontWeight: 950, whiteSpace: "nowrap" }}>
-        {fmtQty(qty)} pcs
-      </div>
-    </div>
-  );
-}
-
-interface ModalDetailPanelProps {
-  itemId: string;
-  customer: string;
-  customerLabel?: string;
-  rank: number;
-  comparison?: CompareSummary;
-  loading: boolean;
-  qty: number;
-  total: number;
-  fmt: (value: number) => string;
-  fmtQty: (value: number) => string;
-  fmtSignedQty: (value: number) => string;
-}
-
-function ModalDetailPanel({
-  itemId,
-  customer,
-  customerLabel = "Customer",
-  rank,
-  comparison,
-  loading,
-  qty,
-  total,
-  fmt,
-  fmtQty,
-  fmtSignedQty,
-}: ModalDetailPanelProps) {
-  const detailRows = [
-    { label: "Rank", value: `${rank}` },
-    { label: customerLabel, value: customer },
-    { label: "Item No", value: itemId, wide: true },
-    { label: "Ordered Qty", value: `${fmtQty(qty || 0)} pcs`, strong: true },
-    { label: "Total Value", value: fmt(total || 0), strong: true },
-  ];
-
-  const directionColor = comparison?.diff && comparison.diff < 0 ? "var(--color-danger-600)" : "var(--color-brand-600)";
-  const pctLabel = !comparison?.hasAnyData
-    ? "No data"
-    : comparison.isNew
-      ? "New"
-      : comparison.isLowBase
-        ? "Low base"
-        : `${comparison.diff >= 0 ? "+" : "-"}${Math.abs(comparison.pct || 0).toFixed(1)}%`;
-
-  return (
-    <aside
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: 12,
-        padding: "20px 24px",
-        height: "100%",
-        minHeight: 0,
-        overflow: "hidden",
-      }}
-    >
-      <div>
-        <div
-          style={{ width: 44, height: 4, background: "color-mix(in srgb, var(--color-brand-500) 72%, var(--color-surface-0))", borderRadius: 2, marginBottom: 10 }}
-        />
-        <div style={{ fontSize: "0.74rem", color: "var(--color-text-tertiary)", fontWeight: 950, letterSpacing: "0.08em", textTransform: "uppercase" }}>Detail</div>
-        <div style={{ marginTop: 6, color: "var(--color-text-primary)", fontFamily: "var(--font-display)", fontSize: "1.35rem", fontWeight: 950, lineHeight: 1.12, wordBreak: "break-word" }}>{itemId}</div>
-        <div style={{ marginTop: 6, color: "var(--color-text-secondary)", fontSize: "0.88rem", fontWeight: 850 }}>{customer}</div>
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "0.75fr 1.25fr", gap: 8 }}>
-        {detailRows.map((row) => (
-          <div
-            key={row.label}
-            style={{
-              border: "1px solid var(--color-border-light)",
-              borderRadius: 8,
-              background: "var(--color-surface-0)",
-              padding: "10px 12px",
-              gridColumn: row.wide ? "1 / -1" : undefined,
-            }}
-          >
-            <div style={{ color: "var(--color-text-tertiary)", fontSize: "0.68rem", fontWeight: 900, marginBottom: 2 }}>{row.label}</div>
-            <div
-              title={row.value}
-              style={{
-                color: "var(--color-text-primary)",
-                fontSize: row.strong ? "1rem" : "0.92rem",
-                fontWeight: row.strong ? 950 : 900,
-                fontFamily: row.strong ? "var(--font-display)" : undefined,
-                overflowWrap: "anywhere",
-              }}
-            >
-              {row.value}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div style={{ border: "1px solid var(--color-border-default)", borderRadius: 8, background: "color-mix(in srgb, var(--color-surface-0) 72%, var(--color-surface-2))", padding: "12px", marginTop: 0 }}>
-        <div style={{ color: "var(--color-text-tertiary)", fontSize: "0.68rem", fontWeight: 950, marginBottom: 8 }}>Comparison</div>
-        {loading ? (
-          <div style={{ color: "var(--color-text-secondary)", fontSize: "0.9rem", fontWeight: 850 }}>Loading comparison...</div>
-        ) : !comparison?.hasAnyData ? (
-          <div style={{ color: "var(--color-text-primary)", fontSize: "1rem", fontWeight: 900 }}>No comparison data</div>
-        ) : (
-          <div style={{ display: "grid", gap: 8 }}>
-            <ModalSummaryValue label={`Combined ${comparison.combinedLabel}`} value={`${fmtQty(comparison.combinedQty)} pcs`} strong />
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-              <ModalSummaryValue label="Diff" value={`${fmtSignedQty(comparison.diff)} pcs`} />
-              <ModalSummaryValue label="%Change" value={pctLabel} color={directionColor} />
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-              <ModalYearValue year={comparison.baseYear} qty={comparison.baseQty} fmtQty={fmtQty} />
-              <ModalYearValue year={comparison.compareYear} qty={comparison.compareQty} fmtQty={fmtQty} />
-            </div>
-          </div>
-        )}
-      </div>
-    </aside>
-  );
-}
+const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 interface TopOrdersItemPreviewProps {
-  previewItem: PreviewItem | null;
-  previewRef: React.RefObject<HTMLDivElement | null>;
-  setPreviewItem: (v: PreviewItem | null) => void;
-  previewComparison?: CompareSummary;
-  compareLoading: boolean;
+  item: TopGalleryItem | null;
+  onClose: () => void;
+  baseYear: string;
+  compareYear: string;
+  compareEnabled: boolean;
+  metric: 'qty' | 'amount';
   fmt: (value: number) => string;
   fmtQty: (value: number) => string;
-  fmtSignedQty: (value: number) => string;
 }
 
 export function TopOrdersItemPreview({
-  previewItem,
-  previewRef,
-  setPreviewItem,
-  previewComparison,
-  compareLoading,
+  item,
+  onClose,
+  baseYear,
+  compareYear,
+  compareEnabled,
+  metric,
   fmt,
   fmtQty,
-  fmtSignedQty
 }: TopOrdersItemPreviewProps) {
-  if (!previewItem) return null;
+  const [activeTab, setActiveTab] = useState<'overview' | 'monthly' | 'customers'>('overview');
+
+  if (!item) return null;
+
+  const sharePct = metric === 'amount' ? item.shareOfPortfolioAmntPct : item.shareOfPortfolioQtyPct;
+  const yearsList = Object.keys(item.yearlyTotals).sort((a, b) => Number(b) - Number(a));
 
   return (
     <div
       style={{
-        position: "fixed", inset: 0, zIndex: 1000,
-        background: "color-mix(in srgb, var(--color-surface-900) 85%, transparent)",
-        display: "flex", alignItems: "center", justifyContent: "center",
+        position: 'fixed',
+        inset: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.72)',
+        backdropFilter: 'blur(6px)',
+        zIndex: 9999,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '24px',
+        animation: 'fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
       }}
+      onClick={onClose}
     >
       <div
-        ref={previewRef}
-        className="gallery-preview-shell"
         style={{
-          background: "var(--color-surface-0)", borderRadius: 8,
-          border: "1px solid color-mix(in srgb, var(--color-border-light) 50%, transparent)",
-          boxShadow: "var(--shadow-modal), var(--shadow-inset-panel)",
-          display: "flex", flexDirection: "column", overflow: "hidden",
+          width: 'min(980px, 94vw)',
+          maxHeight: '90vh',
+          backgroundColor: 'var(--color-surface-0)',
+          borderRadius: 14,
+          border: '1px solid var(--color-border-light)',
+          boxShadow: '0 24px 60px rgba(0, 0, 0, 0.3)',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
         }}
+        onClick={(e) => e.stopPropagation()}
       >
+        {/* Modal Header */}
         <div
           style={{
-            display: "flex", alignItems: "center", justifyContent: "space-between",
-            padding: "20px 32px", borderBottom: "1px solid var(--color-border-light)",
-            background: "color-mix(in srgb, var(--color-surface-1) 80%, transparent)",
+            padding: '16px 20px',
+            borderBottom: '1px solid var(--color-border-light)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            background: 'var(--color-surface-1)',
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-            <div style={{ display: "flex", flexDirection: "column" }}>
-              <span style={{ fontSize: "0.7rem", fontWeight: 800, color: "var(--color-text-secondary)", textTransform: 'capitalize', letterSpacing: "0.1em" }}>
-                {previewItem.customerLabel === "Customer Group" ? "Customer Group Item" : "Customer Item"}
-              </span>
-              <span style={{ fontSize: "1.2rem", fontWeight: 900, color: "var(--color-text-primary)", fontFamily: "var(--font-display)", lineHeight: 1 }}>
-                {previewItem.cust}
-              </span>
-            </div>
-            <span style={{ fontSize: "1.5rem", fontWeight: 900, color: "var(--color-text-tertiary)", fontFamily: "var(--font-display)" }}>
-              - {previewItem.id}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span
+              style={{
+                padding: '4px 10px',
+                borderRadius: 6,
+                background: item.rank === 1 ? 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)' : 'var(--color-brand-500)',
+                color: item.rank === 1 ? '#000' : '#FFF',
+                fontSize: '0.85rem',
+                fontWeight: 950,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4,
+              }}
+            >
+              {item.rank === 1 && <Sparkles size={13} />}
+              Rank #{item.rank}
+            </span>
+
+            <span style={{ fontSize: '1.25rem', fontWeight: 950, color: 'var(--color-text-primary)', fontFamily: 'var(--font-display)' }}>
+              {item.itemNo}
+            </span>
+
+            <span
+              style={{
+                padding: '3px 8px',
+                borderRadius: 6,
+                fontSize: '0.75rem',
+                fontWeight: 900,
+                background: 'var(--color-brand-50)',
+                color: 'var(--color-brand-600)',
+                border: '1px solid var(--color-brand-300)',
+              }}
+            >
+              {item.productTypeLabel}
             </span>
           </div>
+
           <button
-            onClick={() => setPreviewItem(null)}
+            type="button"
+            onClick={onClose}
             style={{
-              background: "var(--color-surface-2)", border: "1px solid var(--color-border-default)", borderRadius: 50,
-              cursor: "pointer", padding: 8, color: "var(--color-text-secondary)", display: "flex", transition: "all 0.2s cubic-bezier(0.25, 1, 0.5, 1)",
-              boxShadow: "0 2px 8px color-mix(in srgb, var(--color-surface-900) 10%, transparent)",
+              background: 'none',
+              border: 'none',
+              padding: 6,
+              cursor: 'pointer',
+              color: 'var(--color-text-tertiary)',
+              borderRadius: 6,
+              display: 'flex',
             }}
-            className="hover:bg-danger-50 hover:text-danger-600 hover:border-danger-300 hover:scale-110"
+            className="hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text-primary)]"
           >
-            <X size={20} />
+            <X size={18} />
           </button>
         </div>
 
-        <div
-          className="content-scrollbar gallery-preview-grid"
-          style={{ display: "grid", flex: 1, minHeight: 0, overflow: "hidden", background: "var(--color-surface-0)" }}
-        >
-          <div style={{ display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0, background: "var(--color-product-canvas)" }}>
-            <div style={{ flex: 1, position: "relative", overflow: "hidden", background: "var(--color-product-canvas)", display: "flex", alignItems: "center", justifyContent: "center", minHeight: 0, height: "100%", padding: "24px" }}>
+        {/* Modal Body: 2 Columns */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(300px, 380px) 1fr', flex: 1, overflow: 'hidden' }}>
+          {/* Left Column: Big Image & Key Metrics */}
+          <div
+            style={{
+              padding: 20,
+              borderRight: '1px solid var(--color-border-light)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 16,
+              background: 'var(--color-surface-1)',
+              overflowY: 'auto',
+            }}
+          >
+            {/* Image Preview Box */}
+            <div
+              style={{
+                width: '100%',
+                height: 240,
+                borderRadius: 10,
+                background: 'var(--color-surface-0)',
+                border: '1px solid var(--color-border-light)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: 12,
+                position: 'relative',
+              }}
+            >
               <img
-                src={`/api/photos/ps/${previewItem.id}`}
-                alt={`${previewItem.id}`}
-                className="gallery-preview-image"
+                src={`/api/photos/ps/${item.itemNo}`}
+                alt={item.itemNo}
                 style={{ objectFit: 'contain', width: '100%', height: '100%' }}
                 onError={(event: SyntheticEvent<HTMLImageElement>) => {
-                  const container = event.currentTarget.parentElement?.parentElement;
-                  if (container) container.style.display = "none";
+                  const image = event.currentTarget;
+                  if (!image.dataset.triedCad) {
+                    image.dataset.triedCad = "true";
+                    image.src = `/api/photos/cad/${item.itemNo}`;
+                  } else {
+                    image.style.display = "none";
+                  }
                 }}
               />
             </div>
+
+            {/* Significance Strip */}
+            <div
+              style={{
+                padding: 14,
+                borderRadius: 10,
+                background: 'var(--color-surface-0)',
+                border: '1px solid var(--color-border-light)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 10,
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--color-text-secondary)' }}>
+                  Portfolio Significance
+                </span>
+                <span
+                  style={{
+                    padding: '2px 8px',
+                    borderRadius: 5,
+                    background: 'var(--color-brand-500)',
+                    color: '#FFF',
+                    fontSize: '0.8rem',
+                    fontWeight: 950,
+                  }}
+                >
+                  {sharePct}% Share
+                </span>
+              </div>
+
+              <div style={{ width: '100%', height: 6, background: 'var(--color-surface-2)', borderRadius: 4, overflow: 'hidden' }}>
+                <div style={{ width: `${Math.min(100, Math.max(2, sharePct))}%`, height: '100%', background: 'var(--color-brand-500)' }} />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 4 }}>
+                <div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--color-text-tertiary)', fontWeight: 800 }}>Combined Volume</div>
+                  <div style={{ fontSize: '1.1rem', color: 'var(--color-text-primary)', fontWeight: 950 }}>{fmtQty(item.totalCombinedQty)} pcs</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--color-text-tertiary)', fontWeight: 800 }}>Combined Value</div>
+                  <div style={{ fontSize: '1.1rem', color: 'var(--color-brand-600)', fontWeight: 950 }}>{fmt(item.totalCombinedAmnt)}</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Primary Customer Group Badge */}
+            <div
+              style={{
+                padding: 12,
+                borderRadius: 8,
+                background: 'var(--color-surface-0)',
+                border: '1px solid var(--color-border-light)',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
+              <div>
+                <div style={{ fontSize: '0.7rem', color: 'var(--color-text-tertiary)', fontWeight: 800 }}>Top Customer</div>
+                <div style={{ fontSize: '0.9rem', color: 'var(--color-text-primary)', fontWeight: 950 }}>{item.primaryCustCode}</div>
+              </div>
+              <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--color-text-secondary)' }}>
+                {item.primaryGroupLabel}
+              </span>
+            </div>
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", minHeight: 0, borderLeft: "1px solid var(--color-border-light)", background: "color-mix(in srgb, var(--color-surface-1) 82%, var(--color-surface-0))", overflow: "hidden" }}>
-            <ModalDetailPanel
-              itemId={previewItem.id}
-              customer={previewItem.cust}
-              customerLabel={previewItem.customerLabel}
-              rank={previewItem.rank}
-              comparison={previewComparison}
-              loading={compareLoading}
-              qty={previewItem.qty}
-              total={previewItem.total}
-              fmt={fmt}
-              fmtQty={fmtQty}
-              fmtSignedQty={fmtSignedQty}
-            />
+          {/* Right Column: Tabbed Breakdown Views */}
+          <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+            {/* Tabs Header */}
+            <div style={{ display: 'flex', borderBottom: '1px solid var(--color-border-light)', background: 'var(--color-surface-0)', padding: '0 16px' }}>
+              <button
+                type="button"
+                onClick={() => setActiveTab('overview')}
+                style={{
+                  padding: '12px 16px',
+                  fontSize: '0.85rem',
+                  fontWeight: 900,
+                  border: 'none',
+                  borderBottom: activeTab === 'overview' ? '2px solid var(--color-brand-500)' : '2px solid transparent',
+                  color: activeTab === 'overview' ? 'var(--color-brand-600)' : 'var(--color-text-tertiary)',
+                  background: 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                }}
+              >
+                <BarChart2 size={14} />
+                Multi-Year Comparison
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('monthly')}
+                style={{
+                  padding: '12px 16px',
+                  fontSize: '0.85rem',
+                  fontWeight: 900,
+                  border: 'none',
+                  borderBottom: activeTab === 'monthly' ? '2px solid var(--color-brand-500)' : '2px solid transparent',
+                  color: activeTab === 'monthly' ? 'var(--color-brand-600)' : 'var(--color-text-tertiary)',
+                  background: 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                }}
+              >
+                <Calendar size={14} />
+                Monthly Distribution
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('customers')}
+                style={{
+                  padding: '12px 16px',
+                  fontSize: '0.85rem',
+                  fontWeight: 900,
+                  border: 'none',
+                  borderBottom: activeTab === 'customers' ? '2px solid var(--color-brand-500)' : '2px solid transparent',
+                  color: activeTab === 'customers' ? 'var(--color-brand-600)' : 'var(--color-text-tertiary)',
+                  background: 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                }}
+              >
+                <Users size={14} />
+                Customers ({item.customersCount})
+              </button>
+            </div>
+
+            {/* Tab Contents */}
+            <div style={{ padding: 20, flex: 1, overflowY: 'auto' }}>
+              {activeTab === 'overview' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  {/* YoY Banner */}
+                  {compareEnabled && compareYear && (
+                    <div
+                      style={{
+                        padding: 16,
+                        borderRadius: 10,
+                        background: item.yoyGrowthPct !== null && item.yoyGrowthPct >= 0 ? 'rgba(16, 185, 129, 0.08)' : 'rgba(239, 68, 68, 0.08)',
+                        border: `1px solid ${item.yoyGrowthPct !== null && item.yoyGrowthPct >= 0 ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontSize: '0.78rem', color: 'var(--color-text-secondary)', fontWeight: 800 }}>
+                          YoY Performance ({baseYear} vs {compareYear})
+                        </div>
+                        <div style={{ fontSize: '1.25rem', fontWeight: 950, color: item.yoyGrowthPct !== null && item.yoyGrowthPct >= 0 ? '#059669' : '#dc2626', display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                          {item.yoyGrowthPct !== null && item.yoyGrowthPct >= 0 ? <TrendingUp size={18} /> : <TrendingDown size={18} />}
+                          <span>{item.yoyGrowthPct !== null ? `${item.yoyGrowthPct >= 0 ? '+' : ''}${item.yoyGrowthPct.toFixed(1)}% Growth` : 'New Data'}</span>
+                        </div>
+                      </div>
+
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)', fontWeight: 800 }}>Net Volume Diff</div>
+                        <div style={{ fontSize: '1.1rem', fontWeight: 950, color: 'var(--color-text-primary)' }}>
+                          {item.qtyDiff >= 0 ? '+' : ''}{fmtQty(item.qtyDiff)} pcs
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Year by Year Cards */}
+                  <div style={{ fontSize: '0.82rem', fontWeight: 900, color: 'var(--color-text-secondary)' }}>
+                    Yearly Order History
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
+                    {yearsList.map((yr) => {
+                      const yrData = item.yearlyTotals[yr] || { qty: 0, amount: 0 };
+                      const isBase = yr === baseYear;
+                      const isComp = yr === compareYear;
+                      return (
+                        <div
+                          key={yr}
+                          style={{
+                            padding: 14,
+                            borderRadius: 8,
+                            background: isBase ? 'color-mix(in srgb, var(--color-brand-500) 8%, var(--color-surface-0))' : 'var(--color-surface-1)',
+                            border: `1px solid ${isBase ? 'var(--color-brand-400)' : 'var(--color-border-light)'}`,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 6,
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: '0.9rem', fontWeight: 950, color: 'var(--color-text-primary)' }}>{yr}</span>
+                            {isBase && <span style={{ fontSize: '0.68rem', fontWeight: 900, color: 'var(--color-brand-600)', background: 'var(--color-brand-50)', padding: '1px 6px', borderRadius: 4 }}>Base</span>}
+                            {isComp && <span style={{ fontSize: '0.68rem', fontWeight: 900, color: 'var(--color-text-secondary)', background: 'var(--color-surface-2)', padding: '1px 6px', borderRadius: 4 }}>Compare</span>}
+                          </div>
+                          <div style={{ fontSize: '1.15rem', fontWeight: 950, color: 'var(--color-text-primary)' }}>{fmtQty(yrData.qty)} pcs</div>
+                          <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--color-brand-600)' }}>{fmt(yrData.amount)}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'monthly' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  <div style={{ fontSize: '0.82rem', fontWeight: 900, color: 'var(--color-text-secondary)' }}>
+                    Monthly Order Volume (12-Month Distribution)
+                  </div>
+                  {yearsList.map((yr) => {
+                    const mthMap = item.monthlyBreakdown[yr] || {};
+                    const maxMthVal = Math.max(...Object.values(mthMap).map(Number), 1);
+                    return (
+                      <div key={yr} style={{ padding: 14, borderRadius: 8, background: 'var(--color-surface-1)', border: '1px solid var(--color-border-light)' }}>
+                        <div style={{ fontSize: '0.85rem', fontWeight: 950, color: 'var(--color-text-primary)', marginBottom: 12 }}>
+                          Year {yr}
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: 6 }}>
+                          {MONTH_NAMES.map((mName, mIdx) => {
+                            const val = mthMap[String(mIdx + 1)] || 0;
+                            const heightPct = Math.min(100, Math.max(12, (val / maxMthVal) * 100));
+                            return (
+                              <div key={mName} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                                <div style={{ height: 60, width: '100%', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+                                  <div
+                                    style={{
+                                      width: '75%',
+                                      height: `${heightPct}%`,
+                                      background: val > 0 ? 'var(--color-brand-500)' : 'var(--color-surface-2)',
+                                      borderRadius: '3px 3px 0 0',
+                                    }}
+                                    title={`${mName} ${yr}: ${fmtQty(val)} pcs`}
+                                  />
+                                </div>
+                                <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--color-text-tertiary)' }}>{mName}</span>
+                                <span style={{ fontSize: '0.68rem', fontWeight: 900, color: val > 0 ? 'var(--color-text-primary)' : 'var(--color-text-tertiary)' }}>
+                                  {val > 0 ? fmtQty(val) : '-'}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {activeTab === 'customers' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <div style={{ fontSize: '0.82rem', fontWeight: 900, color: 'var(--color-text-secondary)' }}>
+                    Customer Distribution for this Item
+                  </div>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid var(--color-border-light)', color: 'var(--color-text-tertiary)', textAlign: 'left' }}>
+                        <th style={{ padding: '8px 10px', fontWeight: 900 }}>Customer</th>
+                        <th style={{ padding: '8px 10px', fontWeight: 900 }}>Group</th>
+                        <th style={{ padding: '8px 10px', fontWeight: 900, textAlign: 'right' }}>Total Qty</th>
+                        <th style={{ padding: '8px 10px', fontWeight: 900, textAlign: 'right' }}>Total Value</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {item.customerBreakdown.map((cust) => (
+                        <tr key={cust.custCode} style={{ borderBottom: '1px solid var(--color-border-light)' }}>
+                          <td style={{ padding: '10px', fontWeight: 950, color: 'var(--color-text-primary)' }}>{cust.custCode}</td>
+                          <td style={{ padding: '10px', fontWeight: 800, color: 'var(--color-text-secondary)' }}>{cust.groupLabel}</td>
+                          <td style={{ padding: '10px', fontWeight: 950, textAlign: 'right', color: 'var(--color-text-primary)' }}>{fmtQty(cust.qty)} pcs</td>
+                          <td style={{ padding: '10px', fontWeight: 950, textAlign: 'right', color: 'var(--color-brand-600)' }}>{fmt(cust.amount)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

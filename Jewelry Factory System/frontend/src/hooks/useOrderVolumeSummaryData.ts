@@ -12,7 +12,7 @@ import {
   type SalesRiskPoint,
   type SalesAnalyticsParams
 } from '../services/orderVolumeSummaryAPI';
-import { CUSTOMER_GROUPS } from '../config/customerGroups';
+import { CUSTOMER_GROUPS, getCustomerGroupId } from '../config/customerGroups';
 
 // --- Types ---
 export type Metric = 'amount' | 'qty';
@@ -67,16 +67,25 @@ export type DueOutlookDatum = {
 };
 
 export const ORDER_DETAIL_COLUMNS = [
-  ['Order No.', 105],
-  ['CustCode', 85],
-  ['Group', 90],
-  ['Order Date', 100],
-  ['Due Date', 100],
+  ['No.', 45],
+  ['Week', 55],
+  ['Cust', 65],
+  ['PO No.', 110],
+  ['PO 2', 95],
+  ['New/Replen', 80],
+  ['Metal', 55],
+  ['Item No.', 110],
+  ['Ship To', 75],
+  ['Order Date', 90],
+  ['Due Date', 90],
   ['Status', 110],
-  ['Factory Stage', 110],
-  ['Open Qty', 85],
-  ['Open Value', 110],
-  ['Days +/-', 85]
+  ['Factory Stage', 95],
+  ['Ordered Qty', 75],
+  ['Total Value ($)', 95],
+  ['Shipped Qty', 75],
+  ['Backlog Qty', 75],
+  ['Backlog Value ($)', 95],
+  ['Days +/-', 60]
 ] as const;
 
 // --- Helpers ---
@@ -134,7 +143,16 @@ export function growthPercent(primary: number, compare: number) {
   return ((primary - compare) / compare) * 100;
 }
 
-// --- Formatting ---
+export function formatDmY(dateStr: string | null | undefined): string {
+  if (!dateStr) return '-';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '-';
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const yyyy = d.getFullYear();
+  return `${dd}/${mm}/${yyyy}`;
+}
+
 export const fmtQty = (value: number) => (value || 0).toLocaleString(undefined, { maximumFractionDigits: 0 });
 export const fmtCurrency = (value: number) => `$${(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 export const fmtMetric = (value: number, metric: Metric) => metric === 'amount' ? fmtCurrency(value) : fmtQty(value);
@@ -361,17 +379,33 @@ export function useOrderVolumeSummaryData() {
 
 
 
+  const [selectedCustGroup, setSelectedCustGroup] = useState<string | null>(null);
+
   const filteredOrderRows = useMemo(() => {
     const q = search.trim().toLowerCase();
-    const rows = q
-      ? drilldownOrders.filter(row => [
+    let rows = drilldownOrders;
+
+    if (q) {
+      rows = rows.filter(row => [
         row.orderNo,
         row.poNo,
         row.itemNo,
         row.customerCode,
         row.productTypeCode,
-      ].some(value => String(value || '').toLowerCase().includes(q)))
-      : drilldownOrders;
+      ].some(value => String(value || '').toLowerCase().includes(q)));
+    }
+
+    if (selectedDepartment && selectedDepartment !== 'ALL') {
+      rows = rows.filter(row => (row.currentDepartment || 'Wax / Preparation') === selectedDepartment);
+    }
+
+    if (selectedBucket && selectedBucket !== 'ALL') {
+      rows = rows.filter(row => (row.dueRiskBucket || 'Scheduled') === selectedBucket);
+    }
+
+    if (selectedCustGroup && selectedCustGroup !== 'ALL') {
+      rows = rows.filter(row => getCustomerGroupId(row.customerCode) === selectedCustGroup);
+    }
 
     return [...rows].sort((a, b) => {
       // most overdue first (daysToCustDue asc)
@@ -382,7 +416,34 @@ export function useOrderVolumeSummaryData() {
       const dateSort = (a.ordDate ? new Date(a.ordDate).getTime() : 0) - (b.ordDate ? new Date(b.ordDate).getTime() : 0);
       return dateSort || String(a.orderNo || '').localeCompare(String(b.orderNo || ''));
     });
-  }, [drilldownOrders, search]);
+  }, [drilldownOrders, search, selectedDepartment, selectedBucket, selectedCustGroup]);
+
+  const loadAllDetailsOrders = useCallback(async () => {
+    if (selectedYears.length === 0) return;
+    setDrilldownLoading(true);
+    try {
+      const params: SalesAnalyticsParams = {
+        years: selectedYears,
+        months: selectedMonths,
+        customers: selectedCustCode ? [selectedCustCode] : customers,
+      };
+      if (selectedBucket) params.bucket = selectedBucket;
+      if (selectedDepartment) params.department = selectedDepartment;
+
+      const orders = await fetchSalesOrders(params);
+      setDrilldownOrders(orders);
+    } catch {
+      setDrilldownOrders([]);
+    } finally {
+      setDrilldownLoading(false);
+    }
+  }, [selectedYears, selectedMonths, customers, selectedBucket, selectedDepartment, selectedCustCode]);
+
+  useEffect(() => {
+    if (activeView === 'details' && drilldownOrders.length === 0 && !drilldownLoading) {
+      void loadAllDetailsOrders();
+    }
+  }, [activeView, drilldownOrders.length, drilldownLoading, loadAllDetailsOrders]);
 
   const clearSearch = () => setSearch('');
   const retryLoad = () => {
@@ -397,14 +458,18 @@ export function useOrderVolumeSummaryData() {
     if (event.key === 'Escape') clearSearch();
   };
 
-  const resetDrilldown = () => {
+  const resetDrilldown = useCallback(() => {
     setDrilldown(null);
-    setDrilldownOrders([]);
     setSelectedBucket(null);
     setSelectedDepartment(null);
     setSelectedCustCode(null);
-    setActiveView('overview');
-  };
+    setSelectedCustGroup(null);
+    setSearch('');
+    setPage(1);
+    if (activeView === 'details') {
+      void loadAllDetailsOrders();
+    }
+  }, [activeView, loadAllDetailsOrders]);
 
   const openChartDetail = (year: string, periodNumber: number | undefined) => {
     const dd: Drilldown = {
@@ -425,9 +490,10 @@ export function useOrderVolumeSummaryData() {
     activeView, setActiveView,
     drilldown, setDrilldown, resetDrilldown,
     monthlyData, deliveryOutlookData,
-    selectedBucket, handleSelectBucket,
-    selectedDepartment, handleSelectDepartment,
-    selectedCustCode, handleSelectCustCode,
+    selectedBucket, setSelectedBucket, handleSelectBucket,
+    selectedDepartment, setSelectedDepartment, handleSelectDepartment,
+    selectedCustCode, setSelectedCustCode, handleSelectCustCode,
+    selectedCustGroup, setSelectedCustGroup,
     drilldownOrders, drilldownLoading, loadDrilldownOrders,
     loading, error, hasResolvedData, retryLoad, loadOverviewData,
     search, setSearch, clearSearch, handleSearchKeyDown,

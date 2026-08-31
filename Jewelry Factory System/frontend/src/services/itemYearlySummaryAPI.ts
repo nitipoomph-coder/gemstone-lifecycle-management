@@ -83,3 +83,82 @@ export const fetchItemsYearlySummary = async (styleNos: string[], years: string[
   if (!res.ok) throw new Error(`Items yearly summary API error: ${res.status}`);
   return await res.json();
 };
+
+export interface TopGalleryCustomerBreakdown {
+  custCode: string;
+  groupId: string;
+  groupLabel: string;
+  qty: number;
+  amount: number;
+}
+
+export interface TopGalleryItem {
+  rank: number;
+  itemNo: string;
+  itemDesc: string;
+  productType: string;
+  productCategory: string;
+  productTypeLabel: string;
+  primaryCustCode: string;
+  primaryGroupId: string;
+  primaryGroupLabel: string;
+  customersCount: number;
+  totalCombinedQty: number;
+  totalCombinedAmnt: number;
+  baseYearQty: number;
+  baseYearAmnt: number;
+  compareYearQty: number;
+  compareYearAmnt: number;
+  qtyDiff: number;
+  yoyGrowthPct: number | null;
+  shareOfPortfolioQtyPct: number;
+  shareOfPortfolioAmntPct: number;
+  yearlyTotals: Record<string, { qty: number; amount: number }>;
+  monthlyBreakdown: Record<string, Record<string, number>>;
+  weeklyBreakdown: Record<string, Record<string, number>>;
+  customerBreakdown: TopGalleryCustomerBreakdown[];
+}
+
+export interface TopGalleryResponse {
+  ok: boolean;
+  years: number[];
+  baseYear: number;
+  compareYear: number | null;
+  summary: {
+    totalItemsCount: number;
+    portfolioTotalQty: number;
+    portfolioTotalAmnt: number;
+    baseYearTotalQty: number;
+    compareYearTotalQty: number;
+  };
+  items: TopGalleryItem[];
+}
+
+export interface TopGalleryParams {
+  years?: string[];
+  months?: string[];
+  baseYear?: string;
+  compareYear?: string;
+  groups?: string[];
+  productType?: string;
+  metric?: 'qty' | 'amount';
+  search?: string;
+  limit?: number;
+}
+
+export const fetchTopItemsGallery = async (params: TopGalleryParams): Promise<TopGalleryResponse> => {
+  const qs = new URLSearchParams();
+  if (params.years?.length) qs.set('years', params.years.join(','));
+  if (params.months?.length) qs.set('months', params.months.join(','));
+  if (params.baseYear) qs.set('baseYear', params.baseYear);
+  if (params.compareYear) qs.set('compareYear', params.compareYear);
+  if (params.groups?.length) qs.set('groups', params.groups.join(','));
+  if (params.productType) qs.set('productType', params.productType);
+  if (params.metric) qs.set('metric', params.metric);
+  if (params.search) qs.set('search', params.search);
+  if (params.limit) qs.set('limit', String(params.limit));
+
+  const res = await fetchWithAuth(`${BASE_URL}/items/top-gallery?${qs.toString()}`);
+  if (!res.ok) throw new Error(`Top gallery API error: ${res.status}`);
+  return await res.json();
+};

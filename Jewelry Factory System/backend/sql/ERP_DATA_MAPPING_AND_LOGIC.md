@@ -80,18 +80,21 @@
 
 ## 3. กฎเกณฑ์ทางธุรกิจและการกรองข้อมูล (Business Filtering Rules)
 
-ระบบจะดึงข้อมูลผ่าน View กลาง **`dbo.VW_Web_SalesDashboard`** โดยใช้กฎมาตรฐานรายงานยอดขาย 4 ข้อดังนี้:
+ระบบจะดึงข้อมูลผ่าน View กลาง **`dbo.VW_Web_SalesDashboard`** และ **`dbo.VW_Web_OrderTrends`** โดยใช้กฎมาตรฐานที่สอดคล้องกับ Stored Procedure โรงงาน (`dbo.PC_Show_OrdTrack_Sum_OrdDate`) 100%:
 
 ```sql
 WHERE 
-    -- 1. ตัดบิลที่ยกเลิกออกจากการคำนวณ
+    -- 1. ตัดบิลที่ยกเลิกออกจากการคำนวณ 100%
     (ISNULL(HD.OrdStatus, '') <> 'C') 
     
     -- 2. ดึงเฉพาะลูกค้าที่มีสถานะ Active
     AND (ISNULL(CUST.CustStatus, 'Y') = 'Y')
     
-    -- 3. ตัดบิลงานเลเซอร์ / กึ่งสำเร็จรูป / งานซ่อมเฉพาะกิจออก (Finished Goods Report Standard)
-    AND (SUBSTRING(HD.OrdNo, 1, 3) NOT IN ('BBL', 'BBD', 'BBK', 'BBT', 'BBP'))
+    -- 3. รับเฉพาะรหัสบิลผลิตหลักมาตรฐาน (ตัด BBI Sample, BBQ Quote, BBX ออก)
+    AND (SUBSTRING(HD.OrdNo, 1, 3) IN ('BBC', 'BBS', 'BBE', 'BBL', 'BBR', 'BBT', 'BBP'))
+    
+    -- 4. ตัดงานทดสอบ งานเทสตัวอย่าง และงานสต็อกภายใน (TOP, Test, Testing, Stock, PONo ว่าง)
+    AND (LTRIM(RTRIM(ISNULL(HD.PONo, ''))) NOT IN ('', 'TOP', 'Test', 'Testing', 'Stock', 'STOCK'));
 ```
 
 ### 💡 ทำไมต้องใช้ `ISNULL(DT.ItemExchAmnt, DT.ItemAmnt)`?
@@ -140,10 +143,16 @@ WHERE
    - แสดงตารางแจกแจงรายเดือน 1-12 และยอดรวมทั้งปี แยกตามลูกค้ารายตัวและกลุ่มลูกค้า
 
 3. **Order Trends & Delivery Outlook (`/dashboard/customer/trends`):**
-   - วิเคราะห์แนวโน้มยอดสั่งซื้อรายสัปดาห์ (Weekly), รายเดือน (Monthly), และสัดส่วนประเภทสินค้า
-   - **Delivery Outlook & Risk Buckets:** คำนวณช่วงกำหนดส่งมอบตาม `CustDueDate` (Overdue, Due in 15 Days, Due in 16-30 Days, Future)
-   - **Factory Department Bottlenecks:** วิเคราะห์งานค้างส่ง (`OpenQty`) ตามแผนกผลิตจริง (หล่อ, เจียร, แต่ง, ฝัง, ขัด, ชุบ, QC, Pack) จาก View `dbo.VW_Web_OrderTrends`
-   - **Customer Code Backlog:** สรุปยอดค้างส่งแยกตาม `CustCode` โดยไม่เปิดเผยชื่อจริงเพื่อความลับทางธุรกิจ
+   - **Overview Tab:**
+     - **6 KPI Metric Strip:** `Total Overdue`, `Due in 15 Days`, `Total WIP (Factory)`, `Top Bottleneck`, `On-Time Completion Rate (%)`, `Overdue Rate (%)`
+     - **Order Volume Trend Chart:** กราฟเส้นเปรียบเทียบยอดคำสั่งซื้อรายเดือนเทียบปีก่อนหน้า (YoY Comparison)
+     - **Delivery Risk by Customer Group:** กราฟแท่งเปรียบเทียบสถานะงานตามกำหนด vs งานเลยกำหนดส่ง
+     - **Active Production by Department:** ตารางจุดคอขวด 9 แผนก พร้อมยอดเงิน/ชิ้น และสัดส่วน % Share ของทั้งโรงงาน
+     - **Pending Orders by Customer Group:** ตารางสรุปภาพรวมยอดงานค้างส่งของกลุ่มลูกค้ารายใหญ่
+   - **Order Details Tab (เจาะลึกรายใบสั่งผลิต):**
+      - ตารางทางการ 19 คอลัมน์ (`No.`, `Week`, `Cust`, `PO No.`, `PO 2`, `New/Replen`, `Metal`, `Item No.`, `Ship To`, `Order Date`, `Due Date`, `Status`, `Factory Stage`, `Ordered Qty`, `Total Value ($)`, `Shipped Qty`, `Backlog Qty`, `Backlog Value ($)`, `Days +/-`)
+     - **Interactive Custom Filters:** เลือกกรองตาม `Dept` (แผนก), `Status` (ความเสี่ยง), `Group` (กลุ่มลูกค้า), ช่องค้นหาด่วน (`Search Box`), และปุ่ม `Reset`
+     - **Direct & Drill-down Navigation:** รองรับทั้งการคลิกเจาะจงมาจากแผนกในหน้า Overview หรือกดเข้ามาเลือกฟิลเตอร์ดูเองโดยตรง
 
 4. **Top Item Gallery (`/dashboard/top-orders`):**
    - ดึงรหัสสินค้าที่มียอดรวม **`SUM(ItemQty)` สูงสุดเป็นอันดับ 1** ของลูกค้านั้นๆ ในปีที่เลือก พร้อมดึงรูปภาพจาก Photo Server (`/api/photos/ps/:itemNo`) มาแสดงผล
@@ -152,14 +161,16 @@ WHERE
 
 ## 7. โครงสร้าง Database View: `dbo.VW_Web_OrderTrends`
 
-View สำหรับการวิเคราะห์คำสั่งซื้อ กำหนดส่งมอบลูกค้า (`CustDueDate`) และแผนกผลิตที่งานตกค้างอยู่จริง:
+View กลางสำหรับ Order Trends และ Order Details ที่เชื่อมโยงข้อมูล 100% กับมาตรฐานโรงงาน:
 
 ```sql
 -- คอลัมน์สำคัญใน dbo.VW_Web_OrderTrends
+- OrdNo             : เลขที่ใบสั่งผลิต (กรองเฉพาะ BBC, BBS, BBE, BBL, BBR, BBT, BBP)
+- PONo              : เลขที่ PO ลูกค้า (ตัดงาน TOP, Test, Testing, Stock, PONo ว่าง)
 - CustDueDate       : วันที่กำหนดส่งลูกค้า (ISNULL(HD.CustDueDate, HD.DueDate))
 - DaysToCustDue     : จำนวนวันที่เหลือจนถึงกำหนดส่ง (DATEDIFF กับ GETDATE())
 - DueRiskBucket     : จำแนกความเสี่ยง ('Overdue', 'Due in 15 Days', 'Due in 16-30 Days', 'Future Due', 'Shipped')
-- CurrentDepartment : แผนกที่งานอยู่ ('Casting', 'Grinding', 'Filing', 'Setting', 'Polishing', 'Plating', 'QC', 'Packing', 'Wax / Preparation')
+- CurrentDepartment : แผนกที่งานอยู่ ('Wax / Preparation', 'Casting', 'Grinding', 'Filing', 'Setting', 'Polishing', 'Plating', 'QC', 'Packing')
 - OpenQty           : ยอดค้างส่งจริง (ItemQty - ExportQty)
 - CustCode          : รหัสลูกค้า (รักษาความลับ ไม่เปิดเผย CustName)
 ```

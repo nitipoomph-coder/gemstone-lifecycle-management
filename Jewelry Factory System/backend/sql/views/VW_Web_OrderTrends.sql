@@ -5,7 +5,7 @@
 -- Privacy: Uses CustCode as primary identifier (No confidential CustName)
 -- =========================================================================
 
-CREATE OR ALTER VIEW dbo.VW_Web_OrderTrends
+CREATE VIEW dbo.VW_Web_OrderTrends
 AS
 SELECT 
     HD.OrdID,
@@ -13,12 +13,15 @@ SELECT
     HD.OrdDate,
     YEAR(HD.OrdDate) AS OrdYear,
     MONTH(HD.OrdDate) AS OrdMonth,
+    DATEPART(isowk, HD.OrdDate) AS OrdWeek,
     HD.DueDate,
     ISNULL(HD.CustDueDate, HD.DueDate) AS CustDueDate,
     HD.CustCode,
     CUST.CustStatus,
     HD.PONo,
     HD.EXNo AS PO2,
+    CASE WHEN UPPER(ISNULL(HD.OrdKind, '')) = 'NEW' THEN 'New' ELSE 'Replen' END AS OrdKind,
+    ISNULL(DT.ItemMat, ISNULL(HD.OrdMat, '')) AS Metal,
     HD.CustMultiAddr AS ShipTo,
     
     -- Item Information
@@ -113,5 +116,6 @@ LEFT OUTER JOIN dbo.GMCust AS CUST WITH (NOLOCK)
 WHERE 
     (ISNULL(HD.OrdStatus, '') <> 'C')
     AND (ISNULL(CUST.CustStatus, 'Y') = 'Y')
-    AND (SUBSTRING(HD.OrdNo, 1, 3) NOT IN ('BBL', 'BBD', 'BBK', 'BBT', 'BBP'));
+    AND (SUBSTRING(HD.OrdNo, 1, 3) IN ('BBC', 'BBS', 'BBE', 'BBL', 'BBR', 'BBT', 'BBP'))
+    AND (LTRIM(RTRIM(ISNULL(HD.PONo, ''))) NOT IN ('', 'TOP', 'Test', 'Testing', 'Stock', 'STOCK'));
 GO

@@ -283,6 +283,12 @@ export default function OrderVolumeSummaryPage() {
                   resetDrilldown={resetDrilldown}
                   page={page}
                   setPage={setPage}
+                  selectedDepartment={data.selectedDepartment}
+                  setSelectedDepartment={data.setSelectedDepartment}
+                  selectedBucket={data.selectedBucket}
+                  setSelectedBucket={data.setSelectedBucket}
+                  selectedCustGroup={data.selectedCustGroup}
+                  setSelectedCustGroup={data.setSelectedCustGroup}
                 />
               )}
             </>

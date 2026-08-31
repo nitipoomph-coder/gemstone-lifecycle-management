@@ -5,7 +5,7 @@
 -- Business Logic: 100% Aligned with Production "Yearly Sales Summary By Customer"
 -- =========================================================================
 
-ALTER VIEW dbo.VW_Web_SalesDashboard
+CREATE VIEW dbo.VW_Web_SalesDashboard
 AS
 SELECT        
     HD.OrdID, 
@@ -75,6 +75,9 @@ WHERE
     -- 2. Include active customers only
     AND (ISNULL(CUST.CustStatus, N'Y') = 'Y')
     
-    -- 3. Exclude non-finished goods / internal processing order prefixes
-    AND (SUBSTRING(HD.OrdNo, 1, 3) NOT IN ('BBL', 'BBD', 'BBK', 'BBT', 'BBP'));
+    -- 3. Include finished goods / commercial production prefixes matching PC_Show_OrdTrack_Sum_OrdDate
+    AND (SUBSTRING(HD.OrdNo, 1, 3) IN ('BBC', 'BBS', 'BBE', 'BBL', 'BBR', 'BBT', 'BBP'))
+
+    -- 4. Exclude test, stock and blank POs matching factory standards
+    AND (LTRIM(RTRIM(ISNULL(HD.PONo, ''))) NOT IN ('', 'TOP', 'Test', 'Testing', 'Stock', 'STOCK'));
 GO

@@ -337,4 +337,321 @@ router.get('/:styleNo/yearly-summary', async (req, res) => {
   }
 });
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// [TOP ITEM GALLERY] GET /api/items/top-gallery
+// Queries VW_Web_SalesDashboard for item-centric ranking, multi-year comparison,
+// product type classification (including Bangles / Non-Bangles), % share of portfolio,
+// and monthly/weekly breakdowns.
+// ═══════════════════════════════════════════════════════════════════════════════
+const CUSTOMER_GROUP_PREFIXES = {
+  N008: ['N008', 'N048', 'N065', 'N066', 'N067', 'N068', 'N069', 'N070', 'N071', 'N072', 'N073', 'N074', 'N075'],
+  N044: ['N044'],
+  N098: ['N098'],
+  N051: ['N051'],
+  N083: ['N083', 'N086', 'N087', 'N088', 'N089'],
+  MLT: ['U411', 'U412', 'U413', 'U414', 'U415', 'U416', 'U417', 'U418', 'U419', 'U420', 'U421', 'U422', 'U423', 'U424', 'U425', 'U426'],
+};
+
+const GROUP_LABELS = {
+  N008: 'N008 Group',
+  N044: 'N044 Group',
+  N098: 'N098 Group',
+  N051: 'N051 Group',
+  N083: 'N083 Group',
+  MLT: 'MLT Group',
+  General: 'General',
+};
+
+function getCustomerGroupId(custCode) {
+  const code = String(custCode || '').toUpperCase().trim();
+  for (const [groupId, prefixes] of Object.entries(CUSTOMER_GROUP_PREFIXES)) {
+    if (prefixes.some(prefix => code.startsWith(prefix))) {
+      return groupId;
+    }
+  }
+  return 'General';
+}
+
+function classifyProductType(itemNo, itemDesc, itemType) {
+  const normItem = String(itemNo || '').toUpperCase().trim();
+  const normDesc = String(itemDesc || '').toUpperCase().trim();
+  const normType = String(itemType || '').toUpperCase().trim();
+  const prefix3 = normItem.substring(0, 3);
+
+  const isBangle = normDesc.includes('BANGLE') || normType.includes('BANGLE') || normItem.includes('BANGLE');
+
+  if (prefix3 === 'BBS') {
+    return isBangle ? 'BANGLE' : 'NON_BANGLE';
+  }
+  if (prefix3 === 'BES') return 'BES';
+  if (prefix3 === 'BNS') return 'BNS';
+  if (prefix3 === 'BRS') return 'BRS';
+  if (prefix3 === 'BPD') return 'BPD';
+  if (prefix3 === 'BCH') return 'BCH';
+  return 'OTH';
+}
+
+function getProductTypeLabel(typeKey) {
+  switch (typeKey) {
+    case 'BBS': return 'Bracelet & Bangle';
+    case 'BANGLE': return 'Bangle';
+    case 'NON_BANGLE': return 'Bracelet (Soft)';
+    case 'BES': return 'Earring';
+    case 'BNS': return 'Necklace';
+    case 'BRS': return 'Ring';
+    case 'BPD': return 'Pendant';
+    case 'BCH': return 'Charm';
+    default: return 'Others';
+  }
+}
+
+router.get('/top-gallery', async (req, res) => {
+  try {
+    const years = parseYears(req.query.years);
+    const months = parseMonths(req.query.months);
+    const baseYear = req.query.baseYear ? parseInt(req.query.baseYear, 10) : years[years.length - 1];
+    const compareYear = req.query.compareYear ? parseInt(req.query.compareYear, 10) : (years.length > 1 ? years[0] : null);
+    const groupFilter = req.query.groups ? String(req.query.groups).split(',').map(g => g.trim()).filter(Boolean) : [];
+    const productTypeFilter = String(req.query.productType || 'ALL').toUpperCase().trim();
+    const metric = String(req.query.metric || 'qty').toLowerCase() === 'amount' ? 'amount' : 'qty';
+    const searchQuery = String(req.query.search || '').toUpperCase().trim();
+    const limit = parseInt(req.query.limit || '100', 10);
+
+    const pool = await getPool();
+    const request = pool.request();
+
+    // SARGable date range condition
+    function buildDateCondition(yearList, monthList) {
+      if (!yearList || yearList.length === 0) return '1=1';
+      if (!monthList || monthList.length === 0) {
+        return '(' + yearList.map(y => `(OrdDate >= '${y}-01-01' AND OrdDate < '${y + 1}-01-01')`).join(' OR ') + ')';
+      }
+      const conditions = [];
+      for (const y of yearList) {
+        for (const m of monthList) {
+          const sM = m.toString().padStart(2, '0');
+          const eM_val = m + 1;
+          const eY = eM_val > 12 ? y + 1 : y;
+          const eM = (eM_val > 12 ? 1 : eM_val).toString().padStart(2, '0');
+          conditions.push(`(OrdDate >= '${y}-${sM}-01' AND OrdDate < '${eY}-${eM}-01')`);
+        }
+      }
+      return '(' + conditions.join(' OR ') + ')';
+    }
+
+    const dateClause = buildDateCondition(years, months);
+
+    const query = `
+      SELECT 
+        UPPER(LTRIM(RTRIM(ISNULL(ItemNo, '')))) AS ItemNo,
+        MAX(ISNULL(ItemDesc, '')) AS ItemDesc,
+        MAX(ISNULL(ItemType, '')) AS ItemType,
+        UPPER(LTRIM(RTRIM(ISNULL(CustCode, '')))) AS CustCode,
+        OrdYear,
+        OrdMonth,
+        OrdWeek,
+        SUM(ISNULL(ItemQty, 0)) AS TotalQty,
+        SUM(ISNULL(ItemAmnt, 0)) AS TotalAmnt
+      FROM VW_Web_SalesDashboard
+      WHERE ${dateClause}
+        AND ItemNo IS NOT NULL AND LTRIM(RTRIM(ItemNo)) <> ''
+      GROUP BY 
+        UPPER(LTRIM(RTRIM(ISNULL(ItemNo, '')))),
+        UPPER(LTRIM(RTRIM(ISNULL(CustCode, '')))),
+        OrdYear,
+        OrdMonth,
+        OrdWeek
+    `;
+
+    const result = await request.query(query);
+    const rows = result.recordset || [];
+
+    // Grouping & Aggregation Engine
+    const itemsMap = new Map();
+    let portfolioGrandQty = 0;
+    let portfolioGrandAmnt = 0;
+    let baseYearGrandQty = 0;
+    let compareYearGrandQty = 0;
+
+    for (const r of rows) {
+      const itemNo = r.ItemNo;
+      const custCode = r.CustCode;
+      const groupId = getCustomerGroupId(custCode);
+
+      // Apply customer group filter if provided and not empty
+      if (groupFilter.length > 0 && !groupFilter.includes('all') && !groupFilter.includes(groupId)) {
+        continue;
+      }
+
+      const rawProductType = classifyProductType(itemNo, r.ItemDesc, r.ItemType);
+      const prefix3 = itemNo.substring(0, 3);
+
+      // Apply product type filter
+      if (productTypeFilter !== 'ALL') {
+        if (productTypeFilter === 'BBS') {
+          if (prefix3 !== 'BBS' && rawProductType !== 'BANGLE' && rawProductType !== 'NON_BANGLE') continue;
+        } else if (productTypeFilter === 'BANGLE') {
+          if (rawProductType !== 'BANGLE') continue;
+        } else if (productTypeFilter === 'NON_BANGLE') {
+          if (rawProductType !== 'NON_BANGLE') continue;
+        } else if (rawProductType !== productTypeFilter) {
+          continue;
+        }
+      }
+
+      const yr = Number(r.OrdYear);
+      const mth = Number(r.OrdMonth);
+      const wk = Number(r.OrdWeek);
+      const qty = Number(r.TotalQty) || 0;
+      const amnt = Number(r.TotalAmnt) || 0;
+
+      portfolioGrandQty += qty;
+      portfolioGrandAmnt += amnt;
+      if (yr === baseYear) baseYearGrandQty += qty;
+      if (compareYear && yr === compareYear) compareYearGrandQty += qty;
+
+      if (!itemsMap.has(itemNo)) {
+        itemsMap.set(itemNo, {
+          itemNo,
+          itemDesc: r.ItemDesc,
+          productType: rawProductType,
+          productCategory: prefix3,
+          productTypeLabel: getProductTypeLabel(rawProductType),
+          totalCombinedQty: 0,
+          totalCombinedAmnt: 0,
+          baseYearQty: 0,
+          baseYearAmnt: 0,
+          compareYearQty: 0,
+          compareYearAmnt: 0,
+          yearlyTotals: {},
+          monthlyBreakdown: {},
+          weeklyBreakdown: {},
+          customerMap: new Map(),
+        });
+      }
+
+      const it = itemsMap.get(itemNo);
+      it.totalCombinedQty += qty;
+      it.totalCombinedAmnt += amnt;
+
+      if (yr === baseYear) {
+        it.baseYearQty += qty;
+        it.baseYearAmnt += amnt;
+      }
+      if (compareYear && yr === compareYear) {
+        it.compareYearQty += qty;
+        it.compareYearAmnt += amnt;
+      }
+
+      // Yearly Totals
+      const yrKey = String(yr);
+      if (!it.yearlyTotals[yrKey]) it.yearlyTotals[yrKey] = { qty: 0, amount: 0 };
+      it.yearlyTotals[yrKey].qty += qty;
+      it.yearlyTotals[yrKey].amount += amnt;
+
+      // Monthly Breakdown
+      if (!it.monthlyBreakdown[yrKey]) it.monthlyBreakdown[yrKey] = {};
+      const mthKey = String(mth);
+      it.monthlyBreakdown[yrKey][mthKey] = (it.monthlyBreakdown[yrKey][mthKey] || 0) + qty;
+
+      // Weekly Breakdown
+      if (!it.weeklyBreakdown[yrKey]) it.weeklyBreakdown[yrKey] = {};
+      const wkKey = String(wk);
+      it.weeklyBreakdown[yrKey][wkKey] = (it.weeklyBreakdown[yrKey][wkKey] || 0) + qty;
+
+      // Customer map
+      if (!it.customerMap.has(custCode)) {
+        it.customerMap.set(custCode, {
+          custCode,
+          groupId,
+          groupLabel: GROUP_LABELS[groupId] || groupId,
+          qty: 0,
+          amount: 0,
+        });
+      }
+      const cEntry = it.customerMap.get(custCode);
+      cEntry.qty += qty;
+      cEntry.amount += amnt;
+    }
+
+    // Convert map to list and compute significance + rankings
+    let itemsList = Array.from(itemsMap.values()).map(it => {
+      // Find primary customer / group
+      const custList = Array.from(it.customerMap.values()).sort((a, b) => (metric === 'amount' ? b.amount - a.amount : b.qty - a.qty));
+      const primary = custList[0] || { custCode: 'N/A', groupId: 'General', groupLabel: 'General' };
+
+      const diff = it.baseYearQty - it.compareYearQty;
+      const yoyGrowthPct = it.compareYearQty > 0 ? ((it.baseYearQty - it.compareYearQty) / it.compareYearQty) * 100 : null;
+
+      const shareOfPortfolioQtyPct = portfolioGrandQty > 0 ? (it.totalCombinedQty / portfolioGrandQty) * 100 : 0;
+      const shareOfPortfolioAmntPct = portfolioGrandAmnt > 0 ? (it.totalCombinedAmnt / portfolioGrandAmnt) * 100 : 0;
+
+      return {
+        itemNo: it.itemNo,
+        itemDesc: it.itemDesc,
+        productType: it.productType,
+        productCategory: it.productCategory,
+        productTypeLabel: it.productTypeLabel,
+        primaryCustCode: primary.custCode,
+        primaryGroupId: primary.groupId,
+        primaryGroupLabel: primary.groupLabel,
+        customersCount: custList.length,
+        totalCombinedQty: it.totalCombinedQty,
+        totalCombinedAmnt: it.totalCombinedAmnt,
+        baseYearQty: it.baseYearQty,
+        baseYearAmnt: it.baseYearAmnt,
+        compareYearQty: it.compareYearQty,
+        compareYearAmnt: it.compareYearAmnt,
+        qtyDiff: diff,
+        yoyGrowthPct,
+        shareOfPortfolioQtyPct: Number(shareOfPortfolioQtyPct.toFixed(2)),
+        shareOfPortfolioAmntPct: Number(shareOfPortfolioAmntPct.toFixed(2)),
+        yearlyTotals: it.yearlyTotals,
+        monthlyBreakdown: it.monthlyBreakdown,
+        weeklyBreakdown: it.weeklyBreakdown,
+        customerBreakdown: custList.slice(0, 10),
+        sortScore: metric === 'amount' ? it.totalCombinedAmnt : it.totalCombinedQty,
+      };
+    });
+
+    // Apply text search if query provided
+    if (searchQuery) {
+      itemsList = itemsList.filter(it =>
+        it.itemNo.includes(searchQuery) ||
+        it.primaryCustCode.includes(searchQuery) ||
+        it.primaryGroupLabel.toUpperCase().includes(searchQuery) ||
+        it.itemDesc.toUpperCase().includes(searchQuery)
+      );
+    }
+
+    // Sort by sortScore descending
+    itemsList.sort((a, b) => b.sortScore - a.sortScore);
+
+    // Assign final Ranks
+    const rankedItems = itemsList.slice(0, limit).map((it, idx) => ({
+      rank: idx + 1,
+      ...it,
+    }));
+
+    res.json({
+      ok: true,
+      years,
+      baseYear,
+      compareYear,
+      summary: {
+        totalItemsCount: itemsList.length,
+        portfolioTotalQty: portfolioGrandQty,
+        portfolioTotalAmnt: portfolioGrandAmnt,
+        baseYearTotalQty: baseYearGrandQty,
+        compareYearTotalQty: compareYearGrandQty,
+      },
+      items: rankedItems,
+    });
+  } catch (err) {
+    console.error('[API ERROR] /api/items/top-gallery:', err.message);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 module.exports = router;
+

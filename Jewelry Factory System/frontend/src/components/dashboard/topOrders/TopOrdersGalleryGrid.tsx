@@ -1,7 +1,7 @@
 import type { SyntheticEvent } from 'react';
 import type { TopGalleryItem } from '../../../services/itemYearlySummaryAPI';
 import type { PerspectiveMode } from '../../../hooks/useTopOrdersGalleryData';
-import { TrendingUp, TrendingDown } from 'lucide-react';
+import { comparisonTextStyle, formatSignedPct } from './galleryComparison';
 
 interface TopOrdersGalleryGridProps {
   items: TopGalleryItem[];
@@ -90,18 +90,8 @@ export function TopOrdersGalleryGrid({
               </div>
 
               {isCompare && compareEnabled && compareYear && item.yoyGrowthPct !== null ? (
-                <div
-                  style={{
-                    fontWeight: 900,
-                    fontSize: '0.75rem',
-                    color: item.yoyGrowthPct >= 0 ? 'var(--color-brand-600)' : 'var(--color-danger-500)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 3,
-                  }}
-                >
-                  {item.yoyGrowthPct >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
-                  <span>{item.yoyGrowthPct >= 0 ? '+' : ''}{item.yoyGrowthPct.toFixed(1)}%</span>
+                <div style={comparisonTextStyle(item.yoyGrowthPct)}>
+                  {formatSignedPct(item.yoyGrowthPct)}
                 </div>
               ) : (
                 <div style={{ fontWeight: 900, color: 'var(--color-brand-600)', fontSize: '0.75rem' }}>
@@ -231,17 +221,10 @@ export function TopOrdersGalleryGrid({
                   ) : (
                     item.yoyGrowthPct !== null && (
                       <span
-                        style={{
-                          fontSize: '0.68rem',
-                          fontWeight: 900,
-                          color: item.yoyGrowthPct >= 0 ? 'var(--color-success-700)' : 'var(--color-danger-700)',
-                          background: item.yoyGrowthPct >= 0 ? 'var(--color-success-50)' : 'var(--color-danger-50)',
-                          padding: '1px 6px',
-                          borderRadius: 4,
-                        }}
-                        title={`ปี ${baseYear} (${fmtQty(item.baseYearQty)} pcs) เทียบ ${compareYear} (${fmtQty(item.compareYearQty)} pcs): ${item.qtyDiff >= 0 ? '+' : ''}${fmtQty(item.qtyDiff)} pcs (${item.yoyGrowthPct >= 0 ? '+' : ''}${item.yoyGrowthPct.toFixed(1)}%)`}
+                        style={comparisonTextStyle(item.yoyGrowthPct)}
+                        title={`${baseYear} (${fmtQty(item.baseYearQty)} pcs) vs ${compareYear} (${fmtQty(item.compareYearQty)} pcs): ${item.qtyDiff >= 0 ? '+' : ''}${fmtQty(item.qtyDiff)} pcs (${formatSignedPct(item.yoyGrowthPct)})`}
                       >
-                        {item.yoyGrowthPct >= 0 ? '▲ +' : '▼ '}{item.yoyGrowthPct.toFixed(1)}% ({item.qtyDiff >= 0 ? '+' : ''}{fmtQty(item.qtyDiff)} pcs)
+                        {formatSignedPct(item.yoyGrowthPct)} ({item.qtyDiff >= 0 ? '+' : ''}{fmtQty(item.qtyDiff)} pcs)
                       </span>
                     )
                   )

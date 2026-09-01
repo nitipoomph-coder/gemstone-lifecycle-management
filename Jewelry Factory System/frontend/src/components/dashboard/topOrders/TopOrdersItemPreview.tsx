@@ -1,7 +1,8 @@
 import { useState, useEffect, type SyntheticEvent } from 'react';
-import { X, TrendingUp, TrendingDown, Sparkles, Calendar, Users, BarChart2 } from 'lucide-react';
+import { X, Sparkles, Calendar, Users, BarChart2 } from 'lucide-react';
 import type { TopGalleryItem } from '../../../services/itemYearlySummaryAPI';
 import type { PerspectiveMode } from '../../../hooks/useTopOrdersGalleryData';
+import { comparisonPctColor, comparisonTextStyle, formatSignedPct } from './galleryComparison';
 
 const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -242,15 +243,8 @@ export function TopOrdersItemPreview({
               {isCompare && item.yoyGrowthPct !== null && (
                 <div style={{ marginTop: 4, paddingTop: 8, borderTop: '1px solid var(--color-border-light)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <span style={{ fontSize: '0.72rem', color: 'var(--color-text-tertiary)', fontWeight: 800 }}>YoY vs {compareYear}</span>
-                  <span style={{
-                    fontSize: '0.75rem',
-                    fontWeight: 900,
-                    padding: '2px 6px',
-                    borderRadius: 4,
-                    background: item.yoyGrowthPct >= 0 ? 'var(--color-success-50)' : 'var(--color-danger-50)',
-                    color: item.yoyGrowthPct >= 0 ? 'var(--color-success-700)' : 'var(--color-danger-700)',
-                  }}>
-                    {item.yoyGrowthPct >= 0 ? '▲ +' : '▼ '}{item.yoyGrowthPct.toFixed(1)}% ({item.qtyDiff >= 0 ? '+' : ''}{fmtQty(item.qtyDiff)} pcs)
+                  <span style={comparisonTextStyle(item.yoyGrowthPct)}>
+                    {formatSignedPct(item.yoyGrowthPct)} ({item.qtyDiff >= 0 ? '+' : ''}{fmtQty(item.qtyDiff)} pcs)
                   </span>
                 </div>
               )}
@@ -258,15 +252,8 @@ export function TopOrdersItemPreview({
               {!isCompare && compareEnabled && compareYear && item.yoyGrowthPct !== null && (
                 <div style={{ marginTop: 4, paddingTop: 8, borderTop: '1px solid var(--color-border-light)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <span style={{ fontSize: '0.72rem', color: 'var(--color-text-tertiary)', fontWeight: 800 }}>{baseYear} Contribution</span>
-                  <span style={{
-                    fontSize: '0.73rem',
-                    fontWeight: 900,
-                    padding: '2px 6px',
-                    borderRadius: 4,
-                    background: item.yoyGrowthPct >= 0 ? 'var(--color-success-50)' : 'var(--color-danger-50)',
-                    color: item.yoyGrowthPct >= 0 ? 'var(--color-success-700)' : 'var(--color-danger-700)',
-                  }}>
-                    {fmtQty(item.baseYearQty)} pcs ({item.yoyGrowthPct >= 0 ? '▲ +' : '▼ '}{item.yoyGrowthPct.toFixed(1)}% | {item.qtyDiff >= 0 ? '+' : ''}{fmtQty(item.qtyDiff)} pcs vs {compareYear})
+                  <span style={comparisonTextStyle(item.yoyGrowthPct)}>
+                    {fmtQty(item.baseYearQty)} pcs ({formatSignedPct(item.yoyGrowthPct)} · {item.qtyDiff >= 0 ? '+' : ''}{fmtQty(item.qtyDiff)} pcs vs {compareYear})
                   </span>
                 </div>
               )}
@@ -379,27 +366,35 @@ export function TopOrdersItemPreview({
                     <div
                       style={{
                         padding: 16,
-                        borderRadius: 10,
-                        background: item.yoyGrowthPct !== null && item.yoyGrowthPct >= 0 ? 'rgba(16, 185, 129, 0.08)' : 'rgba(239, 68, 68, 0.08)',
-                        border: `1px solid ${item.yoyGrowthPct !== null && item.yoyGrowthPct >= 0 ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+                        borderRadius: 8,
+                        background: 'var(--color-surface-1)',
+                        border: '1px solid var(--color-border-light)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
+                        gap: 16,
                       }}
                     >
                       <div>
-                        <div style={{ fontSize: '0.78rem', color: 'var(--color-text-secondary)', fontWeight: 800 }}>
-                          Period Trend ({compareYear} ➔ {baseYear})
+                        <div style={{ fontSize: 'var(--erp-text-control)', color: 'var(--color-text-secondary)', fontWeight: 800 }}>
+                          Period Trend ({compareYear} → {baseYear})
                         </div>
-                        <div style={{ fontSize: '1.25rem', fontWeight: 950, color: item.yoyGrowthPct !== null && item.yoyGrowthPct >= 0 ? '#059669' : '#dc2626', display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
-                          {item.yoyGrowthPct !== null && item.yoyGrowthPct >= 0 ? <TrendingUp size={18} /> : <TrendingDown size={18} />}
-                          <span>{item.yoyGrowthPct !== null ? `${item.yoyGrowthPct >= 0 ? '+' : ''}${item.yoyGrowthPct.toFixed(1)}% Growth` : 'New Data'}</span>
+                        <div
+                          style={{
+                            fontSize: 'var(--erp-text-kpi)',
+                            fontWeight: 800,
+                            color: item.yoyGrowthPct !== null ? comparisonPctColor(item.yoyGrowthPct) : 'var(--color-text-tertiary)',
+                            marginTop: 2,
+                            letterSpacing: 0,
+                          }}
+                        >
+                          {item.yoyGrowthPct !== null ? `${formatSignedPct(item.yoyGrowthPct)} vs ${compareYear}` : 'New Data'}
                         </div>
                       </div>
 
                       <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)', fontWeight: 800 }}>Volume Growth</div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: 950, color: 'var(--color-text-primary)' }}>
+                        <div style={{ fontSize: 'var(--erp-text-control)', color: 'var(--color-text-tertiary)', fontWeight: 800 }}>Volume Change</div>
+                        <div style={{ fontSize: 'var(--erp-text-section)', fontWeight: 800, color: 'var(--color-text-primary)' }}>
                           {item.qtyDiff >= 0 ? '+' : ''}{fmtQty(item.qtyDiff)} pcs
                         </div>
                       </div>

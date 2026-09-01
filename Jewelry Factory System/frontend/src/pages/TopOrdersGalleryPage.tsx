@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { RefreshCw } from "lucide-react";
 import Topbar from "../components/layout/Topbar";
 import { useTopOrdersGalleryData } from "../hooks/useTopOrdersGalleryData";
@@ -5,6 +6,7 @@ import { TopOrdersFilterBar } from "../components/dashboard/topOrders/TopOrdersF
 import { TopOrdersGalleryGrid } from "../components/dashboard/topOrders/TopOrdersGalleryGrid";
 import { TopOrdersItemPreview } from "../components/dashboard/topOrders/TopOrdersItemPreview";
 import { TopOrdersSkeleton } from "../components/dashboard/topOrders/TopOrdersSkeleton";
+import { comparisonTextStyle, formatSignedPct } from "../components/dashboard/topOrders/galleryComparison";
 import "./SalesResponsive.css";
 
 export default function TopOrdersGalleryPage() {
@@ -149,20 +151,20 @@ export default function TopOrdersGalleryPage() {
                   style={{
                     padding: '2px 8px',
                     borderRadius: 6,
-                    background: 'var(--color-brand-50)',
-                    color: 'var(--color-brand-700)',
-                    fontWeight: 900,
-                    fontSize: '0.75rem',
-                    border: '1px solid var(--color-brand-200)',
+                    background: 'var(--color-ui-selected)',
+                    color: 'var(--color-ui-interactive)',
+                    fontWeight: 800,
+                    fontSize: 'var(--erp-text-control)',
+                    border: '1px solid var(--color-border-light)',
                   }}
                 >
                   {perspectiveMode === 'compare' ? `Compare: ${baseYear} vs ${compareYear}` : 'Combined All Years'}
                 </span>
-                <span style={{ fontSize: '0.95rem', fontWeight: 950, color: 'var(--color-text-primary)', fontFamily: 'var(--font-display)' }}>
+                <span style={{ fontSize: 'var(--erp-text-section)', fontWeight: 800, color: 'var(--color-text-primary)', fontFamily: 'var(--font-display)' }}>
                   Top Ranked ({items.length.toLocaleString()} Items)
                 </span>
               </div>
-              <span style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)', fontWeight: 700 }}>
+              <span style={{ fontSize: 'var(--erp-text-control)', color: 'var(--color-text-tertiary)', fontWeight: 700 }}>
                 {perspectiveMode === 'compare'
                   ? `Ranked by ${baseYear} metric • Comparing head-to-head with ${compareYear}`
                   : `Cumulative volume & value across all selected years in portfolio`}
@@ -171,129 +173,55 @@ export default function TopOrdersGalleryPage() {
 
             {/* Right Side: KPI Cards for Volume & Value */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-              {/* KPI Card 1: Volume */}
               {(() => {
-                const volLabel = perspectiveMode === 'compare' ? `${baseYear} Volume` : 'Total Volume';
-                const volValue = perspectiveMode === 'compare' ? summary.baseYearTotalQty : summary.portfolioTotalQty;
+                const isCompare = perspectiveMode === 'compare';
                 const hasVolDelta = summary.compareYearTotalQty > 0 && summary.baseYearTotalQty > 0;
-                const volUp = summary.baseYearTotalQty >= summary.compareYearTotalQty;
-                const volDeltaPct = hasVolDelta ? (((summary.baseYearTotalQty - summary.compareYearTotalQty) / summary.compareYearTotalQty) * 100).toFixed(1) : '0';
+                const volDeltaPct = hasVolDelta
+                  ? ((summary.baseYearTotalQty - summary.compareYearTotalQty) / summary.compareYearTotalQty) * 100
+                  : null;
                 const volDeltaAbs = summary.baseYearTotalQty - summary.compareYearTotalQty;
-                return (
-                  <div
-                    role="region"
-                    aria-label={`${volLabel}: ${fmtQty(volValue)} pieces${hasVolDelta ? `, ${volUp ? 'increased' : 'decreased'} ${volDeltaPct} percent year over year` : ''}`}
-                    style={{
-                      padding: '8px 16px',
-                      borderRadius: 8,
-                      background: 'var(--color-surface-1)',
-                      border: '1px solid var(--color-border-light)',
-                      minWidth: 190,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: 2,
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--color-text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                        {volLabel}
-                      </span>
-                      {hasVolDelta && (
-                        <span
-                          aria-hidden="true"
-                          style={{
-                            padding: '1px 6px',
-                            borderRadius: 4,
-                            fontSize: '0.75rem',
-                            fontWeight: 900,
-                            background: volUp ? 'var(--color-success-50)' : 'var(--color-danger-50)',
-                            color: volUp ? 'var(--color-success-700)' : 'var(--color-danger-700)',
-                          }}
-                          title={`${baseYear} (${fmtQty(summary.baseYearTotalQty)} pcs) vs ${compareYear} (${fmtQty(summary.compareYearTotalQty)} pcs): ${volUp ? '+' : ''}${fmtQty(volDeltaAbs)} pcs`}
-                        >
-                          {volUp ? '▲ +' : '▼ '}{volDeltaPct}%
-                        </span>
-                      )}
-                      {/* WCAG 1.4.1: Screen reader text — not relying on color alone */}
-                      {hasVolDelta && (
-                        <span className="sr-only">
-                          Volume {volUp ? 'increased' : 'decreased'} by {volDeltaPct} percent compared to {compareYear}
-                        </span>
-                      )}
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-                      <span aria-live="polite" style={{ fontSize: '1.2rem', fontWeight: 950, color: 'var(--color-text-primary)', fontFamily: 'var(--font-display)' }}>
-                        {fmtQty(volValue)}
-                      </span>
-                      <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--color-text-tertiary)' }}>pcs</span>
-                    </div>
-                    {perspectiveMode === 'combined' && summary.compareYearTotalQty > 0 && (
-                      <span style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)', fontWeight: 700 }}>
-                        {baseYear}: {fmtQty(summary.baseYearTotalQty)} pcs ({volUp ? '+' : ''}{fmtQty(volDeltaAbs)} pcs vs {compareYear})
-                      </span>
-                    )}
-                  </div>
-                );
-              })()}
+                const volLabel = isCompare ? `${baseYear} Volume` : 'Total Volume';
+                const volValue = isCompare ? summary.baseYearTotalQty : summary.portfolioTotalQty;
 
-              {/* KPI Card 2: Value */}
-              {(() => {
-                const valLabel = perspectiveMode === 'compare' ? `${baseYear} Value` : 'Total Value';
-                const valValue = perspectiveMode === 'compare' ? summary.baseYearTotalAmnt : summary.portfolioTotalAmnt;
                 const hasValDelta = summary.compareYearTotalAmnt > 0 && summary.baseYearTotalAmnt > 0;
-                const valUp = summary.baseYearTotalAmnt >= summary.compareYearTotalAmnt;
-                const valDeltaPct = hasValDelta ? (((summary.baseYearTotalAmnt - summary.compareYearTotalAmnt) / summary.compareYearTotalAmnt) * 100).toFixed(1) : '0';
+                const valDeltaPct = hasValDelta
+                  ? ((summary.baseYearTotalAmnt - summary.compareYearTotalAmnt) / summary.compareYearTotalAmnt) * 100
+                  : null;
+                const valLabel = isCompare ? `${baseYear} Value` : 'Total Value';
+                const valValue = isCompare ? summary.baseYearTotalAmnt : summary.portfolioTotalAmnt;
+
                 return (
-                  <div
-                    role="region"
-                    aria-label={`${valLabel}: ${fmt(valValue)}${hasValDelta ? `, ${valUp ? 'increased' : 'decreased'} ${valDeltaPct} percent year over year` : ''}`}
-                    style={{
-                      padding: '8px 16px',
-                      borderRadius: 8,
-                      background: 'var(--color-surface-1)',
-                      border: '1px solid var(--color-border-light)',
-                      minWidth: 190,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: 2,
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--color-text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                        {valLabel}
-                      </span>
-                      {hasValDelta && (
-                        <span
-                          aria-hidden="true"
-                          style={{
-                            padding: '1px 6px',
-                            borderRadius: 4,
-                            fontSize: '0.75rem',
-                            fontWeight: 900,
-                            background: valUp ? 'var(--color-success-50)' : 'var(--color-danger-50)',
-                            color: valUp ? 'var(--color-success-700)' : 'var(--color-danger-700)',
-                          }}
-                        >
-                          {valUp ? '▲ +' : '▼ '}{valDeltaPct}%
-                        </span>
-                      )}
-                      {hasValDelta && (
-                        <span className="sr-only">
-                          Value {valUp ? 'increased' : 'decreased'} by {valDeltaPct} percent compared to {compareYear}
-                        </span>
-                      )}
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-                      <span aria-live="polite" style={{ fontSize: '1.2rem', fontWeight: 950, color: 'var(--color-brand-600)', fontFamily: 'var(--font-display)' }}>
-                        {fmt(valValue)}
-                      </span>
-                    </div>
-                    {perspectiveMode === 'combined' && summary.compareYearTotalAmnt > 0 && (
-                      <span style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)', fontWeight: 700 }}>
-                        {baseYear}: {fmt(summary.baseYearTotalAmnt)}
-                      </span>
-                    )}
-                  </div>
+                  <>
+                    <GallerySummaryKpi
+                      label={volLabel}
+                      value={fmtQty(volValue)}
+                      unit="pcs"
+                      ariaLabel={`${volLabel}: ${fmtQty(volValue)} pieces${hasVolDelta ? `, ${formatSignedPct(volDeltaPct ?? 0)} versus ${compareYear}` : ''}`}
+                      deltaPct={volDeltaPct}
+                      deltaVsYear={compareYear}
+                      showHeaderDelta={isCompare && hasVolDelta}
+                      deltaTitle={hasVolDelta
+                        ? `${baseYear} ${fmtQty(summary.baseYearTotalQty)} pcs vs ${compareYear} ${fmtQty(summary.compareYearTotalQty)} pcs (${volDeltaAbs >= 0 ? '+' : ''}${fmtQty(volDeltaAbs)} pcs)`
+                        : undefined}
+                      footnote={!isCompare && hasVolDelta
+                        ? `${baseYear}: ${fmtQty(summary.baseYearTotalQty)} pcs · ${formatSignedPct(volDeltaPct ?? 0)} vs ${compareYear}`
+                        : undefined}
+                    />
+                    <GallerySummaryKpi
+                      label={valLabel}
+                      value={fmt(valValue)}
+                      ariaLabel={`${valLabel}: ${fmt(valValue)}${hasValDelta ? `, ${formatSignedPct(valDeltaPct ?? 0)} versus ${compareYear}` : ''}`}
+                      deltaPct={valDeltaPct}
+                      deltaVsYear={compareYear}
+                      showHeaderDelta={isCompare && hasValDelta}
+                      deltaTitle={hasValDelta
+                        ? `${baseYear} ${fmt(summary.baseYearTotalAmnt)} vs ${compareYear} ${fmt(summary.compareYearTotalAmnt)}`
+                        : undefined}
+                      footnote={!isCompare && hasValDelta
+                        ? `${baseYear}: ${fmt(summary.baseYearTotalAmnt)} · ${formatSignedPct(valDeltaPct ?? 0)} vs ${compareYear}`
+                        : undefined}
+                    />
+                  </>
                 );
               })()}
             </div>
@@ -366,6 +294,78 @@ export default function TopOrdersGalleryPage() {
         fmt={fmt}
         fmtQty={fmtQty}
       />
+    </div>
+  );
+}
+
+const kpiTileStyle: CSSProperties = {
+  padding: "8px 16px",
+  borderRadius: 8,
+  background: "var(--color-surface-1)",
+  border: "1px solid var(--color-border-light)",
+  minWidth: 190,
+  display: "flex",
+  flexDirection: "column",
+  gap: 2,
+};
+
+function GallerySummaryKpi({
+  label,
+  value,
+  unit,
+  ariaLabel,
+  deltaPct,
+  deltaVsYear,
+  showHeaderDelta,
+  deltaTitle,
+  footnote,
+}: {
+  label: string;
+  value: string;
+  unit?: string;
+  ariaLabel: string;
+  deltaPct: number | null;
+  deltaVsYear: string;
+  showHeaderDelta: boolean;
+  deltaTitle?: string;
+  footnote?: string;
+}) {
+  return (
+    <div role="region" aria-label={ariaLabel} style={kpiTileStyle}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+        <span style={{ fontSize: "var(--erp-text-control)", fontWeight: 800, color: "var(--color-text-tertiary)" }}>
+          {label}
+        </span>
+        {showHeaderDelta && deltaPct !== null && (
+          <span title={deltaTitle} style={comparisonTextStyle(deltaPct)}>
+            {formatSignedPct(deltaPct)} vs {deltaVsYear}
+          </span>
+        )}
+      </div>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+        <span
+          aria-live="polite"
+          style={{
+            fontSize: "var(--erp-text-kpi)",
+            fontWeight: 800,
+            color: "var(--color-text-primary)",
+            fontFamily: "var(--font-display)",
+            letterSpacing: 0,
+          }}
+        >
+          {value}
+        </span>
+        {unit ? (
+          <span style={{ fontSize: "var(--erp-text-control)", fontWeight: 800, color: "var(--color-text-tertiary)" }}>
+            {unit}
+          </span>
+        ) : null}
+      </div>
+      {footnote ? (
+        <span style={{ fontSize: "var(--erp-text-dense)", color: "var(--color-text-tertiary)", fontWeight: 700 }}>
+          {footnote}
+        </span>
+      ) : null}
     </div>
   );
 }

@@ -90,6 +90,10 @@ export interface TopGalleryCustomerBreakdown {
   groupLabel: string;
   qty: number;
   amount: number;
+  baseYearQty?: number;
+  baseYearAmnt?: number;
+  compareYearQty?: number;
+  compareYearAmnt?: number;
 }
 
 export interface TopGalleryItem {
@@ -113,10 +117,22 @@ export interface TopGalleryItem {
   yoyGrowthPct: number | null;
   shareOfPortfolioQtyPct: number;
   shareOfPortfolioAmntPct: number;
+  baseYearShareOfPortfolioQtyPct?: number;
+  baseYearShareOfPortfolioAmntPct?: number;
   yearlyTotals: Record<string, { qty: number; amount: number }>;
   monthlyBreakdown: Record<string, Record<string, number>>;
   weeklyBreakdown: Record<string, Record<string, number>>;
   customerBreakdown: TopGalleryCustomerBreakdown[];
+}
+
+export interface TopGallerySummary {
+  totalItemsCount: number;
+  portfolioTotalQty: number;
+  portfolioTotalAmnt: number;
+  baseYearTotalQty: number;
+  baseYearTotalAmnt: number;
+  compareYearTotalQty: number;
+  compareYearTotalAmnt: number;
 }
 
 export interface TopGalleryResponse {
@@ -124,13 +140,7 @@ export interface TopGalleryResponse {
   years: number[];
   baseYear: number;
   compareYear: number | null;
-  summary: {
-    totalItemsCount: number;
-    portfolioTotalQty: number;
-    portfolioTotalAmnt: number;
-    baseYearTotalQty: number;
-    compareYearTotalQty: number;
-  };
+  summary: TopGallerySummary;
   items: TopGalleryItem[];
 }
 
@@ -144,6 +154,7 @@ export interface TopGalleryParams {
   metric?: 'qty' | 'amount';
   search?: string;
   limit?: number;
+  rankBy?: 'combined' | 'base' | 'growth';
 }
 
 export const fetchTopItemsGallery = async (params: TopGalleryParams): Promise<TopGalleryResponse> => {
@@ -157,8 +168,9 @@ export const fetchTopItemsGallery = async (params: TopGalleryParams): Promise<To
   if (params.metric) qs.set('metric', params.metric);
   if (params.search) qs.set('search', params.search);
   if (params.limit) qs.set('limit', String(params.limit));
+  if (params.rankBy) qs.set('rankBy', params.rankBy);
 
   const res = await fetchWithAuth(`${BASE_URL}/items/top-gallery?${qs.toString()}`);
   if (!res.ok) throw new Error(`Top gallery API error: ${res.status}`);
   return await res.json();
-};
+};

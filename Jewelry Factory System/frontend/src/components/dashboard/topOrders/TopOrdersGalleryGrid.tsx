@@ -1,5 +1,6 @@
 import type { SyntheticEvent } from 'react';
 import type { TopGalleryItem } from '../../../services/itemYearlySummaryAPI';
+import type { PerspectiveMode } from '../../../hooks/useTopOrdersGalleryData';
 import { TrendingUp, TrendingDown } from 'lucide-react';
 
 interface TopOrdersGalleryGridProps {
@@ -8,6 +9,7 @@ interface TopOrdersGalleryGridProps {
   compareEnabled: boolean;
   baseYear: string;
   compareYear: string;
+  perspectiveMode?: PerspectiveMode;
   openPreview: (item: TopGalleryItem) => void;
   fmt: (value: number) => string;
   fmtQty: (value: number) => string;
@@ -19,6 +21,7 @@ export function TopOrdersGalleryGrid({
   compareEnabled,
   baseYear,
   compareYear,
+  perspectiveMode = 'combined',
   openPreview,
   fmt,
   fmtQty,
@@ -41,6 +44,7 @@ export function TopOrdersGalleryGrid({
       {items.map((item) => {
         const isTop3 = item.rank <= 3;
         const sharePct = metric === 'amount' ? item.shareOfPortfolioAmntPct : item.shareOfPortfolioQtyPct;
+        const isCompare = perspectiveMode === 'compare';
 
         return (
           <div
@@ -59,7 +63,7 @@ export function TopOrdersGalleryGrid({
               transition: 'box-shadow 0.15s ease, border-color 0.15s ease',
             }}
           >
-            {/* Header Meta: Rank + Category + % Share (Clean Text, No heavy boxes) */}
+            {/* Header Meta: Rank + Category + % Share or YoY Badge */}
             <div
               style={{
                 padding: '10px 12px 6px',
@@ -85,9 +89,25 @@ export function TopOrdersGalleryGrid({
                 </span>
               </div>
 
-              <div style={{ fontWeight: 900, color: 'var(--color-brand-600)', fontSize: '0.75rem' }}>
-                {sharePct}% <span style={{ fontWeight: 600, color: 'var(--color-text-tertiary)', fontSize: '0.7rem' }}>Share</span>
-              </div>
+              {isCompare && compareEnabled && compareYear && item.yoyGrowthPct !== null ? (
+                <div
+                  style={{
+                    fontWeight: 900,
+                    fontSize: '0.75rem',
+                    color: item.yoyGrowthPct >= 0 ? 'var(--color-brand-600)' : 'var(--color-danger-500)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 3,
+                  }}
+                >
+                  {item.yoyGrowthPct >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+                  <span>{item.yoyGrowthPct >= 0 ? '+' : ''}{item.yoyGrowthPct.toFixed(1)}%</span>
+                </div>
+              ) : (
+                <div style={{ fontWeight: 900, color: 'var(--color-brand-600)', fontSize: '0.75rem' }}>
+                  {sharePct}% <span style={{ fontWeight: 600, color: 'var(--color-text-tertiary)', fontSize: '0.7rem' }}>Share</span>
+                </div>
+              )}
             </div>
 
             {/* Product Image Canvas (Clean, no nested borders) */}
@@ -132,35 +152,36 @@ export function TopOrdersGalleryGrid({
                 }}
               >
                 <span style={{ fontSize: '0.7rem', color: 'var(--color-overlay-text-muted)', fontWeight: 700 }}>
-                  Combined ({baseYear}{compareEnabled && compareYear ? ` & ${compareYear}` : ''})
+                  {isCompare ? `${baseYear} vs ${compareYear}` : `Combined (${baseYear}${compareEnabled && compareYear ? ` & ${compareYear}` : ''})`}
                 </span>
                 <span style={{ fontSize: '1.25rem', color: 'var(--color-overlay-text)', fontWeight: 950, fontFamily: 'var(--font-display)' }}>
-                  {fmtQty(item.totalCombinedQty)} pcs
+                  {fmtQty(isCompare ? item.baseYearQty : item.totalCombinedQty)} pcs
                 </span>
                 <span style={{ fontSize: '0.85rem', color: 'var(--color-brand-400)', fontWeight: 800 }}>
-                  {fmt(item.totalCombinedAmnt)}
+                  {fmt(isCompare ? item.baseYearAmnt : item.totalCombinedAmnt)}
                 </span>
 
                 {compareEnabled && compareYear && item.yoyGrowthPct !== null && (
                   <div
                     style={{
-                      marginTop: 4,
+                      marginTop: 2,
                       display: 'flex',
                       alignItems: 'center',
                       gap: 4,
-                      fontSize: '0.75rem',
+                      fontSize: '0.72rem',
                       fontWeight: 800,
-                      color: item.yoyGrowthPct >= 0 ? 'var(--color-brand-400)' : 'var(--color-danger-400)',
+                      color: item.yoyGrowthPct >= 0 ? '#4ade80' : '#f87171',
                     }}
                   >
-                    {item.yoyGrowthPct >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
-                    <span>{item.yoyGrowthPct >= 0 ? '+' : ''}{item.yoyGrowthPct.toFixed(1)}% YoY</span>
+                    <span>
+                      {baseYear}: {fmtQty(item.baseYearQty)} pcs ({item.yoyGrowthPct >= 0 ? '▲ +' : '▼ '}{item.yoyGrowthPct.toFixed(1)}% | {item.qtyDiff >= 0 ? '+' : ''}{fmtQty(item.qtyDiff)} pcs vs {compareYear})
+                    </span>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Footer Summary: Item No + Customer + Metric (Seamless, no extra border line) */}
+            {/* Footer Summary: Item No + Customer + Metric */}
             <div
               style={{
                 padding: '6px 12px 10px',
@@ -194,21 +215,36 @@ export function TopOrdersGalleryGrid({
                     whiteSpace: 'nowrap',
                   }}
                 >
-                  {metric === 'amount' ? fmt(item.totalCombinedAmnt) : `${fmtQty(item.totalCombinedQty)} pcs`}
+                  {isCompare
+                    ? (metric === 'amount' ? fmt(item.baseYearAmnt) : `${fmtQty(item.baseYearQty)} pcs`)
+                    : (metric === 'amount' ? fmt(item.totalCombinedAmnt) : `${fmtQty(item.totalCombinedQty)} pcs`)}
                 </span>
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.72rem', color: 'var(--color-text-tertiary)', fontWeight: 700 }}>
                 <span>{item.primaryGroupLabel}</span>
-                {compareEnabled && compareYear && item.yoyGrowthPct !== null && (
-                  <span
-                    style={{
-                      fontWeight: 800,
-                      color: item.yoyGrowthPct >= 0 ? 'var(--color-brand-600)' : 'var(--color-danger-500)',
-                    }}
-                  >
-                    {item.yoyGrowthPct >= 0 ? '+' : ''}{item.yoyGrowthPct.toFixed(1)}% YoY
-                  </span>
+                {compareEnabled && compareYear && (
+                  isCompare ? (
+                    <span style={{ fontSize: '0.7rem', color: 'var(--color-text-tertiary)' }}>
+                      vs {compareYear}: <strong style={{ color: 'var(--color-text-secondary)' }}>{fmtQty(item.compareYearQty)}</strong>
+                    </span>
+                  ) : (
+                    item.yoyGrowthPct !== null && (
+                      <span
+                        style={{
+                          fontSize: '0.68rem',
+                          fontWeight: 900,
+                          color: item.yoyGrowthPct >= 0 ? 'var(--color-success-700)' : 'var(--color-danger-700)',
+                          background: item.yoyGrowthPct >= 0 ? 'var(--color-success-50)' : 'var(--color-danger-50)',
+                          padding: '1px 6px',
+                          borderRadius: 4,
+                        }}
+                        title={`ปี ${baseYear} (${fmtQty(item.baseYearQty)} pcs) เทียบ ${compareYear} (${fmtQty(item.compareYearQty)} pcs): ${item.qtyDiff >= 0 ? '+' : ''}${fmtQty(item.qtyDiff)} pcs (${item.yoyGrowthPct >= 0 ? '+' : ''}${item.yoyGrowthPct.toFixed(1)}%)`}
+                      >
+                        {item.yoyGrowthPct >= 0 ? '▲ +' : '▼ '}{item.yoyGrowthPct.toFixed(1)}% ({item.qtyDiff >= 0 ? '+' : ''}{fmtQty(item.qtyDiff)} pcs)
+                      </span>
+                    )
+                  )
                 )}
               </div>
             </div>

@@ -39,6 +39,9 @@ export default function TopOrdersGalleryPage() {
     analyticsPath,
     selectedPeriodLabel,
     startFilterTransition,
+    perspectiveMode,
+    setPerspectiveMode,
+    swapYears,
   } = useTopOrdersGalleryData();
 
   const fmt = (val: number) => {
@@ -85,6 +88,9 @@ export default function TopOrdersGalleryPage() {
               selGroups={selGroups}
               setSelGroups={setSelGroups}
               toggleGroup={toggleGroup}
+              perspectiveMode={perspectiveMode}
+              setPerspectiveMode={setPerspectiveMode}
+              swapYears={swapYears}
             />
             <div style={{ width: 1, height: 16, background: 'var(--color-border-light)', margin: '0 4px' }} />
             <button
@@ -119,33 +125,177 @@ export default function TopOrdersGalleryPage() {
           @keyframes galleryFilterSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         `}</style>
 
-        {/* Clean Portfolio Summary Sub-header */}
+        {/* WCAG 2.1 AA — Portfolio Summary Sub-header with Accessible KPI Cards */}
         {summary.totalItemsCount > 0 && (
           <div
+            role="banner"
+            aria-label="Portfolio summary and key performance indicators"
             style={{
-              padding: '10px 20px 0',
+              padding: '12px 20px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
               flexWrap: 'wrap',
-              gap: 12,
-              fontSize: '0.78rem',
-              fontWeight: 700,
-              color: 'var(--color-text-secondary)',
+              gap: 16,
+              borderBottom: '1px solid var(--color-border-light)',
+              background: 'var(--color-surface-0)',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-              <span>
-                Ranked: <strong style={{ color: 'var(--color-text-primary)' }}>{items.length}</strong> items
+            {/* Left Side: Scope & Ranked Summary */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span
+                  role="status"
+                  style={{
+                    padding: '2px 8px',
+                    borderRadius: 6,
+                    background: 'var(--color-brand-50)',
+                    color: 'var(--color-brand-700)',
+                    fontWeight: 900,
+                    fontSize: '0.75rem',
+                    border: '1px solid var(--color-brand-200)',
+                  }}
+                >
+                  {perspectiveMode === 'compare' ? `Compare: ${baseYear} vs ${compareYear}` : 'Combined All Years'}
+                </span>
+                <span style={{ fontSize: '0.95rem', fontWeight: 950, color: 'var(--color-text-primary)', fontFamily: 'var(--font-display)' }}>
+                  Top Ranked ({items.length.toLocaleString()} Items)
+                </span>
+              </div>
+              <span style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)', fontWeight: 700 }}>
+                {perspectiveMode === 'compare'
+                  ? `Ranked by ${baseYear} metric • Comparing head-to-head with ${compareYear}`
+                  : `Cumulative volume & value across all selected years in portfolio`}
               </span>
-              <span>•</span>
-              <span>
-                Volume: <strong style={{ color: 'var(--color-brand-600)' }}>{fmtQty(summary.portfolioTotalQty)}</strong> pcs
-              </span>
-              <span>•</span>
-              <span>
-                Value: <strong style={{ color: 'var(--color-brand-600)' }}>{fmt(summary.portfolioTotalAmnt)}</strong>
-              </span>
+            </div>
+
+            {/* Right Side: KPI Cards for Volume & Value */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+              {/* KPI Card 1: Volume */}
+              {(() => {
+                const volLabel = perspectiveMode === 'compare' ? `${baseYear} Volume` : 'Total Volume';
+                const volValue = perspectiveMode === 'compare' ? summary.baseYearTotalQty : summary.portfolioTotalQty;
+                const hasVolDelta = summary.compareYearTotalQty > 0 && summary.baseYearTotalQty > 0;
+                const volUp = summary.baseYearTotalQty >= summary.compareYearTotalQty;
+                const volDeltaPct = hasVolDelta ? (((summary.baseYearTotalQty - summary.compareYearTotalQty) / summary.compareYearTotalQty) * 100).toFixed(1) : '0';
+                const volDeltaAbs = summary.baseYearTotalQty - summary.compareYearTotalQty;
+                return (
+                  <div
+                    role="region"
+                    aria-label={`${volLabel}: ${fmtQty(volValue)} pieces${hasVolDelta ? `, ${volUp ? 'increased' : 'decreased'} ${volDeltaPct} percent year over year` : ''}`}
+                    style={{
+                      padding: '8px 16px',
+                      borderRadius: 8,
+                      background: 'var(--color-surface-1)',
+                      border: '1px solid var(--color-border-light)',
+                      minWidth: 190,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 2,
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--color-text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        {volLabel}
+                      </span>
+                      {hasVolDelta && (
+                        <span
+                          aria-hidden="true"
+                          style={{
+                            padding: '1px 6px',
+                            borderRadius: 4,
+                            fontSize: '0.75rem',
+                            fontWeight: 900,
+                            background: volUp ? 'var(--color-success-50)' : 'var(--color-danger-50)',
+                            color: volUp ? 'var(--color-success-700)' : 'var(--color-danger-700)',
+                          }}
+                          title={`${baseYear} (${fmtQty(summary.baseYearTotalQty)} pcs) vs ${compareYear} (${fmtQty(summary.compareYearTotalQty)} pcs): ${volUp ? '+' : ''}${fmtQty(volDeltaAbs)} pcs`}
+                        >
+                          {volUp ? '▲ +' : '▼ '}{volDeltaPct}%
+                        </span>
+                      )}
+                      {/* WCAG 1.4.1: Screen reader text — not relying on color alone */}
+                      {hasVolDelta && (
+                        <span className="sr-only">
+                          Volume {volUp ? 'increased' : 'decreased'} by {volDeltaPct} percent compared to {compareYear}
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                      <span aria-live="polite" style={{ fontSize: '1.2rem', fontWeight: 950, color: 'var(--color-text-primary)', fontFamily: 'var(--font-display)' }}>
+                        {fmtQty(volValue)}
+                      </span>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--color-text-tertiary)' }}>pcs</span>
+                    </div>
+                    {perspectiveMode === 'combined' && summary.compareYearTotalQty > 0 && (
+                      <span style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)', fontWeight: 700 }}>
+                        {baseYear}: {fmtQty(summary.baseYearTotalQty)} pcs ({volUp ? '+' : ''}{fmtQty(volDeltaAbs)} pcs vs {compareYear})
+                      </span>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* KPI Card 2: Value */}
+              {(() => {
+                const valLabel = perspectiveMode === 'compare' ? `${baseYear} Value` : 'Total Value';
+                const valValue = perspectiveMode === 'compare' ? summary.baseYearTotalAmnt : summary.portfolioTotalAmnt;
+                const hasValDelta = summary.compareYearTotalAmnt > 0 && summary.baseYearTotalAmnt > 0;
+                const valUp = summary.baseYearTotalAmnt >= summary.compareYearTotalAmnt;
+                const valDeltaPct = hasValDelta ? (((summary.baseYearTotalAmnt - summary.compareYearTotalAmnt) / summary.compareYearTotalAmnt) * 100).toFixed(1) : '0';
+                return (
+                  <div
+                    role="region"
+                    aria-label={`${valLabel}: ${fmt(valValue)}${hasValDelta ? `, ${valUp ? 'increased' : 'decreased'} ${valDeltaPct} percent year over year` : ''}`}
+                    style={{
+                      padding: '8px 16px',
+                      borderRadius: 8,
+                      background: 'var(--color-surface-1)',
+                      border: '1px solid var(--color-border-light)',
+                      minWidth: 190,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 2,
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--color-text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        {valLabel}
+                      </span>
+                      {hasValDelta && (
+                        <span
+                          aria-hidden="true"
+                          style={{
+                            padding: '1px 6px',
+                            borderRadius: 4,
+                            fontSize: '0.75rem',
+                            fontWeight: 900,
+                            background: valUp ? 'var(--color-success-50)' : 'var(--color-danger-50)',
+                            color: valUp ? 'var(--color-success-700)' : 'var(--color-danger-700)',
+                          }}
+                        >
+                          {valUp ? '▲ +' : '▼ '}{valDeltaPct}%
+                        </span>
+                      )}
+                      {hasValDelta && (
+                        <span className="sr-only">
+                          Value {valUp ? 'increased' : 'decreased'} by {valDeltaPct} percent compared to {compareYear}
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                      <span aria-live="polite" style={{ fontSize: '1.2rem', fontWeight: 950, color: 'var(--color-brand-600)', fontFamily: 'var(--font-display)' }}>
+                        {fmt(valValue)}
+                      </span>
+                    </div>
+                    {perspectiveMode === 'combined' && summary.compareYearTotalAmnt > 0 && (
+                      <span style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)', fontWeight: 700 }}>
+                        {baseYear}: {fmt(summary.baseYearTotalAmnt)}
+                      </span>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           </div>
         )}
@@ -159,6 +309,7 @@ export default function TopOrdersGalleryPage() {
             compareEnabled={compareEnabled}
             baseYear={baseYear}
             compareYear={compareYear}
+            perspectiveMode={perspectiveMode}
             openPreview={(item) => setPreviewItem(item)}
             fmt={fmt}
             fmtQty={fmtQty}
@@ -166,8 +317,37 @@ export default function TopOrdersGalleryPage() {
         )}
 
         {isFilterLoading && !isInitialLoading && (
-          <div style={{ position: "absolute", inset: 0, zIndex: 30, display: "flex", alignItems: "center", justifyContent: "center", background: "color-mix(in srgb, var(--color-surface-1) 72%, transparent)", pointerEvents: "auto" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, border: "1px solid var(--color-border-light)", borderRadius: 8, background: "var(--color-surface-0)", color: "var(--color-text-primary)", padding: "10px 14px", boxShadow: "0 10px 30px color-mix(in srgb, var(--color-surface-900) 18%, transparent)", fontSize: "0.82rem", fontWeight: 900 }}>
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              zIndex: 50,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: "color-mix(in srgb, var(--color-surface-0) 65%, transparent)",
+              backdropFilter: "blur(2px)",
+              cursor: "wait",
+              userSelect: "none",
+              pointerEvents: "all",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                border: "1px solid var(--color-border-light)",
+                borderRadius: 8,
+                background: "var(--color-surface-0)",
+                color: "var(--color-text-primary)",
+                padding: "10px 16px",
+                boxShadow: "0 10px 30px color-mix(in srgb, var(--color-surface-900) 18%, transparent)",
+                fontSize: "0.82rem",
+                fontWeight: 900,
+                cursor: "wait",
+              }}
+            >
               <span className="gallery-filter-spinner" style={{ width: 16, height: 16, border: "2px solid color-mix(in srgb, var(--color-brand-500) 22%, transparent)", borderTopColor: "var(--color-brand-500)", borderRadius: "50%" }} />
               Updating portfolio results...
             </div>
@@ -182,6 +362,7 @@ export default function TopOrdersGalleryPage() {
         compareYear={compareYear}
         compareEnabled={compareEnabled}
         metric={metric}
+        perspectiveMode={perspectiveMode}
         fmt={fmt}
         fmtQty={fmtQty}
       />

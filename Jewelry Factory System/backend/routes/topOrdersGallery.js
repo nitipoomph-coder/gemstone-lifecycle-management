@@ -340,7 +340,7 @@ router.get('/:styleNo/yearly-summary', async (req, res) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 // [TOP ITEM GALLERY] GET /api/items/top-gallery
 // Queries VW_Web_SalesDashboard for item-centric ranking, multi-year comparison,
-// product type classification (including Bangles / Non-Bangles), % share of portfolio,
+// product type classification, % share of portfolio,
 // and monthly/weekly breakdowns.
 // ═══════════════════════════════════════════════════════════════════════════════
 const CUSTOMER_GROUP_PREFIXES = {
@@ -372,17 +372,9 @@ function getCustomerGroupId(custCode) {
   return 'General';
 }
 
-function classifyProductType(itemNo, itemDesc, itemType) {
-  const normItem = String(itemNo || '').toUpperCase().trim();
-  const normDesc = String(itemDesc || '').toUpperCase().trim();
-  const normType = String(itemType || '').toUpperCase().trim();
-  const prefix3 = normItem.substring(0, 3);
-
-  const isBangle = normDesc.includes('BANGLE') || normType.includes('BANGLE') || normItem.includes('BANGLE');
-
-  if (prefix3 === 'BBS') {
-    return isBangle ? 'BANGLE' : 'NON_BANGLE';
-  }
+function classifyProductType(itemNo) {
+  const prefix3 = String(itemNo || '').toUpperCase().trim().substring(0, 3);
+  if (prefix3 === 'BBS') return 'BBS';
   if (prefix3 === 'BES') return 'BES';
   if (prefix3 === 'BNS') return 'BNS';
   if (prefix3 === 'BRS') return 'BRS';
@@ -414,6 +406,7 @@ router.get('/top-gallery', async (req, res) => {
     const groupFilter = req.query.groups ? String(req.query.groups).split(',').map(g => g.trim()).filter(Boolean) : [];
     const productTypeFilter = String(req.query.productType || 'ALL').toUpperCase().trim();
     const metric = String(req.query.metric || 'qty').toLowerCase() === 'amount' ? 'amount' : 'qty';
+    const rankBy = String(req.query.rankBy || 'combined').toLowerCase().trim(); // 'combined' | 'base' | 'growth'
     const searchQuery = String(req.query.search || '').toUpperCase().trim();
     const limit = parseInt(req.query.limit || '100', 10);
 
@@ -471,7 +464,9 @@ router.get('/top-gallery', async (req, res) => {
     let portfolioGrandQty = 0;
     let portfolioGrandAmnt = 0;
     let baseYearGrandQty = 0;
+    let baseYearGrandAmnt = 0;
     let compareYearGrandQty = 0;
+    let compareYearGrandAmnt = 0;
 
     for (const r of rows) {
       const itemNo = r.ItemNo;
@@ -483,20 +478,12 @@ router.get('/top-gallery', async (req, res) => {
         continue;
       }
 
-      const rawProductType = classifyProductType(itemNo, r.ItemDesc, r.ItemType);
+      const rawProductType = classifyProductType(itemNo);
       const prefix3 = itemNo.substring(0, 3);
 
       // Apply product type filter
       if (productTypeFilter !== 'ALL') {
-        if (productTypeFilter === 'BBS') {
-          if (prefix3 !== 'BBS' && rawProductType !== 'BANGLE' && rawProductType !== 'NON_BANGLE') continue;
-        } else if (productTypeFilter === 'BANGLE') {
-          if (rawProductType !== 'BANGLE') continue;
-        } else if (productTypeFilter === 'NON_BANGLE') {
-          if (rawProductType !== 'NON_BANGLE') continue;
-        } else if (rawProductType !== productTypeFilter) {
-          continue;
-        }
+        if (rawProductType !== productTypeFilter) continue;
       }
 
       const yr = Number(r.OrdYear);
@@ -507,8 +494,14 @@ router.get('/top-gallery', async (req, res) => {
 
       portfolioGrandQty += qty;
       portfolioGrandAmnt += amnt;
-      if (yr === baseYear) baseYearGrandQty += qty;
-      if (compareYear && yr === compareYear) compareYearGrandQty += qty;
+      if (yr === baseYear) {
+        baseYearGrandQty += qty;
+        baseYearGrandAmnt += amnt;
+      }
+      if (compareYear && yr === compareYear) {
+        compareYearGrandQty += qty;
+        compareYearGrandAmnt += amnt;
+      }
 
       if (!itemsMap.has(itemNo)) {
         itemsMap.set(itemNo, {
@@ -567,17 +560,37 @@ router.get('/top-gallery', async (req, res) => {
           groupLabel: GROUP_LABELS[groupId] || groupId,
           qty: 0,
           amount: 0,
+          baseYearQty: 0,
+          baseYearAmnt: 0,
+          compareYearQty: 0,
+          compareYearAmnt: 0,
         });
       }
       const cEntry = it.customerMap.get(custCode);
       cEntry.qty += qty;
       cEntry.amount += amnt;
+      if (yr === baseYear) {
+        cEntry.baseYearQty += qty;
+        cEntry.baseYearAmnt += amnt;
+      }
+      if (compareYear && yr === compareYear) {
+        cEntry.compareYearQty += qty;
+        cEntry.compareYearAmnt += amnt;
+      }
     }
 
     // Convert map to list and compute significance + rankings
     let itemsList = Array.from(itemsMap.values()).map(it => {
-      // Find primary customer / group
-      const custList = Array.from(it.customerMap.values()).sort((a, b) => (metric === 'amount' ? b.amount - a.amount : b.qty - a.qty));
+      // Find primary customer / group based on perspective
+      const isBaseRanking = rankBy === 'base';
+      const custList = Array.from(it.customerMap.values()).sort((a, b) => {
+        if (isBaseRanking) {
+          const valA = metric === 'amount' ? a.baseYearAmnt : a.baseYearQty;
+          const valB = metric === 'amount' ? b.baseYearAmnt : b.baseYearQty;
+          if (valB !== valA) return valB - valA;
+        }
+        return metric === 'amount' ? b.amount - a.amount : b.qty - a.qty;
+      });
       const primary = custList[0] || { custCode: 'N/A', groupId: 'General', groupLabel: 'General' };
 
       const diff = it.baseYearQty - it.compareYearQty;
@@ -585,6 +598,9 @@ router.get('/top-gallery', async (req, res) => {
 
       const shareOfPortfolioQtyPct = portfolioGrandQty > 0 ? (it.totalCombinedQty / portfolioGrandQty) * 100 : 0;
       const shareOfPortfolioAmntPct = portfolioGrandAmnt > 0 ? (it.totalCombinedAmnt / portfolioGrandAmnt) * 100 : 0;
+
+      const baseYearShareOfPortfolioQtyPct = baseYearGrandQty > 0 ? (it.baseYearQty / baseYearGrandQty) * 100 : 0;
+      const baseYearShareOfPortfolioAmntPct = baseYearGrandAmnt > 0 ? (it.baseYearAmnt / baseYearGrandAmnt) * 100 : 0;
 
       return {
         itemNo: it.itemNo,
@@ -606,11 +622,17 @@ router.get('/top-gallery', async (req, res) => {
         yoyGrowthPct,
         shareOfPortfolioQtyPct: Number(shareOfPortfolioQtyPct.toFixed(2)),
         shareOfPortfolioAmntPct: Number(shareOfPortfolioAmntPct.toFixed(2)),
+        baseYearShareOfPortfolioQtyPct: Number(baseYearShareOfPortfolioQtyPct.toFixed(2)),
+        baseYearShareOfPortfolioAmntPct: Number(baseYearShareOfPortfolioAmntPct.toFixed(2)),
         yearlyTotals: it.yearlyTotals,
         monthlyBreakdown: it.monthlyBreakdown,
         weeklyBreakdown: it.weeklyBreakdown,
         customerBreakdown: custList.slice(0, 10),
-        sortScore: metric === 'amount' ? it.totalCombinedAmnt : it.totalCombinedQty,
+        sortScore: (() => {
+          if (rankBy === 'base') return metric === 'amount' ? it.baseYearAmnt : it.baseYearQty;
+          if (rankBy === 'growth') return diff;
+          return metric === 'amount' ? it.totalCombinedAmnt : it.totalCombinedQty; // 'combined' default
+        })(),
       };
     });
 
@@ -643,7 +665,9 @@ router.get('/top-gallery', async (req, res) => {
         portfolioTotalQty: portfolioGrandQty,
         portfolioTotalAmnt: portfolioGrandAmnt,
         baseYearTotalQty: baseYearGrandQty,
+        baseYearTotalAmnt: baseYearGrandAmnt,
         compareYearTotalQty: compareYearGrandQty,
+        compareYearTotalAmnt: compareYearGrandAmnt,
       },
       items: rankedItems,
     });

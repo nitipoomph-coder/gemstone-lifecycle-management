@@ -28,13 +28,13 @@ export interface ProductTypeOption {
 export const PRODUCT_TYPE_OPTIONS: ProductTypeOption[] = [
   { value: 'ALL', label: 'All', fullLabel: 'All Product Types', description: 'ทุกประเภทสินค้า' },
   { value: 'BBS', label: 'BBS', fullLabel: 'Bracelet & Bangle', description: 'สร้อยข้อมือ & กำไล' },
-  { value: 'BANGLE', label: 'Bangles', fullLabel: 'Bangles', description: 'กำไลข้อแข็ง' },
-  { value: 'NON_BANGLE', label: 'Non Bangles', fullLabel: 'Bracelet (Soft)', description: 'สร้อยข้อมือแบบนิ่ม/โซ่' },
   { value: 'BES', label: 'BES', fullLabel: 'Earring', description: 'ต่างหู' },
-  { value: 'BNS', label: 'BNS', fullLabel: 'Necklace', description: 'สร้อยคอ / จี้' },
+  { value: 'BNS', label: 'BNS', fullLabel: 'Necklace', description: 'สร้อยคอ' },
   { value: 'BRS', label: 'BRS', fullLabel: 'Ring', description: 'แหวน' },
   { value: 'OTH', label: 'Others', fullLabel: 'Others', description: 'เครื่องประดับอื่นๆ' },
 ];
+
+export type PerspectiveMode = 'combined' | 'compare';
 
 export interface PeriodDraft {
   preset: PeriodPreset;
@@ -101,6 +101,8 @@ export function useTopOrdersGalleryData() {
   const [productType, setProductType] = useState<string>(() => {
     return searchParams.get("type") || "ALL";
   });
+
+  const [perspectiveMode, setPerspectiveMode] = useState<PerspectiveMode>('combined');
 
   const [searchDraft, setSearchDraft] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -192,6 +194,7 @@ export function useTopOrdersGalleryData() {
       metric,
       search: searchQuery,
       limit: 100,
+      rankBy: perspectiveMode === 'compare' ? 'base' : 'combined',
     })
       .then((data) => {
         if (cancelled) return;
@@ -211,7 +214,7 @@ export function useTopOrdersGalleryData() {
     return () => {
       cancelled = true;
     };
-  }, [availableYears, baseYear, compareEnabled, compareYear, metric, productType, searchQuery, selGroups, selectedMonthNumbers]);
+  }, [availableYears, baseYear, compareEnabled, compareYear, metric, perspectiveMode, productType, searchQuery, selGroups, selectedMonthNumbers]);
 
   const items = galleryResponse?.items || [];
   const summary = galleryResponse?.summary || {
@@ -219,7 +222,9 @@ export function useTopOrdersGalleryData() {
     portfolioTotalQty: 0,
     portfolioTotalAmnt: 0,
     baseYearTotalQty: 0,
+    baseYearTotalAmnt: 0,
     compareYearTotalQty: 0,
+    compareYearTotalAmnt: 0,
   };
 
   const buildPeriodDraft = (): PeriodDraft => {
@@ -280,6 +285,15 @@ export function useTopOrdersGalleryData() {
     );
   };
 
+  const swapYears = () => {
+    if (!compareEnabled || !compareYear || compareYear === baseYear) return;
+    startFilterTransition();
+    const oldBase = baseYear;
+    const oldCompare = compareYear;
+    setBaseYear(oldCompare);
+    setCompareYear(oldBase);
+  };
+
   return {
     metric,
     isInitialLoading: loading && !galleryResponse,
@@ -321,5 +335,8 @@ export function useTopOrdersGalleryData() {
     selectedMonthNumbers,
     selectedPeriodLabel,
     startFilterTransition,
+    perspectiveMode,
+    setPerspectiveMode,
+    swapYears,
   };
 }

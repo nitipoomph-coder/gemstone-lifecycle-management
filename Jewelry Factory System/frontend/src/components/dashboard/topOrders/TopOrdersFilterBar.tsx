@@ -1,13 +1,14 @@
 import { useState, useRef, useEffect, type KeyboardEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, X, CalendarDays, Users, Tag, ChevronDown, BarChart3 } from 'lucide-react';
+import { Search, X, CalendarDays, Users, Tag, ChevronDown, BarChart3, Layers, ArrowLeftRight } from 'lucide-react';
 import { ALL_GROUPS } from '../../../config/customerGroups';
 import {
   PERIOD_PRESETS,
   MONTHS,
   PRODUCT_TYPE_OPTIONS,
   type PeriodPreset,
-  type PeriodDraft
+  type PeriodDraft,
+  type PerspectiveMode,
 } from '../../../hooks/useTopOrdersGalleryData';
 import CustomSelect from '../../ui/CustomSelect';
 
@@ -60,6 +61,9 @@ interface TopOrdersFilterBarProps {
   selGroups: string[];
   setSelGroups: (g: string[]) => void;
   toggleGroup: (gId: string) => void;
+  perspectiveMode: PerspectiveMode;
+  setPerspectiveMode: (m: PerspectiveMode) => void;
+  swapYears?: () => void;
 }
 
 export function TopOrdersFilterBar({
@@ -83,7 +87,9 @@ export function TopOrdersFilterBar({
   selectedPeriodLabel,
   selGroups,
   setSelGroups,
-  toggleGroup
+  toggleGroup,
+  perspectiveMode,
+  setPerspectiveMode,
 }: TopOrdersFilterBarProps) {
   const navigate = useNavigate();
   const [showYearMenu, setShowYearMenu] = useState(false);
@@ -149,6 +155,76 @@ export function TopOrdersFilterBar({
 
   return (
     <div className="sales-gallery-topbar-tools flex min-w-0 flex-1 items-center justify-end gap-2 pr-2">
+      {/* Perspective Toggle: Combined (รวมสะสม) vs Compare (เทียบปี) */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          background: 'var(--color-surface-2)',
+          padding: 2,
+          borderRadius: 8,
+          border: '1px solid var(--color-border-light)',
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => {
+            if (perspectiveMode !== 'combined') {
+              startFilterTransition();
+              setPerspectiveMode('combined');
+            }
+          }}
+          style={{
+            padding: '5px 10px',
+            borderRadius: 6,
+            fontSize: '0.78rem',
+            fontWeight: 900,
+            border: 'none',
+            cursor: 'pointer',
+            background: perspectiveMode === 'combined' ? 'var(--color-surface-0)' : 'transparent',
+            color: perspectiveMode === 'combined' ? 'var(--color-brand-700)' : 'var(--color-text-tertiary)',
+            boxShadow: perspectiveMode === 'combined' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 4,
+            transition: 'all 0.15s ease',
+          }}
+          title="Rank by Total Combined Volume across selected years"
+        >
+          <Layers size={13} />
+          Combined
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            if (perspectiveMode !== 'compare') {
+              startFilterTransition();
+              setPerspectiveMode('compare');
+            }
+          }}
+          style={{
+            padding: '5px 10px',
+            borderRadius: 6,
+            fontSize: '0.78rem',
+            fontWeight: 900,
+            border: 'none',
+            cursor: 'pointer',
+            background: perspectiveMode === 'compare' ? 'var(--color-surface-0)' : 'transparent',
+            color: perspectiveMode === 'compare' ? 'var(--color-brand-700)' : 'var(--color-text-tertiary)',
+            boxShadow: perspectiveMode === 'compare' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 4,
+            transition: 'all 0.15s ease',
+          }}
+          title="Rank by Base Year and compare Head-to-Head with comparison year"
+        >
+          <ArrowLeftRight size={13} />
+          Compare
+        </button>
+      </div>
+
       {/* Qty Analysis Action Button */}
       <button
         type="button"
@@ -171,7 +247,7 @@ export function TopOrdersFilterBar({
         className="hover:bg-[var(--color-surface-1)] hover:border-[var(--color-border-default)]"
       >
         <BarChart3 size={14} style={{ color: 'var(--color-brand-600)' }} />
-        Qty Analysis
+        Top Items Qty
       </button>
 
       {/* Product Type Custom Dropdown Selector */}
@@ -355,7 +431,7 @@ export function TopOrdersFilterBar({
               </span>
               <span className="text-[11px] font-bold text-[var(--color-text-secondary)]">
                 {periodDraft.baseYear} {periodDraft.startMonth === 1 && periodDraft.endMonth === 12 ? 'Full Year' : `(${MONTHS[periodDraft.startMonth - 1]}-${MONTHS[periodDraft.endMonth - 1]})`}
-                {periodDraft.compareEnabled && periodDraft.compareYear && ` vs ${periodDraft.compareYear}`}
+                {periodDraft.compareEnabled && periodDraft.compareYear && ` & ${periodDraft.compareYear} (Combined)`}
               </span>
             </div>
 

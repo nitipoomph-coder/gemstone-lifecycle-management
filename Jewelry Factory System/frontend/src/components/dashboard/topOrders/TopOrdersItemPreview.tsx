@@ -1,6 +1,7 @@
-import { useState, type SyntheticEvent } from 'react';
+import { useState, useEffect, type SyntheticEvent } from 'react';
 import { X, TrendingUp, TrendingDown, Sparkles, Calendar, Users, BarChart2 } from 'lucide-react';
 import type { TopGalleryItem } from '../../../services/itemYearlySummaryAPI';
+import type { PerspectiveMode } from '../../../hooks/useTopOrdersGalleryData';
 
 const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -11,6 +12,7 @@ interface TopOrdersItemPreviewProps {
   compareYear: string;
   compareEnabled: boolean;
   metric: 'qty' | 'amount';
+  perspectiveMode?: PerspectiveMode;
   fmt: (value: number) => string;
   fmtQty: (value: number) => string;
 }
@@ -22,14 +24,32 @@ export function TopOrdersItemPreview({
   compareYear,
   compareEnabled,
   metric,
+  perspectiveMode = 'combined',
   fmt,
   fmtQty,
 }: TopOrdersItemPreviewProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'monthly' | 'customers'>('overview');
 
+  useEffect(() => {
+    if (!item) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = '';
+    };
+  }, [item, onClose]);
+
   if (!item) return null;
 
-  const sharePct = metric === 'amount' ? item.shareOfPortfolioAmntPct : item.shareOfPortfolioQtyPct;
+  const isCompare = perspectiveMode === 'compare';
+  const activeSharePct = isCompare
+    ? (metric === 'amount' ? (item.baseYearShareOfPortfolioAmntPct ?? item.shareOfPortfolioAmntPct) : (item.baseYearShareOfPortfolioQtyPct ?? item.shareOfPortfolioQtyPct))
+    : (metric === 'amount' ? item.shareOfPortfolioAmntPct : item.shareOfPortfolioQtyPct);
+
   const yearsList = Object.keys(item.yearlyTotals).sort((a, b) => Number(b) - Number(a));
 
   return (
@@ -50,7 +70,7 @@ export function TopOrdersItemPreview({
     >
       <div
         style={{
-          width: 'min(980px, 94vw)',
+          width: 'min(1040px, 95vw)',
           maxHeight: '90vh',
           backgroundColor: 'var(--color-surface-0)',
           borderRadius: 14,
@@ -129,7 +149,7 @@ export function TopOrdersItemPreview({
         </div>
 
         {/* Modal Body: 2 Columns */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(300px, 380px) 1fr', flex: 1, overflow: 'hidden' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(300px, 360px) 1fr', flex: 1, overflow: 'hidden' }}>
           {/* Left Column: Big Image & Key Metrics */}
           <div
             style={{
@@ -146,7 +166,7 @@ export function TopOrdersItemPreview({
             <div
               style={{
                 width: '100%',
-                height: 240,
+                height: 230,
                 borderRadius: 10,
                 background: 'var(--color-surface-0)',
                 border: '1px solid var(--color-border-light)',
@@ -187,7 +207,7 @@ export function TopOrdersItemPreview({
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--color-text-secondary)' }}>
-                  Portfolio Significance
+                  {isCompare ? `Share of ${baseYear} Total` : 'Portfolio Share (Combined)'}
                 </span>
                 <span
                   style={{
@@ -198,25 +218,58 @@ export function TopOrdersItemPreview({
                     fontSize: '0.8rem',
                     fontWeight: 950,
                   }}
+                  title={isCompare ? `สัดส่วน ${activeSharePct}% ของยอด ${baseYear} ทั้งหมด` : `สัดส่วน ${activeSharePct}% ของยอดสะสมรวมทั้งหมด`}
                 >
-                  {sharePct}% Share
+                  {activeSharePct}% Share
                 </span>
               </div>
 
               <div style={{ width: '100%', height: 6, background: 'var(--color-surface-2)', borderRadius: 4, overflow: 'hidden' }}>
-                <div style={{ width: `${Math.min(100, Math.max(2, sharePct))}%`, height: '100%', background: 'var(--color-brand-500)' }} />
+                <div style={{ width: `${Math.min(100, Math.max(2, activeSharePct))}%`, height: '100%', background: 'var(--color-brand-500)' }} />
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 4 }}>
                 <div>
-                  <div style={{ fontSize: '0.72rem', color: 'var(--color-text-tertiary)', fontWeight: 800 }}>Combined Volume</div>
-                  <div style={{ fontSize: '1.1rem', color: 'var(--color-text-primary)', fontWeight: 950 }}>{fmtQty(item.totalCombinedQty)} pcs</div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--color-text-tertiary)', fontWeight: 800 }}>{isCompare ? `${baseYear} Volume` : 'Combined Volume'}</div>
+                  <div style={{ fontSize: '1.1rem', color: 'var(--color-text-primary)', fontWeight: 950 }}>{fmtQty(isCompare ? item.baseYearQty : item.totalCombinedQty)} pcs</div>
                 </div>
                 <div>
-                  <div style={{ fontSize: '0.72rem', color: 'var(--color-text-tertiary)', fontWeight: 800 }}>Combined Value</div>
-                  <div style={{ fontSize: '1.1rem', color: 'var(--color-brand-600)', fontWeight: 950 }}>{fmt(item.totalCombinedAmnt)}</div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--color-text-tertiary)', fontWeight: 800 }}>{isCompare ? `${baseYear} Value` : 'Combined Value'}</div>
+                  <div style={{ fontSize: '1.1rem', color: 'var(--color-brand-600)', fontWeight: 950 }}>{fmt(isCompare ? item.baseYearAmnt : item.totalCombinedAmnt)}</div>
                 </div>
               </div>
+
+              {isCompare && item.yoyGrowthPct !== null && (
+                <div style={{ marginTop: 4, paddingTop: 8, borderTop: '1px solid var(--color-border-light)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--color-text-tertiary)', fontWeight: 800 }}>YoY vs {compareYear}</span>
+                  <span style={{
+                    fontSize: '0.75rem',
+                    fontWeight: 900,
+                    padding: '2px 6px',
+                    borderRadius: 4,
+                    background: item.yoyGrowthPct >= 0 ? 'var(--color-success-50)' : 'var(--color-danger-50)',
+                    color: item.yoyGrowthPct >= 0 ? 'var(--color-success-700)' : 'var(--color-danger-700)',
+                  }}>
+                    {item.yoyGrowthPct >= 0 ? '▲ +' : '▼ '}{item.yoyGrowthPct.toFixed(1)}% ({item.qtyDiff >= 0 ? '+' : ''}{fmtQty(item.qtyDiff)} pcs)
+                  </span>
+                </div>
+              )}
+
+              {!isCompare && compareEnabled && compareYear && item.yoyGrowthPct !== null && (
+                <div style={{ marginTop: 4, paddingTop: 8, borderTop: '1px solid var(--color-border-light)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--color-text-tertiary)', fontWeight: 800 }}>{baseYear} Contribution</span>
+                  <span style={{
+                    fontSize: '0.73rem',
+                    fontWeight: 900,
+                    padding: '2px 6px',
+                    borderRadius: 4,
+                    background: item.yoyGrowthPct >= 0 ? 'var(--color-success-50)' : 'var(--color-danger-50)',
+                    color: item.yoyGrowthPct >= 0 ? 'var(--color-success-700)' : 'var(--color-danger-700)',
+                  }}>
+                    {fmtQty(item.baseYearQty)} pcs ({item.yoyGrowthPct >= 0 ? '▲ +' : '▼ '}{item.yoyGrowthPct.toFixed(1)}% | {item.qtyDiff >= 0 ? '+' : ''}{fmtQty(item.qtyDiff)} pcs vs {compareYear})
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Primary Customer Group Badge */}
@@ -232,7 +285,9 @@ export function TopOrdersItemPreview({
               }}
             >
               <div>
-                <div style={{ fontSize: '0.7rem', color: 'var(--color-text-tertiary)', fontWeight: 800 }}>Top Customer</div>
+                <div style={{ fontSize: '0.7rem', color: 'var(--color-text-tertiary)', fontWeight: 800 }}>
+                  {isCompare ? `Primary Customer (${baseYear})` : 'Primary Customer'}
+                </div>
                 <div style={{ fontSize: '0.9rem', color: 'var(--color-text-primary)', fontWeight: 950 }}>{item.primaryCustCode}</div>
               </div>
               <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--color-text-secondary)' }}>
@@ -244,13 +299,13 @@ export function TopOrdersItemPreview({
           {/* Right Column: Tabbed Breakdown Views */}
           <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
             {/* Tabs Header */}
-            <div style={{ display: 'flex', borderBottom: '1px solid var(--color-border-light)', background: 'var(--color-surface-0)', padding: '0 16px' }}>
+            <div style={{ display: 'flex', borderBottom: '1px solid var(--color-border-light)', background: 'var(--color-surface-0)', padding: '0 12px', overflowX: 'auto' }}>
               <button
                 type="button"
                 onClick={() => setActiveTab('overview')}
                 style={{
-                  padding: '12px 16px',
-                  fontSize: '0.85rem',
+                  padding: '12px 14px',
+                  fontSize: '0.82rem',
                   fontWeight: 900,
                   border: 'none',
                   borderBottom: activeTab === 'overview' ? '2px solid var(--color-brand-500)' : '2px solid transparent',
@@ -260,18 +315,20 @@ export function TopOrdersItemPreview({
                   display: 'flex',
                   alignItems: 'center',
                   gap: 6,
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
                 }}
               >
                 <BarChart2 size={14} />
-                Multi-Year Comparison
+                Multi-Year Breakdown
               </button>
 
               <button
                 type="button"
                 onClick={() => setActiveTab('monthly')}
                 style={{
-                  padding: '12px 16px',
-                  fontSize: '0.85rem',
+                  padding: '12px 14px',
+                  fontSize: '0.82rem',
                   fontWeight: 900,
                   border: 'none',
                   borderBottom: activeTab === 'monthly' ? '2px solid var(--color-brand-500)' : '2px solid transparent',
@@ -281,6 +338,8 @@ export function TopOrdersItemPreview({
                   display: 'flex',
                   alignItems: 'center',
                   gap: 6,
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
                 }}
               >
                 <Calendar size={14} />
@@ -291,8 +350,8 @@ export function TopOrdersItemPreview({
                 type="button"
                 onClick={() => setActiveTab('customers')}
                 style={{
-                  padding: '12px 16px',
-                  fontSize: '0.85rem',
+                  padding: '12px 14px',
+                  fontSize: '0.82rem',
                   fontWeight: 900,
                   border: 'none',
                   borderBottom: activeTab === 'customers' ? '2px solid var(--color-brand-500)' : '2px solid transparent',
@@ -302,10 +361,12 @@ export function TopOrdersItemPreview({
                   display: 'flex',
                   alignItems: 'center',
                   gap: 6,
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
                 }}
               >
                 <Users size={14} />
-                Customers ({item.customersCount})
+                Customer Breakdown ({item.customersCount})
               </button>
             </div>
 
@@ -313,7 +374,7 @@ export function TopOrdersItemPreview({
             <div style={{ padding: 20, flex: 1, overflowY: 'auto' }}>
               {activeTab === 'overview' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                  {/* YoY Banner */}
+                  {/* Period Trend Banner */}
                   {compareEnabled && compareYear && (
                     <div
                       style={{
@@ -328,7 +389,7 @@ export function TopOrdersItemPreview({
                     >
                       <div>
                         <div style={{ fontSize: '0.78rem', color: 'var(--color-text-secondary)', fontWeight: 800 }}>
-                          YoY Performance ({baseYear} vs {compareYear})
+                          Period Trend ({compareYear} ➔ {baseYear})
                         </div>
                         <div style={{ fontSize: '1.25rem', fontWeight: 950, color: item.yoyGrowthPct !== null && item.yoyGrowthPct >= 0 ? '#059669' : '#dc2626', display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
                           {item.yoyGrowthPct !== null && item.yoyGrowthPct >= 0 ? <TrendingUp size={18} /> : <TrendingDown size={18} />}
@@ -337,7 +398,7 @@ export function TopOrdersItemPreview({
                       </div>
 
                       <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)', fontWeight: 800 }}>Net Volume Diff</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)', fontWeight: 800 }}>Volume Growth</div>
                         <div style={{ fontSize: '1.1rem', fontWeight: 950, color: 'var(--color-text-primary)' }}>
                           {item.qtyDiff >= 0 ? '+' : ''}{fmtQty(item.qtyDiff)} pcs
                         </div>
@@ -392,7 +453,7 @@ export function TopOrdersItemPreview({
                     return (
                       <div key={yr} style={{ padding: 14, borderRadius: 8, background: 'var(--color-surface-1)', border: '1px solid var(--color-border-light)' }}>
                         <div style={{ fontSize: '0.85rem', fontWeight: 950, color: 'var(--color-text-primary)', marginBottom: 12 }}>
-                          Year {yr}
+                          Year {yr} {yr === baseYear && isCompare ? '(Base Year)' : ''}
                         </div>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: 6 }}>
                           {MONTH_NAMES.map((mName, mIdx) => {
@@ -427,27 +488,54 @@ export function TopOrdersItemPreview({
 
               {activeTab === 'customers' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  <div style={{ fontSize: '0.82rem', fontWeight: 900, color: 'var(--color-text-secondary)' }}>
-                    Customer Distribution for this Item
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ fontSize: '0.82rem', fontWeight: 900, color: 'var(--color-text-secondary)' }}>
+                      {isCompare ? `Customer Distribution (${baseYear})` : 'Customer Distribution for this Item (Combined)'}
+                    </div>
+                    {isCompare && (
+                      <span style={{ fontSize: '0.72rem', color: 'var(--color-brand-600)', fontWeight: 900 }}>
+                        Showing {baseYear} active customers
+                      </span>
+                    )}
                   </div>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
                     <thead>
                       <tr style={{ borderBottom: '1px solid var(--color-border-light)', color: 'var(--color-text-tertiary)', textAlign: 'left' }}>
                         <th style={{ padding: '8px 10px', fontWeight: 900 }}>Customer</th>
                         <th style={{ padding: '8px 10px', fontWeight: 900 }}>Group</th>
-                        <th style={{ padding: '8px 10px', fontWeight: 900, textAlign: 'right' }}>Total Qty</th>
-                        <th style={{ padding: '8px 10px', fontWeight: 900, textAlign: 'right' }}>Total Value</th>
+                        <th style={{ padding: '8px 10px', fontWeight: 900, textAlign: 'right' }}>
+                          {isCompare ? `${baseYear} Qty` : 'Total Qty'}
+                        </th>
+                        <th style={{ padding: '8px 10px', fontWeight: 900, textAlign: 'right' }}>
+                          {isCompare ? `${baseYear} Value` : 'Total Value'}
+                        </th>
+                        {isCompare && compareYear && (
+                          <th style={{ padding: '8px 10px', fontWeight: 900, textAlign: 'right' }}>
+                            {compareYear} Qty
+                          </th>
+                        )}
                       </tr>
                     </thead>
                     <tbody>
-                      {item.customerBreakdown.map((cust) => (
-                        <tr key={cust.custCode} style={{ borderBottom: '1px solid var(--color-border-light)' }}>
-                          <td style={{ padding: '10px', fontWeight: 950, color: 'var(--color-text-primary)' }}>{cust.custCode}</td>
-                          <td style={{ padding: '10px', fontWeight: 800, color: 'var(--color-text-secondary)' }}>{cust.groupLabel}</td>
-                          <td style={{ padding: '10px', fontWeight: 950, textAlign: 'right', color: 'var(--color-text-primary)' }}>{fmtQty(cust.qty)} pcs</td>
-                          <td style={{ padding: '10px', fontWeight: 950, textAlign: 'right', color: 'var(--color-brand-600)' }}>{fmt(cust.amount)}</td>
-                        </tr>
-                      ))}
+                      {item.customerBreakdown.map((cust) => {
+                        const displayQty = isCompare ? (cust.baseYearQty ?? cust.qty) : cust.qty;
+                        const displayAmnt = isCompare ? (cust.baseYearAmnt ?? cust.amount) : cust.amount;
+                        const compQty = cust.compareYearQty ?? 0;
+
+                        return (
+                          <tr key={cust.custCode} style={{ borderBottom: '1px solid var(--color-border-light)' }}>
+                            <td style={{ padding: '10px', fontWeight: 950, color: 'var(--color-text-primary)' }}>{cust.custCode}</td>
+                            <td style={{ padding: '10px', fontWeight: 800, color: 'var(--color-text-secondary)' }}>{cust.groupLabel}</td>
+                            <td style={{ padding: '10px', fontWeight: 950, textAlign: 'right', color: 'var(--color-text-primary)' }}>{fmtQty(displayQty)} pcs</td>
+                            <td style={{ padding: '10px', fontWeight: 950, textAlign: 'right', color: 'var(--color-brand-600)' }}>{fmt(displayAmnt)}</td>
+                            {isCompare && compareYear && (
+                              <td style={{ padding: '10px', fontWeight: 800, textAlign: 'right', color: 'var(--color-text-secondary)' }}>
+                                {compQty > 0 ? `${fmtQty(compQty)} pcs` : '-'}
+                              </td>
+                            )}
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

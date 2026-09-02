@@ -151,23 +151,6 @@ export function TopOrdersGalleryGrid({
                   {fmt(isCompare ? item.baseYearAmnt : item.totalCombinedAmnt)}
                 </span>
 
-                {compareEnabled && compareYear && item.yoyGrowthPct !== null && (
-                  <div
-                    style={{
-                      marginTop: 2,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 4,
-                      fontSize: '0.72rem',
-                      fontWeight: 800,
-                      color: item.yoyGrowthPct >= 0 ? '#4ade80' : '#f87171',
-                    }}
-                  >
-                    <span>
-                      {baseYear}: {fmtQty(item.baseYearQty)} pcs ({item.yoyGrowthPct >= 0 ? '▲ +' : '▼ '}{item.yoyGrowthPct.toFixed(1)}% | {item.qtyDiff >= 0 ? '+' : ''}{fmtQty(item.qtyDiff)} pcs vs {compareYear})
-                    </span>
-                  </div>
-                )}
               </div>
             </div>
 

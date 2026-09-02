@@ -14,6 +14,7 @@ import OrderVolumeSummaryPage from './pages/OrderVolumeSummaryPage';
 import SalesCustomerGroupDetail from './pages/SalesCustomerGroupDetail';
 import TopOrdersAnalyticsPage from './pages/TopOrdersAnalyticsPage';
 import TopOrdersGalleryPage from './pages/TopOrdersGalleryPage';
+import ProductionSummaryPage from './pages/ProductionSummaryPage';
 import ProcurementDocPage from './pages/document/ProcurementDocPage';
 import RequisitionDocPage from './pages/document/RequisitionDocPage';
 import SampleDocPage from './pages/document/SampleDocPage';
@@ -72,6 +73,7 @@ export default function App() {
             <Route path="/dashboard/Top-Order Lines" element={<Navigate to="/dashboard/top-orders" replace />} />
             <Route path={LEGACY_CUSTOMER_TRENDS_PATH} element={<LegacyCustomerTrendsRedirect />} />
             <Route path="/dashboard/sales-customer-detail" element={<SalesCustomerGroupDetail />} />
+            <Route path="/dashboard/production-summary" element={<ProductionSummaryPage />} />
 
             <Route path="/procurement/purchase" element={<ProcurementDocPage />} />
             <Route path="/procurement/receive" element={<ProcurementDocPage />} />

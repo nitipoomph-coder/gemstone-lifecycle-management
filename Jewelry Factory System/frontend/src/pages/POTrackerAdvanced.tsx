@@ -2,7 +2,7 @@ import Topbar from '../components/layout/Topbar';
 import OrderTable from '../components/dashboard/OrderTable';
 import CustomViewModal from '../components/dashboard/CustomViewModal';
 import CustomSelect from '../components/ui/CustomSelect';
-import { RefreshCw, AlertTriangle, Package, LayoutGrid, DollarSign, Filter, X, Layers } from 'lucide-react';
+import { RefreshCw, AlertTriangle, Filter, X, Layers } from 'lucide-react';
 import { usePOTrackerAdvanced } from '../hooks/usePOTrackerAdvanced';
 
 export default function POTrackerAdvanced() {
@@ -235,51 +235,77 @@ export default function POTrackerAdvanced() {
                   </>
                 )}
               </div>
+              {/* Refresh button moved to the KPI header below */}
+            </div>
+          </div>
 
-              <button
+          {/* ─── SMART KPI TOOLBAR (WCAG 2.1 AA) ─── */}
+          <div
+            role="banner"
+            aria-label="Tracker summary and data refresh"
+            style={{
+              padding: '12px 20px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: 16,
+              marginBottom: '24px',
+              border: '1px solid var(--color-border-light)',
+              borderRadius: '8px',
+              background: 'var(--color-surface-0)',
+              boxShadow: 'var(--shadow-panel)'
+            }}
+          >
+            {/* Left Side: Priority Metrics (ACTIVE, LATE, PENDING) */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '24px', flexWrap: 'wrap' }}>
+              {[
+                { id: 'total', label: 'ACTIVE ORDERS', value: filtered.length.toLocaleString(), color: 'var(--color-brand-600)' },
+                { id: 'late', label: 'LATE', value: delayedCount.toLocaleString(), color: 'var(--color-danger-600)' },
+                { id: 'pending', label: 'PENDING', value: pendingCount.toLocaleString(), color: 'var(--color-warning-700)' },
+              ].map((stat) => (
+                <div key={stat.id} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--color-text-tertiary)', textTransform: 'capitalize', letterSpacing: '0.05em' }}>{stat.label}</span>
+                  <span style={{ fontSize: '1.2rem', fontWeight: 800, color: stat.color, fontFamily: 'var(--font-display)', lineHeight: 1 }}>{stat.value}</span>
+                </div>
+              ))}
+              
+              <div style={{ width: 1, height: 24, background: 'var(--color-border-strong)', margin: '0 8px' }} />
+
+              {/* Secondary Metrics (QTY, AMOUNT) */}
+              {[
+                { id: 'qty', label: 'TOTAL QTY', value: totalQty.toLocaleString(), color: 'var(--color-text-primary)' },
+                { id: 'amount', label: 'TOTAL AMOUNT', value: `$${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, color: 'var(--color-text-primary)' },
+              ].map((stat) => (
+                <div key={stat.id} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <span style={{ fontSize: '0.6rem', fontWeight: 700, color: 'var(--color-text-quaternary)', textTransform: 'capitalize' }}>{stat.label}</span>
+                  <span style={{ fontSize: '0.95rem', fontWeight: 700, color: stat.color, fontFamily: 'var(--font-display)', lineHeight: 1 }}>{stat.value}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Right Side: Refresh Button integrated with summary context */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+               <span style={{ fontSize: '0.7rem', color: 'var(--color-text-tertiary)', fontWeight: 700 }}>
+                 Last updated: Just now
+               </span>
+               <button
                 onClick={load}
                 disabled={loading}
                 style={{
-                  padding: '8px 12px', borderRadius: '8px', background: 'var(--color-surface-0)', color: 'var(--color-text-primary)',
+                  padding: '8px 16px', borderRadius: '8px',
+                  background: 'var(--color-surface-0)', color: 'var(--color-text-primary)',
                   border: '1px solid var(--color-border-strong)', fontSize: '0.75rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '6px',
-                  cursor: 'pointer', transition: 'all 0.2s ease'
+                  cursor: 'pointer', transition: 'all 0.2s ease',
+                  boxShadow: '0 2px 8px color-mix(in srgb, var(--color-surface-900) 4%, transparent)'
                 }}
                 className="hover:bg-[var(--color-surface-1)] active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
+                title="Refresh PO Data"
               >
                 <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
                 {loading ? 'REFRESHING...' : 'REFRESH'}
               </button>
             </div>
-          </div>
-
-          {/* ─── KPI TILES (Flat icon-circle, static display — consistent with PCC Subcontract Management) ─── */}
-          <div className="po-kpi-grid">
-            {[
-              { id: 'total', label: 'ACTIVE ORDERS', value: filtered.length.toLocaleString(), color: 'var(--color-brand-500)', icon: <Package size={16} /> },
-              { id: 'qty', label: 'TOTAL QTY', value: totalQty.toLocaleString(), color: 'var(--color-brand-500)', icon: <LayoutGrid size={16} /> },
-              { id: 'amount', label: 'TOTAL AMOUNT', value: `$${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, color: 'var(--color-brand-500)', icon: <DollarSign size={16} /> },
-              { id: 'pending', label: 'PENDING', value: pendingCount.toLocaleString(), color: 'var(--color-warning-600)', icon: <AlertTriangle size={16} /> },
-              { id: 'late', label: 'LATE', value: delayedCount.toLocaleString(), color: 'var(--color-danger-600)', icon: <RefreshCw size={16} /> },
-            ].map((stat) => (
-              <div
-                key={stat.id}
-                style={{
-                  background: 'var(--color-surface-0)',
-                  padding: '10px 14px', borderRadius: '8px',
-                  border: '1px solid var(--color-border-light)',
-                  display: 'flex', alignItems: 'center', gap: '10px',
-                  boxShadow: '0 2px 8px color-mix(in srgb, var(--color-surface-900) 4%, transparent)',
-                }}
-              >
-                <div style={{ width: 32, height: 32, borderRadius: '8px', flexShrink: 0, background: `color-mix(in srgb, ${stat.color} 14%, var(--color-surface-1))`, color: stat.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  {stat.icon}
-                </div>
-                <div>
-                  <div style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--color-text-secondary)', letterSpacing: '0.02em' }}>{stat.label}</div>
-                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: stat.color, margin: '2px 0 0', fontFamily: 'var(--font-display)', letterSpacing: '-0.02em', lineHeight: 1 }}>{stat.value}</div>
-                </div>
-              </div>
-            ))}
           </div>
 
           {/* ─── DATA TABLE — outer box owns the leftover viewport space (invisible, no chrome);

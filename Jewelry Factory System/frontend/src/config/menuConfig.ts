@@ -45,7 +45,7 @@ export const menuConfig: NavMenuGroup[] = [
     ],
   },
 
-  // PO tracker
+  // PO tracker and Production Summary
   {
     id: 'order-tracker',
     label: 'Production',
@@ -54,6 +54,7 @@ export const menuConfig: NavMenuGroup[] = [
     roles: ['admin', 'sales'],
     items: [
       { id: 'po-tracker', label: 'PO Tracker', path: '/po-tracker' },
+      { id: 'pro-sum', label: 'Production Summary', path: '/dashboard/production-summary' },
     ],
   },
 

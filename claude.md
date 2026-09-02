@@ -44,12 +44,25 @@
 
 **Design Notes (POTrackerAdvanced.tsx / OrderTable.tsx):**
 - **Filters — Toolbar + Popover + Chips (modern table-filter pattern, ไม่ใช่ sidebar)**: Group toggle และ Status toggle แสดงตลอดเวลาในแถบเดียวบรรทัดเดียว ส่วนฟิลเตอร์รอง (Week/Customer/PO/Type/ShipTo/Date Range) ซ่อนอยู่หลังปุ่ม "Filters" (มี badge บอกจำนวนที่เลือกไว้) กดแล้วเปิดเป็น popover ลอย (ใช้ pattern เดียวกับ View Columns popover ใน `OrderTable.tsx`) — เมื่อมีฟิลเตอร์ที่เลือกไว้ จะโชว์เป็น chip ที่ลบทีละตัวได้ใต้แถบ toolbar เพื่อให้เห็นว่าเลือกอะไรไว้โดยไม่ต้องเปิด popover ซ้ำ — เมื่อไม่มีฟิลเตอร์ใดเลือกไว้ พื้นที่ด้านบนจะเหลือแค่แถบ toolbar บรรทัดเดียว (โล่ง ไม่กระจุก) อ้างอิงจาก pattern ของ Linear/Notion/GitHub Issues (ไม่ใช่ sidebar แบบ BI dashboard เพราะ PO Tracker เป็นตารางข้อมูลเป็นหลัก ไม่ใช่ multi-chart report)
-- **KPI Tiles**: เป็น flat icon-circle แบบ static display **ไม่ clickable** (ไม่มี onClick/hover-scale/gradient/glassmorphism) — ดีไซน์อ้างอิงจากระบบพี่น้อง "PCC System: Subcontract Management" เพื่อความสอดคล้องในองค์กร ตัวเลขแต่ละ tile ใช้สีตามความหมาย (semantic color)
+- **KPI Tiles → Smart KPI Toolbar**: เดิมเป็น flat icon-circle grid 5 ใบแยกกัน — **ปรับแล้ว** เป็น inline toolbar แถบเดียว: Priority Metrics (ACTIVE ORDERS, LATE, PENDING) แสดงตัวเลขใหญ่ด้านซ้าย | เส้นแบ่ง | Secondary Metrics (TOTAL QTY, TOTAL AMOUNT) ขนาดเล็กกว่า | ปุ่ม Refresh + "Last updated" ด้านขวา — ดีไซน์ align กับ Top Item Gallery Summary Header
 - **Pagination — Pinned, ไม่ต้องเลื่อนจอ**: รวมเป็นแถบเดียวที่ด้านล่างตาราง (Showing X–Y of Z + page size selector + Prev/page numbers/Next ทั้งหมดอยู่แถวเดียวกัน) — `OrderTable.tsx` ไม่รับ props `totalCount`/`pageSize`/`onPageSizeChange` อีกต่อไป เพราะ Pagination UI ทั้งหมดย้ายไปอยู่ใน `POTrackerAdvanced.tsx` แล้ว และ Data Table card ใช้ flex column (`flex:1, minHeight:0`) ให้ตารางขยายเต็มพื้นที่ที่เหลือของจอเสมอ ส่วน scroll container ใน `OrderTable.tsx` เปลี่ยนจาก `maxHeight: calc(100vh - 280px)` (เลขคงที่ที่ไม่ตรงกับความสูงจริงของ Filters/KPI) เป็น `flex:1, minHeight:0` แทน — ทำให้แถบ pagination ติดอยู่ด้านล่างของจอเสมอ ไม่ต้อง scroll หน้าทั้งหน้าเพื่อกด Next
 - **Line Detail Drawer & Order Line Table**:
   - ปรับ `OrderLineTable.tsx` ไม่ให้ตัดคำ (Wrap text) ในคอลัมน์แคบๆ เช่น 'Plating' เพื่อให้อ่านง่าย
   - พื้นหลังกล่องรูปใน `LineDetailDrawer.tsx` ใช้ `--color-product-canvas` เพื่อให้รูปสินค้าอ่านง่ายทุกธีม และปุ่มปิดใช้รูปแบบเดียวกับ Lightbox
 - **Column Presets Synchronization**: ปรับปรุงค่าเริ่มต้นของกลุ่มคอลัมน์ (Sales, Production, All) ใน `orderDetailColumns.ts` ให้ตรงกับ Checkboxes ของระบบ VB.net เดิมแบบ 100% (เพิ่ม `QCDate`, `FinishQty` ใน Sales และ `OrdRemark` ใน Production)
+
+### Key Feature: Top Item Gallery
+
+หน้าแสดง Top-Ranked Items (สินค้าขายดี) แบบ Gallery Card Grid พร้อมระบบเปรียบเทียบปีต่อปี
+
+**Design Notes (TopOrdersGalleryPage.tsx / TopOrdersGalleryGrid.tsx / TopOrdersSkeleton.tsx):**
+- **Summary Header**: แถบด้านบนแสดง scope (Combined/Compare mode) + จำนวนรายการ Ranked + KPI Cards สำหรับ Volume & Value ด้วย `GallerySummaryKpi` component — รองรับทั้ง Combined mode (รวมทุกปี) และ Compare mode (เทียบ Base vs Compare year พร้อม % delta)
+- **Gallery Grid**: ใช้ CSS Grid responsive (`gallery-grid` class) ด้วย `repeat(auto-fill, minmax(clamp(260px, 16vw, 320px), 1fr))` แสดงการ์ดสินค้าพร้อมรูปจาก Photo Bridge
+- **Loading State — Skeleton (`TopOrdersSkeleton.tsx`)**: แสดง 2 ส่วน:
+  1. **Summary Header Skeleton** — จำลองแถบ KPI ด้านบน (ชื่อหัวข้อ + กล่อง Volume/Value placeholder) เพื่อลด Layout Shift
+  2. **Gallery Grid Skeleton** — 15 การ์ด placeholder ใช้ `gallery-grid` class เดียวกับของจริง แต่ละการ์ดมี: Header Row, Image Area (capsule shape), Footer Row 1-2 พร้อม shimmer animation (`linear-gradient 110deg, background-size 400%, 1.5s linear infinite`)
+- **Filter Loading Overlay**: เมื่อเปลี่ยน filter (ไม่ใช่ initial load) จะแสดง semi-transparent overlay + spinner กลางจอ พร้อม `backdrop-filter: blur(2px)` และ `pointer-events: all` ป้องกันการกดระหว่างโหลด
+- **Perspective Modes**: รองรับ 2 โหมด — `combined` (รวมทุกปี) และ `compare` (เทียบ 2 ปี head-to-head) สลับได้จาก Topbar
 ---
 
 ## Tech Stack

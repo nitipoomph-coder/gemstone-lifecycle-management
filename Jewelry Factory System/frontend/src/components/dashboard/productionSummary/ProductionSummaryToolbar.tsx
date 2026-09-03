@@ -1,4 +1,4 @@
-import { PRODUCTION_STEPS, PRODUCTION_MODES, MONTH_FULL, getYearOptions } from '../../../config/productionSummaryConfig';
+import { PRODUCTION_STEPS, PRODUCTION_MODES, MONTH_SHORT, getYearOptions } from '../../../config/productionSummaryConfig';
 import type { ProductionStep, ProductionMode } from '../../../config/productionSummaryConfig';
 
 interface ToolbarProps {
@@ -72,8 +72,8 @@ export function ProductionSummaryToolbar(props: ToolbarProps) {
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'flex-end' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
           <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-secondary)' }}>Production Step</label>
-          <select 
-            value={step} 
+          <select
+            value={step}
             onChange={e => setStep(e.target.value)}
             style={{ padding: '6px 12px', borderRadius: '4px', border: '1px solid var(--color-border-light)', background: 'var(--color-ui-surface)', color: 'var(--color-text-primary)' }}
           >
@@ -85,8 +85,8 @@ export function ProductionSummaryToolbar(props: ToolbarProps) {
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
           <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-secondary)' }}>Mode</label>
-          <select 
-            value={mode} 
+          <select
+            value={mode}
             onChange={e => setMode(e.target.value)}
             style={{ padding: '6px 12px', borderRadius: '4px', border: '1px solid var(--color-border-light)', background: 'var(--color-ui-surface)', color: 'var(--color-text-primary)' }}
           >
@@ -98,8 +98,8 @@ export function ProductionSummaryToolbar(props: ToolbarProps) {
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
           <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-secondary)' }}>Year</label>
-          <select 
-            value={year} 
+          <select
+            value={year}
             onChange={e => setYear(Number(e.target.value))}
             style={{ padding: '6px 12px', borderRadius: '4px', border: '1px solid var(--color-border-light)', background: 'var(--color-ui-surface)', color: 'var(--color-text-primary)' }}
           >
@@ -111,8 +111,8 @@ export function ProductionSummaryToolbar(props: ToolbarProps) {
           <>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
               <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-secondary)' }}>From Week</label>
-              <select 
-                value={fromWeek} 
+              <select
+                value={fromWeek}
                 onChange={e => setFromWeek(Number(e.target.value))}
                 style={{ padding: '6px 12px', borderRadius: '4px', border: '1px solid var(--color-border-light)', background: 'var(--color-ui-surface)', color: 'var(--color-text-primary)' }}
               >
@@ -121,8 +121,8 @@ export function ProductionSummaryToolbar(props: ToolbarProps) {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
               <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-secondary)' }}>To Week</label>
-              <select 
-                value={toWeek} 
+              <select
+                value={toWeek}
                 onChange={e => setToWeek(Number(e.target.value))}
                 style={{ padding: '6px 12px', borderRadius: '4px', border: '1px solid var(--color-border-light)', background: 'var(--color-ui-surface)', color: 'var(--color-text-primary)' }}
               >
@@ -135,13 +135,13 @@ export function ProductionSummaryToolbar(props: ToolbarProps) {
         {tab === 'month' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
             <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-secondary)' }}>Month</label>
-            <select 
-              value={month} 
+            <select
+              value={month}
               onChange={e => setMonth(Number(e.target.value))}
               style={{ padding: '6px 12px', borderRadius: '4px', border: '1px solid var(--color-border-light)', background: 'var(--color-ui-surface)', color: 'var(--color-text-primary)' }}
             >
-              {MONTH_FULL.map((m: string, i: number) => (
-                <option key={i+1} value={i+1}>{m}</option>
+              {MONTH_SHORT.map((m: string, i: number) => (
+                <option key={i + 1} value={i + 1}>{m}</option>
               ))}
             </select>
           </div>
@@ -150,7 +150,7 @@ export function ProductionSummaryToolbar(props: ToolbarProps) {
         <div style={{ flex: 1 }} />
 
         <div style={{ display: 'flex', gap: '8px' }}>
-          <button 
+          <button
             onClick={onShow}
             disabled={loading}
             style={{
@@ -166,8 +166,8 @@ export function ProductionSummaryToolbar(props: ToolbarProps) {
           >
             {loading ? 'Loading...' : 'Show / แสดงผล'}
           </button>
-          
-          <button 
+
+          <button
             onClick={onPrint}
             style={{
               padding: '6px 16px',

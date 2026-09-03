@@ -73,17 +73,17 @@
   /* Text */
   --color-text-primary: oklch(0.95 0.01 250);
   --color-text-secondary: oklch(0.80 0.02 250);
-  --color-text-tertiary: oklch(0.65 0.03 250);
-  --color-text-quaternary: oklch(0.61 0.02 250);
+  --color-text-tertiary: oklch(0.68 0.03 250);
+  --color-text-quaternary: oklch(0.66 0.02 250);
   --color-text-inverse: oklch(0.15 0.02 250);
   --color-overlay-text: oklch(0.98 0.01 250);
   --color-overlay-text-muted: oklch(0.82 0.02 250);
   --color-product-canvas: oklch(0.99 0.002 260);
 
-  /* Border */
-  --color-border-light: oklch(0.42 0.03 250);
-  --color-border-default: oklch(0.51 0.03 250);
-  --color-border-strong: oklch(0.60 0.03 250);
+  /* Border - Enhanced for WCAG >= 3:1 Non-text Contrast (with 10% safety margin) */
+  --color-border-light: oklch(0.51 0.03 250);
+  --color-border-default: oklch(0.57 0.03 250);
+  --color-border-strong: oklch(0.65 0.03 250);
 
   /* Sidebar */
   --color-sidebar: oklch(0.16 0.03 250);
@@ -111,6 +111,33 @@
   --color-customer-group-n083: var(--color-chart-5);
   --color-customer-group-mlt: var(--color-chart-6);
   --color-customer-group-general: var(--color-text-tertiary);
+
+  /* Production Summary Table Row Backgrounds */
+  --color-prod-total-row-bg: color-mix(in srgb, var(--color-chart-1) 10%, var(--color-surface-0));
+  --color-prod-avg-row-bg: color-mix(in srgb, var(--color-chart-2) 10%, var(--color-surface-0));
+
+  /* Semantic Status Role Tokens — soft bg for badges / chips */
+  --color-status-success-soft: color-mix(in srgb, var(--color-success-500) 10%, var(--color-surface-0));
+  --color-status-warning-soft: color-mix(in srgb, var(--color-warning-500) 10%, var(--color-surface-0));
+  --color-status-danger-soft: color-mix(in srgb, var(--color-danger-500) 10%, var(--color-surface-0));
+  --color-status-info-soft: color-mix(in srgb, var(--color-info-500) 10%, var(--color-surface-0));
+
+  /* Production Tracking Stepper Semantic Tokens */
+  --color-track-done: var(--color-success-500);
+  --color-track-done-text: var(--color-success-600);
+  --color-track-done-border: var(--color-success-500);
+  --color-track-done-soft: var(--color-status-success-soft);
+  --color-track-current: var(--color-warning-500);
+  --color-track-current-text: var(--color-warning-600);
+  --color-track-current-border: var(--color-warning-600);
+  --color-track-current-soft: var(--color-status-warning-soft);
+  --color-track-current-ring: color-mix(in srgb, var(--color-warning-500) 30%, transparent);
+  --color-track-pending: var(--color-surface-2);
+  --color-track-pending-text: var(--color-text-quaternary);
+  --color-track-pending-border: var(--color-border-default);
+  --color-track-line: var(--color-border-default);
+  --color-track-line-active: var(--color-success-500);
+  --color-track-progress-fill: var(--color-info-500);
 
   /* Table Colors */
   --color-table-header: var(--color-surface-2);
@@ -233,7 +260,7 @@
 
 .app-panel {
   min-width: 0;
-  border: 1px solid var(--color-border-light);
+  border: 1px solid var(--color-border-default);
   border-radius: 8px;
   background: var(--color-ui-surface);
   box-shadow: var(--shadow-panel);
@@ -245,6 +272,87 @@
   background: linear-gradient(90deg, var(--color-surface-2) 25%, var(--color-surface-1) 50%, var(--color-surface-2) 75%);
   background-size: 220% 100%;
   animation: skeletonShimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes progressStripesMotion {
+  from {
+    background-position: 28px 0;
+  }
+  to {
+    background-position: 0 0;
+  }
+}
+
+.progress-bar-stripes-active {
+  background-image: linear-gradient(
+    45deg,
+    color-mix(in srgb, white 22%, transparent) 25%,
+    transparent 25%,
+    transparent 50%,
+    color-mix(in srgb, white 22%, transparent) 50%,
+    color-mix(in srgb, white 22%, transparent) 75%,
+    transparent 75%,
+    transparent
+  );
+  background-size: 28px 28px;
+  animation: progressStripesMotion 1s linear infinite;
+}
+
+@keyframes donutExecutiveGlow {
+  0%, 100% {
+    filter: drop-shadow(0 0 2px color-mix(in srgb, var(--color-warning-500) 25%, transparent));
+    opacity: 0.95;
+  }
+  50% {
+    filter: drop-shadow(0 0 5px color-mix(in srgb, var(--color-warning-500) 55%, transparent));
+    opacity: 1;
+  }
+}
+
+@keyframes donutExecutiveSpin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.donut-pulse-active {
+  animation: donutExecutiveGlow 3s ease-in-out infinite;
+}
+
+.donut-loading-spin {
+  transform-origin: 59px 59px;
+  animation: donutExecutiveSpin 1.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes stepPulseBlink {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 0 4px var(--color-track-current-soft), 0 0 8px color-mix(in srgb, var(--color-warning-500) 60%, transparent);
+  }
+  50% {
+    opacity: 0.6;
+    box-shadow: 0 0 0 2px var(--color-track-current-soft);
+  }
+}
+
+.step-current-blink {
+  animation: stepPulseBlink 2.4s ease-in-out infinite;
+}
+
+@keyframes textBlink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+.text-current-blink {
+  animation: textBlink 2.4s ease-in-out infinite;
 }
 
 .dashboard-stat-grid,
@@ -921,12 +1029,12 @@ body * {
     --color-text-primary: oklch(0.96 0.01 85);
     --color-text-secondary: oklch(0.84 0.015 85);
     --color-text-tertiary: oklch(0.72 0.015 85);
-    --color-text-quaternary: oklch(0.59 0.01 85);
+    --color-text-quaternary: oklch(0.65 0.01 85);
 
     --color-text-inverse: oklch(0.12 0.01 85);
-    --color-border-light: oklch(0.41 0.01 80);
-    --color-border-default: oklch(0.49 0.015 80);
-    --color-border-strong: oklch(0.58 0.02 80);
+    --color-border-light: oklch(0.50 0.015 80);
+    --color-border-default: oklch(0.58 0.02 80);
+    --color-border-strong: oklch(0.66 0.025 80);
 
     --color-sidebar: oklch(0.10 0.01 260);
     --color-sidebar-hover: oklch(0.18 0.02 260);
@@ -981,6 +1089,27 @@ body * {
     --color-proc-qc: oklch(0.62 0.14 50);
     --color-proc-packing: oklch(0.50 0.10 140);
 
+    /* Semantic Status Soft Badges for Dark Gold */
+    --color-status-success-soft: color-mix(in srgb, var(--color-success-500) 18%, var(--color-surface-0));
+    --color-status-warning-soft: color-mix(in srgb, var(--color-warning-500) 18%, var(--color-surface-0));
+    --color-status-danger-soft: color-mix(in srgb, var(--color-danger-500) 18%, var(--color-surface-0));
+    --color-status-info-soft: color-mix(in srgb, var(--color-info-500) 18%, var(--color-surface-0));
+
+    --color-track-done-soft: color-mix(in srgb, var(--color-success-500) 20%, var(--color-surface-0));
+    --color-track-done-text: var(--color-success-500);
+    --color-track-done-border: color-mix(in srgb, var(--color-success-500) 40%, transparent);
+
+    --color-track-current-soft: color-mix(in srgb, var(--color-warning-500) 20%, var(--color-surface-0));
+    --color-track-current-text: var(--color-warning-500);
+    --color-track-current-border: color-mix(in srgb, var(--color-warning-500) 45%, transparent);
+    --color-track-current-ring: color-mix(in srgb, var(--color-warning-500) 30%, transparent);
+
+    --color-track-pending: var(--color-surface-2);
+    --color-track-pending-text: var(--color-text-tertiary);
+    --color-track-pending-border: var(--color-border-default);
+    --color-track-line: var(--color-border-default);
+    --color-track-line-active: var(--color-success-500);
+
     /* Table Colors */
     --color-table-header: var(--color-surface-2);
     --color-table-row-alt: color-mix(in srgb, var(--color-surface-1) 65%, var(--color-surface-0));
@@ -1026,14 +1155,14 @@ body * {
     /* Text (Darker for light background) */
     --color-text-primary: oklch(0.15 0.02 260);
     --color-text-secondary: oklch(0.35 0.02 260);
-    --color-text-tertiary: oklch(0.50 0.01 260);
-    --color-text-quaternary: oklch(0.56 0.01 260);
+    --color-text-tertiary: oklch(0.48 0.01 260);
+    --color-text-quaternary: oklch(0.51 0.01 260);
     --color-text-inverse: oklch(0.99 0.01 260);
 
-    /* Border */
-    --color-border-light: oklch(0.72 0.01 260);
-    --color-border-default: oklch(0.66 0.015 260);
-    --color-border-strong: oklch(0.55 0.02 260);
+    /* Border - Enhanced for WCAG >= 3:1 Non-text Contrast (with 10% safety margin) */
+    --color-border-light: oklch(0.62 0.015 260);
+    --color-border-default: oklch(0.54 0.02 260);
+    --color-border-strong: oklch(0.44 0.025 260);
 
     /* Sidebar (Crisp White with Gold/Blue accents) */
     --color-sidebar: var(--color-surface-0);
@@ -1087,6 +1216,27 @@ body * {
     --color-proc-plating: oklch(0.55 0.14 85);
     --color-proc-qc: oklch(0.50 0.16 45);
     --color-proc-packing: oklch(0.40 0.12 135);
+
+    /* Semantic Status Soft Badges for Light Mode */
+    --color-status-success-soft: color-mix(in srgb, var(--color-success-500) 12%, var(--color-surface-0));
+    --color-status-warning-soft: color-mix(in srgb, var(--color-warning-500) 14%, var(--color-surface-0));
+    --color-status-danger-soft: color-mix(in srgb, var(--color-danger-500) 12%, var(--color-surface-0));
+    --color-status-info-soft: color-mix(in srgb, var(--color-info-500) 12%, var(--color-surface-0));
+
+    --color-track-done-soft: color-mix(in srgb, var(--color-success-500) 14%, var(--color-surface-0));
+    --color-track-done-text: var(--color-success-700);
+    --color-track-done-border: color-mix(in srgb, var(--color-success-500) 30%, transparent);
+
+    --color-track-current-soft: color-mix(in srgb, var(--color-warning-500) 16%, var(--color-surface-0));
+    --color-track-current-text: var(--color-warning-600);
+    --color-track-current-border: color-mix(in srgb, var(--color-warning-500) 35%, transparent);
+    --color-track-current-ring: color-mix(in srgb, var(--color-warning-500) 25%, transparent);
+
+    --color-track-pending: var(--color-surface-2);
+    --color-track-pending-text: var(--color-text-secondary);
+    --color-track-pending-border: var(--color-border-default);
+    --color-track-line: var(--color-border-default);
+    --color-track-line-active: var(--color-success-500);
 
     /* Table Colors */
     --color-table-header: var(--color-surface-2);

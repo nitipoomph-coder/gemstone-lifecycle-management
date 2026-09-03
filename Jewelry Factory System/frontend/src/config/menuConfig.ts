@@ -55,6 +55,7 @@ export const menuConfig: NavMenuGroup[] = [
     items: [
       { id: 'po-tracker', label: 'PO Tracker', path: '/po-tracker' },
       { id: 'pro-sum', label: 'Production Summary', path: '/dashboard/production-summary' },
+      { id: 'fbe-order-track', label: 'FBE Order Tracker', path: '/dashboard/fbe-order-track' },
     ],
   },
 

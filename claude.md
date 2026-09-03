@@ -29,6 +29,7 @@
 | ห้องตัวอย่าง            | SSA, SIM                             | 🟡 DocumentLayout done |
 | ตรวจสอบและนับสต็อก      | Check Dispatch/Sample/Purchase/Stock | ⬜ Placeholder      |
 | Production / PO Tracker | —                                  | ✅ Live (core feature, admin only) |
+| FBE Order Tracker       | —                                    | ✅ Live (FBE 17-Step Production Tracker) |
 | Order Trends           | —                                    | ✅ Order volume trends and evidence |
 | สต็อกอะไหล่             | SP-Order, SP-Issue, SP-Receive, …    | ⬜ Placeholder      |
 | งานเหมา (Subcontract Management) | —                           | 🟡 UI Preview (1/3, ไม่มี Backend) |
@@ -867,3 +868,83 @@ Inside route handlers, add only short section labels for important boxes/queries
 - **SalesCustomerGroupAnalytics**: Refactored massive 1,700+ line component into modular sub-components for KPIs, charts, filters, and drill-down tables.
 - **TopOrdersGalleryPage**: Separated gallery cards and ranking tables into dedicated sub-components.
 - Centralized UI notifications into a shared Toast component for consistent error and success handling across the application.
+
+---
+
+## 2026-09-03 FBE Order Tracker Module (ระบบติดตามสถานะคำสั่งผลิต FBE)
+
+### 1. ภาพรวมและเส้นทางไฟล์ (Module Overview & File Architecture)
+- **Route**: `/production/fbe-order-track`
+- **Frontend Page**: `src/pages/FBEOrderTrackPage.tsx`
+- **Stepper Component**: `src/components/dashboard/orderTracking/OrderTrackStepper.tsx`
+- **Frontend Service**: `src/services/orderTrackingAPI.ts` -> `getOrderTracking(ordNo, ordLineNo)`
+- **Backend Route**: `backend/routes/orderTracking.js` (`GET /api/order-tracking/track?ordNo=...&ordLineNo=...`)
+- **Photo Bridge Endpoints**:
+  - Primary: `/api/photos/ps/:itemNo` (ภาพถ่ายจริงจาก Chong Photo)
+  - Fallback: `/api/photos/cad/:itemNo` (ภาพเรนเดอร์ CAD)
+  - Helper: `src/utils/photoUrl.ts` (`psPhotoUrl`, `attachPhotoFallback`)
+
+### 2. แหล่งที่มาของข้อมูลและการเชื่อมโยงฐานข้อมูล (Data Sources & Schema Mapping)
+1. **ข้อมูลคำสั่งผลิตและสเปกชิ้นงาน (Order Header & Detail Specs)**:
+   - ตาราง `OrdHD`: ดึง `CustCode`, `OrdDate`, `DueDate`, `PONo`
+   - ตาราง `OrdDT`: ดึง `ItemNo`, `ItemMat`, `ItemCust`, `ItemDesc`, `ItemStone`, `ItemPlate`, `ItemSize`, `ItemQty`, `OrdLineNo`
+   - เงื่อนไข SQL: `OrdHD.OrdNo = @ordNo AND OrdDT.OrdLineNo = @ordLineNo`
+2. **สายการผลิต 17 ขั้นตอนของ FBE (17 Production Steps Pipeline)**:
+   - ลำดับขั้นตอน:
+     1. Grind (ลงหิน - `GR`)
+     2. Tumbling 1 (ร่อน 1 - `TB`, Dept: `TB1`)
+     3. Assemble 1 (ประกอบ 1 - `AS`, Dept: `AS1`)
+     4. Laser 1 (เลเซอร์ 1 - `LS`, Dept: `LS1`)
+     5. Filing 1 (กระดาษทราย 1 - `FL`, Dept: `FL1`)
+     6. Tumbling 2 (ร่อน 2 - `TB`, Dept: `TB2`)
+     7. Epoxy (ทาสี - `EP`)
+     8. Filing 2 (กระดาษทราย 2 - `FL`, Dept: `FL2`)
+     9. Lapping (ตัดเหลี่ยม - `LP`)
+     10. Copper (ชุบทองแดง - `CP`)
+     11. Polish 1 (ขัดเงา 1 - `PL`, Dept: `PL1`)
+     12. Assemble 2 (ประกอบ 2 - `AS`, Dept: `AS2`)
+     13. Laser 2 (เลเซอร์ 2 - `LS`, Dept: `LS2`)
+     14. Filing 3 (กระดาษทราย 3 - `FL`, Dept: `FL3`)
+     15. Polish 2 (ขัดเงา 2 - `PL`, Dept: `PL2`)
+     16. IQC (ตรวจสอบ - `IQ`)
+     17. Plating (ชุบ - `PT`)
+3. **การอ่านยอดส่ง (Send) และยอดรับ (Receive)**:
+   - ฝั่งส่ง: ตาราง `${prefix}SenHD` (DocuDate, DocuStatus, DocuNo) INNER JOIN `${prefix}SenDT` (SenQty) WHERE `ProFac = 'FBE' AND OrdNo = @ordNo AND OrdLineNo = @ordLineNo`
+   - ฝั่งรับ: ตาราง `${prefix}RecHD` (DocuDate, DocuNo) INNER JOIN `${prefix}RecDT` (RecQty) WHERE `ProFac = 'FBE' AND OrdNo = @ordNo AND OrdLineNo = @ordLineNo`
+   - ยอดคงเหลือประจำขั้นตอน: `Balance = RecQty - SenQty`
+4. **กฎการประเมินสถานะของขั้นตอน (Step Status Logic)**:
+   - `status = 2` (**เสร็จสิ้น / Done**): มีเอกสาร และ `balance === 0` (หรือส่งงานต่อครบแล้ว)
+   - `status = 1` (**กำลังทำ / In-Progress / WIP**): มีเอกสารรับเข้า และ `balance > 0`
+   - `status = 0` (**รอ / Pending**): ยังไม่มีการบันทึกเอกสารเข้าสู่ขั้นตอนนี้
+
+### 3. กฎและข้อกำหนดการออกแบบ (Design Standards & Strict Guardrails)
+1. **ห้าม Hardcode สีเด็ดขาด (Strict No Hardcoded Colors)**:
+   - ทุกองค์ประกอบใน `FBEOrderTrackPage.tsx` และ `OrderTrackStepper.tsx` ต้องใช้ CSS Design Tokens จาก `src/index.css` 100%
+   - ผ่านการตรวจสอบโดย `npm run lint:colors` (0 violations)
+   - คอนทราสต์ต้องผ่านเกณฑ์ WCAG 2.1 Level AA (ข้อความ >= 4.5:1, เส้นขอบและเส้นเชื่อมต่อ >= 3.0:1)
+2. **โครงสร้าง 2 คอลัมน์แบบ Single-Screen Fit (จอไม่เลื่อน)**:
+   - **ฝั่งซ้าย (~75%)**:
+     - *Order Information*: กริด 3 คอลัมน์ แสดงข้อมูลครบถ้วน ตัวอักษรขนาด 12.5px - 13.5px อ่านชัดบนจอโปรเจคเตอร์
+     - *Active Step Highlight Banner*: แถบสีส้มอ่อนระบุขั้นตอนปัจจุบันและยอดขั้นตอนที่ทำเสร็จแล้ว
+     - *Production Progress*: ไทม์ไลน์ 17 ขั้นตอนแบบเชื่อมต่อสมบูรณ์
+     - *Step History Table*: ตารางบันทึกประวัติการรับ-ส่งงาน จัดขอบชัดเจน เลื่อนเฉพาะภายในกล่อง
+   - **ฝั่งขวา (~25%)**:
+     - *Item Photo*: แสดงรูปถ่ายขนาดกระชับ 375px จัดวางรูปกึ่งกลางอย่างพอดี ไม่มีกรอบซ้อน และไม่มีแคปชันท้ายรูป
+     - *Summary Dashboard*: วงแหวน Donut Gauge พร้อมสถิติ 4 ตัวเลขสถานะขนาดใหญ่แบบไร้กรอบ
+3. **ช่องค้นหาและการสแตนด์บาย (Search Bar & Empty Standby)**:
+   - ค่าเริ่มต้นของ `ordNo` และ `ordLineNo` เป็นค่าว่าง (`''`) ไม่ใส่ตัวอย่าง ("เช่น...") และไม่มีการยิงค้นหาอัตโนมัติบน `useEffect` mount
+   - ก่อนค้นหา: ตัวเลขสถิติและข้อมูลแสดงขีด `-` อย่างสุภาพ
+4. **ไทม์ไลน์ 17 ขั้นตอน (Production Progress Stepper)**:
+   - นำตัวเลขจำนวน Qty ออกจากโหนด เพื่อความสบายตา
+   - แถววันที่:
+     - ขั้นตอนที่เสร็จแล้ว: แสดงวันที่แล้วเสร็จ (`DD/MM`)
+     - ขั้นตอนที่กำลังทำ: แสดงข้อความ **`กำลังทำ`** สีส้ม พร้อมไฟกระพริบช้าๆ นุ่มนวล 2.4 วินาที (`.step-current-blink`, `.text-current-blink`)
+     - ขั้นตอนถัดไป: แสดงข้อความ **`รอ`**
+5. **ตาราง Step History**:
+   - คอลัมน์ Status: ตัวอักษรหนาเข้ม (**800**) มีสีตามสถานะ ไม่มีกรอบ/พื้นหลัง (`เสร็จแล้ว (Y)` สีเขียว, `กำลังทำ (O)` สีส้ม)
+   - พื้นหลังตารางใช้สีเดียวกับตัวการ์ด (`var(--color-ui-surface)`) เรียบเนียน ไม่ใช้ลายแถบม้าลาย
+6. **แผงสรุปความคืบหน้ารวม (Summary Card)**:
+   - Donut Gauge: สไตล์ทางการระดับ Executive มีสถานะประมวลผลหมุนแบบสมูท (`cubic-bezier`) เมื่อ loading พร้อมคำว่า `ประมวลผล...`
+   - เมื่อแสดงผล: ตัวเลขเปอร์เซ็นต์ขนาดใหญ่ `24px` หนา คมชัด พร้อมคำว่า `ความคืบหน้า`
+   - สถิติตัวเลข 4 ช่อง: ขนาด `26px` ไร้กรอบ (ทั้งหมด=สีน้ำเงิน, เสร็จแล้ว=สีเขียว, กำลังทำ=สีส้ม, คงเหลือ=สีกรม/เทา)
+

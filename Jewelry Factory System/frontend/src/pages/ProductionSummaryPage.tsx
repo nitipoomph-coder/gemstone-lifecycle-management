@@ -8,6 +8,8 @@ import { getMaxWeek, getHolidays } from '../services/productionSummaryAPI';
 import { PRODUCTION_STEPS, PRODUCTION_MODES, MONTH_FULL, getYearOptions, PROD_CUSTOMER_GROUPS } from '../config/productionSummaryConfig';
 import type { ProdCustomerGroup } from '../config/productionSummaryConfig';
 import { fetchWithAuth } from '../utils/fetchWithAuth';
+import html2canvas from 'html2canvas';
+
 
 function parseDateLocal(ymd: string) {
   const [y, m, d] = ymd.split('-').map(Number);
@@ -33,7 +35,7 @@ function getWorkDaysInDateRange(minDateStr: string, maxDateStr: string, holidays
   let workDays = 0;
   const d = parseDateLocal(minDateStr);
   const end = parseDateLocal(maxDateStr);
-  
+
   while (d <= end) {
     if (d.getDay() !== 0) {
       const dStr = toLocalYMD(d);
@@ -52,7 +54,7 @@ function getWorkDaysInMonth(year: number, month: number, holidays: string[]): nu
   for (let d = 1; d <= daysInMonth; d++) {
     const date = new Date(year, month - 1, d);
     if (date.getDay() === 0) continue;
-    
+
     const dStr = toLocalYMD(date);
     if (holidays.includes(dStr)) continue;
     workDays++;
@@ -81,11 +83,11 @@ export default function ProductionSummaryPage() {
     return d.toISOString().slice(0, 10);
   });
   const [toDate, setToDate] = useState(() => new Date().toISOString().slice(0, 10));
-  
+
   const [maxWeek, setMaxWeek] = useState(52);
   const [holidays, setHolidays] = useState<string[]>([]);
   const [isReady, setIsReady] = useState(false);
-  
+
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [chartTitle, setChartTitle] = useState('');
@@ -111,13 +113,13 @@ export default function ProductionSummaryPage() {
           getHolidays(year)
         ]);
         setMaxWeek(mw || 52);
-        
+
         const cleanHols = hols.map(h => {
           if (h.includes('T')) return h.split('T')[0];
           return h;
         });
         setHolidays(cleanHols);
-        
+
         // If year changes, reset week range to make sense for that year
         if (year === new Date().getFullYear()) {
           const currentWk = getCurrentWeek();
@@ -164,7 +166,7 @@ export default function ProductionSummaryPage() {
     try {
       let rawData: any[] = [];
       let weekDatesMap: any = {};
-      
+
       const stepName = PRODUCTION_STEPS.find((s: any) => s.code === step)?.nameEN || step;
       const modeName = PRODUCTION_MODES.find((m: any) => m.key === mode)?.label || mode;
 
@@ -172,21 +174,21 @@ export default function ProductionSummaryPage() {
         const res = await fetchWithAuth(`/api/production-summary/year?step=${step}&mode=${mode}&year=${year}`);
         const dataJson = await res.json();
         rawData = dataJson.data || [];
-        
+
         const chartData = rawData.map(item => {
           const m = item.month;
           let total = 0;
           const groupData: Record<string, number> = {};
-          
+
           PROD_CUSTOMER_GROUPS.forEach((g: ProdCustomerGroup) => {
             const val = item[g.id] || 0;
             groupData[g.id] = val;
             total += val;
           });
-          
+
           const workDays = getWorkDaysInMonth(year, m, holidays);
           const avg = workDays > 0 ? total / workDays : 0;
-          
+
           return {
             period: m,
             periodLabel: MONTH_FULL[m - 1].substring(0, 3).toUpperCase(),
@@ -207,22 +209,22 @@ export default function ProductionSummaryPage() {
           const w = item.week;
           let total = 0;
           const groupData: Record<string, number> = {};
-          
+
           PROD_CUSTOMER_GROUPS.forEach((g: ProdCustomerGroup) => {
             const val = item[g.id] || 0;
             groupData[g.id] = val;
             total += val;
           });
-          
+
           let workDays = 0;
           if (weekDatesMap[w]) {
             workDays = getWorkDaysInDateRange(weekDatesMap[w].min, weekDatesMap[w].max, holidays);
           } else {
             workDays = 6;
           }
-          
+
           const avg = workDays > 0 ? total / workDays : 0;
-          
+
           return {
             period: w,
             periodLabel: `W${w}`,
@@ -237,26 +239,26 @@ export default function ProductionSummaryPage() {
         const res = await fetchWithAuth(`/api/production-summary/month?step=${step}&mode=${mode}&year=${year}&month=${month}`);
         const dataJson = await res.json();
         rawData = dataJson.data || [];
-        
+
         const chartData = rawData.map(item => {
           const d = item.day;
           let total = 0;
           const groupData: Record<string, number> = {};
-          
+
           PROD_CUSTOMER_GROUPS.forEach((g: ProdCustomerGroup) => {
             const val = item[g.id] || 0;
             groupData[g.id] = val;
             total += val;
           });
-          
+
           const date = new Date(year, month - 1, d);
           const dStr = toLocalYMD(date);
-          
+
           let workDays = 0;
           if (date.getDay() !== 0 && !holidays.includes(dStr)) {
             workDays = 1;
           }
-          
+
           return {
             period: dStr,
             periodLabel: `${String(d).padStart(2, '0')}/${String(month).padStart(2, '0')}`,
@@ -270,19 +272,19 @@ export default function ProductionSummaryPage() {
       } else if (tab === 'day') {
         const d1 = new Date(fromDate);
         const d2 = new Date(toDate);
-        
+
         if (d1 > d2) {
           alert("Date From cannot be greater than Date To");
           setLoading(false);
           return;
         }
 
-        const diffDays = Math.ceil(Math.abs(d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24)); 
+        const diffDays = Math.ceil(Math.abs(d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24));
         let finalToDate = toDate;
-        
-        if (diffDays > 31) {
+
+        if (diffDays > 30) {
           const maxD = new Date(d1);
-          maxD.setDate(maxD.getDate() + 31);
+          maxD.setDate(maxD.getDate() + 30);
           finalToDate = toLocalYMD(maxD);
           setToDate(finalToDate);
         }
@@ -290,28 +292,28 @@ export default function ProductionSummaryPage() {
         const res = await fetchWithAuth(`/api/production-summary/daily?step=${step}&mode=${mode}&startDate=${fromDate}&endDate=${finalToDate}`);
         const dataJson = await res.json();
         rawData = dataJson.data || [];
-        
+
         const chartData = rawData.map(item => {
           let total = 0;
           const groupData: Record<string, number> = {};
-          
+
           PROD_CUSTOMER_GROUPS.forEach((g: ProdCustomerGroup) => {
             const val = item[g.id] || 0;
             groupData[g.id] = val;
             total += val;
           });
-          
+
           let workDays = 0;
           const dStr = item.dateStr;
           const dateObj = parseDateLocal(dStr);
           if (dateObj.getDay() !== 0 && !holidays.includes(dStr)) {
             workDays = 1;
           }
-          
+
           // Format date for label: dd/mm
           const parts = dStr.split('-');
           const label = `${parts[2]}/${parts[1]}`;
-          
+
           return {
             period: dStr,
             periodLabel: label,
@@ -320,7 +322,7 @@ export default function ProductionSummaryPage() {
           };
         });
         setData(chartData);
-        
+
         const fTitle = formatDateStr(fromDate);
         const tTitle = formatDateStr(finalToDate);
         setChartTitle(`${stepName} Daily ${modeName} [ ${fTitle} - ${tTitle} ]`);
@@ -332,8 +334,171 @@ export default function ProductionSummaryPage() {
     }
   };
 
-  const handlePrint = () => {
-    window.print();
+  const handlePrint = async () => {
+    if (!printRef.current) return;
+
+    try {
+      const helperCanvas = document.createElement('canvas');
+      helperCanvas.width = 1;
+      helperCanvas.height = 1;
+      const helperCtx = helperCanvas.getContext('2d');
+
+      const resolveColor = (colorStr: string): string => {
+        if (!colorStr || !helperCtx || colorStr === 'none') return colorStr;
+        helperCtx.fillStyle = 'transparent';
+        helperCtx.fillStyle = colorStr;
+        return helperCtx.fillStyle;
+      };
+
+      // 1) แคปภาพหน้าจอความละเอียดสูง (2x Retina / 300 DPI) เหมือน DrawToBitmap ในระบบเดิม
+      const canvas = await html2canvas(printRef.current, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: null,
+        logging: false,
+        onclone: (_clonedDoc, clonedElement) => {
+          clonedElement.style.setProperty('background', 'var(--color-ui-surface)');
+
+          // แปลงสี CSS Variables และ OKLCH ในองค์ประกอบ SVG ทั้งหมดให้เป็น HEX/RGB มาตรฐาน
+          const origSvgElements = printRef.current?.querySelectorAll('svg, svg *') || [];
+          const clonedSvgElements = clonedElement.querySelectorAll('svg, svg *');
+
+          origSvgElements.forEach((origEl, i) => {
+            const clonedEl = clonedSvgElements[i] as HTMLElement | SVGElement | undefined;
+            if (!clonedEl) return;
+
+            const computed = window.getComputedStyle(origEl);
+
+            // 1.1 Fill (Bars, Circles, Legend icons)
+            const fill = origEl.getAttribute('fill') || computed.fill;
+            if (fill && fill !== 'none') {
+              const resolvedFill = resolveColor(computed.fill || fill);
+              if (resolvedFill) {
+                clonedEl.setAttribute('fill', resolvedFill);
+                clonedEl.style.fill = resolvedFill;
+              }
+            }
+
+            // 1.2 Stroke (Lines, Dots, Grids, Axes)
+            const stroke = origEl.getAttribute('stroke') || computed.stroke;
+            if (stroke && stroke !== 'none') {
+              const resolvedStroke = resolveColor(computed.stroke || stroke);
+              if (resolvedStroke) {
+                clonedEl.setAttribute('stroke', resolvedStroke);
+                clonedEl.style.stroke = resolvedStroke;
+              }
+            }
+
+            // 1.3 Text (Data Labels, Axis numbers, Legend text)
+            if (origEl.tagName.toLowerCase() === 'text') {
+              const textFill = resolveColor(computed.fill || computed.color);
+              if (textFill) {
+                clonedEl.setAttribute('fill', textFill);
+                clonedEl.style.fill = textFill;
+              }
+              clonedEl.style.fontFamily = computed.fontFamily;
+              clonedEl.style.fontSize = computed.fontSize;
+              clonedEl.style.fontWeight = computed.fontWeight;
+            }
+          });
+
+          // แปลงสีในตารางข้อมูลให้ตรงกับหน้าจอ 100%
+          const origCells = printRef.current?.querySelectorAll('th, td, tr') || [];
+          const clonedCells = clonedElement.querySelectorAll('th, td, tr');
+          origCells.forEach((origEl, i) => {
+            const clonedEl = clonedCells[i] as HTMLElement | undefined;
+            if (!clonedEl) return;
+            const computed = window.getComputedStyle(origEl);
+            if (computed.backgroundColor && computed.backgroundColor !== 'transparent' && !computed.backgroundColor.includes('0, 0, 0, 0')) {
+              clonedEl.style.backgroundColor = resolveColor(computed.backgroundColor);
+            }
+            if (computed.color) {
+              clonedEl.style.color = resolveColor(computed.color);
+            }
+          });
+        },
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+
+      // 2) ส่งภาพที่แคปได้ไปพิมพ์ลงกระดาษ A4 แนวนอน
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.write(`
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <title>${chartTitle || 'Production Summary'}</title>
+              <style>
+                @page {
+                  size: A4 landscape;
+                  margin: 0.5cm;
+                }
+                * {
+                  box-sizing: border-box;
+                }
+                body {
+                  margin: 0;
+                  padding: 0;
+                  display: flex;
+                  flex-direction: column;
+                  align-items: center;
+                  justify-content: flex-start;
+                  background: white;
+                }
+                .print-img {
+                  width: 100%;
+                  height: auto;
+                  max-height: 96vh;
+                  object-fit: contain;
+                  display: block;
+                }
+              </style>
+            </head>
+            <body>
+              <img class="print-img" src="${imgData}" onload="window.print(); window.close();" />
+            </body>
+          </html>
+        `);
+        printWindow.document.close();
+      } else {
+        // Fallback using hidden iframe if popup is blocked
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'fixed';
+        iframe.style.right = '0';
+        iframe.style.bottom = '0';
+        iframe.style.width = '0';
+        iframe.style.height = '0';
+        iframe.style.border = '0';
+        document.body.appendChild(iframe);
+        const doc = iframe.contentWindow?.document;
+        if (doc) {
+          doc.write(`
+            <!DOCTYPE html>
+            <html>
+              <head>
+                <title>${chartTitle || 'Production Summary'}</title>
+                <style>
+                  @page { size: A4 landscape; margin: 0.5cm; }
+                  body { margin: 0; display: flex; justify-content: center; background: white; }
+                  .print-img { width: 100%; height: auto; max-height: 96vh; object-fit: contain; }
+                </style>
+              </head>
+              <body>
+                <img class="print-img" src="${imgData}" onload="window.print();" />
+              </body>
+            </html>
+          `);
+          doc.close();
+          iframe.contentWindow?.addEventListener('afterprint', () => {
+            iframe.remove();
+          });
+        }
+      }
+    } catch (err) {
+      console.error('Print snapshot error:', err);
+      window.print(); // fallback
+    }
   };
 
   const years = getYearOptions();
@@ -359,7 +524,7 @@ export default function ProductionSummaryPage() {
           hideSearch
           rightContent={
             <div className="sales-gallery-topbar-tools flex min-w-0 flex-1 items-center justify-end gap-3 pr-2">
-              
+
               {/* Filter Popover moved to the main Topbar row */}
               <div style={{ position: 'relative' }} ref={filterPopoverRef}>
                 <button
@@ -369,7 +534,7 @@ export default function ProductionSummaryPage() {
                     display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px',
                     background: showFilterPopover ? 'var(--color-surface-2)' : 'transparent',
                     border: '1px solid',
-                    borderColor: showFilterPopover ? 'var(--color-border-strong)' : 'var(--color-border-light)', 
+                    borderColor: showFilterPopover ? 'var(--color-border-strong)' : 'var(--color-border-light)',
                     borderRadius: 6,
                     fontSize: '0.85rem', fontWeight: 900, color: 'var(--color-text-primary)',
                     cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'var(--font-display)',
@@ -398,8 +563,8 @@ export default function ProductionSummaryPage() {
                     <div className="flex flex-col gap-3">
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                         <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-secondary)' }}>Department</label>
-                        <select 
-                          value={step} 
+                        <select
+                          value={step}
                           onChange={e => setStep(e.target.value)}
                           style={{ padding: '6px 12px', borderRadius: '4px', border: '1px solid var(--color-border-light)', background: 'var(--color-surface-1)', color: 'var(--color-text-primary)' }}
                         >
@@ -411,8 +576,8 @@ export default function ProductionSummaryPage() {
 
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                         <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-secondary)' }}>Mode</label>
-                        <select 
-                          value={mode} 
+                        <select
+                          value={mode}
                           onChange={e => setMode(e.target.value)}
                           style={{ padding: '6px 12px', borderRadius: '4px', border: '1px solid var(--color-border-light)', background: 'var(--color-surface-1)', color: 'var(--color-text-primary)' }}
                         >
@@ -425,8 +590,8 @@ export default function ProductionSummaryPage() {
                       {tab !== 'day' && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                           <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-secondary)' }}>Year</label>
-                          <select 
-                            value={year} 
+                          <select
+                            value={year}
                             onChange={e => setYear(Number(e.target.value))}
                             style={{ padding: '6px 12px', borderRadius: '4px', border: '1px solid var(--color-border-light)', background: 'var(--color-surface-1)', color: 'var(--color-text-primary)' }}
                           >
@@ -439,8 +604,8 @@ export default function ProductionSummaryPage() {
                         <div className="flex gap-2">
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
                             <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-secondary)' }}>From Wk</label>
-                            <select 
-                              value={fromWeek} 
+                            <select
+                              value={fromWeek}
                               onChange={e => setFromWeek(Number(e.target.value))}
                               style={{ padding: '6px 12px', borderRadius: '4px', border: '1px solid var(--color-border-light)', background: 'var(--color-surface-1)', color: 'var(--color-text-primary)' }}
                             >
@@ -449,8 +614,8 @@ export default function ProductionSummaryPage() {
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
                             <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-secondary)' }}>To Wk (Max 12)</label>
-                            <select 
-                              value={toWeek} 
+                            <select
+                              value={toWeek}
                               onChange={e => setToWeek(Number(e.target.value))}
                               style={{ padding: '6px 12px', borderRadius: '4px', border: '1px solid var(--color-border-light)', background: 'var(--color-surface-1)', color: 'var(--color-text-primary)' }}
                             >
@@ -463,45 +628,79 @@ export default function ProductionSummaryPage() {
                       {tab === 'month' && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                           <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-secondary)' }}>Month</label>
-                          <select 
-                            value={month} 
+                          <select
+                            value={month}
                             onChange={e => setMonth(Number(e.target.value))}
                             style={{ padding: '6px 12px', borderRadius: '4px', border: '1px solid var(--color-border-light)', background: 'var(--color-surface-1)', color: 'var(--color-text-primary)' }}
                           >
                             {MONTH_FULL.map((m, i) => (
-                              <option key={i+1} value={i+1}>{m}</option>
+                              <option key={i + 1} value={i + 1}>{m}</option>
                             ))}
                           </select>
                         </div>
                       )}
 
-                      {tab === 'day' && (
-                        <div className="flex flex-col gap-3">
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                            <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-secondary)' }}>Date From</label>
-                            <input 
-                              type="date"
-                              value={fromDate}
-                              max={toDate}
-                              onChange={e => setFromDate(e.target.value)}
-                              style={{ padding: '6px 12px', borderRadius: '4px', border: '1px solid var(--color-border-light)', background: 'var(--color-surface-1)', color: 'var(--color-text-primary)' }}
-                            />
+                      {tab === 'day' && (() => {
+                        // Calculate max allowed toDate (fromDate + 30 days = 31 total)
+                        const maxToDateStr = (() => {
+                          if (!fromDate) return '';
+                          const d = new Date(fromDate);
+                          d.setDate(d.getDate() + 30);
+                          return toLocalYMD(d);
+                        })();
+                        return (
+                          <div className="flex flex-col gap-3">
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                              <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-secondary)' }}>Date From</label>
+                              <input
+                                type="date"
+                                value={fromDate}
+                                onChange={e => {
+                                  const newFrom = e.target.value;
+                                  setFromDate(newFrom);
+                                  // If toDate is now more than 30 days away, cap it
+                                  if (newFrom && toDate) {
+                                    const diff = Math.ceil(Math.abs(new Date(toDate).getTime() - new Date(newFrom).getTime()) / (1000 * 60 * 60 * 24));
+                                    if (diff > 30) {
+                                      const maxD = new Date(newFrom);
+                                      maxD.setDate(maxD.getDate() + 30);
+                                      setToDate(toLocalYMD(maxD));
+                                    }
+                                  }
+                                }}
+                                style={{ padding: '6px 12px', borderRadius: '4px', border: '1px solid var(--color-border-light)', background: 'var(--color-surface-1)', color: 'var(--color-text-primary)' }}
+                              />
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                              <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-secondary)' }}>Date To (Max 31 days)</label>
+                              <input
+                                type="date"
+                                value={toDate}
+                                min={fromDate}
+                                max={maxToDateStr}
+                                onChange={e => {
+                                  const newTo = e.target.value;
+                                  // Enforce max 30-day diff
+                                  if (fromDate && newTo) {
+                                    const diff = Math.ceil(Math.abs(new Date(newTo).getTime() - new Date(fromDate).getTime()) / (1000 * 60 * 60 * 24));
+                                    if (diff > 30) {
+                                      const maxD = new Date(fromDate);
+                                      maxD.setDate(maxD.getDate() + 30);
+                                      setToDate(toLocalYMD(maxD));
+                                      return;
+                                    }
+                                  }
+                                  setToDate(newTo);
+                                }}
+                                style={{ padding: '6px 12px', borderRadius: '4px', border: '1px solid var(--color-border-light)', background: 'var(--color-surface-1)', color: 'var(--color-text-primary)' }}
+                              />
+                            </div>
                           </div>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                            <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-secondary)' }}>Date To (Max 31 days)</label>
-                            <input 
-                              type="date"
-                              value={toDate}
-                              min={fromDate}
-                              onChange={e => setToDate(e.target.value)}
-                              style={{ padding: '6px 12px', borderRadius: '4px', border: '1px solid var(--color-border-light)', background: 'var(--color-surface-1)', color: 'var(--color-text-primary)' }}
-                            />
-                          </div>
-                        </div>
-                      )}
-                      
+                        );
+                      })()}
+
                       <div className="mt-2 flex justify-end">
-                        <button 
+                        <button
                           onClick={() => setShowFilterPopover(false)}
                           style={{
                             padding: '6px 16px', background: 'var(--color-ui-interactive)', color: 'var(--color-ui-on-interactive)',
@@ -515,7 +714,7 @@ export default function ProductionSummaryPage() {
                   </div>
                 )}
               </div>
-              
+
               <div style={{ width: '1px', height: '20px', background: 'var(--color-border-light)' }} />
 
               <ErpSegmentedControl
@@ -531,7 +730,7 @@ export default function ProductionSummaryPage() {
               />
 
               <div style={{ width: '1px', height: '20px', background: 'var(--color-border-light)' }} />
-              
+
               <button
                 type="button"
                 onClick={handlePrint}
@@ -544,7 +743,7 @@ export default function ProductionSummaryPage() {
                 <Printer size={13} style={{ color: 'var(--color-brand-600)' }} />
                 <span>Print</span>
               </button>
-              
+
               <ErpIconButton
                 label="Reload data"
                 tone="refresh"
@@ -560,49 +759,97 @@ export default function ProductionSummaryPage() {
 
       <div className="app-content-frame app-content-frame--workspace app-page-content flex-1 overflow-hidden p-2.5 flex flex-col min-h-0">
         <div ref={printRef} className="print-content flex flex-col h-full gap-2 min-h-0">
-          <div className="print-only" style={{ display: 'none', justifyContent: 'flex-end', fontSize: '10px' }}>
-            Printed: {new Date().toLocaleString('en-GB')}
-          </div>
 
-          <div className="flex-1 min-h-0">
+          {/* กล่องกราฟ (ปรับความสูงเป็น 500px) */}
+          <div className="print-chart-box" style={{ height: '500px', width: '100%' }}>
             {loading ? (
               <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-tertiary)' }}>
                 <RefreshCw className="animate-spin mr-2" size={20} /> Loading data...
               </div>
             ) : (
-              <ProductionSummaryChart data={data} title={chartTitle} />
+              <ProductionSummaryChart data={data} title={chartTitle} showAvgLine={tab === 'year' || tab === 'week'} />
             )}
           </div>
 
-          <div className="shrink-0">
+
+
+
+          {/* กล่องตาราง (ใส่ class print-table-box) */}
+          <div className="print-table-box shrink-0">
             <ProductionSummaryTable data={data} tab={tab} />
           </div>
+
         </div>
       </div>
-
       <style>{`
         @media print {
           @page {
             size: A4 landscape;
-            margin: 1cm;
+            margin: 0.5cm;
+          }
+          *, *::before, *::after {
+            box-sizing: border-box !important;
           }
           body {
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            background: var(--color-ui-surface) !important;
           }
-          .no-print {
+          .no-print,
+          .sidebar,
+          .app-sidebar,
+          nav,
+          header,
+          button,
+          .recharts-tooltip-wrapper,
+          .recharts-default-tooltip {
             display: none !important;
           }
-          .print-layout-production {
+          .erp-page-container,
+          .app-content-frame {
+            position: static !important;
             padding: 0 !important;
             margin: 0 !important;
-            background: white !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            overflow: visible !important;
+            border: none !important;
+            background: transparent !important;
           }
           .print-content {
+            width: 100% !important;
+            max-width: 100% !important;
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 8px !important;
             page-break-inside: avoid;
           }
           .print-only {
             display: flex !important;
+          }
+
+          /* กล่องกราฟ: ปรับความสูงอัตโนมัติ ไม่ตัดขอบกราฟ */
+          .print-chart-box {
+            width: 100% !important;
+            height: auto !important;
+            display: block !important;
+          }
+          .print-chart-box > div {
+            width: 100% !important;
+            height: 100% !important;
+          }
+
+          /* ตาราง: กว้าง 100% พอดีเป๊ะ */
+          .print-table-box {
+            width: 100% !important;
+          }
+          .print-table-box table {
+            width: 100% !important;
+            font-size: 10pt !important;
+          }
+          .print-table-box th,
+          .print-table-box td {
+            padding: 4px 2px !important;
           }
         }
       `}</style>

@@ -1,4 +1,4 @@
-import { ALL_GROUPS } from '../../config/customerGroups';
+import { ALL_GROUPS } from '../../../config/customerGroups';
 
 const YEAR_COLORS = ['var(--color-chart-1)', 'var(--color-chart-2)', 'var(--color-chart-3)', 'var(--color-chart-4)', 'var(--color-chart-5)', 'var(--color-chart-6)'];
 
@@ -8,7 +8,7 @@ interface CustomerDashboardSkeletonProps {
 }
 
 export function CustomerDashboardSkeleton({ sortedSel, activeYears }: CustomerDashboardSkeletonProps) {
-  const sortedGroups = sortedSel.map(gId => ALL_GROUPS.find(x => x.id === gId)).filter(Boolean);
+  const sortedGroups = sortedSel.map(gId => ALL_GROUPS.find((x: any) => x.id === gId)).filter(Boolean);
 
   return (
     <div className="content-scrollbar flex-1 overflow-y-auto" style={{ background: 'var(--color-surface-1)' }}>

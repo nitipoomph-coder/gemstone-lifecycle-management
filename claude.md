@@ -918,8 +918,11 @@ Inside route handlers, add only short section labels for important boxes/queries
    - `status = 0` (**รอ / Pending**): ยังไม่มีการบันทึกเอกสารเข้าสู่ขั้นตอนนี้
 
 ### 3. กฎและข้อกำหนดการออกแบบ (Design Standards & Strict Guardrails)
-1. **ห้าม Hardcode สีเด็ดขาด (Strict No Hardcoded Colors)**:
-   - ทุกองค์ประกอบใน `FBEOrderTrackPage.tsx` และ `OrderTrackStepper.tsx` ต้องใช้ CSS Design Tokens จาก `src/index.css` 100%
+1. **โครงสร้างโฟลเดอร์และการแยกไฟล์ Component (Strict Module Encapsulation)**:
+   - **กฎเหล็ก**: ทุกครั้งที่สร้าง Feature หรือระบบใหม่ ให้สร้างโฟลเดอร์แยกเฉพาะเรื่องนั้นๆ ภายใต้ `src/components/...` เสมอ ห้ามวางไฟล์ Component กองรวมกันมั่วๆ ในโฟลเดอร์หลัก
+   - Component ที่ทำหน้าที่ซับซ้อนจะต้องถูก Refactor แยกเป็น Sub-components เสมอ (เช่น แยก Table, Chart, Filters ออกจากหน้าเพจหลัก)
+2. **ห้าม Hardcode สีเด็ดขาด (Strict No Hardcoded Colors)**:
+   - ทุกองค์ประกอบต้องใช้ CSS Design Tokens จาก `src/index.css` 100%
    - ผ่านการตรวจสอบโดย `npm run lint:colors` (0 violations)
    - คอนทราสต์ต้องผ่านเกณฑ์ WCAG 2.1 Level AA (ข้อความ >= 4.5:1, เส้นขอบและเส้นเชื่อมต่อ >= 3.0:1)
 2. **โครงสร้าง 2 คอลัมน์แบบ Single-Screen Fit (จอไม่เลื่อน)**:

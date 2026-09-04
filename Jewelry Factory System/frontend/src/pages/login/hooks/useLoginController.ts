@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useToast } from '../../../contexts/ToastContext';
 import { authAPI } from '../../../services/authAPI';
 import {
   BACKGROUND_IMAGES,
@@ -11,6 +12,7 @@ import {
 
 export function useLoginController() {
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const [language, setLanguage] = useState<LoginLanguage>('EN');
   const [backgroundIndex, setBackgroundIndex] = useState(0);
   const [isRequestAccess, setIsRequestAccess] = useState(false);
@@ -98,14 +100,14 @@ export function useLoginController() {
     try {
       const response = await authAPI.register(registration);
       if (response.success) {
-        window.alert(copy.reqSent);
+        showToast(copy.reqSent, 'success');
         setRegistration(EMPTY_REGISTRATION);
         setIsRequestAccess(false);
       } else {
-        window.alert(response.message || copy.errSys);
+        showToast(response.message || copy.errSys, 'error');
       }
     } catch {
-      window.alert(copy.errSys);
+      showToast(copy.errSys, 'error');
     } finally {
       setIsLoading(false);
     }

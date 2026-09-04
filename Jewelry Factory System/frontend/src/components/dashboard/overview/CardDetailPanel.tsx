@@ -1,13 +1,14 @@
 // src/components/dashboard/CardDetailPanel.tsx
 import { useState, useEffect, type ReactNode } from 'react';
 import { X, TrendingUp, TrendingDown, Minus, Calendar, Users, Loader2, AlertTriangle, Package, CheckCircle2, Settings, CalendarDays } from 'lucide-react';
-import { fetchCardDetail, fetchAvailableYears, type CardDetailData, type CardType, type MonthlyData } from '../../services/dashboardAPI';
-import { getErrorMessage } from '../../utils/errors';
+import { fetchCardDetail, fetchAvailableYears, type CardDetailData, type CardType, type MonthlyData } from '../../../services/dashboardAPI';
+import { getErrorMessage } from '../../../utils/errors';
+import './DashboardOverview.css';
 
 // ─── Icon wrapper ────────────────────────────────────────────────────────────
 function CardIcon({ color, children }: { color: string; children: ReactNode }) {
   return (
-    <div style={{ width:44, height:44, borderRadius:14, display:'flex', alignItems:'center', justifyContent:'center', background:`color-mix(in srgb, ${color}, transparent 88%)`, color, flexShrink:0 }}>
+    <div className="card-icon" style={{ background:`color-mix(in srgb, ${color}, transparent 88%)`, color }}>
       {children}
     </div>
   );
@@ -31,7 +32,7 @@ function ChangeBadge({ pct, inverse }: { pct: number; inverse?: boolean }) {
   const bg    = isGood ? 'color-mix(in srgb, var(--color-success-500) 15%, transparent)' : isBad ? 'color-mix(in srgb, var(--color-danger-500) 15%, transparent)' : 'var(--color-surface-2)';
   const Icon  = isPos ? TrendingUp : isNeg ? TrendingDown : Minus;
   return (
-    <span style={{ display:'inline-flex', alignItems:'center', gap:4, padding:'4px 12px', borderRadius:20, background:bg, color, fontSize:'0.72rem', fontWeight:800, border:`1px solid ${isGood ? 'color-mix(in srgb, var(--color-success-500) 25%, transparent)' : isBad ? 'color-mix(in srgb, var(--color-danger-500) 25%, transparent)' : 'transparent'}` }}>
+    <span className="change-badge" style={{ background:bg, color, border:`1px solid ${isGood ? 'color-mix(in srgb, var(--color-success-500) 25%, transparent)' : isBad ? 'color-mix(in srgb, var(--color-danger-500) 25%, transparent)' : 'transparent'}` }}>
       <Icon size={13}/> {pct > 0 ? '+' : ''}{pct}%
     </span>
   );
@@ -762,7 +763,7 @@ export default function CardDetailPanel({ cardType, selectedYear, onClose }: { c
                     </tr>
                   </thead>
                   <tbody>
-                    {data.breakdown.map((r) => (
+                    {data.breakdown.map((r: any) => (
                       <tr key={r.code} style={{ borderBottom:'1px solid var(--color-border-light)', transition:'background 0.15s' }}
                         onMouseEnter={e => e.currentTarget.style.background='var(--color-surface-1)'}
                         onMouseLeave={e => e.currentTarget.style.background='transparent'}

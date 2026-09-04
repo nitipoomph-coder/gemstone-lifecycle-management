@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import DocumentLayout from '../../components/layout/DocumentLayout';
 import type { DocListItem, BreadcrumbItem } from '../../components/layout/DocumentLayout';
 import { formConfigMap } from '../../config/formConfigs';
+import { useToast } from '../../contexts/ToastContext';
 import {
   fetchSampleDocuments,
   fetchSampleDocument,
@@ -17,6 +18,7 @@ const routeToDocType: Record<string, string> = {
 };
 
 export default function SampleDocPage() {
+  const { showToast } = useToast();
   const location = useLocation();
   const docType = routeToDocType[location.pathname] || 'SSA';
   return <SampleDocWorkspace key={docType} docType={docType} />;
@@ -104,7 +106,7 @@ function SampleDocWorkspace({ docType }: { docType: string }) {
   };
 
   const handleSave = () => {
-    alert('ระบบนี้อยู่ในช่วงพัฒนา (Read-Only)');
+    showToast('ระบบนี้อยู่ในช่วงพัฒนา (Read-Only)', 'warning');
   };
 
   return (

@@ -1,4 +1,4 @@
-import type { Metric } from '../../hooks/useCustomerSalesData';
+import type { Metric } from '../../../hooks/useCustomerSalesData';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 const YEAR_COLORS = ['var(--color-chart-1)', 'var(--color-chart-2)', 'var(--color-chart-3)', 'var(--color-chart-4)', 'var(--color-chart-5)', 'var(--color-chart-6)'];

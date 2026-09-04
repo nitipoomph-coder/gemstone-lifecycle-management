@@ -327,6 +327,31 @@
   animation: donutExecutiveSpin 1.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
+.donut-shimmer-line {
+  opacity: 0;
+  filter: blur(2.5px);
+  mix-blend-mode: overlay;
+  animation: shimmerTravel 3s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes shimmerTravel {
+  0% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: var(--shimmer-end);
+    opacity: 0;
+  }
+}
+
 @keyframes stepPulseBlink {
   0%, 100% {
     opacity: 1;
@@ -1114,6 +1139,8 @@ body * {
     --color-table-header: var(--color-surface-2);
     --color-table-row-alt: color-mix(in srgb, var(--color-surface-1) 65%, var(--color-surface-0));
     --color-table-footer: color-mix(in srgb, var(--color-brand-500) 6%, var(--color-surface-0));
+    --color-prod-total-row-bg: color-mix(in srgb, var(--color-chart-1) 15%, var(--color-surface-0));
+    --color-prod-avg-row-bg: color-mix(in srgb, var(--color-chart-2) 15%, var(--color-surface-0));
   }
 
   :root:has(body.theme-dark-gold) {
@@ -1242,6 +1269,8 @@ body * {
     --color-table-header: var(--color-surface-2);
     --color-table-row-alt: color-mix(in srgb, var(--color-surface-1) 65%, var(--color-surface-0));
     --color-table-footer: color-mix(in srgb, var(--color-brand-500) 6%, var(--color-surface-0));
+    --color-prod-total-row-bg: color-mix(in srgb, var(--color-chart-1) 15%, var(--color-surface-0));
+    --color-prod-avg-row-bg: color-mix(in srgb, var(--color-chart-2) 15%, var(--color-surface-0));
   }
 
   :root:has(body.theme-royal-white) {
@@ -1640,4 +1669,15 @@ h6 {
   background: var(--color-brand-50);
   color: var(--color-brand-500);
   font-family: var(--font-display);
+}
+
+@keyframes toast-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(100%) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
 }

@@ -4,6 +4,7 @@ import { useLocation } from 'react-router-dom';
 import DocumentLayout from '../../components/layout/DocumentLayout';
 import type { DocListItem, BreadcrumbItem } from '../../components/layout/DocumentLayout';
 import { formConfigMap } from '../../config/formConfigs';
+import { useToast } from '../../contexts/ToastContext';
 import {
   fetchDocumentList,
   fetchDocumentDetail,
@@ -22,6 +23,7 @@ const routeToDocType: Record<string, string> = {
 };
 
 export default function ProcurementDocPage() {
+  const { showToast } = useToast();
   const location = useLocation();
   const docType = routeToDocType[location.pathname] || 'SPA';
   return <ProcurementDocWorkspace key={docType} docType={docType} />;
@@ -166,7 +168,7 @@ function ProcurementDocWorkspace({ docType }: { docType: string }) {
       });
       const json = await res.json();
       if (!json.ok) {
-        alert(`ไม่สามารถแก้ไขได้: ${json.error} (Locked by ${json.lockedBy || 'someone'})`);
+        showToast(`ไม่สามารถแก้ไขได้: ${json.error} (Locked by ${json.lockedBy || 'someone'})`, 'error');
         return;
       }
       if (docDetail?.header) {
@@ -176,7 +178,7 @@ function ProcurementDocWorkspace({ docType }: { docType: string }) {
       }
       setIsEditing(true);
     } catch (requestError: unknown) {
-      alert('Failed to acquire lock: ' + getErrorMessage(requestError, 'Unknown error'));
+      showToast('Failed to acquire lock: ' + getErrorMessage(requestError, 'Unknown error'), 'error');
     } finally {
       setActionLoading(false);
     }

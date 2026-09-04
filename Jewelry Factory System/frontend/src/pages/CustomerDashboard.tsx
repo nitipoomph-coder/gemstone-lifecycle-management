@@ -7,9 +7,9 @@ import { ErpSegmentedControl } from '../components/ui/ErpButtons';
 import { printChartDashboard } from '../utils/printChart';
 import { useTheme } from '../contexts/useTheme';
 import { useCustomerSalesData, type Metric, type CustomerSummaryRow } from '../hooks/useCustomerSalesData';
-import { CustomerSalesChart } from '../components/dashboard/CustomerSalesChart';
-import { CustomerKpiCards } from '../components/dashboard/CustomerKpiCards';
-import { CustomerDashboardSkeleton } from '../components/dashboard/CustomerDashboardSkeleton';
+import { CustomerSalesChart } from '../components/dashboard/customerSales/CustomerSalesChart';
+import { CustomerKpiCards } from '../components/dashboard/customerSales/CustomerKpiCards';
+import { CustomerDashboardSkeleton } from '../components/dashboard/customerSales/CustomerDashboardSkeleton';
 import './CustomerDashboard.css';
 
 const YEAR_COLORS = ['var(--color-chart-1)', 'var(--color-chart-2)', 'var(--color-chart-3)', 'var(--color-chart-4)', 'var(--color-chart-5)', 'var(--color-chart-6)'];

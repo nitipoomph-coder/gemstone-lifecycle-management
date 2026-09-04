@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Topbar from '../components/layout/Topbar';
 import { fetchDashboardData, fetchAvailableYears, type DashboardData, type CardType } from '../services/dashboardAPI';
-import CardDetailPanel from '../components/dashboard/CardDetailPanel';
+import CardDetailPanel from '../components/dashboard/overview/CardDetailPanel';
 import CustomSelect from '../components/ui/CustomSelect';
 import { AlertTriangle, RefreshCw, TrendingUp, Package, Users, BarChart3, Clock, ArrowRight, Gem, Wrench, Calendar } from 'lucide-react';
 

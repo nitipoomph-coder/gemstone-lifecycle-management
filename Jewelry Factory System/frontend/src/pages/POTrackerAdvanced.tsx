@@ -1,6 +1,6 @@
 import Topbar from '../components/layout/Topbar';
-import OrderTable from '../components/dashboard/OrderTable';
-import CustomViewModal from '../components/dashboard/CustomViewModal';
+import OrderTable from '../components/dashboard/poTracker/OrderTable';
+import CustomViewModal from '../components/dashboard/poTracker/CustomViewModal';
 import CustomSelect from '../components/ui/CustomSelect';
 import { RefreshCw, AlertTriangle, Filter, X, Layers } from 'lucide-react';
 import { usePOTrackerAdvanced } from '../hooks/usePOTrackerAdvanced';

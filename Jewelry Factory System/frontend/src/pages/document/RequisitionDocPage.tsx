@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import DocumentLayout from '../../components/layout/DocumentLayout';
 import type { DocListItem, BreadcrumbItem } from '../../components/layout/DocumentLayout';
 import { formConfigMap } from '../../config/formConfigs';
+import { useToast } from '../../contexts/ToastContext';
 import {
   fetchRequisitionDocuments,
   fetchRequisitionDocument,
@@ -22,6 +23,7 @@ const routeToDocType: Record<string, string> = {
 };
 
 export default function RequisitionDocPage() {
+  const { showToast } = useToast();
   const location = useLocation();
   const docType = routeToDocType[location.pathname] || 'SOA';
   return <RequisitionDocWorkspace key={docType} docType={docType} />;
@@ -180,12 +182,12 @@ function RequisitionDocWorkspace({ docType }: { docType: string }) {
       });
       const json = await res.json();
       if (!json.ok) {
-        alert(`ไม่สามารถแก้ไขได้: ${json.error} (Locked by ${json.lockedBy || 'someone'})`);
+        showToast(`ไม่สามารถแก้ไขได้: ${json.error} (Locked by ${json.lockedBy || 'someone'})`, 'error');
         return;
       }
       setIsEditing(true);
     } catch (requestError: unknown) {
-      alert('Failed to acquire lock: ' + getErrorMessage(requestError, 'Unknown error'));
+      showToast('Failed to acquire lock: ' + getErrorMessage(requestError, 'Unknown error'), 'error');
     } finally {
       setActionLoading(false);
     }
@@ -195,7 +197,7 @@ function RequisitionDocWorkspace({ docType }: { docType: string }) {
     if (!docDetail?.header) return;
 
     if (formConfig?.apiType === 'none') {
-      alert('ระบบนี้อยู่ในช่วงพัฒนา (UI Only)');
+      showToast('ระบบนี้อยู่ในช่วงพัฒนา (UI Only)', 'warning');
       return;
     }
 
@@ -207,7 +209,7 @@ function RequisitionDocWorkspace({ docType }: { docType: string }) {
         lines: docDetail.lines
       };
       await saveRequisitionDocument(payload);
-      alert('บันทึกเอกสารสำเร็จ!');
+      showToast('บันทึกเอกสารสำเร็จ!', 'success');
       handleClear();
       loadDocList();
     } catch (requestError: unknown) {

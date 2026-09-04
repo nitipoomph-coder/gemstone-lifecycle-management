@@ -1,7 +1,10 @@
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList } from 'recharts';
+import { useMemo } from 'react';
+import { ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList } from 'recharts';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ALL_GROUPS } from '../../config/customerGroups';
-import type { Metric, ChartDatum } from '../../hooks/useCustomerSalesData';
+import { ALL_GROUPS } from '../../../config/customerGroups';
+import type { ChartDatum, Metric } from '../../../hooks/useCustomerSalesData';
+
+import './CustomerSales.css';
 
 const YEAR_COLORS = ['var(--color-chart-1)', 'var(--color-chart-2)', 'var(--color-chart-3)', 'var(--color-chart-4)', 'var(--color-chart-5)', 'var(--color-chart-6)'];
 
@@ -80,6 +83,25 @@ const CustomTooltip = ({ active, payload, label, metric, chartData, mode, monthl
   return null;
 };
 
+// Helper for Smart Y-Axis Scale
+function niceNum(range: number, round = false) {
+  const exponent = Math.floor(Math.log10(range));
+  const fraction = range / Math.pow(10, exponent);
+  let niceFraction;
+  if (round) {
+    if (fraction < 1.5) niceFraction = 1;
+    else if (fraction < 3) niceFraction = 2;
+    else if (fraction < 7) niceFraction = 5;
+    else niceFraction = 10;
+  } else {
+    if (fraction <= 1) niceFraction = 1;
+    else if (fraction <= 2) niceFraction = 2;
+    else if (fraction <= 5) niceFraction = 5;
+    else niceFraction = 10;
+  }
+  return niceFraction * Math.pow(10, exponent);
+}
+
 interface CustomerSalesChartProps {
   chartData: ChartDatum[];
   metric: Metric;
@@ -123,15 +145,116 @@ export function CustomerSalesChart({
     return value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
 
+  const { processedData, yAxisMax, yAxisTicks } = useMemo(() => {
+    if (!chartData || chartData.length === 0) {
+      return { processedData: [], yAxisMax: 100, yAxisTicks: [0, 50, 100] };
+    }
+
+    let maxBar = 0;
+    let maxTot = 0;
+    let minTot = Number.MAX_VALUE;
+    const keys = monthlySeries === 'group' ? sortedSel : activeYears;
+
+    // หา Max Bar และคำนวณ Total ของแต่ละช่วง
+    chartData.forEach((d: any) => {
+      let tot = 0;
+      keys.forEach(k => {
+        const val = Number(d[k] || 0);
+        tot += val;
+        if (val > maxBar) maxBar = val;
+      });
+      d._actualTotal = tot;
+      if (tot > 0) {
+        if (tot > maxTot) maxTot = tot;
+        if (tot < minTot) minTot = tot;
+      }
+    });
+
+    if (minTot === Number.MAX_VALUE) minTot = 0;
+
+    const BAR_ZONE = 0.58; // กดแท่งลงมาเหลือ 58% เพื่อให้มีที่ว่างด้านบนสำหรับเส้น Total
+    const TOT_LO = 0.65;   // เส้น Total ลอยระหว่าง 65% ถึง 85%
+    const TOT_HI = 0.85;
+
+    let calculatedYMax = 100;
+    let calculatedTicks: number[] = [0, 50, 100];
+
+    if (maxBar > 0) {
+      const pTarget = maxBar / BAR_ZONE;
+      // เพิ่มขั้น (Ticks) เป็นประมาณ 10-12 ขั้นตาม ProductionSummary
+      const pInt = niceNum(pTarget / 12.0, false); 
+      calculatedYMax = Math.ceil(pTarget / pInt) * pInt;
+
+      calculatedTicks = [];
+      for (let val = 0; val <= calculatedYMax; val += pInt) {
+        calculatedTicks.push(val);
+      }
+    }
+
+    const processed = chartData.map((d: any) => {
+      const tot = d._actualTotal || 0;
+      let totalPlotY: number | null = null;
+
+      if (tot > 0) {
+        let frac = (TOT_LO + TOT_HI) / 2;
+        if (maxTot > minTot) {
+          frac = TOT_LO + ((tot - minTot) / (maxTot - minTot)) * (TOT_HI - TOT_LO);
+        }
+        totalPlotY = calculatedYMax * frac;
+      }
+
+      return { ...d, _totalPlotY: totalPlotY };
+    });
+
+    return { processedData: processed, yAxisMax: calculatedYMax, yAxisTicks: calculatedTicks };
+  }, [chartData, monthlySeries, sortedSel, activeYears]);
+
+  const renderTotalLabel = (props: any) => {
+    const { x, y, index } = props;
+    const item = processedData[index];
+    if (!item || !item._actualTotal || item._actualTotal === 0) return <g />;
+
+    return (
+      <text
+        x={x}
+        y={y - 12}
+        textAnchor="middle"
+        fill="var(--color-text-primary)"
+        fontSize={10}
+        fontWeight={800}
+      >
+        {metric === 'qty'
+          ? Number(item._actualTotal).toLocaleString(undefined, { maximumFractionDigits: 0 })
+          : '$' + formatAxisValue(item._actualTotal).replace('$', '')}
+      </text>
+    );
+  };
+
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <BarChart data={chartData} margin={{ top: 20, right: 24, left: 0, bottom: 5 }}>
-        <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--color-border-light)" opacity={0.5} />
-        <XAxis dataKey="label" tick={{ fontSize: 10, fill: 'var(--color-text-secondary)', fontWeight: 800 }} axisLine={false} tickLine={false} dy={10} />
-        <YAxis tickFormatter={(val) => formatAxisValue(val)} tick={{ fontSize: 10, fill: 'var(--color-text-quaternary)', fontWeight: 700 }} axisLine={false} tickLine={false} dx={-5} width={70} />
+      <ComposedChart data={processedData} margin={{ top: 20, right: 24, left: 0, bottom: 5 }}>
+        <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--color-border-light)" />
+        <XAxis 
+          dataKey="label" 
+          tick={{ fontSize: 11, fill: 'var(--color-text-secondary)', fontWeight: 600 }} 
+          axisLine={{ stroke: 'var(--color-border-strong)', strokeWidth: 1.5 }}
+          tickLine={false} 
+          tickMargin={8} 
+        />
+        <YAxis 
+          domain={[0, yAxisMax]}
+          ticks={yAxisTicks}
+          interval={0}
+          tickFormatter={(val) => formatAxisValue(val)} 
+          tick={{ fontSize: 10, fill: 'var(--color-text-secondary)', fontWeight: 500 }} 
+          axisLine={{ stroke: 'var(--color-border-strong)', strokeWidth: 1.5 }}
+          tickLine={{ stroke: 'var(--color-border-strong)', strokeWidth: 1 }}
+          tickMargin={6} 
+          width={70} 
+        />
         <Tooltip content={<CustomTooltip metric={metric} chartData={chartData} mode={mode} monthlySeries={monthlySeries} />} cursor={{ fill: 'var(--color-surface-1)', opacity: 0.4 }} />
         {monthlySeries === 'group' ? sortedSel.map((gId) => {
-          const g = ALL_GROUPS.find(x => x.id === gId)!;
+          const g = ALL_GROUPS.find((group) => group.id === gId)!;
           return (
             <Bar
               key={gId}
@@ -173,7 +296,19 @@ export function CustomerSalesChart({
             </Bar>
           );
         })}
-      </BarChart>
+
+        <Line
+          type="monotone"
+          dataKey="_totalPlotY"
+          name="Total"
+          stroke="#3b82f6"
+          strokeWidth={3}
+          dot={{ r: 4, fill: "#3b82f6", stroke: 'var(--color-ui-surface)', strokeWidth: 1.5 }}
+          activeDot={{ r: 6 }}
+          connectNulls={true}
+          label={renderTotalLabel}
+        />
+      </ComposedChart>
     </ResponsiveContainer>
   );
 }

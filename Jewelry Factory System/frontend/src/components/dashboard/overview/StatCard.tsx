@@ -1,5 +1,5 @@
 import { PackageCheck, ClipboardList, Factory, BarChart3 } from 'lucide-react';
-import type { DashboardStat } from '../../types';
+import type { DashboardStat } from '../../../types';
 
 const variantStyles: Record<string, { iconColor: string }> = {
   procurement: { iconColor: 'text-[var(--color-brand-600)]' },

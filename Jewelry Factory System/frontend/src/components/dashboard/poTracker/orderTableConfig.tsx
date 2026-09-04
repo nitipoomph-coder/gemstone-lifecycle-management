@@ -1,5 +1,5 @@
 import { ChevronRight } from 'lucide-react';
-import type { OrderSummary } from '../../services/orderAPI';
+import type { OrderSummary } from '../../../services/orderAPI';
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 // ช่องที่ไม่มีข้อมูล = เว้นว่าง (ตามที่ผู้ใช้ระบุ ไม่ใส่ placeholder '-')
 const formatDate = (d: string | null) =>

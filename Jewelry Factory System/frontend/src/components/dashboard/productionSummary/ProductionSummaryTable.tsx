@@ -80,7 +80,7 @@ export function ProductionSummaryTable({ data, tab }: TableProps) {
                 fontWeight: 700,
               }}
             >
-              Group
+
             </th>
 
             {/* คอลัมน์ข้อมูล (เฉลี่ยความกว้างเท่ากันทั้งหมด) */}
@@ -246,7 +246,7 @@ export function ProductionSummaryTable({ data, tab }: TableProps) {
                   lineHeight: '1.1',
                 }}
               >
-                Avg.(Day)
+                Avg.(Day/Pcs)
               </td>
 
               {data.map((d) => (

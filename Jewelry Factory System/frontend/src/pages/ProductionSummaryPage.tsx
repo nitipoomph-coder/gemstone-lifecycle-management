@@ -2,8 +2,11 @@ import { useState, useEffect, useRef } from 'react';
 import Topbar from '../components/layout/Topbar';
 import { ErpSegmentedControl, ErpIconButton } from '../components/ui/ErpButtons';
 import { Printer, Settings2, RefreshCw, ChevronDown } from 'lucide-react';
+import CustomSelect from '../components/ui/CustomSelect';
 import { ProductionSummaryChart } from '../components/dashboard/productionSummary/ProductionSummaryChart';
 import { ProductionSummaryTable } from '../components/dashboard/productionSummary/ProductionSummaryTable';
+import { ProductionDashboardSkeleton } from '../components/dashboard/productionSummary/ProductionDashboardSkeleton';
+import { useToast } from '../contexts/ToastContext';
 import { getMaxWeek, getHolidays } from '../services/productionSummaryAPI';
 import { PRODUCTION_STEPS, PRODUCTION_MODES, MONTH_FULL, getYearOptions, PROD_CUSTOMER_GROUPS } from '../config/productionSummaryConfig';
 import type { ProdCustomerGroup } from '../config/productionSummaryConfig';
@@ -93,6 +96,8 @@ export default function ProductionSummaryPage() {
   const [chartTitle, setChartTitle] = useState('');
   const [showFilterPopover, setShowFilterPopover] = useState(false);
   const filterPopoverRef = useRef<HTMLDivElement>(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const { showToast } = useToast();
 
   const printRef = useRef<HTMLDivElement>(null);
 
@@ -274,7 +279,7 @@ export default function ProductionSummaryPage() {
         const d2 = new Date(toDate);
 
         if (d1 > d2) {
-          alert("Date From cannot be greater than Date To");
+          showToast("Date From cannot be greater than Date To", "error");
           setLoading(false);
           return;
         }
@@ -563,40 +568,30 @@ export default function ProductionSummaryPage() {
                     <div className="flex flex-col gap-3">
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                         <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-secondary)' }}>Department</label>
-                        <select
+                        <CustomSelect
                           value={step}
-                          onChange={e => setStep(e.target.value)}
-                          style={{ padding: '6px 12px', borderRadius: '4px', border: '1px solid var(--color-border-light)', background: 'var(--color-surface-1)', color: 'var(--color-text-primary)' }}
-                        >
-                          {PRODUCTION_STEPS.map((s) => (
-                            <option key={s.code} value={s.code}>{s.nameEN} ({s.nameTH})</option>
-                          ))}
-                        </select>
+                          onChange={setStep}
+                          options={PRODUCTION_STEPS.map(s => ({ value: s.code, label: `${s.nameEN} (${s.nameTH})` }))}
+                        />
                       </div>
 
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                         <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-secondary)' }}>Mode</label>
-                        <select
+                        <CustomSelect
                           value={mode}
-                          onChange={e => setMode(e.target.value)}
-                          style={{ padding: '6px 12px', borderRadius: '4px', border: '1px solid var(--color-border-light)', background: 'var(--color-surface-1)', color: 'var(--color-text-primary)' }}
-                        >
-                          {PRODUCTION_MODES.map((m) => (
-                            <option key={m.key} value={m.key}>{m.label}</option>
-                          ))}
-                        </select>
+                          onChange={setMode}
+                          options={PRODUCTION_MODES.map(m => ({ value: m.key, label: m.label }))}
+                        />
                       </div>
 
                       {tab !== 'day' && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                           <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-secondary)' }}>Year</label>
-                          <select
-                            value={year}
-                            onChange={e => setYear(Number(e.target.value))}
-                            style={{ padding: '6px 12px', borderRadius: '4px', border: '1px solid var(--color-border-light)', background: 'var(--color-surface-1)', color: 'var(--color-text-primary)' }}
-                          >
-                            {years.map(y => <option key={y} value={y}>{y}</option>)}
-                          </select>
+                          <CustomSelect
+                            value={String(year)}
+                            onChange={(v) => setYear(Number(v))}
+                            options={years.map(y => ({ value: String(y), label: String(y) }))}
+                          />
                         </div>
                       )}
 
@@ -604,23 +599,19 @@ export default function ProductionSummaryPage() {
                         <div className="flex gap-2">
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
                             <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-secondary)' }}>From Wk</label>
-                            <select
-                              value={fromWeek}
-                              onChange={e => setFromWeek(Number(e.target.value))}
-                              style={{ padding: '6px 12px', borderRadius: '4px', border: '1px solid var(--color-border-light)', background: 'var(--color-surface-1)', color: 'var(--color-text-primary)' }}
-                            >
-                              {weeks.map(w => <option key={w} value={w}>W{w}</option>)}
-                            </select>
+                            <CustomSelect
+                              value={String(fromWeek)}
+                              onChange={(v) => setFromWeek(Number(v))}
+                              options={weeks.map(w => ({ value: String(w), label: `W${w}` }))}
+                            />
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
                             <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-secondary)' }}>To Wk (Max 12)</label>
-                            <select
-                              value={toWeek}
-                              onChange={e => setToWeek(Number(e.target.value))}
-                              style={{ padding: '6px 12px', borderRadius: '4px', border: '1px solid var(--color-border-light)', background: 'var(--color-surface-1)', color: 'var(--color-text-primary)' }}
-                            >
-                              {weeks.map(w => <option key={w} value={w}>W{w}</option>)}
-                            </select>
+                            <CustomSelect
+                              value={String(toWeek)}
+                              onChange={(v) => setToWeek(Number(v))}
+                              options={weeks.map(w => ({ value: String(w), label: `W${w}` }))}
+                            />
                           </div>
                         </div>
                       )}
@@ -628,15 +619,11 @@ export default function ProductionSummaryPage() {
                       {tab === 'month' && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                           <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-secondary)' }}>Month</label>
-                          <select
-                            value={month}
-                            onChange={e => setMonth(Number(e.target.value))}
-                            style={{ padding: '6px 12px', borderRadius: '4px', border: '1px solid var(--color-border-light)', background: 'var(--color-surface-1)', color: 'var(--color-text-primary)' }}
-                          >
-                            {MONTH_FULL.map((m, i) => (
-                              <option key={i + 1} value={i + 1}>{m}</option>
-                            ))}
-                          </select>
+                          <CustomSelect
+                            value={String(month)}
+                            onChange={(v) => setMonth(Number(v))}
+                            options={MONTH_FULL.map((m, i) => ({ value: String(i + 1), label: m }))}
+                          />
                         </div>
                       )}
 
@@ -760,24 +747,21 @@ export default function ProductionSummaryPage() {
       <div className="app-content-frame app-content-frame--workspace app-page-content flex-1 overflow-hidden p-2.5 flex flex-col min-h-0">
         <div ref={printRef} className="print-content flex flex-col h-full gap-2 min-h-0">
 
-          {/* กล่องกราฟ (ปรับความสูงเป็น 500px) */}
-          <div className="print-chart-box" style={{ height: '500px', width: '100%' }}>
-            {loading ? (
-              <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-tertiary)' }}>
-                <RefreshCw className="animate-spin mr-2" size={20} /> Loading data...
+          {loading ? (
+            <ProductionDashboardSkeleton />
+          ) : (
+            <>
+              {/* กล่องกราฟ (ปรับความสูงเป็น 500px) */}
+              <div className="print-chart-box" style={{ height: '500px', width: '100%' }}>
+                <ProductionSummaryChart data={data} title={chartTitle} showAvgLine={tab === 'year' || tab === 'week'} />
               </div>
-            ) : (
-              <ProductionSummaryChart data={data} title={chartTitle} showAvgLine={tab === 'year' || tab === 'week'} />
-            )}
-          </div>
 
-
-
-
-          {/* กล่องตาราง (ใส่ class print-table-box) */}
-          <div className="print-table-box shrink-0">
-            <ProductionSummaryTable data={data} tab={tab} />
-          </div>
+              {/* กล่องตาราง (ใส่ class print-table-box) */}
+              <div className="print-table-box shrink-0">
+                <ProductionSummaryTable data={data} tab={tab} />
+              </div>
+            </>
+          )}
 
         </div>
       </div>

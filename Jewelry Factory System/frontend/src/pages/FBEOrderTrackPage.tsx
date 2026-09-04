@@ -576,20 +576,41 @@ export default function FBEOrderTrackPage() {
                       className="donut-loading-spin"
                     />
                   ) : (
-                    <circle
-                      cx="59"
-                      cy="59"
-                      r="47"
-                      stroke={summary?.percent === 100 ? 'var(--color-track-done)' : 'var(--color-warning-500)'}
-                      strokeWidth="9"
-                      fill="none"
-                      strokeDasharray={2 * Math.PI * 47}
-                      strokeDashoffset={2 * Math.PI * 47 * (1 - (summary?.percent || 0) / 100)}
-                      strokeLinecap="round"
-                      transform="rotate(-90 59 59)"
-                      className={summary?.percent && summary.percent < 100 ? 'donut-pulse-active' : undefined}
-                      style={{ transition: 'stroke-dashoffset 0.6s ease' }}
-                    />
+                    <>
+                      <circle
+                        cx="59"
+                        cy="59"
+                        r="47"
+                        stroke={summary?.percent === 100 ? 'var(--color-track-done)' : 'var(--color-warning-500)'}
+                        strokeWidth="9"
+                        fill="none"
+                        strokeDasharray={2 * Math.PI * 47}
+                        strokeDashoffset={2 * Math.PI * 47 * (1 - (summary?.percent || 0) / 100)}
+                        strokeLinecap="round"
+                        transform="rotate(-90 59 59)"
+                        className={summary?.percent && summary.percent < 100 ? 'donut-pulse-active' : undefined}
+                        style={{ transition: 'stroke-dashoffset 0.6s ease' }}
+                      />
+                      
+                      {/* Shimmer Line (Only when < 100% and > 0%) */}
+                      {summary?.percent && summary.percent > 0 && summary.percent < 100 ? (
+                        <circle
+                          cx="59"
+                          cy="59"
+                          r="47"
+                          stroke="rgba(255, 255, 255, 0.9)"
+                          strokeWidth="9"
+                          fill="transparent"
+                          strokeDasharray={`15 ${2 * Math.PI * 47}`}
+                          strokeLinecap="round"
+                          transform="rotate(-90 59 59)"
+                          className="donut-shimmer-line"
+                          style={{
+                             '--shimmer-end': `${-1 * ((2 * Math.PI * 47 * (summary.percent / 100)) - 15)}px`
+                          } as React.CSSProperties}
+                        />
+                      ) : null}
+                    </>
                   )}
 
                   {/* ตัวเลขเปอร์เซ็นต์ หรือข้อความระบุสถานะประมวลผลทางการสำหรับห้องประชุม */}

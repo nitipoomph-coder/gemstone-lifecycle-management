@@ -2,8 +2,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ChevronRight, BarChart2, DollarSign, Layers, Package, X } from 'lucide-react';
-import { type OrderSummary } from '../../services/orderAPI';
+import { type OrderSummary } from '../../../services/orderAPI';
 import { MASTER_COLS, USER_INPUT_HEAD_BG, USER_INPUT_KEYS, PENDING_QTY_KEYS, PENDING_QTY_HEAD_BG, METRICS_KEYS, METRICS_HEAD_BG, METRICS_BG } from './orderTableConfig';
+import './POTracker.css';
 
 
 // ─── View Selection Popup ─────────────────────────────────────────────────────

@@ -9,6 +9,7 @@ import { ORDER_DETAIL_COLUMNS } from '../../config/orderDetailColumns';
 import { formatV, formatColumnValue } from './format';
 import { SpecItem, DataPair } from './shared';
 import { psPhotoUrl, attachPhotoFallback } from '../../utils/photoUrl';
+import { useToast } from '../../contexts/ToastContext';
 
 const PRODUCTION_COLS = ORDER_DETAIL_COLUMNS.filter((c) => c.group === 'production');
 
@@ -50,7 +51,7 @@ export default function LineDetailDrawer({ line, index, onClose, onSaved }: Line
     PkRemark: (line.PkRemark as string) || '',
     ProdRemark: (line.ProdRemark as string) || '',
   });
-  const [showToast, setShowToast] = useState(false);
+  const { showToast } = useToast();
   const [isImageOpen, setIsImageOpen] = useState(false);
 
   // รูปดึงจาก network path อย่างเดียว (ps ก่อน, onError fallback ไป cad)
@@ -85,11 +86,10 @@ export default function LineDetailDrawer({ line, index, onClose, onSaved }: Line
       Object.assign(line, remarks);
       onSaved(updated);
 
-      setShowToast(true);
-      setTimeout(() => setShowToast(false), 3000);
+      showToast(`Remarks for Line #${index + 1} updated successfully.`, 'success');
     } catch (err) {
       console.error('Failed to save remarks:', err);
-      alert('Failed to save remarks. Please try again.');
+      showToast('Failed to save remarks. Please try again.', 'error');
     }
   };
 
@@ -356,25 +356,6 @@ export default function LineDetailDrawer({ line, index, onClose, onSaved }: Line
           />
         </div>
       )}
-
-      {/* Toast */}
-      {showToast && (
-        <div style={{
-          position: 'fixed', bottom: '32px', right: '32px', background: 'var(--color-surface-0)',
-          border: '1px solid var(--color-success-500)', borderRadius: '8px', padding: '16px 24px',
-          boxShadow: 'var(--shadow-floating)', zIndex: 10002, display: 'flex', alignItems: 'center', gap: '16px',
-          animation: 'slideUpFade 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards', color: 'var(--color-text-primary)',
-        }}>
-          <div style={{ background: 'var(--color-success-100)', color: 'var(--color-success-700)', borderRadius: '50%', padding: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Check size={20} strokeWidth={3} />
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <span style={{ fontWeight: 800, fontSize: '0.9rem', color: 'var(--color-text-primary)' }}>Saved Successfully</span>
-            <span style={{ fontWeight: 600, fontSize: '0.75rem', color: 'var(--color-text-tertiary)' }}>Remarks for Line #{index + 1} updated.</span>
-          </div>
-        </div>
-      )}
-
       <style>{`
         @keyframes slideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
       `}</style>

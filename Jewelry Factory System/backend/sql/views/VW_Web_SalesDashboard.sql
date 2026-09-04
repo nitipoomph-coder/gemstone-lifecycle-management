@@ -16,10 +16,16 @@ SELECT
     DATEPART(isowk, HD.OrdDate) AS OrdWeek,
     HD.DueDate,
     ISNULL(HD.CustDueDate, HD.DueDate) AS CustDueDate,
+    
+    -- Customer Information
     HD.CustCode, 
     CUST.CustName, 
     CUST.CustStatus, 
+    
+    -- Sales Information
     ISNULL(CUST.SalesName, HD.SalesName) AS SalesName, 
+    EMP.EmpType,      -- [อิงตามระบบเก่า] เพื่อใช้แยกสิทธิ์ว่าเป็น 'SLA', 'SLC', ฯลฯ
+    EMP.SalesLV,      -- [อิงตามระบบเก่า] เพื่อใช้เรียงลำดับใน Dropdown
     
     HD.PONo,
     HD.EXNo AS PO2,
@@ -54,10 +60,11 @@ SELECT
         ELSE 0 
     END AS OpenQty,
 
-    -- Financial Amounts ($ USD Standardized via ItemExchAmnt)
+    -- Financial Amounts
     ISNULL(DT.ItemPrice, 0) AS ItemPrice,
     ISNULL(DT.ItemExchAmnt, DT.ItemAmnt) AS ItemAmnt, 
     ISNULL(DT.ExportAmnt, 0) AS ExportAmnt,
+    ISNULL(HD.SumOrdExchAmnt, 0.0) AS SumOrdExchAmnt, -- [อิงตามระบบเก่า] เป็น Field ยอดรวมที่ใช้คิดในหน้ารายปี
 
     -- Order Status
     ISNULL(HD.OrdStatus, 'P') AS OrdStatus,
@@ -68,16 +75,18 @@ INNER JOIN dbo.OrdDT AS DT WITH (NOLOCK)
     ON HD.OrdID = DT.OrdID AND HD.OrdNo = DT.OrdNo 
 LEFT OUTER JOIN dbo.GMCust AS CUST WITH (NOLOCK)
     ON HD.CustCode = CUST.CustCode
+LEFT OUTER JOIN dbo.GMEmp AS EMP WITH (NOLOCK)
+    ON ISNULL(CUST.SalesName, HD.SalesName) = EMP.SalesName
 WHERE 
     -- 1. Exclude cancelled orders
     (ISNULL(HD.OrdStatus, N'') <> 'C') 
     
-    -- 2. Include active customers only
+    -- 2. Include active customers only (อิงระบบเก่า: GMCust.CustStatus = 'Y')
     AND (ISNULL(CUST.CustStatus, N'Y') = 'Y')
     
-    -- 3. Include finished goods / commercial production prefixes matching PC_Show_OrdTrack_Sum_OrdDate
-    AND (SUBSTRING(HD.OrdNo, 1, 3) IN ('BBC', 'BBS', 'BBE', 'BBL', 'BBR', 'BBT', 'BBP'))
+    -- 3. Exclude non-sales orders (อิงระบบเก่า 100%: SUBSTRING(a.OrdNo,1,3) NOT IN ('BBP','BBK',...))
+    AND (SUBSTRING(HD.OrdNo, 1, 3) NOT IN ('BBP','BBK','BBS','BBL','BBT','BBD'))
 
-    -- 4. Exclude test, stock and blank POs matching factory standards
+    -- 4. Exclude test, stock and blank POs
     AND (LTRIM(RTRIM(ISNULL(HD.PONo, ''))) NOT IN ('', 'TOP', 'Test', 'Testing', 'Stock', 'STOCK'));
 GO

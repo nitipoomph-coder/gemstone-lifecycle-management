@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { GROUP_PRESETS } from '../components/dashboard/orderTableConfig';
+import { GROUP_PRESETS } from '../components/dashboard/poTracker/orderTableConfig';
 import { fetchOrders, type OrderSummary } from '../services/orderAPI';
 import { getErrorMessage } from '../utils/errors';
 

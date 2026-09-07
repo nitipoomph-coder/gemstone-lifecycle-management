@@ -148,23 +148,27 @@ export function ProductionForecastDashboard() {
     if (viewMode === 'week') return `W${fromWeek} - W${toWeek} ${year}`;
     
     // Format YYYY-MM-DD to DD/MM/YYYY
-    const formatStr = (ymd: string) => {
-      const parts = ymd.split('-');
-      if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
-      return ymd;
-    };
-    return `${formatStr(fromDate)} to ${formatStr(toDate)}`;
+    const fd = fromDate.split('-');
+    const td = toDate.split('-');
+    if (fd.length === 3 && td.length === 3) {
+      return `${fd[2]}/${fd[1]}/${fd[0]} - ${td[2]}/${td[1]}/${td[0]}`;
+    }
+    return 'Custom Date';
   };
 
   return (
-    <div className="erp-page-layout">
-      <Topbar 
-        breadcrumb={[{ label: 'JEWELRY FACTORY SYSTEM', path: '/' }, { label: 'Production Forecast' }]}
-        hideSearch
+    <div className="flex flex-col w-full h-full min-w-0">
+      <Topbar
+        breadcrumb={[
+          { label: 'JEWELRY FACTORY SYSTEM', path: '/' },
+          { label: 'Production Forecast' }
+        ]}
         contentLayout="workspace"
+        hideSearch
         rightContent={
-          <div style={{ display: 'flex', flexWrap: 'nowrap', gap: '8px', alignItems: 'center' }}>
-            <div style={{ minWidth: 160 }}>
+          <div className="flex items-center justify-end flex-1 min-w-0 gap-3 pr-2">
+            
+            <div className="min-w-[160px]">
               <CustomSelect
                 options={GROUPS}
                 value={group}
@@ -175,30 +179,24 @@ export function ProductionForecastDashboard() {
             <div className="relative" ref={filterPopoverRef}>
               <button
                 onClick={() => setShowFilterPopover(!showFilterPopover)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px',
-                  background: showFilterPopover ? 'var(--color-surface-2)' : 'transparent',
-                  border: '1px solid',
-                  borderColor: showFilterPopover ? 'var(--color-border-strong)' : 'var(--color-border-light)',
-                  borderRadius: 6, height: '36px',
-                  fontSize: '0.85rem', fontWeight: 900, color: 'var(--color-text-primary)',
-                  cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'var(--font-display)',
-                  transition: 'all 0.15s'
-                }}
-                className="hover:bg-[var(--color-surface-1)] hover:border-[var(--color-border-strong)]"
+                className={`flex items-center gap-1.5 px-2.5 h-[36px] border rounded-md whitespace-nowrap transition-all text-[0.85rem] font-black cursor-pointer font-display ${
+                  showFilterPopover 
+                    ? 'bg-[var(--color-ui-raised)] border-[var(--color-border-strong)] text-[var(--color-text-primary)]' 
+                    : 'bg-transparent border-[var(--color-border-light)] text-[var(--color-text-primary)] hover:bg-[var(--color-ui-surface)] hover:border-[var(--color-border-strong)]'
+                }`}
               >
                 <Settings2 size={14} style={{ color: 'var(--color-brand-500)' }} />
                 <>
-                  <span style={{ color: "var(--color-text-secondary)", fontSize: "0.76rem", fontWeight: 700 }}>
+                  <span className="text-[0.76rem] font-bold text-[var(--color-text-secondary)]">
                     Filters:
                   </span>
-                  <span style={{ fontSize: "0.8rem", fontWeight: 600 }}>{getFilterSummaryText()}</span>
+                  <span className="text-[0.8rem] font-semibold">{getFilterSummaryText()}</span>
                 </>
                 <ChevronDown size={14} style={{ color: 'var(--color-text-tertiary)' }} />
               </button>
 
               {showFilterPopover && (
-                <div className="absolute right-0 z-[110] mt-2 bg-[var(--color-surface-0)] border border-[var(--color-border-strong)] rounded-lg shadow-lg p-4" style={{ width: 320 }}>
+                <div className="absolute right-0 z-[110] mt-2 w-[320px] bg-[var(--color-ui-surface)] border border-[var(--color-border-default)] rounded-md shadow-[var(--shadow-dropdown)] p-4">
                   <div className="flex items-center justify-between border-b border-[var(--color-border-light)] pb-2.5 mb-3">
                     <span className="text-xs font-black capitalize tracking-wider text-[var(--color-text-primary)]">
                       Date Filters
@@ -207,8 +205,8 @@ export function ProductionForecastDashboard() {
 
                   <div className="flex flex-col gap-3">
                     {viewMode !== 'day' && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-secondary)' }}>Year</label>
+                      <div className="flex flex-col gap-1">
+                        <label className="text-xs font-semibold text-[var(--color-text-secondary)]">Year</label>
                         <CustomSelect
                           value={String(year)}
                           onChange={(v) => setYear(Number(v))}
@@ -219,16 +217,16 @@ export function ProductionForecastDashboard() {
 
                     {viewMode === 'week' && (
                       <div className="flex gap-2">
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
-                          <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-secondary)' }}>From Wk</label>
+                        <div className="flex flex-col gap-1 flex-1">
+                          <label className="text-xs font-semibold text-[var(--color-text-secondary)]">From Wk</label>
                           <CustomSelect
                             value={String(fromWeek)}
                             onChange={(v) => setFromWeek(Number(v))}
                             options={weeks.map(w => ({ value: String(w), label: `W${w}` }))}
                           />
                         </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
-                          <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-secondary)' }}>To Wk</label>
+                        <div className="flex flex-col gap-1 flex-1">
+                          <label className="text-xs font-semibold text-[var(--color-text-secondary)]">To Wk</label>
                           <CustomSelect
                             value={String(toWeek)}
                             onChange={(v) => setToWeek(Number(v))}
@@ -239,8 +237,8 @@ export function ProductionForecastDashboard() {
                     )}
 
                     {viewMode === 'month' && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-secondary)' }}>Month</label>
+                      <div className="flex flex-col gap-1">
+                        <label className="text-xs font-semibold text-[var(--color-text-secondary)]">Month</label>
                         <CustomSelect
                           value={String(month)}
                           onChange={(v) => setMonth(Number(v))}
@@ -251,24 +249,22 @@ export function ProductionForecastDashboard() {
 
                     {viewMode === 'day' && (
                       <>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                          <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-secondary)' }}>From Date</label>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-xs font-semibold text-[var(--color-text-secondary)]">From Date</label>
                           <input 
                             type="date" 
                             value={fromDate} 
                             onChange={e => setFromDate(e.target.value)}
-                            className="erp-input"
-                            style={{ padding: '6px 10px', borderRadius: '6px', border: '1px solid var(--color-border-light)' }}
+                            className="erp-input px-2.5 py-1.5 rounded-md border border-[var(--color-border-default)] bg-[var(--color-ui-surface)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ui-focus-ring)]"
                           />
                         </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                          <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-secondary)' }}>To Date</label>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-xs font-semibold text-[var(--color-text-secondary)]">To Date</label>
                           <input 
                             type="date" 
                             value={toDate} 
                             onChange={e => setToDate(e.target.value)}
-                            className="erp-input"
-                            style={{ padding: '6px 10px', borderRadius: '6px', border: '1px solid var(--color-border-light)' }}
+                            className="erp-input px-2.5 py-1.5 rounded-md border border-[var(--color-border-default)] bg-[var(--color-ui-surface)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ui-focus-ring)]"
                           />
                         </div>
                       </>
@@ -278,7 +274,7 @@ export function ProductionForecastDashboard() {
               )}
             </div>
             
-            <div style={{ borderLeft: '1px solid var(--color-border-light)', paddingLeft: '8px', marginLeft: '4px' }}>
+            <div className="border-l border-[var(--color-border-default)] pl-2 ml-1">
               <ErpSegmentedControl
                 options={[
                   { value: 'day', label: 'Day' },
@@ -302,20 +298,20 @@ export function ProductionForecastDashboard() {
         }
       />
       
-      <div className="erp-page-body" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '24px', overflowY: 'auto' }}>
+      <div className="erp-page-body p-6 flex flex-col gap-6 overflow-y-auto">
         
         {/* Chart */}
-        <div style={{ background: 'var(--color-ui-surface)', padding: '20px', borderRadius: '12px', border: '1px solid var(--color-border-light)', height: '400px' }}>
-          <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--color-text-primary)', marginBottom: '16px' }}>
+        <div className="bg-[var(--color-ui-surface)] p-5 rounded-md border border-[var(--color-border-default)] shadow-[var(--shadow-panel)] h-[400px]">
+          <h3 className="text-base font-extrabold text-[var(--color-text-primary)] mb-4">
             Production Forecast ({group})
           </h3>
-          <div style={{ height: 'calc(100% - 40px)' }}>
+          <div className="h-[calc(100%-40px)]">
             <ProductionForecastChart data={data} />
           </div>
         </div>
 
         {/* Table */}
-        <div style={{ paddingBottom: '24px' }}>
+        <div className="pb-6">
           <ProductionForecastTable data={data} viewMode={viewMode} />
         </div>
 

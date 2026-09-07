@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
+import GlobalTopbar from './GlobalTopbar';
 
 const getInitialSidebarState = () => {
   if (typeof window === 'undefined') return true;
@@ -34,9 +35,12 @@ export default function AppLayout() {
           aria-label="Close navigation menu"
         />
       )}
-      <main className="app-main flex min-w-0 flex-1 flex-col overflow-hidden">
-        <Outlet />
-      </main>
+      <div className="flex flex-col flex-1 min-w-0">
+        <GlobalTopbar />
+        <main className="app-main flex min-w-0 flex-1 flex-col overflow-hidden">
+          <Outlet />
+        </main>
+      </div>
     </div>
   );
 }

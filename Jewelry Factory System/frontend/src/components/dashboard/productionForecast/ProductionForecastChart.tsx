@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { ComposedChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Line, LabelList } from 'recharts';
+import { useMemo } from 'react';
+import { ComposedChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList } from 'recharts';
 
 function niceNum(range: number, round = false) {
   const exponent = Math.floor(Math.log10(range));

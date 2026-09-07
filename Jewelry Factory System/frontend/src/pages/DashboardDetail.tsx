@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
-import Topbar from '../components/layout/Topbar';
+import PageHeader from '../components/layout/PageHeader';
 import { fetchDashboardData } from '../services/dashboardAPI';
 
 export default function DashboardDetail() {
@@ -49,7 +49,7 @@ export default function DashboardDetail() {
 
   return (
     <div className="app-page">
-      <Topbar
+      <PageHeader
         breadcrumb={[
           { label: 'JEWELRY FACTORY SYSTEM', path: '/' },
           { label: 'DASHBOARD', path: '/' },

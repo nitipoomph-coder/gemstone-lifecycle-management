@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Topbar from '../components/layout/Topbar';
+import PageHeader from '../components/layout/PageHeader';
 import { fetchDashboardData, fetchAvailableYears, type DashboardData, type CardType } from '../services/dashboardAPI';
 import CardDetailPanel from '../components/dashboard/overview/CardDetailPanel';
 import CustomSelect from '../components/ui/CustomSelect';
@@ -95,7 +95,7 @@ export default function Dashboard() {
   // Loading
   if (loading) return (
     <>
-      <Topbar breadcrumb={[{ label: 'JEWELRY FACTORY SYSTEM', path: '/' }, { label: 'DASHBOARD' }]} contentLayout="dashboard" />
+      <PageHeader breadcrumb={[{ label: 'JEWELRY FACTORY SYSTEM', path: '/' }, { label: 'DASHBOARD' }]} contentLayout="dashboard" />
       <div className="app-page-scroll content-scrollbar">
         <div className="app-content-frame app-content-frame--dashboard app-page-content dashboard-page flex flex-col gap-4">
           {/* Header Skeleton */}
@@ -130,7 +130,7 @@ export default function Dashboard() {
   // Error
   if (error) return (
     <>
-      <Topbar breadcrumb={[{ label: 'JEWELRY FACTORY SYSTEM', path: '/' }, { label: 'DASHBOARD' }]} contentLayout="dashboard" />
+      <PageHeader breadcrumb={[{ label: 'JEWELRY FACTORY SYSTEM', path: '/' }, { label: 'DASHBOARD' }]} contentLayout="dashboard" />
       <div className="app-page-scroll flex items-center justify-center">
         <div className="flex flex-col items-center gap-4 text-center">
           <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ background: 'var(--color-danger-50)' }}>
@@ -174,7 +174,7 @@ export default function Dashboard() {
 
   return (
     <>
-      <Topbar breadcrumb={[{ label: 'JEWELRY FACTORY SYSTEM', path: '/' }, { label: 'DASHBOARD' }]} contentLayout="dashboard" />
+      <PageHeader breadcrumb={[{ label: 'JEWELRY FACTORY SYSTEM', path: '/' }, { label: 'DASHBOARD' }]} contentLayout="dashboard" />
       <div className="app-page-scroll content-scrollbar">
         <div className="app-content-frame app-content-frame--dashboard app-page-content dashboard-page flex flex-col gap-4">
 

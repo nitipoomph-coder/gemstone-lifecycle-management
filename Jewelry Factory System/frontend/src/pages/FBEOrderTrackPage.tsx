@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import Topbar from '../components/layout/Topbar';
+import PageHeader from '../components/layout/PageHeader';
 import {
   Search,
   RotateCcw,
@@ -85,10 +85,9 @@ export default function FBEOrderTrackPage() {
     <div className="erp-page-container flex flex-col h-full overflow-hidden" style={{ background: 'var(--color-ui-canvas)', color: 'var(--color-text-primary)' }}>
       {/* Topbar Header */}
       <div className="no-print">
-        <Topbar
+        <PageHeader
           breadcrumb={breadcrumb}
           contentLayout="workspace"
-          hideSearch
           rightContent={
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <button

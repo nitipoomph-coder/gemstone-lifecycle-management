@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { CSSProperties, KeyboardEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, ChevronLeft, ChevronRight, DollarSign, Hash, Search } from 'lucide-react';
-import Topbar from '../components/layout/Topbar';
+import PageHeader from '../components/layout/PageHeader';
 import '../components/sales/SalesDenseTable.css';
 import './SalesResponsive.css';
 import { CUSTOMER_GROUPS } from '../config/customerGroups';
@@ -201,7 +201,7 @@ export default function SalesCustomerGroupDetail() {
 
   return (
     <>
-      <Topbar breadcrumb={[{ label: 'JEWELRY FACTORY SYSTEM', path: '/' }, { label: 'Sales Analytics' }, { label: 'Sales Summary', path: '/dashboard/customer' }, { label: 'Customer Trends', path: CUSTOMER_TRENDS_PATH }, { label: 'Order List' }]} contentLayout="workspace" />
+      <PageHeader breadcrumb={[{ label: 'JEWELRY FACTORY SYSTEM', path: '/' }, { label: 'Sales Analytics' }, { label: 'Sales Summary', path: '/dashboard/customer' }, { label: 'Customer Trends', path: CUSTOMER_TRENDS_PATH }, { label: 'Order List' }]} contentLayout="workspace" />
       <div className="content-scrollbar flex-1 overflow-y-auto" style={{ background: 'var(--color-surface-1)' }}>
         <div className="app-content-frame app-content-frame--workspace app-page-content sales-order-detail-frame flex flex-col gap-4">
           <div style={pageHeader}>

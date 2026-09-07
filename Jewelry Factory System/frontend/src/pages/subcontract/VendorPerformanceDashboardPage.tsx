@@ -1,6 +1,6 @@
 // src/pages/subcontract/VendorPerformanceDashboardPage.tsx
 import { useState, type CSSProperties } from 'react';
-import Topbar from '../../components/layout/Topbar';
+import PageHeader from '../../components/layout/PageHeader';
 import CustomSelect from '../../components/ui/CustomSelect';
 import { Users, ClipboardList, Clock, CalendarClock, ShieldAlert, AlertTriangle, BarChart3, Search } from 'lucide-react';
 
@@ -33,7 +33,7 @@ export default function VendorPerformanceDashboardPage() {
 
   return (
     <div className="app-page font-body">
-      <Topbar breadcrumb={[
+      <PageHeader breadcrumb={[
         { label: 'JEWELRY FACTORY SYSTEM', path: '/' },
         { label: 'SUBCONTRACT MANAGEMENT', path: '/subcontract/vendor-performance' },
         { label: 'VENDOR PERFORMANCE DASHBOARD' },

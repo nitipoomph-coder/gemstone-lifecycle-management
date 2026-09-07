@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 import { RefreshCw } from "lucide-react";
-import Topbar from "../components/layout/Topbar";
+import PageHeader from '../components/layout/PageHeader';
 import { useTopOrdersGalleryData } from "../hooks/useTopOrdersGalleryData";
 import { TopOrdersFilterBar } from "../components/dashboard/topOrders/TopOrdersFilterBar";
 import { TopOrdersGalleryGrid } from "../components/dashboard/topOrders/TopOrdersGalleryGrid";
@@ -58,13 +58,12 @@ export default function TopOrdersGalleryPage() {
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-[var(--color-surface-1)]">
-      <Topbar
+      <PageHeader
         breadcrumb={[
           { label: "JEWELRY FACTORY SYSTEM", path: "/" },
           { label: "Sales Analytics" },
           { label: "Top Item Gallery" },
         ]}
-        hideSearch={true}
         contentLayout="workspace"
         rightContent={
           <div className="flex items-center gap-2">

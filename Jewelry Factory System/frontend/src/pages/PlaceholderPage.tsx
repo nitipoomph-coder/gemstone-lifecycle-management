@@ -1,6 +1,6 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Blocks } from 'lucide-react';
-import Topbar from '../components/layout/Topbar';
+import PageHeader from '../components/layout/PageHeader';
 import { menuConfig } from '../config/menuConfig';
 
 const groupFirstPath: Record<string, string> = {
@@ -36,7 +36,7 @@ export default function PlaceholderPage() {
 
   return (
     <div className="app-page">
-      <Topbar
+      <PageHeader
         breadcrumb={[
           { label: 'JEWELRY FACTORY SYSTEM', path: '/' },
           { label: groupLabel, path: groupFirstPath[groupId] || '/' },

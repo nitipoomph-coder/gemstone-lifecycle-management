@@ -1,5 +1,5 @@
 import { Outlet } from 'react-router-dom';
-import Topbar from '../components/layout/Topbar';
+import PageHeader from '../components/layout/PageHeader';
 import CustomSelect from '../components/ui/CustomSelect';
 import { CalendarDays, ChevronDown, Users, BarChart3, Table2, LineChart } from 'lucide-react';
 import { ALL_GROUPS } from '../config/customerGroups';
@@ -61,10 +61,9 @@ export default function CustomerDashboardLayout() {
 
   return (
     <>
-      <Topbar
+      <PageHeader
         breadcrumb={summaryBreadcrumb}
         contentLayout="workspace"
-        hideSearch
         rightContent={
           <div className="sales-gallery-topbar-tools flex min-w-0 flex-1 items-center justify-end gap-3 pr-2">
 

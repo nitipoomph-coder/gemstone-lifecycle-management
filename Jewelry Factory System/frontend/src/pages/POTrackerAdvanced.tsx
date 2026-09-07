@@ -1,4 +1,4 @@
-import Topbar from '../components/layout/Topbar';
+import PageHeader from '../components/layout/PageHeader';
 import OrderTable from '../components/dashboard/poTracker/OrderTable';
 import CustomViewModal from '../components/dashboard/poTracker/CustomViewModal';
 import CustomSelect from '../components/ui/CustomSelect';
@@ -55,7 +55,7 @@ export default function POTrackerAdvanced() {
 
   return (
     <div className="app-page font-body">
-      <Topbar breadcrumb={[{ label: 'JEWELRY FACTORY SYSTEM', path: '/' }, { label: 'PO TRACKER' }]} contentLayout="dashboard-wide" />
+      <PageHeader breadcrumb={[{ label: 'JEWELRY FACTORY SYSTEM', path: '/' }, { label: 'PO TRACKER' }]} contentLayout="dashboard-wide" />
 
       <div className="app-content-frame app-content-frame--dashboard-wide app-page-content po-tracker-page" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
 

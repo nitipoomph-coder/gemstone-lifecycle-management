@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef, type CSSProperties, type ReactNode } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { RefreshCw, AlertTriangle, ChevronDown, Search, Package, DollarSign, FileSpreadsheet, Image, X, Layers } from 'lucide-react';
-import Topbar from '../components/layout/Topbar';
+import PageHeader from '../components/layout/PageHeader';
 import { fetchOrderDetail, fetchOrderByPo, fetchOrderByGroup, type OrderDetail } from '../services/poTrackerAPI';
 import { PhotoGalleryModal } from '../components/orderDetail/PhotoGalleryModal';
 import OrderLineTable from '../components/orderDetail/OrderLineTable';
@@ -270,8 +270,7 @@ export default function OrderDetailPage() {
 
   return (
     <div className="app-page order-detail-page">
-      <Topbar
-        hideSearch
+      <PageHeader
         breadcrumb={[
           { label: 'JEWELRY FACTORY SYSTEM', path: '/' },
           { label: 'PO TRACKER', path: '/po-tracker' },

@@ -1,7 +1,7 @@
 // src/pages/ItemDetailPage.tsx
 import { useState, type ReactNode } from 'react';
 import { useParams } from 'react-router-dom';
-import Topbar from '../components/layout/Topbar';
+import PageHeader from '../components/layout/PageHeader';
 import { AlertTriangle, Image as ImageIcon, CheckCircle, FileText, Settings, Layers, Hash, Box } from 'lucide-react';
 
 export default function ItemDetailPage() {
@@ -21,7 +21,7 @@ export default function ItemDetailPage() {
 
   return (
     <div className="app-page item-detail-page">
-      <Topbar breadcrumb={[
+      <PageHeader breadcrumb={[
         { label: 'JEWELRY FACTORY SYSTEM', path: '/' },
         { label: 'PO TRACKER', path: '/po-tracker' },
         { label: itemData.itemNo }

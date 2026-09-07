@@ -1,35 +1,17 @@
-import { useNavigate, useLocation } from 'react-router-dom';
-import { Search, ChevronDown, ChevronRight, ChevronLeft, Palette, Package, Gem, User, Layers } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Search, ChevronDown, ChevronRight, Palette, Package, Gem, User, Layers } from 'lucide-react';
 import { useTheme } from '../../contexts/useTheme';
 import { useState, useRef, useEffect } from 'react';
 import { fetchSearch, type SearchResultItem } from '../../services/poTrackerAPI';
 import { psPhotoUrl, attachPhotoFallback } from '../../utils/photoUrl';
 
-interface BreadcrumbItem {
-  label: string;
-  path?: string;
-}
-
 type SearchScope = 'all' | 'order' | 'item' | 'customer' | 'po';
-type ContentLayout = 'dashboard' | 'dashboard-wide' | 'workspace';
 
-interface TopbarProps {
-  breadcrumb: BreadcrumbItem[];
-  hideSearch?: boolean;
-  contentLayout?: ContentLayout;
-  rightContent?: React.ReactNode;
-  bottomContent?: React.ReactNode;
-  icon?: React.ReactNode;
-}
-
-// Using SearchResultItem from API
-
-export default function Topbar({ breadcrumb, hideSearch, contentLayout = 'workspace', rightContent, bottomContent, icon }: TopbarProps) {
+export default function GlobalTopbar() {
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
   const [showThemeMenu, setShowThemeMenu] = useState(false);
   const themeMenuRef = useRef<HTMLDivElement>(null);
-  const location = useLocation();
 
   // Universal search state
   const [query, setQuery] = useState('');
@@ -92,11 +74,9 @@ export default function Topbar({ breadcrumb, hideSearch, contentLayout = 'worksp
     setQuery('');
   };
 
-  const frameClassName = `app-content-frame app-content-frame--${contentLayout}`;
-
   return (
     <header
-      className="app-topbar flex flex-col py-3.5"
+      className="app-global-topbar flex flex-col py-2"
       style={{
         background: 'var(--color-ui-surface)',
         borderBottom: '1px solid var(--color-border-light)',
@@ -106,61 +86,21 @@ export default function Topbar({ breadcrumb, hideSearch, contentLayout = 'worksp
         boxShadow: 'var(--shadow-panel)',
       }}
     >
-      <div className={`${frameClassName} app-page-inline app-topbar__row flex items-center justify-between gap-4`}>
-      {/* Left: Navigation & Branding */}
-      <div className="app-topbar__left flex min-w-0 items-center gap-4">
-        {location.pathname !== '/' && (
-          <button
-            onClick={() => navigate(-1)}
-            style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              width: 34, height: 34, borderRadius: 8,
-              background: 'var(--color-ui-surface)', color: 'var(--color-text-secondary)',
-              border: '1px solid var(--color-border-light)', cursor: 'pointer',
-              transition: 'color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease',
-            }}
-            className="app-topbar__back flex-shrink-0 hover:border-[var(--color-brand-600)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-brand-600)]"
-            title="Back"
-            aria-label="Go back"
-          >
-            <ChevronLeft size={18} />
-          </button>
-        )}
-
-        {/* Premium Titles Layout */}
-        <div className="flex min-w-0 flex-col">
-          {breadcrumb.length > 1 && (
-            <div className="app-topbar__breadcrumbs mb-1 flex min-w-0 items-center gap-1.5 text-[length:var(--erp-text-dense)] font-bold leading-none text-[var(--color-brand-600)]">
-              {breadcrumb.slice(0, -1).map((item, i) => (
-                <span key={i} className="flex items-center gap-1.5">
-                  {i > 0 && <ChevronRight size={10} className="text-[var(--color-brand-600)] opacity-55" />}
-                  {item.path ? (
-                    <button onClick={() => navigate(item.path!)} className="truncate transition-colors hover:text-[var(--color-brand-600)]">
-                      {item.label}
-                    </button>
-                  ) : (
-                    <span className="truncate">{item.label}</span>
-                  )}
-                </span>
-              ))}
-            </div>
-          )}
-          <h1 className="m-0 flex min-w-0 items-center gap-2 truncate text-[length:var(--erp-text-section)] font-extrabold leading-tight text-[var(--color-text-primary)] font-display">
-            {icon && <span className="flex items-center text-[var(--color-brand-600)]">{icon}</span>}
-            <span className="truncate">{breadcrumb[breadcrumb.length - 1].label}</span>
-          </h1>
+      <div className="flex items-center justify-between gap-4 px-6 w-full">
+        {/* Left: Branding or empty space */}
+        <div className="flex min-w-0 items-center gap-4">
+          <div className="text-[length:var(--erp-text-section)] font-extrabold leading-tight text-[var(--color-text-primary)] font-display tracking-widest uppercase">
+            GLM
+          </div>
         </div>
-      </div>
 
-      {/* Right: Tools & Search */}
-      <div className="app-topbar__right flex flex-1 justify-end min-w-0 items-center gap-4">
-        {/* Universal Search Bar */}
-        {!hideSearch && (
-          <div className="app-topbar__search relative w-full" style={{ maxWidth: '1200px' }} ref={searchRef}>
+        {/* Center/Right: Universal Search Bar */}
+        <div className="flex flex-1 justify-center max-w-[800px] min-w-0 items-center gap-4 mx-auto">
+          <div className="relative w-full" ref={searchRef}>
             <div
               className="flex items-center gap-2 rounded-lg py-1.5 pl-1 pr-3 transition-[border-color,box-shadow] duration-150"
               style={{
-                background: 'var(--color-ui-surface)',
+                background: 'var(--color-surface-1)',
                 border: `1px solid ${isSearchFocused ? 'var(--color-brand-500)' : 'var(--color-border-light)'}`,
                 boxShadow: isSearchFocused ? '0 0 0 3px var(--color-ui-focus-ring)' : 'none',
               }}
@@ -239,7 +179,7 @@ export default function Topbar({ breadcrumb, hideSearch, contentLayout = 'worksp
                             <button
                               key={res.id}
                               onClick={() => handleResultClick(res.path)}
-                              className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors hover:bg-[var(--color-surface-0)] group"
+                              className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors hover:bg-[var(--color-surface-0)] group border-none bg-transparent cursor-pointer"
                             >
                               {res.type === 'customer' ? (
                                 <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-[var(--color-surface-2)] text-[var(--color-text-secondary)]">
@@ -273,21 +213,15 @@ export default function Topbar({ breadcrumb, hideSearch, contentLayout = 'worksp
               </div>
             )}
           </div>
-        )}
+        </div>
 
-        {/* Divider if needed */}
-        {(rightContent || !hideSearch) && <div className="app-topbar__divider mx-1 h-6 w-px bg-[var(--color-border-light)]" />}
-
-        {/* Page Custom Actions */}
-        {rightContent && <div className="app-topbar__page-actions">{rightContent}</div>}
-
-        {/* System Action Icons */}
-        <div className="app-topbar__system-actions flex shrink-0 items-center gap-1.5 pl-2">
+        {/* Right: System Action Icons */}
+        <div className="flex shrink-0 items-center gap-1.5 pl-2">
           <div className="relative z-[100]" ref={themeMenuRef}>
             <button
               type="button"
               onClick={() => setShowThemeMenu(!showThemeMenu)}
-              className={`flex h-9 w-9 items-center justify-center rounded-lg transition-colors duration-150 ${showThemeMenu ? 'bg-[var(--color-brand-50)] text-[var(--color-brand-600)]' : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-brand-600)]'}`}
+              className={`flex h-9 w-9 items-center border-none cursor-pointer justify-center rounded-lg transition-colors duration-150 ${showThemeMenu ? 'bg-[var(--color-brand-50)] text-[var(--color-brand-600)]' : 'bg-transparent text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-brand-600)]'}`}
               title="Change Theme"
               aria-label="Change theme"
             >
@@ -301,21 +235,21 @@ export default function Topbar({ breadcrumb, hideSearch, contentLayout = 'worksp
                 </div>
                 <button
                   onClick={() => { setTheme('royal-white'); setShowThemeMenu(false); }}
-                  className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[length:var(--erp-text-body)] transition-colors ${theme === 'royal-white' ? 'bg-[var(--color-brand-50)] text-[var(--color-brand-600)] font-bold' : 'text-[var(--color-text-primary)] hover:bg-[var(--color-surface-2)] font-semibold'}`}
+                  className={`flex w-full cursor-pointer items-center gap-3 border-none rounded-lg px-3 py-2.5 text-[length:var(--erp-text-body)] transition-colors ${theme === 'royal-white' ? 'bg-[var(--color-brand-50)] text-[var(--color-brand-600)] font-bold' : 'bg-transparent text-[var(--color-text-primary)] hover:bg-[var(--color-surface-2)] font-semibold'}`}
                 >
                   <span className="h-4 w-4 rounded-full border border-[var(--color-border-default)]" style={{ background: 'var(--color-theme-preview-royal)' }} />
                   Royal White
                 </button>
                 <button
                   onClick={() => { setTheme('dark-gold'); setShowThemeMenu(false); }}
-                  className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[length:var(--erp-text-body)] transition-colors ${theme === 'dark-gold' ? 'bg-[var(--color-brand-50)] text-[var(--color-brand-600)] font-bold' : 'text-[var(--color-text-primary)] hover:bg-[var(--color-surface-2)] font-semibold'}`}
+                  className={`flex w-full cursor-pointer items-center gap-3 border-none rounded-lg px-3 py-2.5 text-[length:var(--erp-text-body)] transition-colors ${theme === 'dark-gold' ? 'bg-[var(--color-brand-50)] text-[var(--color-brand-600)] font-bold' : 'bg-transparent text-[var(--color-text-primary)] hover:bg-[var(--color-surface-2)] font-semibold'}`}
                 >
                   <span className="h-4 w-4 rounded-full border border-[var(--color-border-default)]" style={{ background: 'var(--color-theme-preview-gold)' }} />
                   Dark Gold
                 </button>
                 <button
                   onClick={() => { setTheme('modern-dark'); setShowThemeMenu(false); }}
-                  className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[length:var(--erp-text-body)] transition-colors ${theme === 'modern-dark' ? 'bg-[var(--color-brand-50)] text-[var(--color-brand-600)] font-bold' : 'text-[var(--color-text-primary)] hover:bg-[var(--color-surface-2)] font-semibold'}`}
+                  className={`flex w-full cursor-pointer items-center gap-3 border-none rounded-lg px-3 py-2.5 text-[length:var(--erp-text-body)] transition-colors ${theme === 'modern-dark' ? 'bg-[var(--color-brand-50)] text-[var(--color-brand-600)] font-bold' : 'bg-transparent text-[var(--color-text-primary)] hover:bg-[var(--color-surface-2)] font-semibold'}`}
                 >
                   <span className="h-4 w-4 rounded-full border border-[var(--color-border-default)]" style={{ background: 'var(--color-theme-preview-dark)' }} />
                   Modern Dark
@@ -325,14 +259,6 @@ export default function Topbar({ breadcrumb, hideSearch, contentLayout = 'worksp
           </div>
         </div>
       </div>
-      </div>
-      {bottomContent && (
-        <div className={`${frameClassName} app-page-inline`}>
-          <div className="app-topbar__bottom mt-3 w-full border-t border-[var(--color-border-light)] pt-3">
-            {bottomContent}
-          </div>
-        </div>
-      )}
     </header>
   );
 }

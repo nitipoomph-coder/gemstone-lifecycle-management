@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Topbar from './Topbar';
+import PageHeader from './PageHeader';
 import type { FormConfig, TableColumnDef } from '../../config/formConfigs';
 import {
   FilePlus, Save, Edit3, Search, Trash2, CornerUpLeft, Printer, X,
@@ -230,7 +230,7 @@ export default function DocumentLayout({
   return (
     <div className="flex h-full flex-col bg-[var(--color-ui-canvas)] relative font-body text-[var(--color-text-primary)]">
       <div className="screen-only flex h-full flex-col overflow-hidden">
-        <Topbar breadcrumb={breadcrumb} />
+        <PageHeader breadcrumb={breadcrumb} />
 
         {/* Toolbar */}
         <div className="document-toolbar flex h-14 items-center gap-1 border-b border-[var(--color-border-light)] bg-[var(--color-ui-surface)] px-4 shrink-0 overflow-x-auto z-10" style={{ boxShadow: 'var(--shadow-panel)' }}>

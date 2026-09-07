@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import Topbar from '../../layout/Topbar';
+import PageHeader from '../../layout/PageHeader';
 import { ErpSegmentedControl, ErpIconButton } from '../../ui/ErpButtons';
 import { RefreshCw, Settings2, ChevronDown } from 'lucide-react';
 import CustomSelect from '../../ui/CustomSelect';
@@ -158,13 +158,12 @@ export function ProductionForecastDashboard() {
 
   return (
     <div className="flex flex-col w-full h-full min-w-0">
-      <Topbar
+      <PageHeader
         breadcrumb={[
           { label: 'JEWELRY FACTORY SYSTEM', path: '/' },
           { label: 'Production Forecast' }
         ]}
         contentLayout="workspace"
-        hideSearch
         rightContent={
           <div className="flex items-center justify-end flex-1 min-w-0 gap-3 pr-2">
             
@@ -185,14 +184,14 @@ export function ProductionForecastDashboard() {
                     : 'bg-transparent border-[var(--color-border-light)] text-[var(--color-text-primary)] hover:bg-[var(--color-ui-surface)] hover:border-[var(--color-border-strong)]'
                 }`}
               >
-                <Settings2 size={14} style={{ color: 'var(--color-brand-500)' }} />
+                <Settings2 size={14} className="text-[var(--color-brand-500)]" />
                 <>
                   <span className="text-[0.76rem] font-bold text-[var(--color-text-secondary)]">
                     Filters:
                   </span>
                   <span className="text-[0.8rem] font-semibold">{getFilterSummaryText()}</span>
                 </>
-                <ChevronDown size={14} style={{ color: 'var(--color-text-tertiary)' }} />
+                <ChevronDown size={14} className="text-[var(--color-text-tertiary)]" />
               </button>
 
               {showFilterPopover && (
@@ -284,13 +283,13 @@ export function ProductionForecastDashboard() {
                 ]}
                 value={viewMode}
                 onChange={(val) => setViewMode(val as any)}
+                ariaLabel="View Mode"
               />
             </div>
             
             <ErpIconButton
               icon={<RefreshCw size={18} className={loading ? 'animate-spin' : ''} />}
               label="Refresh"
-              variant="outline"
               onClick={fetchData}
               disabled={loading}
             />

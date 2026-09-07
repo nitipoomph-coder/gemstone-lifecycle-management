@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import Topbar from '../components/layout/Topbar';
+import PageHeader from '../components/layout/PageHeader';
 import { ErpSegmentedControl, ErpIconButton } from '../components/ui/ErpButtons';
 import { Printer, Settings2, RefreshCw, ChevronDown } from 'lucide-react';
 import CustomSelect from '../components/ui/CustomSelect';
@@ -523,10 +523,9 @@ export default function ProductionSummaryPage() {
   return (
     <div className="erp-page-container print-layout-production flex flex-col h-full bg-[var(--color-ui-canvas)]">
       <div className="no-print">
-        <Topbar
+        <PageHeader
           breadcrumb={breadcrumb}
           contentLayout="workspace"
-          hideSearch
           rightContent={
             <div className="sales-gallery-topbar-tools flex min-w-0 flex-1 items-center justify-end gap-3 pr-2">
 

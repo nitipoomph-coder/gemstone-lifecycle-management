@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { Award, BarChart3, Search, X } from "lucide-react";
 import { ALL_GROUPS } from "../config/customerGroups";
-import Topbar from "../components/layout/Topbar";
+import PageHeader from '../components/layout/PageHeader';
 import CompareYearDropdown from "../components/topOrders/CompareYearDropdown";
 import "../components/sales/SalesDenseTable.css";
 import { useTopOrdersAnalyticsData, fmtQty, fmtSignedQty, TOP_CUSTOMER_ITEM_LIMIT } from "../hooks/useTopOrdersAnalyticsData";
@@ -31,10 +31,9 @@ export default function TopOrdersAnalyticsPage() {
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-[var(--color-surface-1)]">
-      <Topbar
+      <PageHeader
         breadcrumb={[{ label: "JEWELRY FACTORY SYSTEM", path: "/" }, { label: "Sales Analytics" }, { label: "Top Item Gallery", path: "/dashboard/top-orders" }, { label: "Top Items Qty" }]}
         icon={<BarChart3 size={22} />}
-        hideSearch
         rightContent={
           <div className="flex items-center gap-2 pr-2">
             <button type="button" onClick={() => navigate("/dashboard/top-orders")} style={toolbarButtonStyle}>

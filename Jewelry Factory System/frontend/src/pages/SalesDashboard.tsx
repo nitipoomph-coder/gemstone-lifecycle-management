@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { CSSProperties, KeyboardEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, BarChart3, ChevronDown, Filter, RefreshCw, Search, Trophy } from 'lucide-react';
-import Topbar from '../components/layout/Topbar';
+import PageHeader from '../components/layout/PageHeader';
 import '../components/sales/SalesDenseTable.css';
 import {
   fetchSalesCustomerGroups,
@@ -214,7 +214,7 @@ export default function SalesDashboard() {
 
   return (
     <>
-      <Topbar breadcrumb={[{ label: 'JEWELRY FACTORY SYSTEM', path: '/' }, { label: 'Sales Analytics' }, { label: 'Sales Dashboard' }]} hideSearch contentLayout="workspace" />
+      <PageHeader breadcrumb={[{ label: 'JEWELRY FACTORY SYSTEM', path: '/' }, { label: 'Sales Analytics' }, { label: 'Sales Dashboard' }]} contentLayout="workspace" />
       <div className="content-scrollbar flex-1 overflow-y-auto" style={workspace}>
         <main style={pageShell}>
           <section style={commandBar}>

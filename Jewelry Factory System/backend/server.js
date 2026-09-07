@@ -176,6 +176,7 @@ app.use('/api/dashboard', authMiddleware, require('./routes/productionDashboard'
 app.use('/api/dashboard', authMiddleware, require('./routes/customerReportMatrix'));
 app.use('/api/dashboard', authMiddleware, require('./routes/orderVolumeSummary'));
 app.use('/api/production-summary', authMiddleware, require('./routes/productionSummary'));
+app.use('/api/production-forecast', authMiddleware, require('./routes/productionForecast'));
 app.use('/api/order-tracking', authMiddleware, requireRole('admin', 'sales'), require('./routes/orderTracking')); // 👈 ป้องกันสิทธิ์ตรงนี้
 app.use('/api/items', authMiddleware, require('./routes/topOrdersGallery'));
 app.use('/api/search', authMiddleware, require('./routes/search'));

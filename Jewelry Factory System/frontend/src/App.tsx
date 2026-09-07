@@ -16,6 +16,7 @@ import SalesCustomerGroupDetail from './pages/SalesCustomerGroupDetail';
 import TopOrdersAnalyticsPage from './pages/TopOrdersAnalyticsPage';
 import TopOrdersGalleryPage from './pages/TopOrdersGalleryPage';
 import ProductionSummaryPage from './pages/ProductionSummaryPage';
+import ProductionForecastPage from './pages/ProductionForecastPage';
 import FBEOrderTrackPage from './pages/FBEOrderTrackPage';
 import ProcurementDocPage from './pages/document/ProcurementDocPage';
 import RequisitionDocPage from './pages/document/RequisitionDocPage';
@@ -77,6 +78,7 @@ export default function App() {
             <Route path={LEGACY_CUSTOMER_TRENDS_PATH} element={<LegacyCustomerTrendsRedirect />} />
             <Route path="/dashboard/sales-customer-detail" element={<SalesCustomerGroupDetail />} />
             <Route path="/dashboard/production-summary" element={<ProductionSummaryPage />} />
+            <Route path="/dashboard/production-forecast" element={<ProductionForecastPage />} />
             <Route path="/dashboard/fbe-order-track" element={<FBEOrderTrackPage />} />
             <Route path="/procurement/purchase" element={<ProcurementDocPage />} />
             <Route path="/procurement/receive" element={<ProcurementDocPage />} />

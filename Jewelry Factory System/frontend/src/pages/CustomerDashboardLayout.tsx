@@ -1,5 +1,6 @@
 import { Outlet } from 'react-router-dom';
 import PageHeader from '../components/layout/PageHeader';
+import { BREADCRUMBS } from '../config/breadcrumbs';
 import CustomSelect from '../components/ui/CustomSelect';
 import { CalendarDays, ChevronDown, Users, BarChart3, Table2, LineChart } from 'lucide-react';
 import { ALL_GROUPS } from '../config/customerGroups';
@@ -53,16 +54,10 @@ export default function CustomerDashboardLayout() {
     setSelGroups
   } = useCustomerDashboardLayout();
 
-  const summaryBreadcrumb = [
-    { label: 'JEWELRY FACTORY SYSTEM', path: '/' },
-    { label: 'Sales Analytics' },
-    { label: activeTab === 'matrix' ? 'Customer Report Matrix' : activeTab === 'trends' ? 'Order Trends' : 'Sales Summary' }
-  ];
-
   return (
     <>
       <PageHeader
-        breadcrumb={summaryBreadcrumb}
+        breadcrumb={BREADCRUMBS.CUSTOMER_DASHBOARD_TAB(activeTab)}
         contentLayout="workspace"
         rightContent={
           <div className="sales-gallery-topbar-tools flex min-w-0 flex-1 items-center justify-end gap-3 pr-2">

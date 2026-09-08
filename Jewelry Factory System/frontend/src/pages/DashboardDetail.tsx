@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import PageHeader from '../components/layout/PageHeader';
+import { BREADCRUMBS } from '../config/breadcrumbs';
 import { fetchDashboardData } from '../services/dashboardAPI';
 
 export default function DashboardDetail() {
@@ -50,11 +51,7 @@ export default function DashboardDetail() {
   return (
     <div className="app-page">
       <PageHeader
-        breadcrumb={[
-          { label: 'JEWELRY FACTORY SYSTEM', path: '/' },
-          { label: 'DASHBOARD', path: '/' },
-          { label: pageTitle },
-        ]}
+        breadcrumb={BREADCRUMBS.DASHBOARD_DETAIL(pageTitle)}
         contentLayout="dashboard"
       />
 

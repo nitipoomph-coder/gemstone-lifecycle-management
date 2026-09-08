@@ -4,6 +4,7 @@ import { useLocation } from 'react-router-dom';
 import DocumentLayout from '../../components/layout/DocumentLayout';
 import type { DocListItem, BreadcrumbItem } from '../../components/layout/DocumentLayout';
 import { formConfigMap } from '../../config/formConfigs';
+import { BREADCRUMBS } from '../../config/breadcrumbs';
 import { useToast } from '../../contexts/ToastContext';
 import {
   fetchDocumentList,
@@ -51,14 +52,10 @@ function ProcurementDocWorkspace({ docType }: { docType: string }) {
   const loading = loadedListKey !== listKey;
   const detailLoading = actionLoading || Boolean(selectedDocNo && loadedDetailNo !== selectedDocNo);
 
-  const groupLabel = formConfig?.groupLabel || 'จัดซื้อและรับเข้า';
+  const groupLabel = 'Procurement & Receiving';
   const itemLabel = formConfig?.titleTh || docType;
 
-  const breadcrumb: BreadcrumbItem[] = [
-    { label: 'JEWELRY FACTORY SYSTEM', path: '/' },
-    { label: groupLabel, path: '/procurement/purchase' },
-    { label: `${itemLabel} (${docType})` },
-  ];
+  const breadcrumb: BreadcrumbItem[] = BREADCRUMBS.DOCUMENT(groupLabel, itemLabel, docType);
 
   // ─── Load document list ─────────────────────
   useEffect(() => {

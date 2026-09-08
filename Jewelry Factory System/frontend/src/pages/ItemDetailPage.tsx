@@ -2,6 +2,7 @@
 import { useState, type ReactNode } from 'react';
 import { useParams } from 'react-router-dom';
 import PageHeader from '../components/layout/PageHeader';
+import { BREADCRUMBS } from '../config/breadcrumbs';
 import { AlertTriangle, Image as ImageIcon, CheckCircle, FileText, Settings, Layers, Hash, Box } from 'lucide-react';
 
 export default function ItemDetailPage() {
@@ -21,11 +22,7 @@ export default function ItemDetailPage() {
 
   return (
     <div className="app-page item-detail-page">
-      <PageHeader breadcrumb={[
-        { label: 'JEWELRY FACTORY SYSTEM', path: '/' },
-        { label: 'PO TRACKER', path: '/po-tracker' },
-        { label: itemData.itemNo }
-      ]} contentLayout="dashboard" />
+      <PageHeader breadcrumb={BREADCRUMBS.ITEM_DETAIL(itemData.itemNo)} contentLayout="dashboard" />
 
       <div className="app-page-scroll custom-scrollbar">
       <div className="app-content-frame app-content-frame--dashboard app-page-content">

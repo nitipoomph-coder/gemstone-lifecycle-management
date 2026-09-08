@@ -19,6 +19,7 @@ export interface NavMenuGroup {
   badge?: number;
   accentColor?: string;
   roles?: string[];
+  section?: string;
 }
 
 // ============================================

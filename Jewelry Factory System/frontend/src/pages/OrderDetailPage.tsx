@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, type CSSProperties, type ReactNode } from 
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { RefreshCw, AlertTriangle, ChevronDown, Search, Package, DollarSign, FileSpreadsheet, Image, X, Layers } from 'lucide-react';
 import PageHeader from '../components/layout/PageHeader';
+import { BREADCRUMBS } from '../config/breadcrumbs';
 import { fetchOrderDetail, fetchOrderByPo, fetchOrderByGroup, type OrderDetail } from '../services/poTrackerAPI';
 import { PhotoGalleryModal } from '../components/orderDetail/PhotoGalleryModal';
 import OrderLineTable from '../components/orderDetail/OrderLineTable';
@@ -271,11 +272,7 @@ export default function OrderDetailPage() {
   return (
     <div className="app-page order-detail-page">
       <PageHeader
-        breadcrumb={[
-          { label: 'JEWELRY FACTORY SYSTEM', path: '/' },
-          { label: 'PO TRACKER', path: '/po-tracker' },
-          { label: pageTitle },
-        ]}
+        breadcrumb={BREADCRUMBS.ORDER_DETAIL(pageTitle)}
         contentLayout="workspace"
       />
 

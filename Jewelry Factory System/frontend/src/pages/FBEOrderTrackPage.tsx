@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import PageHeader from '../components/layout/PageHeader';
+import { BREADCRUMBS } from '../config/breadcrumbs';
 import {
   Search,
   RotateCcw,
@@ -20,11 +21,7 @@ export default function FBEOrderTrackPage() {
   const [data, setData] = useState<OrderTrackingResponse | null>(null);
   const [imgFailed, setImgFailed] = useState(false);
 
-  const breadcrumb = [
-    { label: 'JEWELRY FACTORY SYSTEM', path: '/' },
-    { label: 'Production', path: '/po-tracker' },
-    { label: 'FBE Order Tracker' }
-  ];
+  const breadcrumb = BREADCRUMBS.FBE_ORDER_TRACK;
 
   // ฟังก์ชันค้นหาพร้อมเงื่อนไขการแจ้งเตือนแบบแยกเคส
   const executeSearch = async (targetOrd: string, targetLine: string) => {

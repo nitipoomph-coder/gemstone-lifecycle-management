@@ -3,6 +3,7 @@ import type { CSSProperties, KeyboardEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, BarChart3, ChevronDown, Filter, RefreshCw, Search, Trophy } from 'lucide-react';
 import PageHeader from '../components/layout/PageHeader';
+import { BREADCRUMBS } from '../config/breadcrumbs';
 import '../components/sales/SalesDenseTable.css';
 import {
   fetchSalesCustomerGroups,
@@ -214,7 +215,7 @@ export default function SalesDashboard() {
 
   return (
     <>
-      <PageHeader breadcrumb={[{ label: 'JEWELRY FACTORY SYSTEM', path: '/' }, { label: 'Sales Analytics' }, { label: 'Sales Dashboard' }]} contentLayout="workspace" />
+      <PageHeader breadcrumb={BREADCRUMBS.SALES_DASHBOARD} contentLayout="workspace" />
       <div className="content-scrollbar flex-1 overflow-y-auto" style={workspace}>
         <main style={pageShell}>
           <section style={commandBar}>

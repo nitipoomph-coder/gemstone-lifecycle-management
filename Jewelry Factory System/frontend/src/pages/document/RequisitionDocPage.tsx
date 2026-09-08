@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import DocumentLayout from '../../components/layout/DocumentLayout';
 import type { DocListItem, BreadcrumbItem } from '../../components/layout/DocumentLayout';
 import { formConfigMap } from '../../config/formConfigs';
+import { BREADCRUMBS } from '../../config/breadcrumbs';
 import { useToast } from '../../contexts/ToastContext';
 import {
   fetchRequisitionDocuments,
@@ -50,14 +51,10 @@ function RequisitionDocWorkspace({ docType }: { docType: string }) {
   const loading = formConfig?.apiType === 'none' ? false : loadedListKey !== listKey;
   const detailLoading = actionLoading || Boolean(selectedDocNo && loadedDetailNo !== selectedDocNo);
 
-  const groupLabel = formConfig?.groupLabel || 'ออเดอร์และการเบิก';
+  const groupLabel = 'Order Lines & Issues';
   const itemLabel = formConfig?.titleTh || docType;
 
-  const breadcrumb: BreadcrumbItem[] = [
-    { label: 'JEWELRY FACTORY SYSTEM', path: '/' },
-    { label: groupLabel },
-    { label: `${itemLabel} (${docType})` },
-  ];
+  const breadcrumb: BreadcrumbItem[] = BREADCRUMBS.DOCUMENT(groupLabel, itemLabel, docType);
 
   const hasPhoto = formConfig?.hasPhoto;
 

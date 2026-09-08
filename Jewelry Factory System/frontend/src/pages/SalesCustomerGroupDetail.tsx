@@ -3,12 +3,13 @@ import type { CSSProperties, KeyboardEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, ChevronLeft, ChevronRight, DollarSign, Hash, Search } from 'lucide-react';
 import PageHeader from '../components/layout/PageHeader';
+import { BREADCRUMBS } from '../config/breadcrumbs';
 import '../components/sales/SalesDenseTable.css';
 import './SalesResponsive.css';
 import { CUSTOMER_GROUPS } from '../config/customerGroups';
 import { fetchSalesOrders, type SalesOrderRow } from '../services/orderVolumeSummaryAPI';
 import { ErpSegmentedControl } from '../components/ui/ErpButtons';
-import { buildCustomerTrendsPath, CUSTOMER_TRENDS_PATH } from '../utils/customerTrendsUrl';
+import { buildCustomerTrendsPath } from '../utils/customerTrendsUrl';
 import { Download } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
@@ -201,7 +202,7 @@ export default function SalesCustomerGroupDetail() {
 
   return (
     <>
-      <PageHeader breadcrumb={[{ label: 'JEWELRY FACTORY SYSTEM', path: '/' }, { label: 'Sales Analytics' }, { label: 'Sales Summary', path: '/dashboard/customer' }, { label: 'Customer Trends', path: CUSTOMER_TRENDS_PATH }, { label: 'Order List' }]} contentLayout="workspace" />
+      <PageHeader breadcrumb={BREADCRUMBS.SALES_CUSTOMER_GROUP_DETAIL} contentLayout="workspace" />
       <div className="content-scrollbar flex-1 overflow-y-auto" style={{ background: 'var(--color-surface-1)' }}>
         <div className="app-content-frame app-content-frame--workspace app-page-content sales-order-detail-frame flex flex-col gap-4">
           <div style={pageHeader}>

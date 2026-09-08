@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import PageHeader from '../components/layout/PageHeader';
+import { BREADCRUMBS } from '../config/breadcrumbs';
 import { ErpSegmentedControl, ErpIconButton } from '../components/ui/ErpButtons';
 import { Printer, Settings2, RefreshCw, ChevronDown } from 'lucide-react';
 import CustomSelect from '../components/ui/CustomSelect';
@@ -515,16 +516,11 @@ export default function ProductionSummaryPage() {
     return `${sName} • ${mName} • ${tab === 'year' ? year : tab === 'month' ? MONTH_FULL[month - 1].substring(0, 3) + ' ' + year : tab === 'week' ? 'W' + fromWeek + '-W' + toWeek + ' ' + year : formatDateStr(fromDate) + ' - ' + formatDateStr(toDate)}`;
   };
 
-  const breadcrumb = [
-    { label: 'JEWELRY FACTORY SYSTEM', path: '/' },
-    { label: 'Production Dashboard' }
-  ];
-
   return (
     <div className="erp-page-container print-layout-production flex flex-col h-full bg-[var(--color-ui-canvas)]">
       <div className="no-print">
         <PageHeader
-          breadcrumb={breadcrumb}
+          breadcrumb={BREADCRUMBS.PRODUCTION_SUMMARY}
           contentLayout="workspace"
           rightContent={
             <div className="sales-gallery-topbar-tools flex min-w-0 flex-1 items-center justify-end gap-3 pr-2">

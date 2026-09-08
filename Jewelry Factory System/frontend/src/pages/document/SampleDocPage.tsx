@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import DocumentLayout from '../../components/layout/DocumentLayout';
 import type { DocListItem, BreadcrumbItem } from '../../components/layout/DocumentLayout';
 import { formConfigMap } from '../../config/formConfigs';
+import { BREADCRUMBS } from '../../config/breadcrumbs';
 import { useToast } from '../../contexts/ToastContext';
 import {
   fetchSampleDocuments,
@@ -42,14 +43,10 @@ function SampleDocWorkspace({ docType }: { docType: string }) {
   const loading = loadedListKey !== listKey;
   const detailLoading = Boolean(selectedDocNo && loadedDetailNo !== selectedDocNo);
 
-  const groupLabel = formConfig?.groupLabel || 'ห้องตัวอย่าง';
+  const groupLabel = 'Sample Department';
   const itemLabel = formConfig?.titleTh || docType;
 
-  const breadcrumb: BreadcrumbItem[] = [
-    { label: 'JEWELRY FACTORY SYSTEM', path: '/' },
-    { label: groupLabel },
-    { label: `${itemLabel} (${docType})` },
-  ];
+  const breadcrumb: BreadcrumbItem[] = BREADCRUMBS.DOCUMENT(groupLabel, itemLabel, docType);
 
   // ─── Load document list ─────────────────────
   useEffect(() => {

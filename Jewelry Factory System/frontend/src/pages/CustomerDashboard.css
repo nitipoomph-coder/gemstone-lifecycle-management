@@ -227,6 +227,43 @@
   cursor: pointer;
 }
 
+/* Card toolbar in Sales Summary: completely borderless, active item has light background */
+.sales-summary-toolbar .erp-segmented {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  height: auto !important;
+  gap: 2px !important;
+}
+
+.sales-summary-toolbar .erp-segment {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--color-text-secondary) !important;
+  font-weight: 700 !important;
+  font-size: var(--erp-text-control, 12px) !important;
+  padding: 4px 10px !important;
+  height: 28px !important;
+  border-radius: 6px !important;
+  cursor: pointer !important;
+  transition: background 0.15s ease, color 0.15s ease !important;
+}
+
+.sales-summary-toolbar .erp-segment:hover:not(.erp-segment--active) {
+  background: var(--color-surface-2) !important;
+  color: var(--color-text-primary) !important;
+}
+
+.sales-summary-toolbar .erp-segment--active {
+  background: color-mix(in srgb, var(--color-brand-500) 12%, var(--color-surface-0)) !important;
+  color: var(--color-brand-600) !important;
+  font-weight: 800 !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
 @media print {
   .sales-summary-page {
     padding: 16px !important;   /* คืนค่า padding ให้มีขอบ (breathing room) ตอนพิมพ์ จะได้ไม่ชิดขอบกระดาษเกินไป */

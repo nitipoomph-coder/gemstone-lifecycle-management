@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { PanelLeftClose, PanelLeftOpen, LogOut } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import NavGroup from '../navigation/NavGroup';
 import { menuConfig } from '../../config/menuConfig';
-import type { NavMenuItem } from '../../types';
+import { getActiveGroupId } from '../../utils/navigationUtils';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -19,55 +19,30 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
   const role = (localStorage.getItem('auth_role') || 'sales').toLowerCase();
   const filteredMenu = menuConfig.filter(g => !g.roles || g.roles.includes(role));
 
-  const isMenuPathActive = (path?: string) => {
-    if (!path) return false;
-    if (location.pathname === path) return true;
-    
-    // Nested or detail pages matching
-    if (path === '/po-tracker') {
-      return location.pathname.startsWith('/po-tracker');
-    }
-    if (path === '/dashboard/customer') {
-      return location.pathname.startsWith('/dashboard/sales-customer-detail');
-    }
-    return false;
-  };
+  // Pure derived active group id directly from current route
+  const activeGroupId = getActiveGroupId(filteredMenu, location.pathname, location.search);
 
-  const isMenuItemActive = (item: NavMenuItem): boolean => {
-    return isMenuPathActive(item.path) || Boolean(item.items?.some(child => isMenuItemActive(child)));
-  };
+  // Track if user manually toggled an accordion group on the current page
+  const [userToggledGroupId, setUserToggledGroupId] = useState<{ pathname: string; groupId: string | null } | null>(null);
 
-  // Accordion: only one group open at a time
-  const activeGroupId = filteredMenu.find(g =>
-    g.path ? isMenuPathActive(g.path) : (g.items || []).some(item => isMenuItemActive(item))
-  )?.id || 'sales-dashboard';
-
-  const [openGroupId, setOpenGroupId] = useState<string>(activeGroupId);
-
-  useEffect(() => {
-    const found = menuConfig.find(g =>
-      g.path ? isMenuPathActive(g.path) : (g.items || []).some(item => isMenuItemActive(item))
-    );
-    if (found) {
-      setOpenGroupId(found.id);
-    }
-  }, [location.pathname]);
-
-  const handleLogout = () => {
-    localStorage.removeItem('auth_role');
-    localStorage.removeItem('auth_user');
-    navigate('/login');
-  };
+  // When pathname changes or on initial render, openGroupId automatically equals activeGroupId.
+  // If user toggled a group on the current pathname, respect that toggle.
+  const openGroupId = userToggledGroupId && userToggledGroupId.pathname === location.pathname
+    ? userToggledGroupId.groupId
+    : activeGroupId;
 
   const handleGroupToggle = (groupId: string) => {
-    setOpenGroupId(prev => (prev === groupId ? '' : groupId));
+    setUserToggledGroupId({
+      pathname: location.pathname,
+      groupId: openGroupId === groupId ? null : groupId,
+    });
   };
 
   // Handle scroll events to show/hide fade gradients
   const handleScroll = () => {
     if (!scrollRef.current) return;
     const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
-    
+
     if (scrollTop === 0) {
       setScrollState('top');
     } else if (Math.ceil(scrollTop + clientHeight) >= scrollHeight) {
@@ -97,40 +72,35 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
 
         <div className="brand-accent-line mx-3 w-8 mb-2" />
 
-        {/* Icons only Ã¢â‚¬â€ click to expand sidebar + open group */}
+        {/* Icons only — click to expand sidebar + open group */}
         <nav className="flex flex-1 flex-col items-center gap-1.5 py-2 w-full px-2">
-          {filteredMenu.map(group => (
-            <NavGroup
-              key={group.id}
-              group={group}
-              isOpen={false}
-              onToggle={() => {
-                setOpenGroupId(group.id);
-                onToggle(); // expand sidebar
-              }}
-              collapsed
-            />
-          ))}
+          {filteredMenu.map((group, index) => {
+            const isNewSection = index > 0 && group.section !== filteredMenu[index - 1].section;
+            return (
+              <div key={group.id} className="w-full flex flex-col items-center">
+                {isNewSection && (
+                  <div className="w-6 h-[1px] my-1.5 bg-[var(--color-border-light)] opacity-30" />
+                )}
+                <NavGroup
+                  key={group.id}
+                  group={group}
+                  isOpen={false}
+                  isActive={group.id === activeGroupId}
+                  onToggle={() => {
+                    setUserToggledGroupId({ pathname: location.pathname, groupId: group.id });
+                    onToggle(); // expand sidebar
+                  }}
+                  collapsed
+                />
+              </div>
+            );
+          })}
         </nav>
-
-        {/* User avatar only */}
-        <div className="py-3 w-full flex justify-center" style={{ borderTop: '1px solid var(--color-sidebar-divider)' }}>
-          <div
-            className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold shadow-sm capitalize"
-            style={{ 
-              background: 'var(--color-brand-500)',
-              color: 'var(--color-text-inverse)'
-            }}
-            title={`${localStorage.getItem('auth_user') || 'User'} Ã¢â‚¬â€ ${role}`}
-          >
-            {localStorage.getItem('auth_user')?.[0] || 'U'}
-          </div>
-        </div>
       </aside>
     );
   }
 
-  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Expanded state Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+  // ——— Expanded state ———
   return (
     <aside
       className="flex h-screen w-[270px] min-w-[270px] flex-col transition-all duration-300 relative z-20 shadow-xl"
@@ -144,8 +114,8 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         >
           <div
             className="truncate text-[20px] font-bold tracking-wider"
-            style={{ 
-              fontFamily: 'var(--font-logo)', 
+            style={{
+              fontFamily: 'var(--font-logo)',
               lineHeight: '1.1',
               background: 'linear-gradient(90deg, var(--color-brand-500), var(--color-brand-300))',
               WebkitBackgroundClip: 'text',
@@ -155,7 +125,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
             JEWELRY
           </div>
           <div className="text-[10px] font-bold text-[var(--color-text-secondary)] tracking-[0.15em] font-sans mt-0.5 capitalize" style={{ lineHeight: '1.2' }}>
-            Smart Factory
+            Factory System
           </div>
         </button>
         <button
@@ -171,54 +141,43 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
 
       {/* Navigation with scroll fade wrapper */}
       <div className={`flex-1 overflow-hidden scroll-fade-container ${scrollState !== 'top' ? 'fade-top' : ''} ${scrollState !== 'bottom' ? 'fade-bottom' : ''}`}>
-        <nav 
+        <nav
           ref={scrollRef}
           onScroll={handleScroll}
-          className="custom-scrollbar h-full overflow-y-auto px-3 py-1"
+          className="custom-scrollbar h-full overflow-y-auto px-3 py-1 flex flex-col gap-0.5"
         >
-          {filteredMenu.map(group => (
-            <NavGroup
-              key={group.id}
-              group={group}
-              isOpen={openGroupId === group.id}
-              onToggle={() => handleGroupToggle(group.id)}
-              collapsed={false}
-              onNavigate={() => { if (isOpen) onToggle(); }}
-            />
-          ))}
+          {filteredMenu.map((group, index) => {
+            const isNewSection = index === 0 || group.section !== filteredMenu[index - 1].section;
+            return (
+              <div key={group.id}>
+                {isNewSection && group.section && (
+                  <div className={`px-3 select-none ${index === 0 ? 'pt-1.5 pb-1' : 'pt-4 pb-1'}`}>
+                    {index > 0 && (
+                      <div className="mb-2.5 h-[1px] bg-[var(--color-border-light)] opacity-20" />
+                    )}
+                    <div className="text-[11px] font-bold text-[var(--color-sidebar-text)] opacity-45 tracking-wide">
+                      {group.section}
+                    </div>
+                  </div>
+                )}
+                <NavGroup
+                  group={group}
+                  isOpen={openGroupId === group.id}
+                  isActive={group.id === activeGroupId}
+                  onToggle={() => handleGroupToggle(group.id)}
+                  collapsed={false}
+                  onNavigate={() => {
+                    if (window.matchMedia('(max-width: 819px)').matches) {
+                      onToggle();
+                    }
+                  }}
+                />
+              </div>
+            );
+          })}
           {/* Spacer for bottom padding */}
           <div className="h-6"></div>
         </nav>
-      </div>
-
-      {/* Footer (User Profile + Hero Background) */}
-      <div
-        className="sidebar-hero-bg flex items-center gap-3 px-5 py-4 mt-auto"
-        style={{ 
-          borderTop: '1px solid var(--color-sidebar-divider)',
-          '--hero-bg-url': 'url(/src/assets/hero.png)' 
-        } as React.CSSProperties}
-      >
-        <div
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold relative z-10 shadow-sm"
-          style={{ 
-            background: 'var(--color-brand-500)',
-            color: 'var(--color-text-inverse)'
-          }}
-        >
-          {localStorage.getItem('auth_user')?.[0] || 'U'}
-        </div>
-        <div className="min-w-0 flex-1 relative z-10">
-          <div className="truncate text-[13.5px] font-bold text-[var(--color-sidebar-text-active)] drop-shadow-sm">
-            {localStorage.getItem('auth_user') || 'User'}
-          </div>
-          <div className="text-[11px] font-medium text-[var(--color-sidebar-text)] opacity-80 mt-0.5 capitalize">
-            {role}
-          </div>
-        </div>
-        <button onClick={handleLogout} className="relative z-10 text-[var(--color-sidebar-text)] hover:text-[var(--color-sidebar-text-active)] transition-colors" title="Logout">
-          <LogOut size={16} />
-        </button>
       </div>
     </aside>
   );

@@ -1,10 +1,8 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ChevronRight, ChevronLeft } from 'lucide-react';
+import type { BreadcrumbItem } from '../../config/breadcrumbs';
 
-interface BreadcrumbItem {
-  label: string;
-  path?: string;
-}
+export type { BreadcrumbItem };
 
 type ContentLayout = 'dashboard' | 'dashboard-wide' | 'workspace';
 
@@ -65,7 +63,7 @@ export default function PageHeader({ breadcrumb, contentLayout = 'workspace', ri
             )}
             <h1 className="m-0 flex flex-wrap min-w-0 items-center gap-2 text-[length:var(--erp-text-page)] font-extrabold leading-tight text-[var(--color-text-primary)] font-display">
               {icon && <span className="flex items-center text-[var(--color-brand-600)]">{icon}</span>}
-              <span className="truncate">{breadcrumb[breadcrumb.length - 1].label}</span>
+              <span className="truncate">{breadcrumb[breadcrumb.length - 1]?.label}</span>
             </h1>
           </div>
         </div>

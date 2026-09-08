@@ -2,24 +2,23 @@ import type { NavMenuGroup } from '../types';
 
 
 export const menuConfig: NavMenuGroup[] = [
-
-  // Dashboard
+  // ── ภาพรวม ──
   {
     id: 'home',
-    label: 'Production Dashboard',
+    label: 'Factory Overview',
     icon: 'home',
     path: '/',
     accentColor: 'var(--color-brand-500)',
     roles: ['admin'],
+    section: 'ภาพรวม',
   },
-
-  // Sales dashboards
   {
     id: 'sales-dashboard',
     label: 'Sales Analytics',
     icon: 'trending-up',
     accentColor: 'var(--color-brand-500)',
     roles: ['admin', 'sales'],
+    section: 'ภาพรวม',
     items: [
       { id: 'dash-cust', label: 'Sales Summary', path: '/dashboard/customer' },
       { id: 'dash-matrix', label: 'Customer Report Matrix', path: '/dashboard/customer/matrix' },
@@ -29,29 +28,14 @@ export const menuConfig: NavMenuGroup[] = [
     ],
   },
 
-  // Subcontract management
-  // Layout previews for future subcontract reports.
-  // report screens (Vendor Performance Dashboard, Vendor Price History, Aging Report)
-  {
-    id: 'subcontract',
-    label: 'Subcontract Management',
-    icon: 'handshake',
-    accentColor: 'var(--color-brand-500)',
-    roles: ['admin'],
-    items: [
-      { id: 'sub-vendor-performance', label: 'Vendor Performance Dashboard', path: '/subcontract/vendor-performance' },
-      { id: 'sub-vendor-price', label: 'Vendor Price History', path: '/subcontract/vendor-price-history' },
-      { id: 'sub-aging', label: 'Aging Report', path: '/subcontract/aging-report' },
-    ],
-  },
-
-  // PO tracker and Production Summary
+  // ── การผลิตและจัดซื้อ ──
   {
     id: 'order-tracker',
     label: 'Production',
     icon: 'layout-list',
     accentColor: 'var(--color-brand-500)',
     roles: ['admin', 'sales'],
+    section: 'การผลิตและจัดซื้อ',
     items: [
       { id: 'po-tracker', label: 'PO Tracker', path: '/po-tracker' },
       { id: 'pro-sum', label: 'Production Summary', path: '/dashboard/production-summary' },
@@ -59,14 +43,26 @@ export const menuConfig: NavMenuGroup[] = [
       { id: 'fbe-order-track', label: 'FBE Order Tracker', path: '/dashboard/fbe-order-track' },
     ],
   },
-
-  // Procurement and receiving
+  {
+    id: 'subcontract',
+    label: 'Subcontract Management',
+    icon: 'handshake',
+    accentColor: 'var(--color-brand-500)',
+    roles: ['admin'],
+    section: 'การผลิตและจัดซื้อ',
+    items: [
+      { id: 'sub-vendor-performance', label: 'Vendor Performance Dashboard', path: '/subcontract/vendor-performance' },
+      { id: 'sub-vendor-price', label: 'Vendor Price History', path: '/subcontract/vendor-price-history' },
+      { id: 'sub-aging', label: 'Aging Report', path: '/subcontract/aging-report' },
+    ],
+  },
   {
     id: 'procurement',
     label: 'Procurement & Receiving',
     icon: 'package-check',
     accentColor: 'var(--color-brand-500)',
     roles: ['admin'],
+    section: 'การผลิตและจัดซื้อ',
     items: [
       { id: 'spa', label: 'Gem Purchase Order', code: 'SPA', path: '/procurement/purchase' },
       { id: 'sra', label: 'Gem Receipt', code: 'SRA', path: '/procurement/receive' },
@@ -74,14 +70,13 @@ export const menuConfig: NavMenuGroup[] = [
       { id: 'sir', label: 'Gem Return', code: 'SIR', path: '/procurement/return' },
     ],
   },
-
-  // Order lines and issues
   {
     id: 'orders',
     label: 'Order Lines & Issues',
     icon: 'clipboard-list',
     accentColor: 'var(--color-brand-500)',
     roles: ['admin'],
+    section: 'การผลิตและจัดซื้อ',
     items: [
       { id: 'soa', label: 'Gem Order', code: 'SOA', path: '/orders/create' },
       { id: 'sia', label: 'Gem Issue', code: 'SIA', path: '/orders/issue' },
@@ -90,27 +85,27 @@ export const menuConfig: NavMenuGroup[] = [
       { id: 'sis', label: 'Gem Dispatch for Order', code: 'SIS', path: '/orders/dispatch-order' },
     ],
   },
-
-  // Sample room
   {
     id: 'sample',
     label: 'Sample Department',
     icon: 'flask-conical',
     accentColor: 'var(--color-brand-500)',
     roles: ['admin'],
+    section: 'การผลิตและจัดซื้อ',
     items: [
       { id: 'ssa', label: 'Sample Request', code: 'SSA', path: '/sample/order' },
       { id: 'sim', label: 'Sample Dispatch', code: 'SIM', path: '/sample/dispatch' },
     ],
   },
 
-  // Inventory control
+  // ── คลังและอะไหล่ ──
   {
     id: 'inventory',
     label: 'Inventory Control',
     icon: 'bar-chart-3',
     accentColor: 'var(--color-brand-500)',
     roles: ['admin'],
+    section: 'คลังและอะไหล่',
     items: [
       { id: 'check-dispatch', label: 'Check Dispatch for Order', path: '/inventory/check-dispatch' },
       { id: 'check-sample', label: 'Check Sample Issue', path: '/inventory/check-sample' },
@@ -120,14 +115,13 @@ export const menuConfig: NavMenuGroup[] = [
       { id: 'check-status', label: 'Gem Status Tracking', path: '/inventory/check-status' },
     ],
   },
-
-  // Spare parts
   {
     id: 'spare-parts',
     label: 'Spare Parts',
     icon: 'wrench',
     accentColor: 'var(--color-brand-500)',
     roles: ['admin'],
+    section: 'คลังและอะไหล่',
     items: [
       { id: 'sp-order', label: 'Spare Parts Order', path: '/spare-parts/order' },
       { id: 'sp-issue', label: 'Spare Parts Issue', path: '/spare-parts/issue' },

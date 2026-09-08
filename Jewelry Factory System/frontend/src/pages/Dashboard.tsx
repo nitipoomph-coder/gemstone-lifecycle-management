@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PageHeader from '../components/layout/PageHeader';
+import { BREADCRUMBS } from '../config/breadcrumbs';
 import { fetchDashboardData, fetchAvailableYears, type DashboardData, type CardType } from '../services/dashboardAPI';
 import CardDetailPanel from '../components/dashboard/overview/CardDetailPanel';
 import CustomSelect from '../components/ui/CustomSelect';
@@ -95,7 +96,7 @@ export default function Dashboard() {
   // Loading
   if (loading) return (
     <>
-      <PageHeader breadcrumb={[{ label: 'JEWELRY FACTORY SYSTEM', path: '/' }, { label: 'DASHBOARD' }]} contentLayout="dashboard" />
+      <PageHeader breadcrumb={BREADCRUMBS.DASHBOARD} contentLayout="dashboard" />
       <div className="app-page-scroll content-scrollbar">
         <div className="app-content-frame app-content-frame--dashboard app-page-content dashboard-page flex flex-col gap-4">
           {/* Header Skeleton */}
@@ -130,7 +131,7 @@ export default function Dashboard() {
   // Error
   if (error) return (
     <>
-      <PageHeader breadcrumb={[{ label: 'JEWELRY FACTORY SYSTEM', path: '/' }, { label: 'DASHBOARD' }]} contentLayout="dashboard" />
+      <PageHeader breadcrumb={BREADCRUMBS.DASHBOARD} contentLayout="dashboard" />
       <div className="app-page-scroll flex items-center justify-center">
         <div className="flex flex-col items-center gap-4 text-center">
           <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ background: 'var(--color-danger-50)' }}>
@@ -174,7 +175,7 @@ export default function Dashboard() {
 
   return (
     <>
-      <PageHeader breadcrumb={[{ label: 'JEWELRY FACTORY SYSTEM', path: '/' }, { label: 'DASHBOARD' }]} contentLayout="dashboard" />
+      <PageHeader breadcrumb={BREADCRUMBS.DASHBOARD} contentLayout="dashboard" />
       <div className="app-page-scroll content-scrollbar">
         <div className="app-content-frame app-content-frame--dashboard app-page-content dashboard-page flex flex-col gap-4">
 
@@ -182,7 +183,7 @@ export default function Dashboard() {
           <div className="dashboard-page-header" style={{ display:'flex', alignItems:'flex-end', justifyContent:'space-between', paddingBottom:8 }}>
             <div>
               <h1 style={{ fontSize:'1.6rem', fontWeight:900, color:'var(--color-text-primary)', fontFamily:'var(--font-display)', letterSpacing:'-0.02em', lineHeight:1 }}>
-                Production <span style={{ color:'var(--color-brand-500)' }}>Dashboard</span>
+                Factory <span style={{ color:'var(--color-brand-500)' }}>Overview</span>
               </h1>
               <p style={{ fontSize:'0.68rem', fontWeight:700, color:'var(--color-text-tertiary)', marginTop:4, letterSpacing:'0.06em', textTransform: 'capitalize' }}>Real-time manufacturing intelligence</p>
             </div>

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import PageHeader from '../../layout/PageHeader';
+import { BREADCRUMBS } from '../../../config/breadcrumbs';
 import { ErpSegmentedControl, ErpIconButton } from '../../ui/ErpButtons';
 import { RefreshCw, Settings2, ChevronDown } from 'lucide-react';
 import CustomSelect from '../../ui/CustomSelect';
@@ -159,10 +160,7 @@ export function ProductionForecastDashboard() {
   return (
     <div className="flex flex-col w-full h-full min-w-0">
       <PageHeader
-        breadcrumb={[
-          { label: 'JEWELRY FACTORY SYSTEM', path: '/' },
-          { label: 'Production Forecast' }
-        ]}
+        breadcrumb={BREADCRUMBS.PRODUCTION_FORECAST}
         contentLayout="workspace"
         rightContent={
           <div className="flex items-center justify-end flex-1 min-w-0 gap-3 pr-2">

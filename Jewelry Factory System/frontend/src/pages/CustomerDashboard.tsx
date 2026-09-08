@@ -1,6 +1,6 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useOutletContext, useSearchParams } from 'react-router-dom';
-import { RefreshCw, DollarSign, Hash, Calendar, CalendarDays, Layers, Users, Eye, EyeOff, Printer } from 'lucide-react';
+import { DollarSign, Hash, Calendar, CalendarDays, Layers, Users, Eye, EyeOff } from 'lucide-react';
 import { fetchCustomerSummary } from '../services/customerSummaryAPI';
 import { ALL_GROUPS } from '../config/customerGroups';
 import { ErpSegmentedControl } from '../components/ui/ErpButtons';
@@ -35,17 +35,24 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
   }, [monthlySeries]);
 
 
-  const activeYears = [...selectedYears].sort();
+  const activeYears = useMemo(() => [...selectedYears].sort(), [selectedYears]);
 
-  const handlePrint = () => {
+  const handlePrint = useCallback(() => {
     const scopeYears = activeYears.join('-');
     const title = `Customer_Sales_Chart_${mode}_${metric}_${scopeYears || 'all'}`;
     printChartDashboard(title);
-  };
+  }, [activeYears, mode, metric]);
+
+  // Listen to GlobalTopbar app-print event
+  useEffect(() => {
+    const onPrint = () => handlePrint();
+    window.addEventListener('app-print', onPrint);
+    return () => window.removeEventListener('app-print', onPrint);
+  }, [handlePrint]);
 
   // Fetch all data for available years
   useEffect(() => {
-    if (availableYears.length === 0) {
+    if (!availableYears || availableYears.length === 0) {
       return;
     }
     const loadTimer = window.setTimeout(() => {
@@ -90,6 +97,71 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
 
   const usesGroupSeriesColors = monthlySeries === 'group';
 
+  // Listen to GlobalTopbar app-export event
+  useEffect(() => {
+    const handleExportEvent = (e: Event) => {
+      const customEvent = e as CustomEvent<{ type: string }>;
+      const exportType = customEvent.detail?.type;
+      if (!chartData || chartData.length === 0) return;
+
+      customEvent.preventDefault();
+
+      const keys = Object.keys(chartData[0] || {}).filter(k => k !== 'sortKey');
+      const filename = `Sales_Summary_${mode}_${metric}_${new Date().toISOString().slice(0, 10)}`;
+
+      if (exportType === 'csv') {
+        const headerRow = keys.join(',');
+        const dataRows = chartData.map(row =>
+          keys.map(k => {
+            const val = row[k];
+            if (typeof val === 'number') return val;
+            return `"${String(val ?? '').replace(/"/g, '""')}"`;
+          }).join(',')
+        );
+        const csvContent = '\uFEFF' + [headerRow, ...dataRows].join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${filename}.csv`;
+        link.click();
+        URL.revokeObjectURL(url);
+      } else if (exportType === 'excel') {
+        const tableHtml = `
+          <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+          <head><meta charset="utf-8"/></head>
+          <body>
+            <table>
+              <thead>
+                <tr style="background-color: #2563eb; color: #ffffff; font-weight: bold;">
+                  ${keys.map(k => `<th>${k.toUpperCase()}</th>`).join('')}
+                </tr>
+              </thead>
+              <tbody>
+                ${chartData.map(row => `
+                  <tr>
+                    ${keys.map(k => `<td>${row[k] ?? ''}</td>`).join('')}
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </body>
+          </html>
+        `;
+        const blob = new Blob([tableHtml], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${filename}.xls`;
+        link.click();
+        URL.revokeObjectURL(url);
+      }
+    };
+
+    window.addEventListener('app-export', handleExportEvent);
+    return () => window.removeEventListener('app-export', handleExportEvent);
+  }, [chartData, mode, metric]);
+
   const switchMetric = (nextMetric: Metric) => {
     if (nextMetric === metric) return;
     const nextParams = new URLSearchParams(searchParams);
@@ -99,12 +171,6 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
       nextParams.delete('metric');
     }
     setSearchParams(nextParams, { replace: true });
-  };
-
-  const resetSummaryView = () => {
-    setMode('yearly');
-    setMonthlySeries('year');
-    setShowLabels(true);
   };
 
   if (loading) {
@@ -117,7 +183,7 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
         <div className="app-content-frame app-content-frame--workspace app-page-content sales-summary-page" style={{ paddingTop: 16 }}>
 
           {/* Internal Dashboard Filter Bar */}
-          <div className="no-print" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', background: 'var(--color-surface-0)', borderBottom: '1px solid var(--color-border-light)', borderRadius: '8px 8px 0 0', marginBottom: 16 }}>
+          <div className="no-print sales-summary-toolbar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', background: 'var(--color-surface-0)', borderBottom: '1px solid var(--color-border-light)', borderRadius: '8px 8px 0 0', marginBottom: 16 }}>
             <h2 style={{ fontSize: 'var(--erp-text-section)', fontWeight: 900, color: 'var(--color-text-primary)', margin: 0 }}>
               Sales Summary
             </h2>
@@ -129,31 +195,6 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
               <ErpSegmentedControl ariaLabel="Series" value={monthlySeries} onChange={(v) => setMonthlySeries(v as 'year' | 'group')} options={[{ value: 'year', label: 'By Year', icon: <Layers size={13} /> }, { value: 'group', label: 'By Group', icon: <Users size={13} /> }]} />
               <div style={{ width: 1, height: 16, background: 'var(--color-border-light)' }} />
               <ErpSegmentedControl ariaLabel="Labels" value={showLabels ? 'on' : 'off'} onChange={(v) => setShowLabels(v === 'on')} options={[{ value: 'on', label: 'Show Labels', icon: <Eye size={13} /> }, { value: 'off', label: 'Hide Labels', icon: <EyeOff size={13} /> }]} />
-              <div style={{ width: 1, height: 16, background: 'var(--color-border-light)' }} />
-              <button
-                type="button"
-                disabled={loading}
-                onClick={handlePrint}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  padding: '5px 12px',
-                  borderRadius: 6,
-                  background: 'var(--color-surface-0)',
-                  border: '1px solid var(--color-border-light)',
-                  fontSize: 'var(--erp-text-control)',
-                  fontWeight: 800,
-                  color: 'var(--color-text-primary)',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease'
-                }}
-                title="Print current page or Save as PDF (Ctrl+P)"
-              >
-                <Printer size={13} style={{ color: 'var(--color-brand-600)' }} />
-                <span>Print / PDF</span>
-              </button>
-              <button onClick={resetSummaryView} style={{ background: "none", border: "none", padding: "6px", color: "var(--color-text-tertiary)", cursor: "pointer", marginLeft: 8 }} title="Reset View"><RefreshCw size={14} /></button>
             </div>
           </div>
           {/* Main Content Grid: Chart on Left, YoY Cards on Right */}

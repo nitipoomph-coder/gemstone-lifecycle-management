@@ -14,7 +14,7 @@ import {
   Handshake,
 } from 'lucide-react';
 import type { NavMenuGroup, NavMenuItem } from '../../types';
-import { CUSTOMER_TRENDS_PATH, LEGACY_CUSTOMER_TRENDS_PATH } from '../../utils/customerTrendsUrl';
+import { isNavigationItemActive } from '../../utils/navigationUtils';
 
 const NAV_ICON_SIZE = 16;
 const NAV_CHEVRON_SIZE = 14;
@@ -37,49 +37,19 @@ const iconComponents: Record<string, React.ElementType> = {
 interface NavGroupProps {
   group: NavMenuGroup;
   isOpen: boolean;
+  isActive: boolean;
   onToggle: () => void;
   collapsed?: boolean;
   onNavigate?: () => void;
 }
 
-export default function NavGroup({ group, isOpen, onToggle, collapsed = false, onNavigate }: NavGroupProps) {
+export default function NavGroup({ group, isOpen, isActive, onToggle, collapsed = false, onNavigate }: NavGroupProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const items = group.items || [];
 
-  const isPathActive = (itemPath?: string) => {
-    if (!itemPath) return false;
-    if (location.pathname === itemPath) return true;
-    if (itemPath === '/dashboard/customer') {
-      return (
-        location.pathname === '/dashboard/qty' ||
-        (location.pathname === '/dashboard/customer-report' && new URLSearchParams(location.search).get('metric') !== 'qty')
-      );
-    }
-    if (itemPath === CUSTOMER_TRENDS_PATH || itemPath === LEGACY_CUSTOMER_TRENDS_PATH || itemPath === '/dashboard/customer/trends') {
-      return (
-        location.pathname === CUSTOMER_TRENDS_PATH ||
-        location.pathname === LEGACY_CUSTOMER_TRENDS_PATH ||
-        location.pathname === '/dashboard/sales-customer-detail'
-      );
-    }
-    if (itemPath === '/dashboard/qty') {
-      return location.pathname === '/dashboard/customer-report' && new URLSearchParams(location.search).get('metric') === 'qty';
-    }
-    if (itemPath === '/dashboard/top-orders') {
-      return location.pathname === '/dashboard/top-orders/analytics';
-    }
-    if (itemPath === '/dashboard/top-orders/analytics') {
-      return location.pathname === '/dashboard/top-orders/analytics';
-    }
-    if (itemPath === '/po-tracker') {
-      return location.pathname.startsWith('/po-tracker/');
-    }
-    return false;
-  };
-
   const isItemActive = (item: NavMenuItem): boolean => {
-    return isPathActive(item.path) || Boolean(item.items?.some(child => isItemActive(child)));
+    return isNavigationItemActive(item, location.pathname, location.search);
   };
 
   const activeParentId = items.find(item => item.items?.some(child => isItemActive(child)))?.id || '';
@@ -92,9 +62,6 @@ export default function NavGroup({ group, isOpen, onToggle, collapsed = false, o
     return count + 1 + childCount;
   }, 0);
 
-  const isGroupActive = group.path
-    ? isPathActive(group.path)
-    : items.some(item => isItemActive(item));
   const IconComponent = iconComponents[group.icon] || PackageCheck;
   const accentColor = group.accentColor || 'var(--color-brand-500)';
 
@@ -116,15 +83,15 @@ export default function NavGroup({ group, isOpen, onToggle, collapsed = false, o
               onToggle();
             }
           }}
-          className={`flex h-9 w-9 items-center justify-center rounded-lg transition-all duration-200 hover:bg-[var(--color-sidebar-hover)] ${isGroupActive ? 'bg-[var(--color-sidebar-hover)]' : ''}`}
-          style={isGroupActive ? {
+          className={`flex h-9 w-9 items-center justify-center rounded-lg transition-all duration-200 hover:bg-[var(--color-sidebar-hover)] ${isActive ? 'bg-[var(--color-sidebar-hover)]' : ''}`}
+          style={isActive ? {
             boxShadow: `0 0 12px 1px color-mix(in oklch, ${accentColor} 25%, transparent)`,
           } : undefined}
           title={group.label}
         >
           <IconComponent
             size={NAV_ICON_SIZE}
-            className={`transition-colors duration-150 ${isGroupActive ? 'text-[var(--color-sidebar-accent)]' : 'text-[var(--color-sidebar-text)]'}`}
+            className={`transition-colors duration-150 ${isActive ? 'text-[var(--color-sidebar-accent)]' : 'text-[var(--color-sidebar-text)]'}`}
           />
         </button>
       </div>
@@ -142,11 +109,11 @@ export default function NavGroup({ group, isOpen, onToggle, collapsed = false, o
             onToggle();
           }
         }}
-        className={`nav-accent-bar nav-item-hover flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left transition-colors duration-150 hover:bg-[var(--color-sidebar-hover)] ${isGroupActive || isOpen ? 'active' : ''}`}
+        className={`nav-accent-bar nav-item-hover flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left transition-colors duration-150 hover:bg-[var(--color-sidebar-hover)] ${isActive ? 'active' : ''}`}
         style={{ '--accent-bar-color': accentColor } as React.CSSProperties}
       >
         <span className="flex w-5 shrink-0 items-center justify-center relative">
-          {(isGroupActive || isOpen) && (
+          {isActive && (
             <span
               className="group-active-dot absolute -left-1.5"
               style={{ '--pulse-color': accentColor, background: accentColor } as React.CSSProperties}
@@ -154,11 +121,11 @@ export default function NavGroup({ group, isOpen, onToggle, collapsed = false, o
           )}
           <IconComponent
             size={NAV_ICON_SIZE}
-            className={`transition-colors duration-150 ${isGroupActive || isOpen ? 'text-[var(--color-sidebar-accent)]' : 'text-[var(--color-sidebar-text)]'}`}
+            className={`transition-colors duration-150 ${isActive ? 'text-[var(--color-sidebar-accent)]' : 'text-[var(--color-sidebar-text)]'}`}
           />
         </span>
         <span
-          className={`flex-1 text-[13px] font-medium transition-colors duration-150 ${isGroupActive || isOpen ? 'text-[var(--color-sidebar-text-active)]' : 'text-[var(--color-sidebar-text)]'}`}
+          className={`flex-1 text-[13px] font-medium transition-colors duration-150 ${isActive ? 'text-[var(--color-sidebar-text-active)]' : 'text-[var(--color-sidebar-text)]'}`}
           style={{ fontFamily: 'var(--font-display)' }}
         >
           {group.label}

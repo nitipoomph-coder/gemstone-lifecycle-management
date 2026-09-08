@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import GlobalTopbar from './GlobalTopbar';
+import { TopbarActionProvider } from '../../contexts/TopbarActionContext';
 
 const getInitialSidebarState = () => {
   if (typeof window === 'undefined') return true;
@@ -25,22 +26,24 @@ export default function AppLayout() {
   };
 
   return (
-    <div className="app-shell flex w-full overflow-hidden">
-      <Sidebar isOpen={sidebarOpen} onToggle={() => setSidebar(!sidebarOpen)} />
-      {sidebarOpen && (
-        <button
-          type="button"
-          className="app-sidebar-scrim"
-          onClick={() => setSidebar(false)}
-          aria-label="Close navigation menu"
-        />
-      )}
-      <div className="flex flex-col flex-1 min-w-0">
-        <GlobalTopbar />
-        <main className="app-main flex min-w-0 flex-1 flex-col overflow-hidden">
-          <Outlet />
-        </main>
+    <TopbarActionProvider>
+      <div className="app-shell flex w-full overflow-hidden">
+        <Sidebar isOpen={sidebarOpen} onToggle={() => setSidebar(!sidebarOpen)} />
+        {sidebarOpen && (
+          <button
+            type="button"
+            className="app-sidebar-scrim"
+            onClick={() => setSidebar(false)}
+            aria-label="Close navigation menu"
+          />
+        )}
+        <div className="flex flex-col flex-1 min-w-0">
+          <GlobalTopbar />
+          <main className="app-main flex min-w-0 flex-1 flex-col overflow-hidden">
+            <Outlet />
+          </main>
+        </div>
       </div>
-    </div>
+    </TopbarActionProvider>
   );
 }

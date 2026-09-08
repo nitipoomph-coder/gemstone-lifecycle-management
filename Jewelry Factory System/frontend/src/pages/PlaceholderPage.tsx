@@ -1,23 +1,14 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Blocks } from 'lucide-react';
 import PageHeader from '../components/layout/PageHeader';
+import { BREADCRUMBS } from '../config/breadcrumbs';
 import { menuConfig } from '../config/menuConfig';
-
-const groupFirstPath: Record<string, string> = {
-  procurement: '/procurement/purchase',
-  orders: '/orders/create',
-  sample: '/sample/order',
-  inventory: '/inventory/check-dispatch',
-  'spare-parts': '/spare-parts/order',
-  subcontract: '/subcontract/vendor-performance',
-};
 
 export default function PlaceholderPage() {
   const location = useLocation();
   const navigate = useNavigate();
 
   let groupLabel = 'Module';
-  let groupId = '';
   let itemLabel = 'Page';
   let itemCode = '';
 
@@ -25,7 +16,6 @@ export default function PlaceholderPage() {
     const found = (group.items || []).find(item => item.path === location.pathname);
     if (found) {
       groupLabel = group.label;
-      groupId = group.id;
       itemLabel = found.label;
       itemCode = found.code || '';
       break;
@@ -37,11 +27,7 @@ export default function PlaceholderPage() {
   return (
     <div className="app-page">
       <PageHeader
-        breadcrumb={[
-          { label: 'JEWELRY FACTORY SYSTEM', path: '/' },
-          { label: groupLabel, path: groupFirstPath[groupId] || '/' },
-          { label: displayTitle },
-        ]}
+        breadcrumb={BREADCRUMBS.PLACEHOLDER(groupLabel, displayTitle)}
         contentLayout="workspace"
       />
 

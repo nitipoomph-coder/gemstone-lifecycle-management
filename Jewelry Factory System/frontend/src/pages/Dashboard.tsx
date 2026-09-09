@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import PageHeader from '../components/layout/PageHeader';
-import { BREADCRUMBS } from '../config/breadcrumbs';
+import { useBreadcrumbs } from '../contexts/BreadcrumbContext';
 import { fetchDashboardData, fetchAvailableYears, type DashboardData, type CardType } from '../services/dashboardAPI';
 import CardDetailPanel from '../components/dashboard/overview/CardDetailPanel';
 import CustomSelect from '../components/ui/CustomSelect';
@@ -173,9 +172,12 @@ export default function Dashboard() {
     </div>
   );
 
+  // Root page — no PageHeader needed; clear stale breadcrumbs
+  const { setBreadcrumbs } = useBreadcrumbs();
+  useEffect(() => { setBreadcrumbs([]); }, [setBreadcrumbs]);
+
   return (
     <>
-      <PageHeader breadcrumb={BREADCRUMBS.DASHBOARD} contentLayout="dashboard" />
       <div className="app-page-scroll content-scrollbar">
         <div className="app-content-frame app-content-frame--dashboard app-page-content dashboard-page flex flex-col gap-4">
 

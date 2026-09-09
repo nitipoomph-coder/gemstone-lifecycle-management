@@ -24,13 +24,13 @@ const routeToDocType: Record<string, string> = {
 };
 
 export default function RequisitionDocPage() {
-  const { showToast } = useToast();
   const location = useLocation();
   const docType = routeToDocType[location.pathname] || 'SOA';
   return <RequisitionDocWorkspace key={docType} docType={docType} />;
 }
 
 function RequisitionDocWorkspace({ docType }: { docType: string }) {
+  const { showToast } = useToast();
   const formConfig = formConfigMap[docType];
 
   const [docList, setDocList] = useState<DocListItem[]>([]);

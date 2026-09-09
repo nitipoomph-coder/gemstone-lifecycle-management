@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList } from 'recharts';
+import { ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList, ReferenceLine } from 'recharts';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ALL_GROUPS } from '../../../config/customerGroups';
 import type { ChartDatum, Metric } from '../../../hooks/useCustomerSalesData';
@@ -19,12 +19,22 @@ const CustomTooltip = ({ active, payload, label, metric, chartData, mode, monthl
           {label}
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {payload.map((entry, index) => {
+          {payload
+            .slice()
+            .sort((a, b) => {
+              if (a.dataKey === '_totalPlotY') return 1;
+              if (b.dataKey === '_totalPlotY') return -1;
+              if (String(a.dataKey).length === 4 && String(b.dataKey).length === 4) {
+                return Number(b.dataKey) - Number(a.dataKey);
+              }
+              return 0;
+            })
+            .map((entry, index) => {
             if (entry.value === 0) return null;
 
             let diff = null;
             let pct = null;
-            const currVal = Number(entry.value || 0);
+            const currVal = entry.dataKey === '_totalPlotY' ? Number(entry.payload._actualTotal || 0) : Number(entry.value || 0);
 
             if (monthlySeries === 'year' && String(entry.dataKey).length === 4) {
               const prevYear = String(Number(entry.dataKey) - 1);
@@ -145,9 +155,9 @@ export function CustomerSalesChart({
     return value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
 
-  const { processedData, yAxisMax, yAxisTicks } = useMemo(() => {
+  const { processedData, yAxisMax, yAxisTicks, avgActualTotal } = useMemo(() => {
     if (!chartData || chartData.length === 0) {
-      return { processedData: [], yAxisMax: 100, yAxisTicks: [0, 50, 100] };
+      return { processedData: [], yAxisMax: 100, yAxisTicks: [0, 50, 100], avgActualTotal: 0 };
     }
 
     let maxBar = 0;
@@ -191,6 +201,9 @@ export function CustomerSalesChart({
       }
     }
 
+    let sumTotal = 0;
+    let countTotal = 0;
+
     const processed = chartData.map((d: any) => {
       const tot = d._actualTotal || 0;
       let totalPlotY: number | null = null;
@@ -201,12 +214,25 @@ export function CustomerSalesChart({
           frac = TOT_LO + ((tot - minTot) / (maxTot - minTot)) * (TOT_HI - TOT_LO);
         }
         totalPlotY = calculatedYMax * frac;
+        sumTotal += tot;
+        countTotal++;
       }
 
       return { ...d, _totalPlotY: totalPlotY };
     });
 
-    return { processedData: processed, yAxisMax: calculatedYMax, yAxisTicks: calculatedTicks };
+    let avgPlotY: number | null = null;
+    let avgActualTotal: number | null = null;
+    if (countTotal > 0) {
+      avgActualTotal = sumTotal / countTotal;
+      let avgFrac = (TOT_LO + TOT_HI) / 2;
+      if (maxTot > minTot) {
+        avgFrac = TOT_LO + ((avgActualTotal - minTot) / (maxTot - minTot)) * (TOT_HI - TOT_LO);
+      }
+      avgPlotY = calculatedYMax * avgFrac;
+    }
+
+    return { processedData: processed, yAxisMax: calculatedYMax, yAxisTicks: calculatedTicks, avgPlotY, avgActualTotal };
   }, [chartData, monthlySeries, sortedSel, activeYears]);
 
   const renderTotalLabel = (props: any) => {
@@ -214,14 +240,16 @@ export function CustomerSalesChart({
     const item = processedData[index];
     if (!item || !item._actualTotal || item._actualTotal === 0) return <g />;
 
+    const isAboveAvg = avgActualTotal !== null && item._actualTotal >= avgActualTotal;
+
     return (
       <text
         x={x}
-        y={y - 12}
+        y={isAboveAvg ? y - 12 : y + 18}
         textAnchor="middle"
-        fill="var(--color-text-primary)"
+        fill={isAboveAvg ? "var(--color-success-600)" : "var(--color-danger-500)"}
         fontSize={10}
-        fontWeight={800}
+        fontWeight={900}
       >
         {metric === 'qty'
           ? Number(item._actualTotal).toLocaleString(undefined, { maximumFractionDigits: 0 })

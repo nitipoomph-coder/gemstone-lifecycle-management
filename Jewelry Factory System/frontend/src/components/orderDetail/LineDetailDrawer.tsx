@@ -3,7 +3,7 @@
 // behavior, not rewritten) the photo zoom/pan lightbox and the remarks edit form that used to
 // live inline inside the old per-line card — a dense table row has no room for either.
 import { useState } from 'react';
-import { X, DollarSign, Package, ClipboardList, Check } from 'lucide-react';
+import { X, DollarSign, Package, ClipboardList } from 'lucide-react';
 import { updateOrderRemarks } from '../../services/poTrackerAPI';
 import { ORDER_DETAIL_COLUMNS } from '../../config/orderDetailColumns';
 import { formatV, formatColumnValue } from './format';

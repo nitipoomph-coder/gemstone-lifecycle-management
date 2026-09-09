@@ -1,10 +1,20 @@
-import { Palette, Printer, FileSpreadsheet, FileText } from 'lucide-react';
+import { Palette, Printer, FileSpreadsheet, FileText, ChevronLeft, ChevronRight, PanelLeft } from 'lucide-react';
 import { useTheme } from '../../contexts/useTheme';
 import { useState, useRef, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import NotificationDropdown from './NotificationDropdown';
 import UserAvatarDropdown from './UserAvatarDropdown';
+import { useBreadcrumbs } from '../../contexts/BreadcrumbContext';
 
-export default function GlobalTopbar() {
+interface GlobalTopbarProps {
+  isSidebarOpen?: boolean;
+  onToggleSidebar?: () => void;
+}
+
+export default function GlobalTopbar({ isSidebarOpen, onToggleSidebar }: GlobalTopbarProps) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { parentBreadcrumbs } = useBreadcrumbs();
   const { theme, setTheme } = useTheme();
   const [showThemeMenu, setShowThemeMenu] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
@@ -84,7 +94,7 @@ export default function GlobalTopbar() {
 
   return (
     <header
-      className="app-global-topbar flex items-center justify-between h-11 sm:h-12 px-4 sm:px-6 w-full"
+      className="app-global-topbar flex items-center justify-between h-11 sm:h-12 px-3 sm:px-5 w-full shrink-0"
       style={{
         background: 'var(--color-ui-surface)',
         borderBottom: '1px solid var(--color-border-light)',
@@ -94,14 +104,77 @@ export default function GlobalTopbar() {
         boxShadow: 'var(--shadow-panel)',
       }}
     >
-      {/* Left: System Status / Context Badge */}
-      <div className="flex items-center gap-2.5 min-w-0">
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[var(--color-surface-1)] border border-[var(--color-border-light)] text-[var(--color-text-secondary)]">
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="text-[11px] font-bold tracking-wider uppercase font-mono truncate">
-            Factory ERP
+      {/* Left: [Toggle Sidebar] -> [Wordmark JEWELRY] -> [Divider] -> [Back Button] -> [Breadcrumbs] */}
+      <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1 mr-4">
+        {onToggleSidebar && (
+          <button
+            type="button"
+            onClick={onToggleSidebar}
+            className="flex items-center justify-center w-8 h-8 rounded-lg text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-brand-600)] transition-colors shrink-0 cursor-pointer border-none bg-transparent"
+            title={isSidebarOpen ? 'ซ่อนเมนู (Collapse sidebar)' : 'แสดงเมนู (Expand sidebar)'}
+            aria-label="Toggle sidebar navigation"
+          >
+            <PanelLeft size={18} strokeWidth={1.75} />
+          </button>
+        )}
+
+        {/* Wordmark JEWELRY (links to home /) */}
+        <button
+          type="button"
+          onClick={() => navigate('/')}
+          className="flex items-center select-none cursor-pointer border-none bg-transparent p-0 transition-opacity hover:opacity-85 shrink-0"
+          title="Factory Overview"
+        >
+          <span
+            className="text-[17px] sm:text-[18px] font-black tracking-[0.14em] uppercase font-display"
+            style={{
+              fontFamily: 'var(--font-logo)',
+              background: 'linear-gradient(90deg, var(--color-brand-500), var(--color-brand-400))',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+            }}
+          >
+            JEWELRY
           </span>
-        </div>
+        </button>
+
+        {/* Subtle vertical separator */}
+        <div className="h-4 w-px bg-[var(--color-border-light)] mx-1 sm:mx-1.5 shrink-0" />
+
+        {/* Back Button (shown on non-root routes) - borderless */}
+        {location.pathname !== '/' && (
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="flex items-center justify-center w-8 h-8 rounded-lg border-none bg-transparent text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-brand-600)] transition-colors shrink-0 cursor-pointer p-0"
+            title="ย้อนกลับ (Back)"
+            aria-label="Go back"
+          >
+            <ChevronLeft size={18} strokeWidth={1.75} />
+          </button>
+        )}
+
+        {/* Parent Breadcrumbs (system parent levels only, no current page title) */}
+        {parentBreadcrumbs && parentBreadcrumbs.length > 0 && (
+          <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs sm:text-[13px] font-semibold min-w-0 truncate">
+            {parentBreadcrumbs.map((item, i) => (
+              <span key={i} className="flex items-center gap-1.5 truncate">
+                {i > 0 && <ChevronRight size={12} strokeWidth={1.75} className="text-[var(--color-text-tertiary)] opacity-60 shrink-0" />}
+                {item.path ? (
+                  <button
+                    type="button"
+                    onClick={() => navigate(item.path!)}
+                    className="truncate hover:underline cursor-pointer bg-transparent border-none p-0 outline-none font-bold text-[var(--color-brand-600)] hover:text-[var(--color-brand-700)] transition-colors"
+                  >
+                    {item.label}
+                  </button>
+                ) : (
+                  <span className="truncate text-[var(--color-text-secondary)] font-bold">{item.label}</span>
+                )}
+              </span>
+            ))}
+          </nav>
+        )}
       </div>
 
       {/* Right: [Print / Export Dropdown] -> [Notification Bell] -> [Theme Palette] -> [User Avatar Dropdown] */}
@@ -119,7 +192,7 @@ export default function GlobalTopbar() {
             title="ส่งออกหน้านี้"
             aria-label="Export or Print this page"
           >
-            <Printer size={18} />
+            <Printer size={18} strokeWidth={1.75} />
           </button>
 
           {showExportMenu && (
@@ -135,7 +208,7 @@ export default function GlobalTopbar() {
                 onClick={handleExportExcel}
                 className="flex w-full cursor-pointer items-center gap-3 border-none rounded-lg px-3 py-2 text-[length:var(--erp-text-body)] transition-colors bg-transparent text-[var(--color-text-primary)] hover:bg-[var(--color-surface-2)] font-semibold"
               >
-                <FileSpreadsheet size={16} className="text-emerald-600 shrink-0" />
+                <FileSpreadsheet size={16} strokeWidth={1.75} className="text-emerald-600 shrink-0" />
                 <span>Export to Excel</span>
               </button>
               <button
@@ -143,7 +216,7 @@ export default function GlobalTopbar() {
                 onClick={handleExportCSV}
                 className="flex w-full cursor-pointer items-center gap-3 border-none rounded-lg px-3 py-2 text-[length:var(--erp-text-body)] transition-colors bg-transparent text-[var(--color-text-primary)] hover:bg-[var(--color-surface-2)] font-semibold"
               >
-                <FileText size={16} className="text-blue-600 shrink-0" />
+                <FileText size={16} strokeWidth={1.75} className="text-blue-600 shrink-0" />
                 <span>Export to CSV</span>
               </button>
               <div className="my-1.5 h-px w-full bg-[var(--color-border-light)]" />
@@ -152,7 +225,7 @@ export default function GlobalTopbar() {
                 onClick={handlePrintPDF}
                 className="flex w-full cursor-pointer items-center gap-3 border-none rounded-lg px-3 py-2 text-[length:var(--erp-text-body)] transition-colors bg-transparent text-[var(--color-text-primary)] hover:bg-[var(--color-surface-2)] font-semibold"
               >
-                <Printer size={16} className="text-[var(--color-brand-600)] shrink-0" />
+                <Printer size={16} strokeWidth={1.75} className="text-[var(--color-brand-600)] shrink-0" />
                 <span>Print / PDF</span>
               </button>
             </div>
@@ -175,7 +248,7 @@ export default function GlobalTopbar() {
             title="เปลี่ยนธีมสี (Theme)"
             aria-label="Change theme"
           >
-            <Palette size={18} />
+            <Palette size={18} strokeWidth={1.75} />
           </button>
 
           {showThemeMenu && (

@@ -123,35 +123,56 @@
 }
 
 .erp-segmented {
+  position: relative;
   display: inline-flex;
   height: 32px;
   align-items: center;
   gap: 2px;
   padding: 3px;
   border: 1px solid var(--color-border-light);
-  border-radius: 7px;
+  border-radius: 8px;
   background: var(--color-surface-2);
+  user-select: none;
+}
+
+.erp-segmented__indicator {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  border-radius: 6px;
+  background: var(--color-surface-0);
+  border: 1px solid var(--color-border-light);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--color-surface-900) 10%, transparent);
+  transition: left 0.22s cubic-bezier(0.4, 0, 0.2, 1), width 0.22s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.15s ease;
+  pointer-events: none;
+  z-index: 1;
 }
 
 .erp-segment {
+  position: relative;
+  z-index: 2;
   display: inline-flex;
   height: 24px;
   align-items: center;
+  justify-content: center;
   gap: 5px;
-  border-color: transparent;
-  background: transparent;
+  border: none !important;
+  background: transparent !important;
   color: var(--color-text-tertiary);
   cursor: pointer;
   padding: 0 10px;
   white-space: nowrap;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  font-weight: 700;
+  transition: color 0.18s ease;
+}
+
+.erp-segment:hover:not(.erp-segment--active) {
+  color: var(--color-text-secondary);
 }
 
 .erp-segment--active {
-  border-color: var(--color-border-light);
-  background: var(--color-surface-0);
-  color: var(--color-text-primary);
-  box-shadow: 0 1px 2px color-mix(in srgb, var(--color-surface-900) 10%, transparent);
+  color: var(--color-text-primary) !important;
+  font-weight: 800 !important;
 }
 
 @keyframes erpButtonSpin {

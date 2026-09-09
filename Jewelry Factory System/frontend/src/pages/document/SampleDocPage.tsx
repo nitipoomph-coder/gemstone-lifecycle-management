@@ -19,13 +19,13 @@ const routeToDocType: Record<string, string> = {
 };
 
 export default function SampleDocPage() {
-  const { showToast } = useToast();
   const location = useLocation();
   const docType = routeToDocType[location.pathname] || 'SSA';
   return <SampleDocWorkspace key={docType} docType={docType} />;
 }
 
 function SampleDocWorkspace({ docType }: { docType: string }) {
+  const { showToast } = useToast();
   const formConfig = formConfigMap[docType];
 
   const [docList, setDocList] = useState<DocListItem[]>([]);

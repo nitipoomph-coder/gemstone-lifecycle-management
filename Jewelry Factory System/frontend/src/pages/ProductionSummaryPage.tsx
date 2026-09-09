@@ -97,7 +97,6 @@ export default function ProductionSummaryPage() {
   const [chartTitle, setChartTitle] = useState('');
   const [showFilterPopover, setShowFilterPopover] = useState(false);
   const filterPopoverRef = useRef<HTMLDivElement>(null);
-  const [isExporting, setIsExporting] = useState(false);
   const { showToast } = useToast();
 
   const printRef = useRef<HTMLDivElement>(null);

@@ -21,8 +21,8 @@ export const menuConfig: NavMenuGroup[] = [
     section: 'ภาพรวม',
     items: [
       { id: 'dash-cust', label: 'Sales Summary', path: '/dashboard/customer' },
-      { id: 'dash-matrix', label: 'Customer Report Matrix', path: '/dashboard/customer/matrix' },
       { id: 'dash-order-trends', label: 'Order Trends', path: '/dashboard/customer/trends' },
+      { id: 'dash-matrix', label: 'Customer Report Matrix', path: '/dashboard/customer/matrix' },
       { id: 'dash-top-orders', label: 'Top Item Gallery', path: '/dashboard/top-orders' },
       { id: 'dash-top-orders-analytics', label: 'Top Items Qty', path: '/dashboard/top-orders/analytics' },
     ],

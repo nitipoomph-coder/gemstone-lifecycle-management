@@ -2,6 +2,7 @@ const CATS = ["BBS", "BES+BCS", "BNS+BPS", "BTS", "BRS", "OTHER"];
 
 interface ProductionForecastTableProps {
   data: any[];
+  viewMode?: string;
 }
 
 export function ProductionForecastTable({ data }: ProductionForecastTableProps) {

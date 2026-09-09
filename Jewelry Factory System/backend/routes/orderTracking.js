@@ -172,14 +172,8 @@ router.get('/track', async (req, res) => {
                 historyTimeline.push(stepObj);
             }
         }
-
-        // 3) เรียงลำดับประวัติตามวันที่ (เก่า -> ใหม่)
-        historyTimeline.sort((a, b) => {
-            if (a.repDate && b.repDate) return new Date(a.repDate) - new Date(b.repDate);
-            if (a.repDate) return -1;
-            if (b.repDate) return 1;
-            return a.stepIndex - b.stepIndex;
-        });
+        // 3) (ไม่ต้อง sort อีกต่อไป เพราะ historyTimeline ถูก push ตามลำดับ process อยู่แล้ว)    
+        historyTimeline.sort((a, b) => a.stepIndex - b.stepIndex);
 
         // 4) สรุปภาพรวม
         const totalSteps = stepsData.length;

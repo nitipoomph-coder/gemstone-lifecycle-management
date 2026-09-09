@@ -6,8 +6,8 @@ import { RefreshCw, Settings2, ChevronDown } from 'lucide-react';
 import CustomSelect from '../../ui/CustomSelect';
 import { useToast } from '../../../contexts/ToastContext';
 import { fetchWithAuth } from '../../../utils/fetchWithAuth';
-import { ProductionForecastChart } from './ProductionForecastChart';
-import { ProductionForecastTable } from './ProductionForecastTable';
+import { ProductionForecastChart } from './ProductionForecastChart.tsx';
+import { ProductionForecastTable } from './ProductionForecastTable.tsx';
 import { getYearOptions, MONTH_FULL } from '../../../config/productionSummaryConfig';
 
 const GROUPS = [

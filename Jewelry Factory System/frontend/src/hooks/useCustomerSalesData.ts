@@ -70,15 +70,19 @@ export function useCustomerSalesData({
           const g = ALL_GROUPS.find(x => x.id === gId)!;
           const r: ChartDatum = { label: g.label };
           activeYears.forEach(y => {
+            const prevY = String(Number(y) - 1);
             r[y] = selectedMonths.reduce((s, mStr) => s + (RAW[y]?.[MONTHS[parseInt(mStr) - 1]]?.[gId] || 0), 0);
+            r[`${y}_prev`] = selectedMonths.reduce((s, mStr) => s + (RAW[prevY]?.[MONTHS[parseInt(mStr) - 1]]?.[gId] || 0), 0);
           });
           return r;
         });
       } else {
         return activeYears.map(y => {
+          const prevY = String(Number(y) - 1);
           const r: ChartDatum = { label: String(y) };
           sortedSel.forEach(g => { 
             r[g] = selectedMonths.reduce((s, mStr) => s + (RAW[y]?.[MONTHS[parseInt(mStr) - 1]]?.[g] || 0), 0); 
+            r[`${g}_prev`] = selectedMonths.reduce((s, mStr) => s + (RAW[prevY]?.[MONTHS[parseInt(mStr) - 1]]?.[g] || 0), 0); 
           });
           return r;
         });
@@ -90,7 +94,9 @@ export function useCustomerSalesData({
           const m = MONTHS[parseInt(mStr) - 1];
           const r: ChartDatum = { label: m };
           activeYears.forEach(y => {
+            const prevY = String(Number(y) - 1);
             r[y] = sortedSel.reduce((sum, g) => sum + (RAW[y]?.[m]?.[g] || 0), 0);
+            r[`${y}_prev`] = sortedSel.reduce((sum, g) => sum + (RAW[prevY]?.[m]?.[g] || 0), 0);
           });
           return r;
         });
@@ -98,11 +104,13 @@ export function useCustomerSalesData({
         const list: ChartDatum[] = [];
         sortedMonths.forEach(mStr => {
           activeYears.forEach(y => {
+            const prevY = String(Number(y) - 1);
             const m = MONTHS[parseInt(mStr) - 1];
             const label = activeYears.length > 1 ? `${m} ${String(y).slice(2)}` : m;
             const r: ChartDatum = { label, sortKey: `${mStr.padStart(2, '0')}-${y}` };
             sortedSel.forEach(g => {
               r[g] = RAW[y]?.[m]?.[g] || 0;
+              r[`${g}_prev`] = RAW[prevY]?.[m]?.[g] || 0;
             });
             list.push(r);
           });

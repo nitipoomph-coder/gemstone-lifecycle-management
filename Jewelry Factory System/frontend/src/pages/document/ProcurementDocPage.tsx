@@ -24,13 +24,13 @@ const routeToDocType: Record<string, string> = {
 };
 
 export default function ProcurementDocPage() {
-  const { showToast } = useToast();
   const location = useLocation();
   const docType = routeToDocType[location.pathname] || 'SPA';
   return <ProcurementDocWorkspace key={docType} docType={docType} />;
 }
 
 function ProcurementDocWorkspace({ docType }: { docType: string }) {
+  const { showToast } = useToast();
   const formConfig = formConfigMap[docType];
 
   const [docList, setDocList] = useState<DocListItem[]>([]);

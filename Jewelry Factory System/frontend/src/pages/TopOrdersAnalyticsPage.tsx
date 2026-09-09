@@ -49,7 +49,6 @@ export default function TopOrdersAnalyticsPage() {
         <header className="no-print" style={reportHeaderStyle}>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h1 style={reportTitleStyle}>Top Items Qty</h1>
               <div style={reportMetaStyle}>{selectedPeriodLabel} / Top {TOP_CUSTOMER_ITEM_LIMIT} rows / Qty only</div>
             </div>
             <div className="flex min-w-0 flex-wrap items-center justify-end gap-2" style={controlClusterStyle}>

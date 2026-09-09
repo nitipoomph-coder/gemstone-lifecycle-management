@@ -58,7 +58,7 @@ export const EMPTY_REGISTRATION: RegistrationValues = {
 
 export const LOGIN_COPY: Record<LoginLanguage, LoginCopy> = {
   EN: {
-    loginTitle: 'Jewelry Factory System',
+    loginTitle: 'JEWELRY',
     loginSub: 'Sign in to your account',
     username: 'Username',
     password: 'Password',

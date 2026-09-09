@@ -25,14 +25,22 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
   // New State mappings
   const [mode, setMode] = useState<'yearly' | 'monthly'>('yearly');
   const [monthlySeries, setMonthlySeries] = useState<'year' | 'group'>('year');
-  const [showLabels, setShowLabels] = useState(true);
 
-  // Auto-hide labels when switching to Group series due to overlapping
+  // Track user manual override for labels
+  const [userCustomLabels, setUserCustomLabels] = useState<boolean | null>(null);
+
+  // When filter changes, reset user manual override
   useEffect(() => {
-    if (monthlySeries === 'group') {
-      setShowLabels(false);
-    }
-  }, [monthlySeries]);
+    setUserCustomLabels(null);
+  }, [mode, monthlySeries]);
+
+  // Default: if filter = By Group + Month simultaneously -> default hide (false), else default show (true)
+  const defaultShowLabels = !(mode === 'monthly' && monthlySeries === 'group');
+  const showLabels = userCustomLabels !== null ? userCustomLabels : defaultShowLabels;
+
+  const handleToggleLabels = () => {
+    setUserCustomLabels(!showLabels);
+  };
 
 
   const activeYears = useMemo(() => [...selectedYears].sort(), [selectedYears]);
@@ -182,34 +190,46 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
       <div className="content-scrollbar flex-1 overflow-y-auto" style={{ background: 'var(--color-surface-1)' }}>
         <div className="app-content-frame app-content-frame--workspace app-page-content sales-summary-page" style={{ paddingTop: 16 }}>
 
-          {/* Internal Dashboard Filter Bar */}
-          <div className="no-print sales-summary-toolbar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', background: 'var(--color-surface-0)', borderBottom: '1px solid var(--color-border-light)', borderRadius: '8px 8px 0 0', marginBottom: 16 }}>
-            <h2 style={{ fontSize: 'var(--erp-text-section)', fontWeight: 900, color: 'var(--color-text-primary)', margin: 0 }}>
-              Sales Summary
-            </h2>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <ErpSegmentedControl ariaLabel="Metric" value={metric} onChange={(v) => switchMetric(v as Metric)} options={[{ value: 'amount', label: 'Sales', icon: <DollarSign size={13} /> }, { value: 'qty', label: 'Qty', icon: <Hash size={13} /> }]} />
-              <div style={{ width: 1, height: 16, background: 'var(--color-border-light)' }} />
-              <ErpSegmentedControl ariaLabel="View" value={mode} onChange={(v) => setMode(v as 'yearly' | 'monthly')} options={[{ value: 'yearly', label: 'Year', icon: <CalendarDays size={13} /> }, { value: 'monthly', label: 'Month', icon: <Calendar size={13} /> }]} />
-              <div style={{ width: 1, height: 16, background: 'var(--color-border-light)' }} />
-              <ErpSegmentedControl ariaLabel="Series" value={monthlySeries} onChange={(v) => setMonthlySeries(v as 'year' | 'group')} options={[{ value: 'year', label: 'By Year', icon: <Layers size={13} /> }, { value: 'group', label: 'By Group', icon: <Users size={13} /> }]} />
-              <div style={{ width: 1, height: 16, background: 'var(--color-border-light)' }} />
-              <ErpSegmentedControl ariaLabel="Labels" value={showLabels ? 'on' : 'off'} onChange={(v) => setShowLabels(v === 'on')} options={[{ value: 'on', label: 'Show Labels', icon: <Eye size={13} /> }, { value: 'off', label: 'Hide Labels', icon: <EyeOff size={13} /> }]} />
-            </div>
-          </div>
           {/* Main Content Grid: Chart on Left, YoY Cards on Right */}
           <div className="sales-summary-main-grid">
 
             {/* Main Chart Section */}
-            <div className="sales-summary-chart" style={{ background: 'var(--color-surface-0)', borderRadius: 8, padding: 18, border: '1px solid var(--color-border-light)', boxShadow: 'none' }}>
+            <div className="sales-summary-chart" style={{ background: 'var(--color-surface-0)', borderRadius: 8, border: '1px solid var(--color-border-light)', boxShadow: 'none' }}>
+              {/* Chart Controls — integrated into chart card header */}
+              <div className="no-print" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '8px 16px', borderBottom: '1px solid var(--color-border-light)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <ErpSegmentedControl ariaLabel="Metric" value={metric} onChange={(v) => switchMetric(v as Metric)} options={[{ value: 'amount', label: 'Sales', icon: <DollarSign size={13} /> }, { value: 'qty', label: 'Qty', icon: <Hash size={13} /> }]} />
+                  <div style={{ width: 1, height: 16, background: 'var(--color-border-light)' }} />
+                  <ErpSegmentedControl ariaLabel="View" value={mode} onChange={(v) => setMode(v as 'yearly' | 'monthly')} options={[{ value: 'yearly', label: 'Year', icon: <CalendarDays size={13} /> }, { value: 'monthly', label: 'Month', icon: <Calendar size={13} /> }]} />
+                  <div style={{ width: 1, height: 16, background: 'var(--color-border-light)' }} />
+                  <ErpSegmentedControl ariaLabel="Series" value={monthlySeries} onChange={(v) => setMonthlySeries(v as 'year' | 'group')} options={[{ value: 'year', label: 'By Year', icon: <Layers size={13} /> }, { value: 'group', label: 'By Group', icon: <Users size={13} /> }]} />
+                  <div style={{ width: 1, height: 16, background: 'var(--color-border-light)' }} />
+                  <button
+                    type="button"
+                    onClick={handleToggleLabels}
+                    className="flex items-center justify-center w-8 h-8 rounded-lg border-none bg-transparent text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-brand-600)] transition-colors shrink-0 cursor-pointer p-0"
+                    title={showLabels ? 'ซ่อนป้ายกำกับ (Hide Labels)' : 'แสดงป้ายกำกับ (Show Labels)'}
+                    aria-label={showLabels ? 'Hide Labels' : 'Show Labels'}
+                  >
+                    {showLabels ? (
+                      <Eye size={16} strokeWidth={1.75} className="text-[var(--color-brand-600)]" />
+                    ) : (
+                      <EyeOff size={16} strokeWidth={1.75} className="text-[var(--color-text-tertiary)] opacity-65" />
+                    )}
+                  </button>
+                </div>
+              </div>
               {/* Dynamic Chart Header */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, marginBottom: 14, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, marginBottom: 14, flexWrap: 'wrap', padding: '18px 18px 0' }}>
                 <div>
                   <h2 style={{ fontSize: 'var(--erp-text-section)', fontWeight: 900, color: 'var(--color-text-primary)', textTransform: 'capitalize', letterSpacing: 0, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 12 }}>
                     {mode === 'yearly' ? (metric === 'qty' ? `Annual Quantity Comparison` : `Annual Sales Comparison`) : (metric === 'qty' ? `Monthly Quantity Breakdown` : `Monthly Sales Breakdown`)}
                   </h2>
                   <p style={{ margin: 0, fontSize: 'var(--erp-text-control)', color: 'var(--color-text-tertiary)', fontWeight: 700 }}>
                     Unit: {metric === 'qty' ? 'PCS' : 'USD'} / Series Color: {usesGroupSeriesColors ? 'Customer Group' : 'Year'} {showLabels ? '/ Value Labels Displayed' : '/ Value Labels Hidden'}
+                  </p>
+                  <p style={{ margin: '4px 0 0 0', fontSize: '0.68rem', color: 'var(--color-text-quaternary)', fontWeight: 800 }}>
+                    (Value Colors: <span style={{ color: 'var(--color-success-600)' }}>Green = Above Avg</span>, <span style={{ color: 'var(--color-danger-500)' }}>Red = Below Avg</span>)
                   </p>
 
                   {/* Chart Legend */}
@@ -235,44 +255,6 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
                       );
                     })}
                   </div>
-                </div>
-
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: 'var(--erp-text-panel)', color: 'var(--color-text-primary)', fontWeight: 900, textTransform: 'capitalize', marginBottom: 2 }}>
-                    Grand Total {grandLatestYear ? `(${grandLatestYear})` : ''}
-                  </div>
-                  <div style={{ fontSize: 'var(--erp-text-grand)', fontWeight: 900, color: 'var(--color-text-primary)' }}>
-                    {metric === 'qty'
-                      ? grandTotal.toLocaleString(undefined, { maximumFractionDigits: 0 })
-                      : '$' + grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                    }
-                  </div>
-                  {grandYoy.length > 0 && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 2, alignItems: 'flex-end' }}>
-                      {grandYoy.slice(0, 1).map(({ currYr, prevYr, pct }) => {
-                        const isRoyalTheme = theme === 'royal-white';
-                        const isUp = pct !== null && pct >= 0;
-                        return (
-                          <div
-                            key={`${currYr}-${prevYr}`}
-                            style={{
-                              fontSize: 'var(--erp-text-body)',
-                              fontWeight: 800,
-                              color: pct === null ? 'var(--color-text-tertiary)' : isUp ? 'var(--color-success-500)' : 'var(--color-danger-500)',
-                              background: pct === null ? 'transparent' : (isRoyalTheme ? (isUp ? 'var(--color-success-50)' : 'var(--color-danger-50)') : 'transparent'),
-                              padding: isRoyalTheme ? '4px 10px' : '0',
-                              borderRadius: 12
-                            }}
-                          >
-                            {pct === null ? `No prior data` : `${isUp ? 'Up +' : 'Down '}${pct.toFixed(2)}%`}
-                            <span style={{ fontSize: 'var(--erp-text-dense)', color: pct === null ? 'var(--color-text-quaternary)' : isUp ? 'var(--color-success-500)' : 'var(--color-danger-500)', opacity: 0.8, marginLeft: 6 }}>
-                              vs {prevYr}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
                 </div>
               </div>
 

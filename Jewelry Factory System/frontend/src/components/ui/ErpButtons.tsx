@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import { useRef, useState, useEffect, useCallback, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import { Loader2 } from 'lucide-react';
 import { erpButtonTokens } from './erpButtonTokens';
 import './ErpButtons.css';
@@ -87,11 +87,49 @@ export function ErpSegmentedControl<T extends string>({
   onChange: (value: T) => void;
   ariaLabel: string;
 }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [indicatorStyle, setIndicatorStyle] = useState<{ left: number; width: number; opacity: number }>({
+    left: 0,
+    width: 0,
+    opacity: 0,
+  });
+
+  const updateIndicator = useCallback(() => {
+    if (!containerRef.current) return;
+    const activeButton = containerRef.current.querySelector<HTMLButtonElement>(`[data-value="${value}"]`);
+    if (activeButton) {
+      setIndicatorStyle({
+        left: activeButton.offsetLeft,
+        width: activeButton.offsetWidth,
+        opacity: 1,
+      });
+    }
+  }, [value]);
+
+  useEffect(() => {
+    updateIndicator();
+  }, [updateIndicator, options]);
+
+  useEffect(() => {
+    window.addEventListener('resize', updateIndicator);
+    return () => window.removeEventListener('resize', updateIndicator);
+  }, [updateIndicator]);
+
   return (
-    <div className="erp-segmented" role="group" aria-label={ariaLabel}>
+    <div ref={containerRef} className="erp-segmented" role="group" aria-label={ariaLabel}>
+      {/* Smooth Sliding Pill Indicator */}
+      <div
+        className="erp-segmented__indicator"
+        style={{
+          left: indicatorStyle.left,
+          width: indicatorStyle.width,
+          opacity: indicatorStyle.opacity,
+        }}
+      />
       {options.map((option) => (
         <button
           key={option.value}
+          data-value={option.value}
           type="button"
           className={`erp-segment ${value === option.value ? 'erp-segment--active' : ''}`}
           onClick={() => onChange(option.value)}

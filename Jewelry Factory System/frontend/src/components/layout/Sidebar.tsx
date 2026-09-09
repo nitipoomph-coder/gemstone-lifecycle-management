@@ -1,6 +1,5 @@
 import { useState, useRef } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import NavGroup from '../navigation/NavGroup';
 import { menuConfig } from '../../config/menuConfig';
 import { getActiveGroupId } from '../../utils/navigationUtils';
@@ -12,7 +11,6 @@ interface SidebarProps {
 
 export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
   const location = useLocation();
-  const navigate = useNavigate();
   const scrollRef = useRef<HTMLElement>(null);
   const [scrollState, setScrollState] = useState<'top' | 'middle' | 'bottom'>('top');
 
@@ -52,37 +50,26 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
     }
   };
 
-  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Collapsed state Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+  // ─── Collapsed state (Icons only) ───
   if (!isOpen) {
     return (
       <aside
-        className="flex h-screen w-[60px] min-w-[60px] flex-col items-center transition-all duration-300 relative z-20 shadow-lg"
-        style={{ background: 'var(--color-sidebar)' }}
+        className="flex h-full w-[60px] min-w-[60px] flex-col items-center transition-all duration-300 relative z-20"
+        style={{
+          background: 'var(--color-sidebar)',
+          borderRight: '1px solid var(--color-border-light)',
+        }}
       >
-        {/* Toggle button */}
-        <div className="flex w-full justify-center pt-4 pb-3">
-          <button
-            onClick={onToggle}
-            className="flex h-8 w-8 items-center justify-center rounded-md text-[var(--color-sidebar-text)] opacity-60 transition-all hover:bg-[var(--color-sidebar-hover)] hover:opacity-100"
-            title="Expand Menu"
-          >
-            <PanelLeftOpen size={16} />
-          </button>
-        </div>
-
-        <div className="brand-accent-line mx-3 w-8 mb-2" />
-
         {/* Icons only — click to expand sidebar + open group */}
-        <nav className="flex flex-1 flex-col items-center gap-1.5 py-2 w-full px-2">
+        <nav className="flex flex-1 flex-col items-center gap-1.5 py-3 w-full px-2">
           {filteredMenu.map((group, index) => {
             const isNewSection = index > 0 && group.section !== filteredMenu[index - 1].section;
             return (
               <div key={group.id} className="w-full flex flex-col items-center">
                 {isNewSection && (
-                  <div className="w-6 h-[1px] my-1.5 bg-[var(--color-border-light)] opacity-30" />
+                  <div className="w-6 h-[1px] my-1.5 bg-[var(--color-border-light)] opacity-40" />
                 )}
                 <NavGroup
-                  key={group.id}
                   group={group}
                   isOpen={false}
                   isActive={group.id === activeGroupId}
@@ -100,62 +87,32 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
     );
   }
 
-  // ——— Expanded state ———
+  // ─── Expanded state ───
   return (
     <aside
-      className="flex h-screen w-[270px] min-w-[270px] flex-col transition-all duration-300 relative z-20 shadow-xl"
-      style={{ background: 'var(--color-sidebar)' }}
+      className="flex h-full w-[260px] min-w-[260px] flex-col transition-all duration-300 relative z-20"
+      style={{
+        background: 'var(--color-sidebar)',
+        borderRight: '1px solid var(--color-border-light)',
+      }}
     >
-      {/* Header */}
-      <div className="flex items-center gap-2 px-5 pt-5 pb-3">
-        <button
-          onClick={() => navigate('/')}
-          className="min-w-0 flex-1 text-left transition-opacity hover:opacity-80 select-none cursor-pointer"
-        >
-          <div
-            className="truncate text-[20px] font-bold tracking-wider"
-            style={{
-              fontFamily: 'var(--font-logo)',
-              lineHeight: '1.1',
-              background: 'linear-gradient(90deg, var(--color-brand-500), var(--color-brand-300))',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-            }}
-          >
-            JEWELRY
-          </div>
-          <div className="text-[10px] font-bold text-[var(--color-text-secondary)] tracking-[0.15em] font-sans mt-0.5 capitalize" style={{ lineHeight: '1.2' }}>
-            Factory System
-          </div>
-        </button>
-        <button
-          onClick={onToggle}
-          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[var(--color-sidebar-text)] opacity-60 transition-all hover:bg-[var(--color-sidebar-hover)] hover:opacity-100"
-          title="Collapse Menu"
-        >
-          <PanelLeftClose size={16} />
-        </button>
-      </div>
-
-      <div style={{ height: 1, background: 'var(--color-border-light)', margin: '0 20px 12px 20px', opacity: 0.5 }} />
-
       {/* Navigation with scroll fade wrapper */}
       <div className={`flex-1 overflow-hidden scroll-fade-container ${scrollState !== 'top' ? 'fade-top' : ''} ${scrollState !== 'bottom' ? 'fade-bottom' : ''}`}>
         <nav
           ref={scrollRef}
           onScroll={handleScroll}
-          className="custom-scrollbar h-full overflow-y-auto px-3 py-1 flex flex-col gap-0.5"
+          className="custom-scrollbar h-full overflow-y-auto px-3 py-2 flex flex-col gap-0.5"
         >
           {filteredMenu.map((group, index) => {
             const isNewSection = index === 0 || group.section !== filteredMenu[index - 1].section;
             return (
               <div key={group.id}>
                 {isNewSection && group.section && (
-                  <div className={`px-3 select-none ${index === 0 ? 'pt-1.5 pb-1' : 'pt-4 pb-1'}`}>
+                  <div className={`px-3 select-none ${index === 0 ? 'pt-1.5 pb-1' : 'pt-3 pb-1'}`}>
                     {index > 0 && (
-                      <div className="mb-2.5 h-[1px] bg-[var(--color-border-light)] opacity-20" />
+                      <div className="mb-2 h-[1px] bg-[var(--color-border-light)] opacity-30" />
                     )}
-                    <div className="text-[11px] font-bold text-[var(--color-sidebar-text)] opacity-45 tracking-wide">
+                    <div className="text-[11px] font-bold text-[var(--color-sidebar-text)] opacity-45 tracking-wide uppercase">
                       {group.section}
                     </div>
                   </div>

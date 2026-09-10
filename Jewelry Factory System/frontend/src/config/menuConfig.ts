@@ -21,8 +21,8 @@ export const menuConfig: NavMenuGroup[] = [
     section: 'ภาพรวม',
     items: [
       { id: 'dash-cust', label: 'Sales Summary', path: '/dashboard/customer' },
-      { id: 'dash-order-trends', label: 'Order Trends', path: '/dashboard/customer/trends' },
       { id: 'dash-matrix', label: 'Customer Report Matrix', path: '/dashboard/customer/matrix' },
+      { id: 'dash-order-trends', label: 'Order Trends', path: '/dashboard/customer/trends' },
       { id: 'dash-top-orders', label: 'Top Item Gallery', path: '/dashboard/top-orders' },
       { id: 'dash-top-orders-analytics', label: 'Top Items Qty', path: '/dashboard/top-orders/analytics' },
     ],
@@ -51,7 +51,7 @@ export const menuConfig: NavMenuGroup[] = [
     roles: ['admin'],
     section: 'การผลิตและจัดซื้อ',
     items: [
-      { id: 'sub-vendor-performance', label: 'Vendor Performance Dashboard', path: '/subcontract/vendor-performance' },
+      { id: 'sub-vendor-performance', label: 'Vendor Performance Dashboard', path: '/subcontract/vendor-performance', roles: ['admin'] },
       { id: 'sub-vendor-price', label: 'Vendor Price History', path: '/subcontract/vendor-price-history' },
       { id: 'sub-aging', label: 'Aging Report', path: '/subcontract/aging-report' },
     ],

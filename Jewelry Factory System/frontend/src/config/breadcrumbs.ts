@@ -13,6 +13,7 @@ export interface BreadcrumbItem {
 export const BREADCRUMBS = {
   // ── Overview & Dashboard ──
   DASHBOARD: [
+    { label: 'Overview' },
     { label: 'Factory Overview' },
   ] as BreadcrumbItem[],
 

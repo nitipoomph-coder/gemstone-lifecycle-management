@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { fetchAvailableYears } from '../services/dashboardAPI';
 import { fetchTopItemsGallery, type TopGalleryItem, type TopGalleryResponse } from '../services/itemYearlySummaryAPI';
@@ -82,12 +82,13 @@ export const presetRange = (preset: PeriodPreset) => {
 
 // --- Custom Hook ---
 export function useTopOrdersGalleryData() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const metric = (searchParams.get("metric") || "amount") as 'qty' | 'amount';
 
   const [availableYears, setAvailableYears] = useState<string[]>(DEFAULT_YEARS);
   const [loading, setLoading] = useState(true);
   const [filterLoading, setFilterLoading] = useState(false);
+  const [refreshVersion, setRefreshVersion] = useState(0);
 
   const [baseYear, setBaseYear] = useState<string>(String(CURRENT_YEAR));
   const [compareYear, setCompareYear] = useState<string>(String(CURRENT_YEAR - 1));
@@ -214,7 +215,7 @@ export function useTopOrdersGalleryData() {
     return () => {
       cancelled = true;
     };
-  }, [availableYears, baseYear, compareEnabled, compareYear, metric, perspectiveMode, productType, searchQuery, selGroups, selectedMonthNumbers]);
+  }, [availableYears, baseYear, compareEnabled, compareYear, metric, perspectiveMode, productType, searchQuery, selGroups, selectedMonthNumbers, refreshVersion]);
 
   const items = galleryResponse?.items || [];
   const summary = galleryResponse?.summary || {
@@ -294,6 +295,35 @@ export function useTopOrdersGalleryData() {
     setCompareYear(oldBase);
   };
 
+  const resetFilters = useCallback(() => {
+    const defaultBase = availableYears[0] || String(CURRENT_YEAR);
+    const defaultComp = getDefaultCompareYear(defaultBase, availableYears) || String(CURRENT_YEAR - 1);
+
+    startFilterTransition(400);
+    setPerspectiveMode('combined');
+    setProductType('ALL');
+    setSearchDraft('');
+    setSearchQuery('');
+    setMonthStart(1);
+    setMonthEnd(12);
+    setPeriodPreset('full-year');
+    setPeriodDraft(null);
+    setBaseYear(defaultBase);
+    setCompareYear(defaultComp);
+    setCompareEnabled(true);
+    setSelGroups(ACTIVE_GROUP_IDS);
+    setRefreshVersion((v) => v + 1);
+
+    if (searchParams.toString()) {
+      const nextParams = new URLSearchParams();
+      const currentMetric = searchParams.get('metric');
+      if (currentMetric && currentMetric !== 'amount') {
+        nextParams.set('metric', currentMetric);
+      }
+      setSearchParams(nextParams, { replace: true });
+    }
+  }, [availableYears, searchParams, setSearchParams]);
+
   return {
     metric,
     isInitialLoading: loading && !galleryResponse,
@@ -338,5 +368,6 @@ export function useTopOrdersGalleryData() {
     perspectiveMode,
     setPerspectiveMode,
     swapYears,
+    resetFilters,
   };
 }

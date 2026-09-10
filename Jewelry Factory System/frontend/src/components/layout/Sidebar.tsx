@@ -15,7 +15,12 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
   const [scrollState, setScrollState] = useState<'top' | 'middle' | 'bottom'>('top');
 
   const role = (localStorage.getItem('auth_role') || 'sales').toLowerCase();
-  const filteredMenu = menuConfig.filter(g => !g.roles || g.roles.includes(role));
+  const filteredMenu = menuConfig
+    .filter(g => !g.roles || g.roles.includes(role))
+    .map(g => ({
+      ...g,
+      items: g.items?.filter(item => !item.roles || item.roles.includes(role)),
+    }));
 
   // Pure derived active group id directly from current route
   const activeGroupId = getActiveGroupId(filteredMenu, location.pathname, location.search);

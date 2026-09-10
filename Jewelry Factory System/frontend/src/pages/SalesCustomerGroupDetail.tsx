@@ -205,11 +205,10 @@ export default function SalesCustomerGroupDetail() {
       <PageHeader breadcrumb={BREADCRUMBS.SALES_CUSTOMER_GROUP_DETAIL} contentLayout="workspace" />
       <div className="content-scrollbar flex-1 overflow-y-auto" style={{ background: 'var(--color-surface-1)' }}>
         <div className="app-content-frame app-content-frame--workspace app-page-content sales-order-detail-frame flex flex-col gap-4">
-          <div style={pageHeader}>
-            <div>
+          <div style={{ ...pageHeader, alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
               <button onClick={() => navigate(overviewPath)} style={backButton}><ArrowLeft size={14} /> Sales Overview</button>
-              <h1 style={pageTitle}>Customer Order Detail</h1>
-              <p style={pageSubtitle}>{years.join(', ') || 'All Years'} / {monthSummary(months)} / sorted by {metric === 'amount' ? 'Sales Amount' : 'Ordered Qty'}</p>
+              <span style={{ ...pageSubtitle, margin: 0 }}>{years.join(', ') || 'All Years'} / {monthSummary(months)} / sorted by {metric === 'amount' ? 'Sales Amount' : 'Ordered Qty'}</span>
             </div>
             <div style={headerActions}>
               <ErpSegmentedControl

@@ -261,8 +261,7 @@ export default function SalesDashboard() {
             )}
           </section>
 
-          <section style={titleRow}>
-            <h1 style={pageTitle}><Trophy size={20} /> Sales Performance Matrix</h1>
+          <section style={{ ...titleRow, justifyContent: 'flex-end' }}>
             <div style={summaryStrip}>
               <MetricPill label="Period Sales" value={fmtCompactMoney(summary.amount)} />
               <MetricPill label="Orders" value={fmtQty(summary.orders)} />

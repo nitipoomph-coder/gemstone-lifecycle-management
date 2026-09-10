@@ -1,5 +1,6 @@
-import { useNavigate } from "react-router-dom";
-import { Award, BarChart3, Search, X } from "lucide-react";
+import { useMemo } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { BarChart3, Search, X, LayoutGrid, RefreshCw } from "lucide-react";
 import { ALL_GROUPS } from "../config/customerGroups";
 import PageHeader from '../components/layout/PageHeader';
 import { BREADCRUMBS } from '../config/breadcrumbs';
@@ -7,9 +8,13 @@ import CompareYearDropdown from "../components/topOrders/CompareYearDropdown";
 import "../components/sales/SalesDenseTable.css";
 import { useTopOrdersAnalyticsData, fmtQty, fmtSignedQty, TOP_CUSTOMER_ITEM_LIMIT } from "../hooks/useTopOrdersAnalyticsData";
 import { TopAnalyticsTable } from "../components/dashboard/topAnalytics/TopAnalyticsTable";
+import { ErpSegmentedControl } from "../components/ui/ErpButtons";
 
 export default function TopOrdersAnalyticsPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const activeTab = location.pathname.startsWith("/dashboard/top-orders/analytics") ? "qty" : "gallery";
+
   const {
     availableYears,
     loading,
@@ -28,7 +33,18 @@ export default function TopOrdersAnalyticsPage() {
     toggleGroup,
     setCurrentYear,
     isBusy,
+    refreshData,
   } = useTopOrdersAnalyticsData();
+
+  const galleryPath = useMemo(() => {
+    const params = new URLSearchParams();
+    if (baseYear) params.set("year", baseYear);
+    if (compareYear) params.set("compareYear", compareYear);
+    if (selGroups.length) params.set("groups", selGroups.join(","));
+    if (searchDraft.trim()) params.set("search", searchDraft.trim());
+    const query = params.toString();
+    return query ? `/dashboard/top-orders?${query}` : `/dashboard/top-orders`;
+  }, [baseYear, compareYear, selGroups, searchDraft]);
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-[var(--color-surface-1)]">
@@ -36,11 +52,38 @@ export default function TopOrdersAnalyticsPage() {
         breadcrumb={BREADCRUMBS.TOP_ORDERS_ANALYTICS}
         icon={<BarChart3 size={22} />}
         rightContent={
-          <div className="flex items-center gap-2 pr-2">
-            <button type="button" onClick={() => navigate("/dashboard/top-orders")} style={toolbarButtonStyle}>
-              <Award size={15} /> Gallery
-            </button>
+          <div className="flex items-center gap-2">
             <span style={periodPillStyle}>{selectedPeriodLabel}</span>
+            <button
+              onClick={refreshData}
+              style={{
+                background: "none",
+                border: "none",
+                padding: "6px",
+                color: "var(--color-text-tertiary)",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+              title="Refresh"
+            >
+              <RefreshCw size={14} className={isBusy ? "animate-spin" : ""} />
+            </button>
+            <div style={{ width: 1, height: 16, background: 'var(--color-border-light)', margin: '0 2px' }} />
+            <div style={{ display: 'flex', alignItems: 'center', background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)', borderRadius: 8, padding: 4 }}>
+              <ErpSegmentedControl
+                ariaLabel="View Mode"
+                value={activeTab}
+                onChange={(val) => {
+                  if (val === "gallery") navigate(galleryPath);
+                }}
+                options={[
+                  { value: "gallery", label: "Gallery", icon: <LayoutGrid size={13} /> },
+                  { value: "qty", label: "Qty", icon: <BarChart3 size={13} /> }
+                ]}
+              />
+            </div>
           </div>
         }
       />
@@ -147,14 +190,6 @@ const reportHeaderStyle: React.CSSProperties = {
   gap: 12,
 };
 
-const reportTitleStyle: React.CSSProperties = {
-  margin: 0,
-  color: "var(--color-text-primary)",
-  fontSize: "1.08rem",
-  fontWeight: 950,
-  fontFamily: "var(--font-display)",
-};
-
 const reportMetaStyle: React.CSSProperties = {
   marginTop: 4,
   color: "var(--color-text-secondary)",
@@ -206,21 +241,6 @@ const summaryCellStyle: React.CSSProperties = {
   minWidth: 0,
   padding: "9px 12px",
   borderRight: "1px solid var(--color-border-light)",
-};
-
-const toolbarButtonStyle: React.CSSProperties = {
-  background: "var(--color-surface-0)",
-  border: "1px solid var(--color-border-light)",
-  borderRadius: 10,
-  padding: "8px 12px",
-  fontSize: "0.82rem",
-  fontWeight: 900,
-  color: "var(--color-text-primary)",
-  cursor: "pointer",
-  display: "flex",
-  alignItems: "center",
-  gap: 8,
-  fontFamily: "var(--font-display)",
 };
 
 const periodPillStyle: React.CSSProperties = {

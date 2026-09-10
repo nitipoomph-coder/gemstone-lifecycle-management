@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useBreadcrumbs } from '../contexts/BreadcrumbContext';
+import { BREADCRUMBS } from '../config/breadcrumbs';
 import { fetchDashboardData, fetchAvailableYears, type DashboardData, type CardType } from '../services/dashboardAPI';
 import CardDetailPanel from '../components/dashboard/overview/CardDetailPanel';
 import CustomSelect from '../components/ui/CustomSelect';
@@ -27,6 +28,8 @@ const PROC_COLORS = [
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { setBreadcrumbs } = useBreadcrumbs();
+  useEffect(() => { setBreadcrumbs(BREADCRUMBS.DASHBOARD); }, [setBreadcrumbs]);
   const [refreshVersion, setRefreshVersion] = useState(0);
   const [dashboardState, setDashboardState] = useState<{
     key: string;
@@ -94,8 +97,7 @@ export default function Dashboard() {
 
   // Loading
   if (loading) return (
-    <>
-      <PageHeader breadcrumb={BREADCRUMBS.DASHBOARD} contentLayout="dashboard" />
+
       <div className="app-page-scroll content-scrollbar">
         <div className="app-content-frame app-content-frame--dashboard app-page-content dashboard-page flex flex-col gap-4">
           {/* Header Skeleton */}
@@ -124,13 +126,11 @@ export default function Dashboard() {
           <div style={{height:140,...shimmerStyle}}/>
         </div>
       </div>
-    </>
   );
 
   // Error
   if (error) return (
-    <>
-      <PageHeader breadcrumb={BREADCRUMBS.DASHBOARD} contentLayout="dashboard" />
+
       <div className="app-page-scroll flex items-center justify-center">
         <div className="flex flex-col items-center gap-4 text-center">
           <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ background: 'var(--color-danger-50)' }}>
@@ -142,7 +142,6 @@ export default function Dashboard() {
           </button>
         </div>
       </div>
-    </>
   );
 
   const d = data!;
@@ -172,23 +171,15 @@ export default function Dashboard() {
     </div>
   );
 
-  // Root page — no PageHeader needed; clear stale breadcrumbs
-  const { setBreadcrumbs } = useBreadcrumbs();
-  useEffect(() => { setBreadcrumbs([]); }, [setBreadcrumbs]);
+
 
   return (
     <>
       <div className="app-page-scroll content-scrollbar">
         <div className="app-content-frame app-content-frame--dashboard app-page-content dashboard-page flex flex-col gap-4">
 
-          {/* Header */}
-          <div className="dashboard-page-header" style={{ display:'flex', alignItems:'flex-end', justifyContent:'space-between', paddingBottom:8 }}>
-            <div>
-              <h1 style={{ fontSize:'1.6rem', fontWeight:900, color:'var(--color-text-primary)', fontFamily:'var(--font-display)', letterSpacing:'-0.02em', lineHeight:1 }}>
-                Factory <span style={{ color:'var(--color-brand-500)' }}>Overview</span>
-              </h1>
-              <p style={{ fontSize:'0.68rem', fontWeight:700, color:'var(--color-text-tertiary)', marginTop:4, letterSpacing:'0.06em', textTransform: 'capitalize' }}>Real-time manufacturing intelligence</p>
-            </div>
+          {/* Header Controls (Clock, Year Dropdown, Refresh) */}
+          <div className="dashboard-page-header" style={{ display:'flex', alignItems:'center', justifyContent:'flex-end', paddingBottom:8, paddingTop: 4 }}>
             <div className="dashboard-page-header__controls" style={{ display:'flex', alignItems:'center', gap:12 }}>
               <div style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 16px', borderRadius:14, background:'var(--color-surface-0)', border:'1px solid var(--color-border-light)' }}>
                 <Clock size={16} style={{ color:'var(--color-brand-500)' }}/>

@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect, type KeyboardEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Search, X, CalendarDays, Users, Tag, ChevronDown, BarChart3, Layers, ArrowLeftRight } from 'lucide-react';
+import { Search, X, CalendarDays, Users, Tag, ChevronDown, Layers, ArrowLeftRight } from 'lucide-react';
 import { ALL_GROUPS } from '../../../config/customerGroups';
 import {
   PERIOD_PRESETS,
@@ -11,6 +10,7 @@ import {
   type PerspectiveMode,
 } from '../../../hooks/useTopOrdersGalleryData';
 import CustomSelect from '../../ui/CustomSelect';
+import { ErpSegmentedControl } from '../../ui/ErpButtons';
 
 interface PeriodSelectProps {
   label: string;
@@ -40,7 +40,7 @@ function PeriodSelect({ label, value, options, disabled = false, className = "",
 }
 
 interface TopOrdersFilterBarProps {
-  analyticsPath: string;
+  analyticsPath?: string;
   productType: string;
   setProductType: (type: string) => void;
   searchDraft: string;
@@ -56,6 +56,8 @@ interface TopOrdersFilterBarProps {
   applyPeriodDraft: () => void;
   getDefaultCompareYear: (baseYear: string, years: string[]) => string;
   availableYears: string[];
+  baseYear?: string;
+  compareYear?: string;
   periodButtonLabel: string;
   selectedPeriodLabel: string;
   selGroups: string[];
@@ -67,7 +69,6 @@ interface TopOrdersFilterBarProps {
 }
 
 export function TopOrdersFilterBar({
-  analyticsPath,
   productType,
   setProductType,
   searchDraft,
@@ -83,6 +84,8 @@ export function TopOrdersFilterBar({
   applyPeriodDraft,
   getDefaultCompareYear,
   availableYears,
+  baseYear = '',
+  compareYear = '',
   periodButtonLabel,
   selectedPeriodLabel,
   selGroups,
@@ -91,7 +94,6 @@ export function TopOrdersFilterBar({
   perspectiveMode,
   setPerspectiveMode,
 }: TopOrdersFilterBarProps) {
-  const navigate = useNavigate();
   const [showYearMenu, setShowYearMenu] = useState(false);
   const yearMenuRef = useRef<HTMLDivElement>(null);
   const [showGroupMenu, setShowGroupMenu] = useState(false);
@@ -156,99 +158,42 @@ export function TopOrdersFilterBar({
   return (
     <div className="sales-gallery-topbar-tools flex min-w-0 flex-1 items-center justify-end gap-2 pr-2">
       {/* Perspective Toggle: Combined (รวมสะสม) vs Compare (เทียบปี) */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          background: 'var(--color-surface-2)',
-          padding: 2,
-          borderRadius: 8,
-          border: '1px solid var(--color-border-light)',
-        }}
-      >
-        <button
-          type="button"
-          onClick={() => {
-            if (perspectiveMode !== 'combined') {
+      <div className="flex items-center gap-1.5 shrink-0">
+        <ErpSegmentedControl
+          ariaLabel="Perspective Mode"
+          value={perspectiveMode}
+          onChange={(val) => {
+            if (val !== perspectiveMode) {
               startFilterTransition();
-              setPerspectiveMode('combined');
+              setPerspectiveMode(val);
             }
           }}
-          style={{
-            padding: '5px 10px',
-            borderRadius: 6,
-            fontSize: '0.78rem',
-            fontWeight: 900,
-            border: 'none',
-            cursor: 'pointer',
-            background: perspectiveMode === 'combined' ? 'var(--color-surface-0)' : 'transparent',
-            color: perspectiveMode === 'combined' ? 'var(--color-brand-700)' : 'var(--color-text-tertiary)',
-            boxShadow: perspectiveMode === 'combined' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 4,
-            transition: 'all 0.15s ease',
-          }}
-          title="Rank by Total Combined Volume across selected years"
-        >
-          <Layers size={13} />
-          Combined
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            if (perspectiveMode !== 'compare') {
-              startFilterTransition();
-              setPerspectiveMode('compare');
-            }
-          }}
-          style={{
-            padding: '5px 10px',
-            borderRadius: 6,
-            fontSize: '0.78rem',
-            fontWeight: 900,
-            border: 'none',
-            cursor: 'pointer',
-            background: perspectiveMode === 'compare' ? 'var(--color-surface-0)' : 'transparent',
-            color: perspectiveMode === 'compare' ? 'var(--color-brand-700)' : 'var(--color-text-tertiary)',
-            boxShadow: perspectiveMode === 'compare' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 4,
-            transition: 'all 0.15s ease',
-          }}
-          title="Rank by Base Year and compare Head-to-Head with comparison year"
-        >
-          <ArrowLeftRight size={13} />
-          Compare
-        </button>
+          options={[
+            { value: 'combined', label: 'Combined', icon: <Layers size={13} /> },
+            { value: 'compare', label: 'Compare', icon: <ArrowLeftRight size={13} /> },
+          ]}
+        />
+        {perspectiveMode === 'compare' && (
+          <span
+            role="status"
+            style={{
+              padding: '2px 8px',
+              height: 24,
+              borderRadius: 6,
+              background: 'var(--color-ui-selected)',
+              color: 'var(--color-ui-interactive)',
+              fontWeight: 800,
+              fontSize: 'var(--erp-text-control)',
+              border: '1px solid var(--color-border-light)',
+              whiteSpace: 'nowrap',
+              display: 'inline-flex',
+              alignItems: 'center',
+            }}
+          >
+            {baseYear} vs {compareYear}
+          </span>
+        )}
       </div>
-
-      {/* Qty Analysis Action Button */}
-      <button
-        type="button"
-        onClick={() => navigate(analyticsPath)}
-        style={{
-          background: "var(--color-surface-0)",
-          border: "1px solid var(--color-border-light)",
-          borderRadius: 8,
-          padding: "6px 12px",
-          fontSize: "0.82rem",
-          fontWeight: 800,
-          color: "var(--color-text-primary)",
-          cursor: "pointer",
-          display: "flex",
-          alignItems: "center",
-          gap: 6,
-          fontFamily: "var(--font-display)",
-          boxShadow: "0 2px 4px color-mix(in srgb, var(--color-surface-900) 3%, transparent)",
-        }}
-        className="hover:bg-[var(--color-surface-1)] hover:border-[var(--color-border-default)]"
-      >
-        <BarChart3 size={14} style={{ color: 'var(--color-brand-600)' }} />
-        Top Items Qty
-      </button>
 
       {/* Product Type Custom Dropdown Selector */}
       <div className="relative z-[100]" ref={typeMenuRef}>

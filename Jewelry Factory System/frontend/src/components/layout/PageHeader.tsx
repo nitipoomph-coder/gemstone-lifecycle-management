@@ -12,9 +12,10 @@ interface PageHeaderProps {
   rightContent?: React.ReactNode;
   bottomContent?: React.ReactNode;
   icon?: React.ReactNode;
+  hideTitle?: boolean;
 }
 
-export default function PageHeader({ breadcrumb, contentLayout = 'workspace', rightContent, bottomContent, icon }: PageHeaderProps) {
+export default function PageHeader({ breadcrumb, contentLayout = 'workspace', rightContent, bottomContent, icon, hideTitle = true }: PageHeaderProps) {
   const { setBreadcrumbs } = useBreadcrumbs();
 
   useEffect(() => {
@@ -24,6 +25,29 @@ export default function PageHeader({ breadcrumb, contentLayout = 'workspace', ri
   }, [breadcrumb, setBreadcrumbs]);
 
   const frameClassName = `app-content-frame app-content-frame--${contentLayout}`;
+
+  if (hideTitle) {
+    if (!bottomContent && !rightContent) {
+      return null;
+    }
+    return (
+      <header className="flex flex-col py-2.5 bg-[var(--color-ui-canvas)]">
+        <div className={`${frameClassName} app-page-inline flex flex-wrap items-center justify-between gap-3`}>
+          {/* Left: Filters */}
+          <div className="flex items-center flex-wrap gap-2 min-w-0">
+            {bottomContent}
+          </div>
+
+          {/* Right: Tools / Actions */}
+          {rightContent && (
+            <div className="flex items-center justify-end gap-2 flex-wrap shrink-0">
+              {rightContent}
+            </div>
+          )}
+        </div>
+      </header>
+    );
+  }
 
   return (
     <header className="flex flex-col py-3.5 bg-[var(--color-ui-canvas)]">

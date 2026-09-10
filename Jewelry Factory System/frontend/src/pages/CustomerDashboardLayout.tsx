@@ -53,14 +53,14 @@ export default function CustomerDashboardLayout() {
     toggleGroup,
     setSelGroups
   } = useCustomerDashboardLayout();
-
   return (
     <>
       <PageHeader
         breadcrumb={BREADCRUMBS.CUSTOMER_DASHBOARD_TAB(activeTab)}
         contentLayout="workspace"
+        hideTitle={true}
         rightContent={
-          <div className="sales-gallery-topbar-tools flex min-w-0 flex-1 items-center justify-end gap-3 pr-2">
+          <div className="sales-gallery-topbar-tools flex min-w-0 items-center justify-end gap-3">
 
             {/* View Switcher Tab */}
             <div style={{ display: 'flex', alignItems: 'center', background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)', borderRadius: 8, padding: 4 }}>
@@ -80,7 +80,7 @@ export default function CustomerDashboardLayout() {
           </div>
         }
         bottomContent={
-          <div className="sales-global-filters flex items-center flex-wrap gap-2 py-1 px-4 w-full">
+          <div className="sales-global-filters flex items-center flex-wrap gap-2">
             <div className="flex items-center gap-2">
 
               {/* Period Dropdown Popover */}

@@ -1,7 +1,9 @@
 import type { CSSProperties } from "react";
-import { RefreshCw } from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { RefreshCw, LayoutGrid, BarChart3 } from "lucide-react";
 import PageHeader from '../components/layout/PageHeader';
 import { BREADCRUMBS } from '../config/breadcrumbs';
+import { ErpSegmentedControl } from "../components/ui/ErpButtons";
 import { useTopOrdersGalleryData } from "../hooks/useTopOrdersGalleryData";
 import { TopOrdersFilterBar } from "../components/dashboard/topOrders/TopOrdersFilterBar";
 import { TopOrdersGalleryGrid } from "../components/dashboard/topOrders/TopOrdersGalleryGrid";
@@ -45,7 +47,12 @@ export default function TopOrdersGalleryPage() {
     perspectiveMode,
     setPerspectiveMode,
     swapYears,
+    resetFilters,
   } = useTopOrdersGalleryData();
+
+  const navigate = useNavigate();
+  const location = useLocation();
+  const activeTab = location.pathname.startsWith("/dashboard/top-orders/analytics") ? "qty" : "gallery";
 
   const fmt = (val: number) => {
     if (metric === "qty") return val.toLocaleString(undefined, { maximumFractionDigits: 0 });
@@ -53,19 +60,14 @@ export default function TopOrdersGalleryPage() {
   };
   const fmtQty = (value: number) => value.toLocaleString(undefined, { maximumFractionDigits: 0 });
 
-  const resetGalleryFilters = () => {
-    window.location.reload();
-  };
-
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-[var(--color-surface-1)]">
       <PageHeader
         breadcrumb={BREADCRUMBS.TOP_ORDERS_GALLERY}
         contentLayout="workspace"
-        rightContent={
-          <div className="flex items-center gap-2">
+        bottomContent={
+          <div className="flex items-center gap-2 flex-wrap min-w-0">
             <TopOrdersFilterBar
-              analyticsPath={analyticsPath}
               productType={productType}
               setProductType={setProductType}
               searchDraft={searchDraft}
@@ -81,6 +83,8 @@ export default function TopOrdersGalleryPage() {
               applyPeriodDraft={applyPeriodDraft}
               getDefaultCompareYear={getDefaultCompareYear}
               availableYears={availableYears}
+              baseYear={baseYear}
+              compareYear={compareYear}
               periodButtonLabel={baseYear}
               selectedPeriodLabel={selectedPeriodLabel}
               selGroups={selGroups}
@@ -90,14 +94,40 @@ export default function TopOrdersGalleryPage() {
               setPerspectiveMode={setPerspectiveMode}
               swapYears={swapYears}
             />
-            <div style={{ width: 1, height: 16, background: 'var(--color-border-light)', margin: '0 4px' }} />
+          </div>
+        }
+        rightContent={
+          <div className="flex items-center gap-2">
             <button
-              onClick={resetGalleryFilters}
-              style={{ background: "none", border: "none", padding: "6px", color: "var(--color-text-tertiary)", cursor: "pointer" }}
+              onClick={resetFilters}
+              style={{
+                background: "none",
+                border: "none",
+                padding: "6px",
+                color: "var(--color-text-tertiary)",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
               title="Reset Filters"
             >
-              <RefreshCw size={14} />
+              <RefreshCw size={14} className={isFilterLoading ? "animate-spin" : ""} />
             </button>
+            <div style={{ width: 1, height: 16, background: 'var(--color-border-light)', margin: '0 2px' }} />
+            <div style={{ display: 'flex', alignItems: 'center', background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)', borderRadius: 8, padding: 4 }}>
+              <ErpSegmentedControl
+                ariaLabel="View Mode"
+                value={activeTab}
+                onChange={(val) => {
+                  if (val === "qty") navigate(analyticsPath);
+                }}
+                options={[
+                  { value: "gallery", label: "Gallery", icon: <LayoutGrid size={13} /> },
+                  { value: "qty", label: "Qty", icon: <BarChart3 size={13} /> }
+                ]}
+              />
+            </div>
           </div>
         }
       />
@@ -142,20 +172,22 @@ export default function TopOrdersGalleryPage() {
             {/* Left Side: Scope & Ranked Summary */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span
-                  role="status"
-                  style={{
-                    padding: '2px 8px',
-                    borderRadius: 6,
-                    background: 'var(--color-ui-selected)',
-                    color: 'var(--color-ui-interactive)',
-                    fontWeight: 800,
-                    fontSize: 'var(--erp-text-control)',
-                    border: '1px solid var(--color-border-light)',
-                  }}
-                >
-                  {perspectiveMode === 'compare' ? `Compare: ${baseYear} vs ${compareYear}` : 'Combined All Years'}
-                </span>
+                {perspectiveMode === 'combined' && (
+                  <span
+                    role="status"
+                    style={{
+                      padding: '2px 8px',
+                      borderRadius: 6,
+                      background: 'var(--color-ui-selected)',
+                      color: 'var(--color-ui-interactive)',
+                      fontWeight: 800,
+                      fontSize: 'var(--erp-text-control)',
+                      border: '1px solid var(--color-border-light)',
+                    }}
+                  >
+                    Combined All Years
+                  </span>
+                )}
                 <span style={{ fontSize: 'var(--erp-text-section)', fontWeight: 800, color: 'var(--color-text-primary)', fontFamily: 'var(--font-display)' }}>
                   Top Ranked ({items.length.toLocaleString()} Items)
                 </span>

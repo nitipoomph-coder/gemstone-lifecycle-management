@@ -113,6 +113,12 @@ export function useTopOrdersAnalyticsData() {
     return () => window.clearTimeout(syncTimer);
   }, [groupParam]);
 
+  const [refreshVersion, setRefreshVersion] = useState(0);
+
+  const refreshData = useCallback(() => {
+    setRefreshVersion((v) => v + 1);
+  }, []);
+
   const loadAnalyticsData = useCallback(async (cancelled: () => boolean) => {
     setLoading(true);
     try {
@@ -127,8 +133,8 @@ export function useTopOrdersAnalyticsData() {
         ? requestedCompareYearParam
         : getDefaultCompareYear(nextBaseYear, sortedYears);
 
-      setBaseYear(nextBaseYear);
-      setCompareYear(nextCompareYear);
+      setBaseYear((current) => current || nextBaseYear);
+      setCompareYear((current) => current || nextCompareYear);
       const data = await fetchCustomerSummary(sortedYears, selectedMonthNames);
       if (!cancelled()) setCustData(data);
     } catch (err) {
@@ -145,7 +151,7 @@ export function useTopOrdersAnalyticsData() {
       cancelled = true;
       window.clearTimeout(loadTimer);
     };
-  }, [loadAnalyticsData]);
+  }, [loadAnalyticsData, refreshVersion]);
 
   const applySearch = () => {
     const nextSearch = searchDraft.toUpperCase();
@@ -244,7 +250,7 @@ export function useTopOrdersAnalyticsData() {
       cancelled = true;
       window.clearTimeout(loadTimer);
     };
-  }, [baseYear, compareYear, comparisonYears, selectedMonthNames, visibleItemPairs]);
+  }, [baseYear, compareYear, comparisonYears, selectedMonthNames, visibleItemPairs, refreshVersion]);
 
   const comparisonsByPair = useMemo(() => {
     const next: Record<string, CompareSummary> = {};
@@ -329,5 +335,6 @@ export function useTopOrdersAnalyticsData() {
     toggleGroup,
     setCurrentYear,
     isBusy: loading || compareLoading,
+    refreshData,
   };
 }

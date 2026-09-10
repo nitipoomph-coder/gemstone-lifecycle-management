@@ -14,7 +14,7 @@ interface GlobalTopbarProps {
 export default function GlobalTopbar({ isSidebarOpen, onToggleSidebar }: GlobalTopbarProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { parentBreadcrumbs } = useBreadcrumbs();
+  const { effectiveBreadcrumbs } = useBreadcrumbs();
   const { theme, setTheme } = useTheme();
   const [showThemeMenu, setShowThemeMenu] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
@@ -118,11 +118,11 @@ export default function GlobalTopbar({ isSidebarOpen, onToggleSidebar }: GlobalT
           </button>
         )}
 
-        {/* Wordmark JEWELRY (links to home /) */}
+        {/* Wordmark JEWELRY Factory system (links to home /) */}
         <button
           type="button"
           onClick={() => navigate('/')}
-          className="flex items-center select-none cursor-pointer border-none bg-transparent p-0 transition-opacity hover:opacity-85 shrink-0"
+          className="flex items-center select-none cursor-pointer border-none bg-transparent p-0 transition-opacity hover:opacity-85 shrink-0 gap-1.5"
           title="Factory Overview"
         >
           <span
@@ -135,6 +135,12 @@ export default function GlobalTopbar({ isSidebarOpen, onToggleSidebar }: GlobalT
             }}
           >
             JEWELRY
+          </span>
+          <span
+            className="text-[11px] font-medium tracking-normal shrink-0"
+            style={{ color: 'var(--text-muted, var(--color-text-tertiary))' }}
+          >
+            Factory system
           </span>
         </button>
 
@@ -154,25 +160,41 @@ export default function GlobalTopbar({ isSidebarOpen, onToggleSidebar }: GlobalT
           </button>
         )}
 
-        {/* Parent Breadcrumbs (system parent levels only, no current page title) */}
-        {parentBreadcrumbs && parentBreadcrumbs.length > 0 && (
-          <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs sm:text-[13px] font-semibold min-w-0 truncate">
-            {parentBreadcrumbs.map((item, i) => (
-              <span key={i} className="flex items-center gap-1.5 truncate">
-                {i > 0 && <ChevronRight size={12} strokeWidth={1.75} className="text-[var(--color-text-tertiary)] opacity-60 shrink-0" />}
-                {item.path ? (
-                  <button
-                    type="button"
-                    onClick={() => navigate(item.path!)}
-                    className="truncate hover:underline cursor-pointer bg-transparent border-none p-0 outline-none font-bold text-[var(--color-brand-600)] hover:text-[var(--color-brand-700)] transition-colors"
-                  >
-                    {item.label}
-                  </button>
-                ) : (
-                  <span className="truncate text-[var(--color-text-secondary)] font-bold">{item.label}</span>
-                )}
+        {/* Breadcrumbs: [Parent Category] (13px, secondary) › [Current Page] (15-16px, bold dark) */}
+        {effectiveBreadcrumbs.length > 0 && (
+          <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 min-w-0 truncate">
+            {effectiveBreadcrumbs.length === 1 ? (
+              <span className="text-[15px] sm:text-[16px] font-extrabold text-[var(--color-text-primary)] truncate font-display">
+                {effectiveBreadcrumbs[0].label}
               </span>
-            ))}
+            ) : (
+              <>
+                {effectiveBreadcrumbs.slice(0, -1).map((item, i) => (
+                  <span key={i} className="flex items-center gap-1.5 shrink-0">
+                    {i > 0 && (
+                      <ChevronRight size={13} strokeWidth={1.75} className="text-[var(--color-text-tertiary)] opacity-60 shrink-0" />
+                    )}
+                    {item.path ? (
+                      <button
+                        type="button"
+                        onClick={() => navigate(item.path!)}
+                        className="text-[13px] font-semibold text-[var(--color-brand-600)] hover:underline cursor-pointer bg-transparent border-none p-0 outline-none transition-colors truncate"
+                      >
+                        {item.label}
+                      </button>
+                    ) : (
+                      <span className="text-[13px] font-semibold text-[var(--color-text-secondary)] truncate">
+                        {item.label}
+                      </span>
+                    )}
+                  </span>
+                ))}
+                <ChevronRight size={13} strokeWidth={1.75} className="text-[var(--color-text-tertiary)] opacity-60 shrink-0" />
+                <span className="text-[15px] sm:text-[16px] font-extrabold text-[var(--color-text-primary)] truncate font-display">
+                  {effectiveBreadcrumbs[effectiveBreadcrumbs.length - 1].label}
+                </span>
+              </>
+            )}
           </nav>
         )}
       </div>

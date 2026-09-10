@@ -26,11 +26,7 @@ export function VolumeFilterBar({
   handlePrint
 }: VolumeFilterBarProps) {
   return (
-    <header className="customer-trends-page-header no-print">
-      <div>
-        <h1 style={{ display: 'flex', alignItems: 'center', gap: 10 }}>Order Trends</h1>
-        <p>Sales & Order Volume Trends by Customer Group with line details</p>
-      </div>
+    <header className="customer-trends-page-header no-print" style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: 12 }}>
       <div className="customer-trends-page-header__actions" style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
         <ErpSegmentedControl
           ariaLabel="Metric switch"

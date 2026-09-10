@@ -1,76 +1,108 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import type { BreadcrumbItem } from '../config/breadcrumbs';
+import { menuConfig } from '../config/menuConfig';
 
 interface BreadcrumbContextType {
   breadcrumbs: BreadcrumbItem[];
   setBreadcrumbs: (items: BreadcrumbItem[]) => void;
   parentBreadcrumbs: BreadcrumbItem[];
+  effectiveBreadcrumbs: BreadcrumbItem[];
 }
 
-export function getFallbackParentBreadcrumbs(pathname: string): BreadcrumbItem[] {
+export function getFallbackBreadcrumbs(pathname: string): BreadcrumbItem[] {
   if (pathname === '/') {
-    return [];
+    return [{ label: 'Overview' }, { label: 'Factory Overview' }];
   }
   if (pathname === '/dashboard/detail') {
-    return [{ label: 'Factory Overview', path: '/' }];
+    return [{ label: 'Overview' }, { label: 'Factory Overview', path: '/' }, { label: 'Metric Detail' }];
   }
   if (pathname.startsWith('/dashboard/sales-customer-detail')) {
     return [
       { label: 'Sales Analytics' },
       { label: 'Order Trends', path: '/dashboard/customer/trends' },
+      { label: 'Order List' },
     ];
   }
-  if (
-    pathname.startsWith('/dashboard/customer') ||
-    pathname.startsWith('/dashboard/sales') ||
-    pathname.startsWith('/dashboard/qty') ||
-    pathname.startsWith('/dashboard/top-orders')
-  ) {
-    return [{ label: 'Sales Analytics' }];
+  if (pathname === '/dashboard/customer' || pathname === '/dashboard/customer/' || pathname === '/dashboard/sales') {
+    return [{ label: 'Sales Analytics' }, { label: 'Sales Summary' }];
   }
-  if (
-    pathname.startsWith('/po-tracker/') &&
-    pathname !== '/po-tracker'
-  ) {
+  if (pathname === '/dashboard/customer/matrix' || pathname === '/dashboard/customer-report') {
+    return [{ label: 'Sales Analytics' }, { label: 'Customer Report Matrix' }];
+  }
+  if (pathname === '/dashboard/customer/trends' || pathname === '/dashboard/customer-trends') {
+    return [{ label: 'Sales Analytics' }, { label: 'Order Trends' }];
+  }
+  if (pathname === '/dashboard/top-orders') {
+    return [{ label: 'Sales Analytics' }, { label: 'Top Item Gallery' }];
+  }
+  if (pathname === '/dashboard/top-orders/analytics' || pathname.startsWith('/dashboard/qty')) {
+    return [{ label: 'Sales Analytics' }, { label: 'Top Items Qty' }];
+  }
+  if (pathname.startsWith('/po-tracker/') && pathname !== '/po-tracker') {
     return [
       { label: 'Production' },
       { label: 'PO Tracker', path: '/po-tracker' },
+      { label: 'Order Detail' },
     ];
   }
-  if (
-    pathname === '/po-tracker' ||
-    pathname.startsWith('/dashboard/production') ||
-    pathname.startsWith('/dashboard/fbe-order-track') ||
-    pathname.startsWith('/item-detail')
-  ) {
-    return [{ label: 'Production' }];
+  if (pathname.startsWith('/item-detail')) {
+    return [
+      { label: 'Production' },
+      { label: 'PO Tracker', path: '/po-tracker' },
+      { label: 'Item Detail' },
+    ];
   }
-  if (pathname.startsWith('/subcontract')) {
-    return [{ label: 'Subcontract Management' }];
+  if (pathname === '/po-tracker') {
+    return [{ label: 'Production' }, { label: 'PO Tracker' }];
   }
-  if (pathname.startsWith('/procurement')) {
-    return [{ label: 'Procurement & Receiving' }];
+  if (pathname === '/dashboard/production-summary') {
+    return [{ label: 'Production' }, { label: 'Production Summary' }];
   }
-  if (pathname.startsWith('/orders')) {
-    return [{ label: 'Order Lines & Issues' }];
+  if (pathname === '/dashboard/production-forecast') {
+    return [{ label: 'Production' }, { label: 'Production Forecast' }];
   }
-  if (pathname.startsWith('/sample')) {
-    return [{ label: 'Sample Department' }];
+  if (pathname === '/dashboard/fbe-order-track') {
+    return [{ label: 'Production' }, { label: 'FBE Order Tracker' }];
   }
-  if (pathname.startsWith('/inventory')) {
-    return [{ label: 'Inventory Control' }];
+  if (pathname === '/subcontract/vendor-performance') {
+    return [{ label: 'Subcontract Management' }, { label: 'Vendor Performance Dashboard' }];
   }
-  if (pathname.startsWith('/spare-parts')) {
-    return [{ label: 'Spare Parts' }];
+
+  // Check menuConfig for matching path
+  for (const group of menuConfig) {
+    if (group.path === pathname) {
+      return [{ label: 'Overview' }, { label: group.label }];
+    }
+    const found = (group.items || []).find(item => item.path === pathname);
+    if (found) {
+      return [{ label: group.label }, { label: found.label }];
+    }
   }
+
+  // Category fallbacks
+  if (pathname.startsWith('/subcontract')) return [{ label: 'Subcontract Management' }];
+  if (pathname.startsWith('/procurement')) return [{ label: 'Procurement & Receiving' }];
+  if (pathname.startsWith('/orders')) return [{ label: 'Order Lines & Issues' }];
+  if (pathname.startsWith('/sample')) return [{ label: 'Sample Department' }];
+  if (pathname.startsWith('/inventory')) return [{ label: 'Inventory Control' }];
+  if (pathname.startsWith('/spare-parts')) return [{ label: 'Spare Parts' }];
+  if (pathname.startsWith('/dashboard/production')) return [{ label: 'Production' }];
+  if (pathname.startsWith('/dashboard')) return [{ label: 'Sales Analytics' }];
+
   return [];
+}
+
+export function getFallbackParentBreadcrumbs(pathname: string): BreadcrumbItem[] {
+  const full = getFallbackBreadcrumbs(pathname);
+  return full.length > 1 ? full.slice(0, -1) : full;
 }
 
 const BreadcrumbContext = createContext<BreadcrumbContextType>({
   breadcrumbs: [],
   setBreadcrumbs: () => {},
   parentBreadcrumbs: [],
+  effectiveBreadcrumbs: [],
 });
 
 export function BreadcrumbProvider({ children }: { children: React.ReactNode }) {
@@ -82,13 +114,16 @@ export function BreadcrumbProvider({ children }: { children: React.ReactNode }) 
     setBreadcrumbs([]);
   }, [location.pathname]);
 
-  const parentBreadcrumbs =
-    breadcrumbs.length > 1
-      ? breadcrumbs.slice(0, -1)
-      : getFallbackParentBreadcrumbs(location.pathname);
+  const effectiveBreadcrumbs = useMemo(() => {
+    return breadcrumbs.length > 0 ? breadcrumbs : getFallbackBreadcrumbs(location.pathname);
+  }, [breadcrumbs, location.pathname]);
+
+  const parentBreadcrumbs = useMemo(() => {
+    return effectiveBreadcrumbs.length > 1 ? effectiveBreadcrumbs.slice(0, -1) : [];
+  }, [effectiveBreadcrumbs]);
 
   return (
-    <BreadcrumbContext.Provider value={{ breadcrumbs, setBreadcrumbs, parentBreadcrumbs }}>
+    <BreadcrumbContext.Provider value={{ breadcrumbs, setBreadcrumbs, parentBreadcrumbs, effectiveBreadcrumbs }}>
       {children}
     </BreadcrumbContext.Provider>
   );

@@ -28,17 +28,66 @@ import {
   customerTrendsPathFromSearch,
   LEGACY_CUSTOMER_TRENDS_PATH,
 } from './utils/customerTrendsUrl';
+import { menuConfig } from './config/menuConfig';
+
+function isRouteAllowedForRole(pathname: string, role: string): boolean {
+  const normalizedRole = (role || '').toLowerCase();
+  const normalizedPath = pathname.replace(/\/+$/, '') || '/';
+
+  for (const group of menuConfig) {
+    if (group.path) {
+      const groupPath = group.path.replace(/\/+$/, '') || '/';
+      const isMatch = groupPath === '/' ? normalizedPath === '/' : (normalizedPath === groupPath || normalizedPath.startsWith(groupPath + '/'));
+      if (isMatch) {
+        if (group.roles && !group.roles.includes(normalizedRole)) {
+          return false;
+        }
+      }
+    }
+
+    if (group.items) {
+      for (const item of group.items) {
+        if (item.path) {
+          const itemPath = item.path.replace(/\/+$/, '') || '/';
+          const isMatch = itemPath === '/' ? normalizedPath === '/' : (normalizedPath === itemPath || normalizedPath.startsWith(itemPath + '/'));
+          if (isMatch) {
+            const effectiveRoles = item.roles || group.roles;
+            if (effectiveRoles && !effectiveRoles.includes(normalizedRole)) {
+              return false;
+            }
+          }
+        }
+        if (item.items) {
+          for (const subItem of item.items) {
+            if (subItem.path) {
+              const subItemPath = subItem.path.replace(/\/+$/, '') || '/';
+              const isMatch = subItemPath === '/' ? normalizedPath === '/' : (normalizedPath === subItemPath || normalizedPath.startsWith(subItemPath + '/'));
+              if (isMatch) {
+                const effectiveRoles = subItem.roles || item.roles || group.roles;
+                if (effectiveRoles && !effectiveRoles.includes(normalizedRole)) {
+                  return false;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return true;
+}
 
 function ProtectedRoute() {
   const token = localStorage.getItem('auth_token');
-  const role = localStorage.getItem('auth_role');
+  const role = (localStorage.getItem('auth_role') || '').toLowerCase();
   const location = useLocation();
 
   if (!token || !role) {
     return <Navigate to="/login" replace />;
   }
 
-  if (role === 'sales' && location.pathname === '/') {
+  if (!isRouteAllowedForRole(location.pathname, role)) {
     return <Navigate to="/dashboard/customer" replace />;
   }
 

@@ -75,6 +75,7 @@
   --color-text-secondary: oklch(0.80 0.02 250);
   --color-text-tertiary: oklch(0.68 0.03 250);
   --color-text-quaternary: oklch(0.66 0.02 250);
+  --text-muted: var(--color-text-tertiary);
   --color-text-inverse: oklch(0.15 0.02 250);
   --color-overlay-text: oklch(0.98 0.01 250);
   --color-overlay-text-muted: oklch(0.82 0.02 250);
@@ -1183,6 +1184,7 @@ body * {
     --color-text-secondary: oklch(0.35 0.02 260);
     --color-text-tertiary: oklch(0.48 0.01 260);
     --color-text-quaternary: oklch(0.51 0.01 260);
+    --text-muted: var(--color-text-tertiary);
     --color-text-inverse: oklch(0.99 0.01 260);
 
     /* Border - Refined, subtle light gray borders for modern enterprise UI */

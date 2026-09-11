@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useLocation, useSearchParams, useNavigate } from 'react-router-dom';
 import { fetchAvailableYears } from '../services/dashboardAPI';
 import { fetchCustomerSummary, type CustomerSummaryRecord } from '../services/customerSummaryAPI';
@@ -278,6 +278,39 @@ export function useCustomerDashboardLayout() {
     else if (val === 'matrix') navigate(`/dashboard/customer/matrix${query}`);
   };
 
+  const isFiltered = useMemo(() => {
+    const isPeriodFiltered = periodPreset !== 'full-year' || monthStart !== 1 || monthEnd !== 12 || compareActive1 || compareActive2;
+    const isGroupsFiltered = selGroups.length !== dynamicActiveGroups.length || !dynamicActiveGroups.every((id: any) => selGroups.includes(id));
+    return isPeriodFiltered || isGroupsFiltered;
+  }, [periodPreset, monthStart, monthEnd, compareActive1, compareActive2, selGroups, dynamicActiveGroups]);
+
+  const resetFilters = useCallback(() => {
+    const defaultYear = availableYears[0] || '';
+    setPeriodPreset('full-year');
+    setDraftPreset('full-year');
+    setMonthStart(1);
+    setMonthEnd(12);
+    setDraftStart(1);
+    setDraftEnd(12);
+    if (defaultYear) {
+      setSelectedYears([defaultYear]);
+      setDraftYear(defaultYear);
+    }
+    setSelectedMonths(MONTH_PARAM_IDS);
+    setCompareActive1(false);
+    setCompareYearVal1('');
+    setCompareActive2(false);
+    setCompareYearVal2('');
+    setDraftCompareActive1(false);
+    setDraftCompareYearVal1('');
+    setDraftCompareActive2(false);
+    setDraftCompareYearVal2('');
+    setKpiCompareYear('');
+    setDraftKpiCompareYear('');
+    setSelGroups(dynamicActiveGroups);
+    setSearchParams({}, { replace: true });
+  }, [availableYears, dynamicActiveGroups, setSearchParams]);
+
   return {
     activeTab,
     handleTabChange,
@@ -323,6 +356,8 @@ export function useCustomerDashboardLayout() {
     periodPopoverRef,
     groupPopoverRef,
     toggleGroup,
-    setSelGroups
+    setSelGroups,
+    isFiltered,
+    resetFilters
   };
 }

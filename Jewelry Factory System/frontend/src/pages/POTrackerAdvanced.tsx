@@ -110,6 +110,40 @@ export default function POTrackerAdvanced() {
                   })}
                 </div>
               </div>
+
+              {/* Reset button at end of chip row */}
+              {(groupFilter !== 'ALL' || statusFilter !== 'pending' || activeFilterCount > 0) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setGroupFilter('ALL');
+                    setStatusFilter('pending');
+                    setFilterWeek('');
+                    setFilterCust('');
+                    setFilterPO('');
+                    setFilterType('');
+                    setFilterShipTo('');
+                    setDateType('Order Date');
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: '6px 10px',
+                    borderRadius: 8,
+                    border: '1px solid var(--color-border-light)',
+                    background: 'transparent',
+                    color: 'var(--color-text-secondary)',
+                    fontSize: '0.78rem',
+                    fontWeight: 850,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                  className="hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text-primary)]"
+                >
+                  Reset
+                </button>
+              )}
             </div>
 
             <div className="po-toolbar__actions" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

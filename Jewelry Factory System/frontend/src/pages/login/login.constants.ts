@@ -43,10 +43,13 @@ export const BACKGROUND_IMAGES = [
   '/assets/cll_blue_geode.png',
   '/assets/cll_plate.png',
   '/assets/cll_holding_charms.png',
-  '/assets/cll_green_geode.png',
+  '/assets/cll_rock.png',
   '/assets/cll_hand_ring.png',
   '/assets/cll_ring_earring.png',
   '/assets/cll_box.png',
+  '/assets/cll_ring.png',
+  '/assets/cll_people.png',
+  '/assets/cll_pearl.png',
 ] as const;
 
 export const EMPTY_REGISTRATION: RegistrationValues = {

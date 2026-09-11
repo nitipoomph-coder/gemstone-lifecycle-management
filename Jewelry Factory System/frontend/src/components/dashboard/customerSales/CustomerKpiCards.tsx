@@ -86,7 +86,7 @@ export function CustomerKpiCards({
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div style={{ fontSize: 'var(--erp-text-dense)', fontWeight: 900, color: 'var(--color-text-primary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ width: 14, height: 14, borderRadius: 3, background: color, marginRight: 2, flexShrink: 0 }} />
+                  <span style={{ width: 14, height: 14, borderRadius: '50%', background: color, marginRight: 2, flexShrink: 0 }} />
                   Year {yData.year}
                 </span>
               </div>
@@ -156,7 +156,7 @@ export function CustomerKpiCards({
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div style={{ fontSize: 'var(--erp-text-dense)', fontWeight: 900, color: 'var(--color-text-primary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 6, textTransform: 'capitalize' }}>
-                  <span style={{ width: 14, height: 14, borderRadius: 3, background: gData.color, marginRight: 2, flexShrink: 0 }} />
+                  <span style={{ width: 14, height: 14, borderRadius: '50%', background: gData.color, marginRight: 2, flexShrink: 0 }} />
                   {gData.label}
                 </span>
                 {latestYear && <span style={{ fontSize: '0.62rem', color: 'var(--color-text-quaternary)', fontWeight: 800 }}>{latestYear}</span>}

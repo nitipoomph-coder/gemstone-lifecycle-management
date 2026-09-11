@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, type KeyboardEvent } from 'react';
-import { Search, X, CalendarDays, Users, Tag, ChevronDown, Layers, ArrowLeftRight } from 'lucide-react';
+import { Search, X, CalendarDays, Users, Tag, ChevronDown, Layers, ArrowLeftRight, FilterX } from 'lucide-react';
 import { ALL_GROUPS } from '../../../config/customerGroups';
 import {
   PERIOD_PRESETS,
@@ -66,6 +66,8 @@ interface TopOrdersFilterBarProps {
   perspectiveMode: PerspectiveMode;
   setPerspectiveMode: (m: PerspectiveMode) => void;
   swapYears?: () => void;
+  isFiltered?: boolean;
+  onReset?: () => void;
 }
 
 export function TopOrdersFilterBar({
@@ -93,6 +95,8 @@ export function TopOrdersFilterBar({
   toggleGroup,
   perspectiveMode,
   setPerspectiveMode,
+  isFiltered = false,
+  onReset,
 }: TopOrdersFilterBarProps) {
   const [showYearMenu, setShowYearMenu] = useState(false);
   const yearMenuRef = useRef<HTMLDivElement>(null);
@@ -156,7 +160,7 @@ export function TopOrdersFilterBar({
   const currentTypeOption = PRODUCT_TYPE_OPTIONS.find(p => p.value === productType) || PRODUCT_TYPE_OPTIONS[0];
 
   return (
-    <div className="sales-gallery-topbar-tools flex min-w-0 flex-1 items-center justify-end gap-2 pr-2">
+    <div className="sales-gallery-topbar-tools flex min-w-0 flex-1 items-center gap-2 pr-2">
       {/* Perspective Toggle: Combined (รวมสะสม) vs Compare (เทียบปี) */}
       <div className="flex items-center gap-1.5 shrink-0">
         <ErpSegmentedControl
@@ -494,7 +498,7 @@ export function TopOrdersFilterBar({
                     <CustomSelect
                       value="none"
                       disabled
-                      onChange={() => {}}
+                      onChange={() => { }}
                       options={[{ value: 'none', label: 'None' }]}
                       ariaLabel="Compare Year 2"
                     />
@@ -508,7 +512,7 @@ export function TopOrdersFilterBar({
                     <CustomSelect
                       value="select"
                       disabled
-                      onChange={() => {}}
+                      onChange={() => { }}
                       options={[{ value: 'select', label: 'Select...' }]}
                       ariaLabel="KPI YoY Base Year"
                     />
@@ -664,6 +668,32 @@ export function TopOrdersFilterBar({
           </div>
         )}
       </div>
+
+      {/* Reset Button (placed at the end of the filter toolbar) */}
+      {isFiltered && onReset && (
+        <button
+          type="button"
+          onClick={onReset}
+          style={{
+            background: "none",
+            border: "none",
+            padding: "6px",
+            color: "var(--color-text-secondary)",
+            cursor: "pointer",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            borderRadius: 6,
+            transition: "all 0.15s ease",
+            flexShrink: 0,
+          }}
+          className="hover:bg-[var(--color-surface-2)] active:scale-95"
+          title="Reset filters"
+          aria-label="Reset filters"
+        >
+          <FilterX size={14} />
+        </button>
+      )}
     </div>
   );
 }

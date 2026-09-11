@@ -15,7 +15,6 @@ import {
 } from 'lucide-react';
 import '../components/sales/SalesDenseTable.css';
 import './OrderVolumeSummaryPage.css';
-import { printChartDashboard } from '../utils/printChart';
 import { useOrderVolumeSummaryData, fmtMetric, fmtQty } from '../hooks/useOrderVolumeSummaryData';
 import { VolumeFilterBar } from '../components/dashboard/orderVolume/VolumeFilterBar';
 import { VolumeOrdersTable } from '../components/dashboard/orderVolume/VolumeOrdersTable';
@@ -81,11 +80,6 @@ export default function OrderVolumeSummaryPage() {
     ? `vs prior year (${onTimeDiff > 0 ? '▲' : onTimeDiff < 0 ? '▼' : ''}${Math.abs(onTimeDiff).toFixed(1)}%)`
     : 'No compare year';
 
-  const handlePrint = () => {
-    const title = `Order_Trends_${activeView}_${primaryYear}_${metric}`;
-    printChartDashboard(title);
-  };
-
   return (
     <>
       <div className="content-scrollbar flex-1 overflow-y-auto" style={pageShell}>
@@ -99,7 +93,6 @@ export default function OrderVolumeSummaryPage() {
             setDrilldownOrders={() => { }} // Hook manages this, or pass a handler
             loading={loading}
             loadOverviewData={loadOverviewData}
-            handlePrint={handlePrint}
           />
 
           {loading ? (

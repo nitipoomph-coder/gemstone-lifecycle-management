@@ -14,27 +14,26 @@ export function CustomerDashboardSkeleton({ sortedSel, activeYears }: CustomerDa
     <div className="content-scrollbar flex-1 overflow-y-auto" style={{ background: 'var(--color-surface-1)' }}>
       <div className="app-content-frame app-content-frame--workspace app-page-content sales-summary-page" style={{ paddingTop: 16 }}>
 
-        {/* Top Filter Bar Skeleton */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', background: 'var(--color-surface-0)', borderBottom: '1px solid var(--color-border-light)', borderRadius: '8px 8px 0 0', marginBottom: 16 }}>
-          <div className="app-skeleton" style={{ width: 140, height: 22, borderRadius: 4 }} />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div className="app-skeleton" style={{ width: 130, height: 32, borderRadius: 7 }} />
-            <div style={{ width: 1, height: 16, background: 'var(--color-border-light)' }} />
-            <div className="app-skeleton" style={{ width: 130, height: 32, borderRadius: 7 }} />
-            <div style={{ width: 1, height: 16, background: 'var(--color-border-light)' }} />
-            <div className="app-skeleton" style={{ width: 160, height: 32, borderRadius: 7 }} />
-            <div style={{ width: 1, height: 16, background: 'var(--color-border-light)' }} />
-            <div className="app-skeleton" style={{ width: 170, height: 32, borderRadius: 7 }} />
-          </div>
-        </div>
-
         {/* Main Content Grid: Chart on Left, YoY Cards on Right */}
         <div className="sales-summary-main-grid">
 
           {/* Main Chart Section Skeleton */}
-          <div className="sales-summary-chart" style={{ background: 'var(--color-surface-0)', borderRadius: 8, padding: 18, border: '1px solid var(--color-border-light)', boxShadow: 'none' }}>
+          <div className="sales-summary-chart" style={{ background: 'var(--color-surface-0)', borderRadius: 8, border: '1px solid var(--color-border-light)', boxShadow: 'none' }}>
+            {/* Chart Controls Skeleton */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '8px 16px', borderBottom: '1px solid var(--color-border-light)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div className="app-skeleton" style={{ width: 110, height: 28, borderRadius: 6 }} />
+                <div style={{ width: 1, height: 16, background: 'var(--color-border-light)' }} />
+                <div className="app-skeleton" style={{ width: 110, height: 28, borderRadius: 6 }} />
+                <div style={{ width: 1, height: 16, background: 'var(--color-border-light)' }} />
+                <div className="app-skeleton" style={{ width: 130, height: 28, borderRadius: 6 }} />
+                <div style={{ width: 1, height: 16, background: 'var(--color-border-light)' }} />
+                <div className="app-skeleton" style={{ width: 32, height: 32, borderRadius: 8 }} />
+              </div>
+            </div>
+
             {/* Dynamic Chart Header Skeleton */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, marginBottom: 14, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, marginBottom: 14, flexWrap: 'wrap', padding: '18px 18px 0' }}>
               <div>
                 <div className="app-skeleton" style={{ width: 280, height: 24, borderRadius: 6, marginBottom: 8 }} />
                 <div className="app-skeleton" style={{ width: 340, height: 14, borderRadius: 4 }} />

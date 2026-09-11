@@ -1,6 +1,6 @@
-import type { CSSProperties } from "react";
+import { useMemo, type CSSProperties } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { RefreshCw, LayoutGrid, BarChart3 } from "lucide-react";
+import { LayoutGrid, BarChart3, RefreshCw } from "lucide-react";
 import PageHeader from '../components/layout/PageHeader';
 import { BREADCRUMBS } from '../config/breadcrumbs';
 import { ErpSegmentedControl } from "../components/ui/ErpButtons";
@@ -19,17 +19,15 @@ export default function TopOrdersGalleryPage() {
     isFilterLoading,
     availableYears,
     baseYear,
+    setBaseYear,
     compareYear,
+    setCompareYear,
     compareEnabled,
+    setCompareEnabled,
     selGroups,
     setSelGroups,
     toggleGroup,
-    productType,
-    setProductType,
-    searchDraft,
-    setSearchDraft,
-    searchQuery,
-    setSearchQuery,
+    periodPreset,
     periodDraft,
     setPeriodDraft,
     buildPeriodDraft,
@@ -37,17 +35,25 @@ export default function TopOrdersGalleryPage() {
     updatePeriodDraft,
     applyPeriodDraft,
     getDefaultCompareYear,
-    items,
-    summary,
-    previewItem,
-    setPreviewItem,
-    analyticsPath,
-    selectedPeriodLabel,
-    startFilterTransition,
+    productType,
+    setProductType,
     perspectiveMode,
     setPerspectiveMode,
     swapYears,
+    selectedPeriodLabel,
+    searchDraft,
+    setSearchDraft,
+    searchQuery,
+    setSearchQuery,
+    startFilterTransition,
+    summary,
+    items,
+    previewItem,
+    setPreviewItem,
     resetFilters,
+    isFiltered,
+    refreshData,
+    analyticsPath,
   } = useTopOrdersGalleryData();
 
   const navigate = useNavigate();
@@ -59,6 +65,52 @@ export default function TopOrdersGalleryPage() {
     return `$${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
   const fmtQty = (value: number) => value.toLocaleString(undefined, { maximumFractionDigits: 0 });
+
+  // Compute Product Type Significance KPI
+  const typeSignificance = useMemo(() => {
+    if (!items || items.length === 0) return null;
+    const typeMap: Record<string, { label: string; totalQty: number; totalAmnt: number; count: number }> = {};
+    let grandQty = 0;
+    let grandAmnt = 0;
+
+    for (const it of items) {
+      const label = it.productTypeLabel || it.productType || 'Other';
+      if (!typeMap[label]) {
+        typeMap[label] = { label, totalQty: 0, totalAmnt: 0, count: 0 };
+      }
+      const qty = perspectiveMode === 'compare' ? it.baseYearQty : it.totalCombinedQty;
+      const amnt = perspectiveMode === 'compare' ? it.baseYearAmnt : it.totalCombinedAmnt;
+      typeMap[label].totalQty += qty;
+      typeMap[label].totalAmnt += amnt;
+      typeMap[label].count += 1;
+      grandQty += qty;
+      grandAmnt += amnt;
+    }
+
+    const sorted = Object.values(typeMap).sort((a, b) =>
+      metric === 'amount' ? b.totalAmnt - a.totalAmnt : b.totalQty - a.totalQty
+    );
+
+    const leader = sorted[0];
+    if (!leader) return null;
+
+    const leaderVal = metric === 'amount' ? leader.totalAmnt : leader.totalQty;
+    const grandVal = metric === 'amount' ? grandAmnt : grandQty;
+    const leaderSharePct = grandVal > 0 ? (leaderVal / grandVal) * 100 : 0;
+
+    // Top runner-ups summary footnote
+    const runnerUps = sorted.slice(1, 4).map(t => {
+      const share = grandVal > 0 ? ((metric === 'amount' ? t.totalAmnt : t.totalQty) / grandVal) * 100 : 0;
+      return `${t.label}: ${share.toFixed(0)}%`;
+    }).join(' · ');
+
+    return {
+      leaderLabel: leader.label,
+      leaderSharePct,
+      leaderCount: leader.count,
+      runnerUps,
+    };
+  }, [items, metric, perspectiveMode]);
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-[var(--color-surface-1)]">
@@ -93,24 +145,31 @@ export default function TopOrdersGalleryPage() {
               perspectiveMode={perspectiveMode}
               setPerspectiveMode={setPerspectiveMode}
               swapYears={swapYears}
+              isFiltered={isFiltered}
+              onReset={resetFilters}
             />
           </div>
         }
         rightContent={
           <div className="flex items-center gap-2">
             <button
-              onClick={resetFilters}
+              type="button"
+              onClick={refreshData}
               style={{
                 background: "none",
                 border: "none",
                 padding: "6px",
-                color: "var(--color-text-tertiary)",
+                color: "var(--color-brand-500)",
                 cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
+                borderRadius: 6,
+                transition: "all 0.15s ease",
               }}
-              title="Reset Filters"
+              className="hover:bg-[var(--color-surface-2)] active:scale-95"
+              title="Refresh"
+              aria-label="Refresh"
             >
               <RefreshCw size={14} className={isFilterLoading ? "animate-spin" : ""} />
             </button>
@@ -132,7 +191,8 @@ export default function TopOrdersGalleryPage() {
         }
       />
 
-      <div className="content-scrollbar sales-gallery-scroll" style={{ flex: 1, overflowY: "auto", background: "var(--color-surface-1)", position: "relative" }}>
+      {/* Main Responsive Grid Area */}
+      <div className="flex-1 overflow-y-auto min-h-0 relative" style={{ scrollBehavior: 'smooth' }}>
         <style>{`
           .gallery-card-hover .hover-overlay { opacity: 0; transform: translateY(10px); transition: all 0.2s ease; }
           .gallery-card-hover:hover .hover-overlay { opacity: 1; transform: translateY(0); }
@@ -148,9 +208,27 @@ export default function TopOrdersGalleryPage() {
             max-width: 2400px;
             margin: 0 auto;
             direction: ltr;
+            transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+          }
+          .gallery-card-clean {
+            transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s ease, border-color 0.2s ease, opacity 0.3s ease;
+            animation: galleryCardAppear 0.35s cubic-bezier(0.4, 0, 0.2, 1) both;
+          }
+          @keyframes galleryCardAppear {
+            from {
+              opacity: 0.6;
+              transform: translateY(6px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
           }
           .gallery-filter-spinner { animation: galleryFilterSpin 0.8s linear infinite; }
           @keyframes galleryFilterSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+          .gallery-card-clean:hover .gallery-overlay {
+            opacity: 1 !important;
+          }
         `}</style>
 
         {/* WCAG 2.1 AA — Portfolio Summary Sub-header with Accessible KPI Cards */}
@@ -171,25 +249,26 @@ export default function TopOrdersGalleryPage() {
           >
             {/* Left Side: Scope & Ranked Summary */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                 {perspectiveMode === 'combined' && (
-                  <span
-                    role="status"
-                    style={{
-                      padding: '2px 8px',
-                      borderRadius: 6,
-                      background: 'var(--color-ui-selected)',
-                      color: 'var(--color-ui-interactive)',
-                      fontWeight: 800,
-                      fontSize: 'var(--erp-text-control)',
-                      border: '1px solid var(--color-border-light)',
-                    }}
-                  >
-                    Combined All Years
-                  </span>
+                  <>
+                    <span
+                      style={{
+                        fontSize: 'var(--erp-text-section)',
+                        fontWeight: 800,
+                        color: 'var(--color-brand-600)',
+                        fontFamily: 'var(--font-display)',
+                      }}
+                    >
+                      Combined All Years
+                    </span>
+                    <span style={{ fontSize: 'var(--erp-text-section)', fontWeight: 800, color: 'var(--color-text-tertiary)' }}>
+                      ·
+                    </span>
+                  </>
                 )}
                 <span style={{ fontSize: 'var(--erp-text-section)', fontWeight: 800, color: 'var(--color-text-primary)', fontFamily: 'var(--font-display)' }}>
-                  Top Ranked ({items.length.toLocaleString()} Items)
+                  Top Ranked ({items.length > 0 ? items.length : 50} Items)
                 </span>
               </div>
               <span style={{ fontSize: 'var(--erp-text-control)', color: 'var(--color-text-tertiary)', fontWeight: 700 }}>
@@ -199,7 +278,7 @@ export default function TopOrdersGalleryPage() {
               </span>
             </div>
 
-            {/* Right Side: KPI Cards for Volume & Value */}
+            {/* Right Side: KPI Cards for Volume, Value & Product Type Significance */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
               {(() => {
                 const isCompare = perspectiveMode === 'compare';
@@ -207,29 +286,27 @@ export default function TopOrdersGalleryPage() {
                 const volDeltaPct = hasVolDelta
                   ? ((summary.baseYearTotalQty - summary.compareYearTotalQty) / summary.compareYearTotalQty) * 100
                   : null;
-                const volDeltaAbs = summary.baseYearTotalQty - summary.compareYearTotalQty;
-                const volLabel = isCompare ? `${baseYear} Volume` : 'Total Volume';
                 const volValue = isCompare ? summary.baseYearTotalQty : summary.portfolioTotalQty;
+                const volLabel = isCompare ? `${baseYear} Volume` : 'Total Volume';
 
                 const hasValDelta = summary.compareYearTotalAmnt > 0 && summary.baseYearTotalAmnt > 0;
                 const valDeltaPct = hasValDelta
                   ? ((summary.baseYearTotalAmnt - summary.compareYearTotalAmnt) / summary.compareYearTotalAmnt) * 100
                   : null;
-                const valLabel = isCompare ? `${baseYear} Value` : 'Total Value';
                 const valValue = isCompare ? summary.baseYearTotalAmnt : summary.portfolioTotalAmnt;
+                const valLabel = isCompare ? `${baseYear} Value` : 'Total Value';
 
                 return (
                   <>
                     <GallerySummaryKpi
                       label={volLabel}
-                      value={fmtQty(volValue)}
-                      unit="pcs"
+                      value={`${fmtQty(volValue)} pcs`}
                       ariaLabel={`${volLabel}: ${fmtQty(volValue)} pieces${hasVolDelta ? `, ${formatSignedPct(volDeltaPct ?? 0)} versus ${compareYear}` : ''}`}
                       deltaPct={volDeltaPct}
                       deltaVsYear={compareYear}
                       showHeaderDelta={isCompare && hasVolDelta}
                       deltaTitle={hasVolDelta
-                        ? `${baseYear} ${fmtQty(summary.baseYearTotalQty)} pcs vs ${compareYear} ${fmtQty(summary.compareYearTotalQty)} pcs (${volDeltaAbs >= 0 ? '+' : ''}${fmtQty(volDeltaAbs)} pcs)`
+                        ? `${baseYear} ${fmtQty(summary.baseYearTotalQty)} pcs vs ${compareYear} ${fmtQty(summary.compareYearTotalQty)} pcs`
                         : undefined}
                       footnote={!isCompare && hasVolDelta
                         ? `${baseYear}: ${fmtQty(summary.baseYearTotalQty)} pcs · ${formatSignedPct(volDeltaPct ?? 0)} vs ${compareYear}`
@@ -249,6 +326,18 @@ export default function TopOrdersGalleryPage() {
                         ? `${baseYear}: ${fmt(summary.baseYearTotalAmnt)} · ${formatSignedPct(valDeltaPct ?? 0)} vs ${compareYear}`
                         : undefined}
                     />
+                    {typeSignificance && (
+                      <GallerySummaryKpi
+                        label="Top Product Type"
+                        value={typeSignificance.leaderLabel}
+                        unit={`${typeSignificance.leaderSharePct.toFixed(1)}% Share`}
+                        ariaLabel={`Top Product Type: ${typeSignificance.leaderLabel}, ${typeSignificance.leaderSharePct.toFixed(1)}% share`}
+                        deltaPct={null}
+                        deltaVsYear=""
+                        showHeaderDelta={false}
+                        footnote={typeSignificance.runnerUps ? typeSignificance.runnerUps : `${typeSignificance.leaderCount} items`}
+                      />
+                    )}
                   </>
                 );
               })()}

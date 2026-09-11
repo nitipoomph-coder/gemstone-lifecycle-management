@@ -55,18 +55,21 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
     }
   };
 
-  // ─── Collapsed state (Icons only) ───
-  if (!isOpen) {
-    return (
-      <aside
-        className="flex h-full w-[60px] min-w-[60px] flex-col items-center transition-all duration-300 relative z-20"
-        style={{
-          background: 'var(--color-sidebar)',
-          borderRight: '1px solid var(--color-border-light)',
-        }}
-      >
-        {/* Icons only — click to expand sidebar + open group */}
-        <nav className="flex flex-1 flex-col items-center gap-1.5 py-3 w-full px-2">
+  return (
+    <aside
+      className="flex h-full flex-col relative z-20 overflow-hidden"
+      style={{
+        width: isOpen ? 260 : 60,
+        minWidth: isOpen ? 260 : 60,
+        maxWidth: isOpen ? 260 : 60,
+        transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.3s cubic-bezier(0.4, 0, 0.2, 1), max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        background: 'var(--color-sidebar)',
+        borderRight: '1px solid var(--color-border-light)',
+      }}
+    >
+      {!isOpen ? (
+        /* Icons only — click to expand sidebar + open group */
+        <nav className="flex flex-1 flex-col items-center gap-1.5 py-3 w-[60px] px-2 animate-fadeIn">
           {filteredMenu.map((group, index) => {
             const isNewSection = index > 0 && group.section !== filteredMenu[index - 1].section;
             return (
@@ -88,59 +91,48 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
             );
           })}
         </nav>
-      </aside>
-    );
-  }
-
-  // ─── Expanded state ───
-  return (
-    <aside
-      className="flex h-full w-[260px] min-w-[260px] flex-col transition-all duration-300 relative z-20"
-      style={{
-        background: 'var(--color-sidebar)',
-        borderRight: '1px solid var(--color-border-light)',
-      }}
-    >
-      {/* Navigation with scroll fade wrapper */}
-      <div className={`flex-1 overflow-hidden scroll-fade-container ${scrollState !== 'top' ? 'fade-top' : ''} ${scrollState !== 'bottom' ? 'fade-bottom' : ''}`}>
-        <nav
-          ref={scrollRef}
-          onScroll={handleScroll}
-          className="custom-scrollbar h-full overflow-y-auto px-3 py-2 flex flex-col gap-0.5"
-        >
-          {filteredMenu.map((group, index) => {
-            const isNewSection = index === 0 || group.section !== filteredMenu[index - 1].section;
-            return (
-              <div key={group.id}>
-                {isNewSection && group.section && (
-                  <div className={`px-3 select-none ${index === 0 ? 'pt-1.5 pb-1' : 'pt-3 pb-1'}`}>
-                    {index > 0 && (
-                      <div className="mb-2 h-[1px] bg-[var(--color-border-light)] opacity-30" />
-                    )}
-                    <div className="text-[11px] font-bold text-[var(--color-sidebar-text)] opacity-45 tracking-wide uppercase">
-                      {group.section}
+      ) : (
+        /* Expanded state: Navigation with scroll fade wrapper */
+        <div className={`flex-1 overflow-hidden scroll-fade-container w-[260px] animate-fadeIn ${scrollState !== 'top' ? 'fade-top' : ''} ${scrollState !== 'bottom' ? 'fade-bottom' : ''}`}>
+          <nav
+            ref={scrollRef}
+            onScroll={handleScroll}
+            className="custom-scrollbar h-full overflow-y-auto px-3 py-2 flex flex-col gap-0.5"
+          >
+            {filteredMenu.map((group, index) => {
+              const isNewSection = index === 0 || group.section !== filteredMenu[index - 1].section;
+              return (
+                <div key={group.id}>
+                  {isNewSection && group.section && (
+                    <div className={`px-3 select-none ${index === 0 ? 'pt-1.5 pb-1' : 'pt-3 pb-1'}`}>
+                      {index > 0 && (
+                        <div className="mb-2 h-[1px] bg-[var(--color-border-light)] opacity-30" />
+                      )}
+                      <div className="text-[11px] font-bold text-[var(--color-sidebar-text)] opacity-45 tracking-wide uppercase">
+                        {group.section}
+                      </div>
                     </div>
-                  </div>
-                )}
-                <NavGroup
-                  group={group}
-                  isOpen={openGroupId === group.id}
-                  isActive={group.id === activeGroupId}
-                  onToggle={() => handleGroupToggle(group.id)}
-                  collapsed={false}
-                  onNavigate={() => {
-                    if (window.matchMedia('(max-width: 819px)').matches) {
-                      onToggle();
-                    }
-                  }}
-                />
-              </div>
-            );
-          })}
-          {/* Spacer for bottom padding */}
-          <div className="h-6"></div>
-        </nav>
-      </div>
+                  )}
+                  <NavGroup
+                    group={group}
+                    isOpen={openGroupId === group.id}
+                    isActive={group.id === activeGroupId}
+                    onToggle={() => handleGroupToggle(group.id)}
+                    collapsed={false}
+                    onNavigate={() => {
+                      if (window.matchMedia('(max-width: 819px)').matches) {
+                        onToggle();
+                      }
+                    }}
+                  />
+                </div>
+              );
+            })}
+            {/* Spacer for bottom padding */}
+            <div className="h-6"></div>
+          </nav>
+        </div>
+      )}
     </aside>
   );
 }

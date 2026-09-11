@@ -111,7 +111,7 @@ export default function GlobalTopbar({ isSidebarOpen, onToggleSidebar }: GlobalT
             type="button"
             onClick={onToggleSidebar}
             className="flex items-center justify-center w-8 h-8 rounded-lg text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-brand-600)] transition-colors shrink-0 cursor-pointer border-none bg-transparent"
-            title={isSidebarOpen ? 'ซ่อนเมนู (Collapse sidebar)' : 'แสดงเมนู (Expand sidebar)'}
+            title={isSidebarOpen ? 'ซ่อนเมนู (Collapse sidebar) [Ctrl+B]' : 'แสดงเมนู (Expand sidebar) [Ctrl+B]'}
             aria-label="Toggle sidebar navigation"
           >
             <PanelLeft size={18} strokeWidth={1.75} />

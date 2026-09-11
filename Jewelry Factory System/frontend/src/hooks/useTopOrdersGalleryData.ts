@@ -194,7 +194,7 @@ export function useTopOrdersGalleryData() {
       productType,
       metric,
       search: searchQuery,
-      limit: 100,
+      limit: 50,
       rankBy: perspectiveMode === 'compare' ? 'base' : 'combined',
     })
       .then((data) => {
@@ -324,6 +324,21 @@ export function useTopOrdersGalleryData() {
     }
   }, [availableYears, searchParams, setSearchParams]);
 
+  const isFiltered = useMemo(() => {
+    const defaultBase = String(CURRENT_YEAR);
+    const isPerspectiveFiltered = perspectiveMode !== 'combined';
+    const isProductTypeFiltered = productType !== 'ALL';
+    const isSearchFiltered = searchQuery.trim() !== '' || searchDraft.trim() !== '';
+    const isPeriodFiltered = periodPreset !== 'full-year' || monthStart !== 1 || monthEnd !== 12 || (baseYear !== '' && baseYear !== defaultBase);
+    const isGroupsFiltered = selGroups.length !== ACTIVE_GROUP_IDS.length || !ACTIVE_GROUP_IDS.every(id => selGroups.includes(id));
+    return isPerspectiveFiltered || isProductTypeFiltered || isSearchFiltered || isPeriodFiltered || isGroupsFiltered;
+  }, [baseYear, monthEnd, monthStart, periodPreset, perspectiveMode, productType, searchDraft, searchQuery, selGroups]);
+
+  const refreshData = useCallback(() => {
+    startFilterTransition(400);
+    setRefreshVersion((v) => v + 1);
+  }, []);
+
   return {
     metric,
     isInitialLoading: loading && !galleryResponse,
@@ -369,5 +384,7 @@ export function useTopOrdersGalleryData() {
     setPerspectiveMode,
     swapYears,
     resetFilters,
+    isFiltered,
+    refreshData,
   };
 }

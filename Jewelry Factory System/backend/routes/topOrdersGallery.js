@@ -408,7 +408,7 @@ router.get('/top-gallery', async (req, res) => {
     const metric = String(req.query.metric || 'qty').toLowerCase() === 'amount' ? 'amount' : 'qty';
     const rankBy = String(req.query.rankBy || 'combined').toLowerCase().trim(); // 'combined' | 'base' | 'growth'
     const searchQuery = String(req.query.search || '').toUpperCase().trim();
-    const limit = parseInt(req.query.limit || '100', 10);
+    const limit = parseInt(req.query.limit || '50', 10);
 
     const pool = await getPool();
     const request = pool.request();

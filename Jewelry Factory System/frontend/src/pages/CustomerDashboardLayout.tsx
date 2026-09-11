@@ -2,7 +2,7 @@ import { Outlet } from 'react-router-dom';
 import PageHeader from '../components/layout/PageHeader';
 import { BREADCRUMBS } from '../config/breadcrumbs';
 import CustomSelect from '../components/ui/CustomSelect';
-import { CalendarDays, ChevronDown, Users, BarChart3, Table2, LineChart } from 'lucide-react';
+import { CalendarDays, ChevronDown, Users, BarChart3, Table2, LineChart, FilterX } from 'lucide-react';
 import { ALL_GROUPS } from '../config/customerGroups';
 import { ErpSegmentedControl } from '../components/ui/ErpButtons';
 import './CustomerDashboard.css';
@@ -51,7 +51,9 @@ export default function CustomerDashboardLayout() {
     periodPopoverRef,
     groupPopoverRef,
     toggleGroup,
-    setSelGroups
+    setSelGroups,
+    isFiltered,
+    resetFilters
   } = useCustomerDashboardLayout();
   return (
     <>
@@ -60,23 +62,17 @@ export default function CustomerDashboardLayout() {
         contentLayout="workspace"
         hideTitle={true}
         rightContent={
-          <div className="sales-gallery-topbar-tools flex min-w-0 items-center justify-end gap-3">
-
-            {/* View Switcher Tab */}
-            <div style={{ display: 'flex', alignItems: 'center', background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)', borderRadius: 8, padding: 4 }}>
-              <ErpSegmentedControl
-                ariaLabel="View Mode"
-                value={activeTab}
-                onChange={(v) => handleTabChange(v as string)}
-                options={[
-                  { value: 'dashboard', label: 'Chart', icon: <BarChart3 size={13} /> },
-                  { value: 'trends', label: 'Order Trends', icon: <LineChart size={13} /> },
-                  { value: 'matrix', label: 'Matrix', icon: <Table2 size={13} /> }
-                ]}
-              />
-            </div>
-
-
+          <div style={{ display: 'flex', alignItems: 'center', background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)', borderRadius: 8, padding: 4 }}>
+            <ErpSegmentedControl
+              ariaLabel="View Mode"
+              value={activeTab}
+              onChange={(v) => handleTabChange(v as string)}
+              options={[
+                { value: 'dashboard', label: 'Chart', icon: <BarChart3 size={13} /> },
+                { value: 'trends', label: 'Order Trends', icon: <LineChart size={13} /> },
+                { value: 'matrix', label: 'Matrix', icon: <Table2 size={13} /> }
+              ]}
+            />
           </div>
         }
         bottomContent={
@@ -380,6 +376,32 @@ export default function CustomerDashboardLayout() {
                   </div>
                 )}
               </div>
+
+              {/* Reset Filters Button (placed at the end of the filter cluster) */}
+              {isFiltered && (
+                <button
+                  type="button"
+                  onClick={resetFilters}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    padding: "6px",
+                    color: "var(--color-text-secondary)",
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: 6,
+                    transition: "all 0.15s ease",
+                    flexShrink: 0,
+                  }}
+                  className="hover:bg-[var(--color-surface-2)] active:scale-95"
+                  title="Reset filters"
+                  aria-label="Reset filters"
+                >
+                  <FilterX size={14} />
+                </button>
+              )}
 
             </div>
           </div>

@@ -26,6 +26,26 @@ export default function AppLayout() {
     localStorage.setItem('app_sidebar_open', String(isOpen));
   };
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'b' || e.key === 'B')) {
+        const target = e.target as HTMLElement;
+        if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+          return;
+        }
+        e.preventDefault();
+        setSidebarOpen((prev) => {
+          const next = !prev;
+          localStorage.setItem('app_sidebar_open', String(next));
+          return next;
+        });
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   return (
     <TopbarActionProvider>
       <BreadcrumbProvider>

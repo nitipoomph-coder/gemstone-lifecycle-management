@@ -3,6 +3,38 @@ import type { TopGalleryItem } from '../../../services/itemYearlySummaryAPI';
 import type { PerspectiveMode } from '../../../hooks/useTopOrdersGalleryData';
 import { comparisonTextStyle, formatSignedPct } from './galleryComparison';
 
+/**
+ * Category-based image scale mapping.
+ * Adjust scale factor here for each product type.
+ * Default is 1.0 (100%), Necklace (BNS) is set to 0.75 (75%).
+ */
+export const CATEGORY_IMAGE_SCALES: Record<string, number> = {
+  BNS: 0.75, // Necklace = 75%
+  NECKLACE: 0.75,
+  BBS: 1.0,  // Bracelet & Bangle = 100%
+  BES: 1.0,  // Earring = 100%
+  BRS: 1.0,  // Ring = 100%
+  BPS: 1.0,  // Pendant = 100%
+  BCS: 1.0,  // Charm = 100%
+  BTS: 1.0,  // Brooch = 100%
+  OTHER: 1.0,
+};
+
+export const getCategoryImageScale = (productType?: string, productTypeLabel?: string): number => {
+  const typeKey = String(productType || '').trim().toUpperCase();
+  if (typeKey && CATEGORY_IMAGE_SCALES[typeKey] !== undefined) {
+    return CATEGORY_IMAGE_SCALES[typeKey];
+  }
+  const labelKey = String(productTypeLabel || '').trim().toUpperCase();
+  if (labelKey && CATEGORY_IMAGE_SCALES[labelKey] !== undefined) {
+    return CATEGORY_IMAGE_SCALES[labelKey];
+  }
+  if (labelKey.includes('NECKLACE') || labelKey.includes('สร้อยคอ')) {
+    return 0.75;
+  }
+  return 1.0;
+};
+
 interface TopOrdersGalleryGridProps {
   items: TopGalleryItem[];
   metric: 'qty' | 'amount';
@@ -45,6 +77,7 @@ export function TopOrdersGalleryGrid({
         const isTop3 = item.rank <= 3;
         const sharePct = metric === 'amount' ? item.shareOfPortfolioAmntPct : item.shareOfPortfolioQtyPct;
         const isCompare = perspectiveMode === 'compare';
+        const imgScale = getCategoryImageScale(item.productType, item.productTypeLabel);
 
         return (
           <div
@@ -89,18 +122,14 @@ export function TopOrdersGalleryGrid({
                 </span>
               </div>
 
-              {isCompare && compareEnabled && compareYear && item.yoyGrowthPct !== null ? (
+              {isCompare && compareEnabled && compareYear && item.yoyGrowthPct !== null && (
                 <div style={comparisonTextStyle(item.yoyGrowthPct)}>
                   {formatSignedPct(item.yoyGrowthPct)}
-                </div>
-              ) : (
-                <div style={{ fontWeight: 900, color: 'var(--color-brand-600)', fontSize: '0.75rem' }}>
-                  {sharePct}% <span style={{ fontWeight: 600, color: 'var(--color-text-tertiary)', fontSize: '0.7rem' }}>Share</span>
                 </div>
               )}
             </div>
 
-            {/* Product Image Canvas (Clean, no nested borders) */}
+            {/* Product Image Canvas (Clean, full width without dark padding gaps) */}
             <div
               style={{
                 height: 190,
@@ -109,39 +138,71 @@ export function TopOrdersGalleryGrid({
                 alignItems: 'center',
                 justifyContent: 'center',
                 position: 'relative',
-                padding: '8px 12px',
+                background: '#ffffff',
+                overflow: 'hidden',
               }}
             >
-              <img
-                src={`/api/photos/ps/${item.itemNo}`}
-                alt={item.itemNo}
+              {/* Category-based Image Wrapper: isolates scale to the image only, keeping all text unscaled */}
+              <div
                 style={{
-                  objectFit: 'contain',
-                  maxWidth: '100%',
-                  maxHeight: '100%',
+                  width: '100%',
+                  height: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transform: `scale(${imgScale})`,
+                  transformOrigin: 'center center',
                   transition: 'transform 0.2s ease',
                 }}
-                className="group-hover:scale-105"
-                onError={(event: SyntheticEvent<HTMLImageElement>) => {
-                  const image = event.currentTarget;
-                  if (!image.dataset.triedCad) {
-                    image.dataset.triedCad = 'true';
-                    image.src = `/api/photos/cad/${item.itemNo}`;
-                  } else {
-                    image.style.display = 'none';
-                  }
-                }}
-              />
+              >
+                <img
+                  src={`/api/photos/ps/${item.itemNo}`}
+                  alt={item.itemNo}
+                  style={{
+                    objectFit: 'contain',
+                    width: '100%',
+                    height: '100%',
+                    padding: '0 4px',
+                    transition: 'transform 0.2s ease',
+                  }}
+                  className="group-hover:scale-105"
+                  onError={(event: SyntheticEvent<HTMLImageElement>) => {
+                    const image = event.currentTarget;
+                    if (!image.dataset.triedCad) {
+                      image.dataset.triedCad = 'true';
+                      image.src = `/api/photos/cad/${item.itemNo}`;
+                    } else {
+                      image.style.display = 'none';
+                    }
+                  }}
+                />
+              </div>
 
-              {/* Minimal Hover Overlay */}
+              {/* Minimal Hover Overlay - Flush edge-to-edge with no leaks */}
               <div
-                className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                className="gallery-overlay group-hover:opacity-100"
                 style={{
-                  background: 'color-mix(in srgb, var(--color-surface-900) 80%, transparent)',
-                  backdropFilter: 'blur(2px)',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  width: '100%',
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                  zIndex: 10,
+                  opacity: 0,
+                  transition: 'opacity 0.2s ease',
+                  background: 'color-mix(in srgb, var(--color-surface-950, #090d16) 94%, transparent)',
+                  backdropFilter: 'blur(6px)',
+                  pointerEvents: 'none',
                 }}
               >
-                <span style={{ fontSize: '0.7rem', color: 'var(--color-overlay-text-muted)', fontWeight: 700 }}>
+                <span style={{ fontSize: '0.72rem', color: 'var(--color-overlay-text-muted)', fontWeight: 700 }}>
                   {isCompare ? `${baseYear} vs ${compareYear}` : `Combined (${baseYear}${compareEnabled && compareYear ? ` & ${compareYear}` : ''})`}
                 </span>
                 <span style={{ fontSize: '1.25rem', color: 'var(--color-overlay-text)', fontWeight: 950, fontFamily: 'var(--font-display)' }}>
@@ -150,7 +211,6 @@ export function TopOrdersGalleryGrid({
                 <span style={{ fontSize: '0.85rem', color: 'var(--color-brand-400)', fontWeight: 800 }}>
                   {fmt(isCompare ? item.baseYearAmnt : item.totalCombinedAmnt)}
                 </span>
-
               </div>
             </div>
 

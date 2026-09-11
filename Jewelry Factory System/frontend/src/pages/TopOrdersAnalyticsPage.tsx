@@ -60,13 +60,17 @@ export default function TopOrdersAnalyticsPage() {
                 background: "none",
                 border: "none",
                 padding: "6px",
-                color: "var(--color-text-tertiary)",
+                color: "var(--color-text-secondary)",
                 cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
+                borderRadius: 6,
+                transition: "all 0.15s ease",
               }}
+              className="hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text-primary)] active:scale-95"
               title="Refresh"
+              aria-label="Refresh"
             >
               <RefreshCw size={14} className={isBusy ? "animate-spin" : ""} />
             </button>
@@ -88,7 +92,7 @@ export default function TopOrdersAnalyticsPage() {
         }
       />
 
-      <main className="content-scrollbar flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4">
+      <main className="content-scrollbar flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-[var(--app-page-gutter)] py-4">
         <header className="no-print" style={reportHeaderStyle}>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>

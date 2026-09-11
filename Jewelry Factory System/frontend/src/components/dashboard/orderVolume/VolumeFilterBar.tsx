@@ -1,5 +1,5 @@
-import { DollarSign, Hash, BarChart3, Table2, Printer, RefreshCw } from 'lucide-react';
-import { ErpSegmentedControl, ErpIconButton } from '../../ui/ErpButtons';
+import { DollarSign, Hash, BarChart3, Table2, RefreshCw } from 'lucide-react';
+import { ErpSegmentedControl } from '../../ui/ErpButtons';
 import type { Metric, ViewMode } from '../../../hooks/useOrderVolumeSummaryData';
 
 interface VolumeFilterBarProps {
@@ -11,7 +11,6 @@ interface VolumeFilterBarProps {
   setDrilldownOrders: (orders: any[]) => void;
   loading: boolean;
   loadOverviewData: () => void;
-  handlePrint: () => void;
 }
 
 export function VolumeFilterBar({
@@ -22,8 +21,7 @@ export function VolumeFilterBar({
   resetDrilldown,
   setDrilldownOrders,
   loading,
-  loadOverviewData,
-  handlePrint
+  loadOverviewData
 }: VolumeFilterBarProps) {
   return (
     <header className="customer-trends-page-header no-print" style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: 12 }}>
@@ -57,35 +55,28 @@ export function VolumeFilterBar({
         <button
           type="button"
           disabled={loading}
-          onClick={handlePrint}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-            padding: '5px 12px',
-            borderRadius: 6,
-            background: 'var(--color-surface-0)',
-            border: '1px solid var(--color-border-light)',
-            fontSize: 'var(--erp-text-control)',
-            fontWeight: 800,
-            color: 'var(--color-text-primary)',
-            cursor: 'pointer',
-            transition: 'all 0.15s ease'
-          }}
-          title="Print current page or Save as PDF (Ctrl+P)"
-        >
-          <Printer size={13} style={{ color: 'var(--color-brand-600)' }} />
-          <span>Print / PDF</span>
-        </button>
-        <ErpIconButton
-          label="Reload data"
-          tone="refresh"
           onClick={() => void loadOverviewData()}
-          icon={<RefreshCw size={14} className={loading ? 'animate-spin' : undefined} />}
-          disabled={loading}
-          size="sm"
-        />
+          style={{
+            background: 'none',
+            border: 'none',
+            padding: '6px',
+            color: 'var(--color-brand-500)',
+            cursor: loading ? 'wait' : 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: 6,
+            transition: 'all 0.15s ease',
+            flexShrink: 0
+          }}
+          className="hover:bg-[var(--color-surface-2)] active:scale-95"
+          title="Reload data"
+          aria-label="Reload data"
+        >
+          <RefreshCw size={14} className={loading ? 'animate-spin' : undefined} />
+        </button>
       </div>
     </header>
   );
 }
+

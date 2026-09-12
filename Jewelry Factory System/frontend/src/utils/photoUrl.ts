@@ -1,15 +1,15 @@
 // ============================================================================
-// photoUrl — SSOT สำหรับ URL รูปสินค้า (เสิร์ฟจาก network file share ผ่าน Photo Bridge)
+// photoUrl — SSOT สำหรับ URL รูปสินค้า (เสิร์ฟfrom network file share ผ่าน Photo Bridge)
 // ----------------------------------------------------------------------------
-// รูปทั้งหมดในระบบดึงจาก network path (\\chongdts\Chong Photo\...) ผ่าน backend
+// รูปAllในSystemดึงfrom network path (\\chongdts\Chong Photo\...) ผ่าน backend
 // endpoint /api/photos/ps|cad/:itemNo (server.js — unauthenticated, res.sendFile)
-// เลิกใช้ base64 (VARBINARY จาก GMItemPhoto) แล้วทั้งระบบ
+// เลิกใช้ base64 (VARBINARY from GMItemPhoto) แล้วทั้งSystem
 //
 // ใช้ relative path เพื่อให้ผ่าน Vite proxy (/api -> :3001) ได้ทุก host บน LAN
 // (pattern เดียวกับ TopOrdersGalleryPage) — <img> ไม่ต้องแนบ token เพราะ Photo Bridge
 // ไม่ได้อยู่หลัง auth middleware
 //
-// การใช้งานมาตรฐาน: ลอง ps ก่อน ถ้าไฟล์ไม่เจอให้ onError fallback ไป cad
+// การใช้Workมาตรฐาน: ลอง ps ก่อน ถ้าไฟล์ไม่เจอให้ onError fallback ไป cad
 // (ใช้ helper attachPhotoFallback เพื่อไม่ต้องเขียน onError ซ้ำในหลายที่)
 // ============================================================================
 

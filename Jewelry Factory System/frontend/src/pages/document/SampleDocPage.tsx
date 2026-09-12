@@ -103,7 +103,7 @@ function SampleDocWorkspace({ docType }: { docType: string }) {
   };
 
   const handleSave = () => {
-    showToast('ระบบนี้อยู่ในช่วงพัฒนา (Read-Only)', 'warning');
+    showToast('System in development phase (Read-Only)', 'warning');
   };
 
   return (

@@ -165,7 +165,7 @@ function ProcurementDocWorkspace({ docType }: { docType: string }) {
       });
       const json = await res.json();
       if (!json.ok) {
-        showToast(`ไม่สามารถแก้ไขได้: ${json.error} (Locked by ${json.lockedBy || 'someone'})`, 'error');
+        showToast(`Cannot edit: ${json.error} (Locked by ${json.lockedBy || 'someone'})`, 'error');
         return;
       }
       if (docDetail?.header) {
@@ -205,7 +205,7 @@ function ProcurementDocWorkspace({ docType }: { docType: string }) {
       setEditDraft({});
       loadDocList();
     } catch (requestError: unknown) {
-      setError(getErrorMessage(requestError, 'บันทึกไม่สำเร็จ'));
+      setError(getErrorMessage(requestError, 'Save failed'));
     } finally {
       setActionLoading(false);
     }
@@ -237,7 +237,7 @@ function ProcurementDocWorkspace({ docType }: { docType: string }) {
         <table style={{ width: '100%', borderCollapse: 'collapse', border: '1.5px solid #000000', tableLayout: 'fixed' }}>
           <tbody>
             <tr>
-              {/* คอลัมน์ฝั่งซ้าย: โลโก้และข้อมูลบริษัท ใช้ Flexbox จัดเรียง */}
+              {/* คอลัมน์ฝั่งซ้าย: โลโก้andข้อมูDeleteริษัท ใช้ Flexbox Arrangeเรียง */}
               <td colSpan={2} style={{ border: '1.5px solid #000000', padding: '12px 16px', verticalAlign: 'middle' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                   <img
@@ -247,7 +247,7 @@ function ProcurementDocWorkspace({ docType }: { docType: string }) {
                   />
                   <div>
                     <div style={{ fontSize: '18px', fontWeight: 'bold', fontFamily: 'Georgia, serif' }}>
-                      Chong Lerdlum Co.,Ltd. &nbsp;บริษัท จงเลิศล้ำ จำกัด
+                      Chong Lerdlum Co.,Ltd. &nbsp;Jong Lertlum Co., Ltd.
                     </div>
                     <div style={{ fontSize: '11px', color: '#333333', marginTop: '4px' }}>
                       224, 224/10 Moo.7 Samrong Nuea, Mueang Samut Prakan, Samut Prakan 10270 Thailand
@@ -258,7 +258,7 @@ function ProcurementDocWorkspace({ docType }: { docType: string }) {
                   </div>
                 </div>
               </td>
-              {/* คอลัมน์ฝั่งขวา: ประเภทเอกสาร */}
+              {/* คอลัมน์ฝั่งขวา: ประเภทDocument */}
               <td style={{ border: '1px solid #000000', width: '30%', padding: '10px', textAlign: 'center', verticalAlign: 'middle' }}>
                 <div style={{ fontSize: '18px', fontWeight: 'bold', letterSpacing: '0.5px' }}>
                   {docType === 'SPA' ? 'Purchase Order' : (docType === 'SRA' || docType === 'SRB') ? 'Goods Receipt' : 'Goods Return'}

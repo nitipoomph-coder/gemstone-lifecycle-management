@@ -31,7 +31,7 @@ export interface SampleListResponse {
   totalPages: number;
 }
 
-/** ดึงรายการเอกสารห้องตัวอย่าง (SSA หรือ SIM) */
+/** ดึงItemDocumentห้องตัวอย่าง (SSA หรือ SIM) */
 export async function fetchSampleDocuments(docType: string, params?: FetchParams): Promise<SampleListResponse> {
   const query = new URLSearchParams();
   if (params?.page) query.append('page', String(params.page));
@@ -44,7 +44,7 @@ export async function fetchSampleDocuments(docType: string, params?: FetchParams
   return { data: json.data, total: json.total, page: json.page, totalPages: json.totalPages } as SampleListResponse;
 }
 
-/** ดึงรายละเอียดเอกสารห้องตัวอย่าง (header + detail lines) */
+/** ดึงDetailsDocumentห้องตัวอย่าง (header + detail lines) */
 export async function fetchSampleDocument(docuNo: string): Promise<SampleDocument> {
   const res = await fetchWithAuth(`${API_BASE}/document/${encodeURIComponent(docuNo)}`);
   const json = await res.json();

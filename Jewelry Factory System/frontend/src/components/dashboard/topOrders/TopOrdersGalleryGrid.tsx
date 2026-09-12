@@ -29,7 +29,7 @@ export const getCategoryImageScale = (productType?: string, productTypeLabel?: s
   if (labelKey && CATEGORY_IMAGE_SCALES[labelKey] !== undefined) {
     return CATEGORY_IMAGE_SCALES[labelKey];
   }
-  if (labelKey.includes('NECKLACE') || labelKey.includes('สร้อยคอ')) {
+  if (labelKey.includes('NECKLACE') || labelKey.includes('Necklace')) {
     return 0.75;
   }
   return 1.0;

@@ -249,7 +249,7 @@ export function FloatingWindowsRenderer({ manager }: { manager: ReturnType<typeo
                 onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface-2)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'var(--color-surface-1)'}
               >
-                🔍 {win.isZoomed ? 'ZOOM OUT' : 'ZOOM IN (ขยาย 2.5 เท่า)'}
+                🔍 {win.isZoomed ? 'ZOOM OUT' : 'ZOOM IN (2.5x)'}
               </button>
             </div>
           </div>

@@ -219,7 +219,7 @@ export function TopOrdersItemPreview({
                     fontSize: '0.8rem',
                     fontWeight: 950,
                   }}
-                  title={isCompare ? `สัดส่วน ${activeSharePct}% ของยอด ${baseYear} ทั้งหมด` : `สัดส่วน ${activeSharePct}% ของยอดสะสมรวมทั้งหมด`}
+                  title={isCompare ? `Ratio ${activeSharePct}% of total ${baseYear} All` : `Ratio ${activeSharePct}% of total accumulated`}
                 >
                   {activeSharePct}% Share
                 </span>

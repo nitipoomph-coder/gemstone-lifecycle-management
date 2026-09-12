@@ -7,7 +7,7 @@ export function TopOrdersSkeleton() {
           100% { background-position: -200% 0; } 
         }
         .gallery-sk-cell {
-          background: linear-gradient(110deg, var(--color-surface-1) 25%, var(--color-surface-2) 50%, var(--color-surface-1) 75%);
+          background: linear-gradient(110deg, var(--color-surface-2) 25%, color-mix(in srgb, var(--color-surface-3, #cbd5e1) 65%, var(--color-surface-2)) 50%, var(--color-surface-2) 75%);
           background-size: 400% 100%;
           animation: shimmer 1.5s linear infinite;
           border-radius: 4px;
@@ -25,44 +25,132 @@ export function TopOrdersSkeleton() {
           gap: 16,
           borderBottom: "1px solid var(--color-border-light)",
           background: "var(--color-surface-0)",
-          marginBottom: "20px" // เพิ่มระยะห่างก่อนเริ่ม Grid
         }}
       >
-        {/* ซ้าย: ชื่อหัวข้อและรายละเอียด */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <div className="gallery-sk-cell" style={{ height: "24px", width: "130px", borderRadius: "6px" }} />
-            <div className="gallery-sk-cell" style={{ height: "24px", width: "180px", borderRadius: "6px" }} />
+        {/* ซ้าย: ชื่อหัวข้อandDetails */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+            <div className="gallery-sk-cell" style={{ height: "20px", width: "130px", borderRadius: "6px" }} />
+            <div className="gallery-sk-cell" style={{ height: "20px", width: "160px", borderRadius: "6px" }} />
           </div>
           <div className="gallery-sk-cell" style={{ height: "14px", width: "320px" }} />
         </div>
 
-        {/* ขวา: กล่อง KPI (Volume & Value) */}
-        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-          {[1, 2].map((key) => (
-            <div
-              key={key}
-              style={{
-                padding: "8px 16px",
-                borderRadius: 8,
-                background: "var(--color-surface-1)",
-                border: "1px solid var(--color-border-light)",
-                minWidth: 190,
-                display: "flex",
-                flexDirection: "column",
-                gap: 6,
-              }}
-            >
-              <div className="gallery-sk-cell" style={{ height: "12px", width: "50%" }} />
-              <div className="gallery-sk-cell" style={{ height: "28px", width: "70%", borderRadius: "6px" }} />
-              <div className="gallery-sk-cell" style={{ height: "10px", width: "90%" }} />
+        {/* ขวา: กล่อง KPI 3 กล่อง Ratio 1fr 1fr 2fr (Volume, Value, Top Product Type) */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr 2fr",
+            gap: 12,
+            alignItems: "stretch",
+            flex: 1,
+            minWidth: "min(100%, 740px)",
+            maxWidth: 1060,
+          }}
+        >
+          {/* Card 1: 1fr (Volume) */}
+          <div
+            style={{
+              padding: "8px 16px",
+              borderRadius: 8,
+              background: "var(--color-surface-1)",
+              border: "1px solid var(--color-border-light)",
+              minWidth: 0,
+              height: "100%",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+              gap: 2,
+            }}
+          >
+            <div>
+              <div className="gallery-sk-cell" style={{ height: "12px", width: "70px" }} />
+              <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginTop: 4 }}>
+                <div className="gallery-sk-cell" style={{ height: "24px", width: "80px", borderRadius: "6px" }} />
+                <div className="gallery-sk-cell" style={{ height: "12px", width: "24px" }} />
+              </div>
             </div>
-          ))}
+            <div className="gallery-sk-cell" style={{ height: "10px", width: "110px", marginTop: 4 }} />
+          </div>
+
+          {/* Card 2: 1fr (Value) */}
+          <div
+            style={{
+              padding: "8px 16px",
+              borderRadius: 8,
+              background: "var(--color-surface-1)",
+              border: "1px solid var(--color-border-light)",
+              minWidth: 0,
+              height: "100%",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+              gap: 2,
+            }}
+          >
+            <div>
+              <div className="gallery-sk-cell" style={{ height: "12px", width: "65px" }} />
+              <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginTop: 4 }}>
+                <div className="gallery-sk-cell" style={{ height: "24px", width: "95px", borderRadius: "6px" }} />
+              </div>
+            </div>
+            <div className="gallery-sk-cell" style={{ height: "10px", width: "120px", marginTop: 4 }} />
+          </div>
+
+          {/* Card 3: 2fr (Top Product Type with segmented bar and 4 legend dots) */}
+          <div
+            style={{
+              padding: "8px 16px",
+              borderRadius: 8,
+              background: "var(--color-surface-1)",
+              border: "1px solid var(--color-border-light)",
+              minWidth: 0,
+              height: "100%",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+              gap: 2,
+            }}
+          >
+            <div>
+              <div className="gallery-sk-cell" style={{ height: "12px", width: "95px" }} />
+              <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginTop: 4 }}>
+                <div className="gallery-sk-cell" style={{ height: "24px", width: "125px", borderRadius: "6px" }} />
+                <div className="gallery-sk-cell" style={{ height: "12px", width: "65px" }} />
+              </div>
+            </div>
+
+            {/* Segmented bar placeholder */}
+            <div
+              className="gallery-sk-cell"
+              style={{ width: "100%", height: 6, borderRadius: 3, marginTop: 6, marginBottom: 4 }}
+            />
+
+            {/* 4 Legend dots placeholder */}
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", rowGap: 2 }}>
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                <div className="gallery-sk-cell" style={{ width: 6, height: 6, borderRadius: "50%", flexShrink: 0 }} />
+                <div className="gallery-sk-cell" style={{ height: "10px", width: "75px" }} />
+              </div>
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                <div className="gallery-sk-cell" style={{ width: 6, height: 6, borderRadius: "50%", flexShrink: 0 }} />
+                <div className="gallery-sk-cell" style={{ height: "10px", width: "65px" }} />
+              </div>
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                <div className="gallery-sk-cell" style={{ width: 6, height: 6, borderRadius: "50%", flexShrink: 0 }} />
+                <div className="gallery-sk-cell" style={{ height: "10px", width: "55px" }} />
+              </div>
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                <div className="gallery-sk-cell" style={{ width: 6, height: 6, borderRadius: "50%", flexShrink: 0 }} />
+                <div className="gallery-sk-cell" style={{ height: "10px", width: "50px" }} />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* 2. Gallery Grid Skeleton (ส่วนการ์ดสินค้า) */}
-      <div className="gallery-grid" style={{ padding: "0 20px" }}>
+      <div className="gallery-grid" style={{ padding: "16px 20px" }}>
         {Array.from({ length: 15 }).map((_, i) => (
           <div
             key={i}

@@ -1,6 +1,5 @@
 import { AdminAuthorizationModal } from './components/AdminAuthorizationModal';
 import { ForgotPasswordModal } from './components/ForgotPasswordModal';
-import { LanguageToggle } from './components/LanguageToggle';
 import { LoginCover } from './components/LoginCover';
 import { LoginForm } from './components/LoginForm';
 import { RegistrationForm } from './components/RegistrationForm';
@@ -21,8 +20,6 @@ export default function LoginPage() {
       />
 
       <div className={`login-forms-container parchment-texture-bg${controller.isRequestAccess ? ' is-request-access' : ''}`}>
-        <LanguageToggle language={controller.language} onChange={controller.setLanguage} />
-
         <div className={`login-form-stage ${stageStateClass}`}>
           <LoginForm
             copy={controller.copy}

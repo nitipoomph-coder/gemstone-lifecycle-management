@@ -56,9 +56,9 @@ export function usePOTrackerAdvanced() {
     let status: StatusFilter | undefined;
     let group: string | undefined;
 
-    if (keywords.some(k => ['pending', 'ค้าง', 'p'].includes(k))) status = 'pending';
-    else if (keywords.some(k => ['finish', 'เสร็จ', 'f', 'complete'].includes(k))) status = 'finish';
-    else if (keywords.some(k => ['all', 'ทั้งหมด'].includes(k))) status = 'all';
+    if (keywords.some(k => ['pending', 'p'].includes(k))) status = 'pending';
+    else if (keywords.some(k => ['finish', 'f', 'complete'].includes(k))) status = 'finish';
+    else if (keywords.some(k => ['all'].includes(k))) status = 'all';
 
     if (keywords.some(k => k.includes('n098'))) group = 'N098';
     else if (keywords.some(k => k.includes('n083'))) group = 'N083';
@@ -178,7 +178,7 @@ export function usePOTrackerAdvanced() {
       const keywords = q.split(' ').filter(k => k.length > 0);
 
       const dataKeywords = keywords.filter(k =>
-        !['pending', 'ค้าง', 'finish', 'เสร็จ', 'all', 'ทั้งหมด', 'late', 'สาย', 'ช้า', 'delay'].includes(k) &&
+        !['pending', 'finish', 'complete', 'all', 'late', 'delay'].includes(k) &&
         !['n008', 'n098', 'n083', 'n051', 'n044', 'mlt'].includes(k)
       );
 
@@ -195,7 +195,7 @@ export function usePOTrackerAdvanced() {
         );
       }
 
-      if (keywords.some(k => ['late', 'สาย', 'ช้า', 'delay'].includes(k))) {
+      if (keywords.some(k => ['late', 'delay'].includes(k))) {
         filteredList = filteredList.filter(o => o.DueDate && new Date(o.DueDate) < new Date() && (o.CloseStatus !== 'Y'));
       }
     }

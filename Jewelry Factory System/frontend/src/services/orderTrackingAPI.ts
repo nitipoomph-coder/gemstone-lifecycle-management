@@ -22,7 +22,7 @@ export interface TrackingStep {
     deptCode: string;
     nameEN: string;
     nameTH: string;
-    status: number; // 0 = รอ, 1 = กำลังทำ (ส้ม), 2 = เสร็จแล้ว (เขียว)
+    status: number; // 0 = Wait, 1 = In Progress (ส้ม), 2 = Done (เขียว)
     recQty: number;
     senQty: number;
     balance: number;
@@ -46,7 +46,7 @@ export interface OrderTrackingResponse {
 }
 
 /**
- * ค้นหาข้อมูลติดตามสถานะออเดอร์ในสายการผลิต 17 ขั้นตอน
+ * Searchข้อมูลติดตามStatusOrderในสายการผลิต 17 Step
  */
 export const getOrderTracking = async (
     ordNo: string,

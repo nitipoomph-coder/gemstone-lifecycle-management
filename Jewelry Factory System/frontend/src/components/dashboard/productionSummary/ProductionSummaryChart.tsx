@@ -77,7 +77,7 @@ export function ProductionSummaryChart({ data, title, showAvgLine = false }: Cha
     const AVG_LO = 0.84;   // เส้น Avg ลอย 84% - 94%
     const AVG_HI = 0.94;
 
-    // 1) คำนวณเพดานและ Ticks แกน Y หลัก
+    // 1) คำนวณเพดานand Ticks แกน Y หลัก
     let calculatedYMax = 1000;
     let calculatedTicks: number[] = [0, 500, 1000];
 
@@ -92,7 +92,7 @@ export function ProductionSummaryChart({ data, title, showAvgLine = false }: Cha
       }
     }
 
-    // 2) แกน Y รองสำหรับเส้น Avg
+    // 2) แกน Y Waitงสำหรับเส้น Avg
     let calculatedY2Min = 0;
     let calculatedY2Max = 100;
     if (maxAvg > 0) {
@@ -106,7 +106,7 @@ export function ProductionSummaryChart({ data, title, showAvgLine = false }: Cha
       }
     }
 
-    // 3) Smart Trimming: ตัดช่วงว่างหัว-ท้ายที่เป็น 0 ออก (ตามแบบระบบเดิม)
+    // 3) Smart Trimming: ตัดช่วงว่างหัว-ท้ายที่เป็น 0 ออก (ตามแบบSystemเดิม)
     let firstIdx = -1;
     let lastIdx = -1;
 
@@ -164,7 +164,7 @@ export function ProductionSummaryChart({ data, title, showAvgLine = false }: Cha
 
 
   // -------------------------------------------------------------
-  // 2. Data Labels (แสดงตัวเลขจริง)
+  // 2. Data Labels (Show Numbersจริง)
   // -------------------------------------------------------------
   const renderTotalLabel = (props: any) => {
     const { x, y, index } = props;
@@ -322,7 +322,7 @@ export function ProductionSummaryChart({ data, title, showAvgLine = false }: Cha
       >
         <h3 style={{ fontSize: '1rem', color: 'var(--color-text-primary)', fontWeight: 'bold' }}>{title}</h3>
         <p style={{ color: 'var(--color-text-tertiary)', marginTop: '8px', fontSize: '0.85rem' }}>
-          (ไม่พบข้อมูลในช่วงที่เลือก)
+          (No data in selected range)
         </p>
       </div>
     );
@@ -352,7 +352,7 @@ export function ProductionSummaryChart({ data, title, showAvgLine = false }: Cha
         {title}
       </h3>
 
-      {/* 👈 กราฟความสูง 100% ตามกล่องแม่ (320px) */}
+      {/* 👈 กราฟความHeight 100% ตามกล่องแม่ (320px) */}
       <div style={{ width: '100%', height: '100%', minHeight: 0 }}>
         <ResponsiveContainer width="99%" height="100%">
           <ComposedChart data={chartData} margin={{ top: 20, right: 20, left: 10, bottom: 0 }}>
@@ -365,7 +365,7 @@ export function ProductionSummaryChart({ data, title, showAvgLine = false }: Cha
               tickMargin={8}
             />
 
-            {/* แกน Y หลัก พร้อมกำหนด Ticks ถี่ๆ แบบระบบเดิม */}
+            {/* แกน Y หลัก พร้อมกำหนด Ticks ถี่ๆ แบบSystemเดิม */}
             <YAxis
               yAxisId="mainAxis"
               domain={[0, yAxisMax]}
@@ -379,7 +379,7 @@ export function ProductionSummaryChart({ data, title, showAvgLine = false }: Cha
               width={60}
             />
 
-            {/* แกน Y รอง (ซ่อนรูป สำหรับเส้น Avg) */}
+            {/* แกน Y Waitง (ซ่อนรูป สำหรับเส้น Avg) */}
             <YAxis
               yAxisId="avgAxis"
               orientation="right"

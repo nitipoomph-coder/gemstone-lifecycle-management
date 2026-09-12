@@ -105,9 +105,9 @@ export const exportPOTrackerExcel = async (
     { header: 'ExpPct', key: 'ExpPct', width: 10 },          // AJ
     { header: 'ProdRiskIssue', key: 'ProdRiskIssue', width: 15 },// AK
     { header: 'PQCPlanShip', key: 'PQCPlanShip', width: 15 },// AL
-    { header: '3. สั่ง/เบิก Box', key: 'PackCard', width: 15 },      // AM
-    { header: '2. สั่ง Card', key: 'TickOrd', width: 15 },        // AN
-    { header: '2. เบิก/จัด Card', key: 'TickRec', width: 15 },        // AO
+    { header: '3. Order/Issue Box', key: 'PackCard', width: 15 },      // AM
+    { header: '2. Order Card', key: 'TickOrd', width: 15 },        // AN
+    { header: '2. Issue/Prep Card', key: 'TickRec', width: 15 },        // AO
     { header: 'PolyOrd', key: 'PolyOrd', width: 10 },        // AP
     { header: 'PolyRec', key: 'PolyRec', width: 10 },        // AQ
     { header: 'PackScanAppv', key: 'PackScanAppv', width: 15 },// AR

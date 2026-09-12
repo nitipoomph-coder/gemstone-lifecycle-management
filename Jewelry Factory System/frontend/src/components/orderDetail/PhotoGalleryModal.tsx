@@ -4,7 +4,7 @@ import { ClipboardList, X } from 'lucide-react';
 import { psPhotoUrl, attachPhotoFallback } from '../../utils/photoUrl';
 
 // ─── Photo Gallery Modal ─────────────────────────────────────────────────────
-// รูปดึงจาก network path อย่างเดียว (ps ก่อน, onError fallback ไป cad)
+// รูปดึงfrom network path อย่างเดียว (ps ก่อน, onError fallback ไป cad)
 function GalleryItemCard({ line, onClick }: { line: Record<string, unknown>, onClick: () => void }) {
   const itemNo = line.ItemNo as string | undefined;
   const photoUrl = psPhotoUrl(itemNo);
@@ -110,7 +110,7 @@ export function PhotoGalleryModal({ lines, onClose }: { lines: Record<string, un
         }}>
           <div style={{ fontSize: '3rem', marginBottom: '16px' }}>📷</div>
           <div style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--color-text-primary)', marginBottom: '8px', fontFamily: 'var(--font-display)' }}>NO PHOTOS FOUND</div>
-          <div style={{ fontSize: '0.85rem', color: 'var(--color-text-tertiary)', marginBottom: '24px', fontFamily: 'var(--font-body)' }}>ไม่พบรูปภาพสินค้าหรือรหัสสินค้าในเอกสารฉบับนี้</div>
+          <div style={{ fontSize: '0.85rem', color: 'var(--color-text-tertiary)', marginBottom: '24px', fontFamily: 'var(--font-body)' }}>No item photo or code in this document</div>
           <button onClick={onClose} style={{
             padding: '10px 28px', borderRadius: '8px', background: 'var(--color-brand-500)', color: 'var(--color-ui-on-interactive)',
             border: 'none', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer'
@@ -143,7 +143,7 @@ export function PhotoGalleryModal({ lines, onClose }: { lines: Record<string, un
     const startX = 120 + offset;
     const startY = 140 + offset;
 
-    // เปิดหน้าต่างทันทีด้วย URL รูปจาก network path (ps) — <img> จัดการ fallback ไป cad เอง
+    // เCloseหน้าต่างทันทีด้วย URL รูปfrom network path (ps) — <img> Arrangeการ fallback ไป cad เอง
     setActiveWindows(prev => [
       ...prev,
       {
@@ -249,7 +249,7 @@ export function PhotoGalleryModal({ lines, onClose }: { lines: Record<string, un
               MASTER PHOTO STUDIO
             </span>
             <span style={{ fontSize: '0.72rem', color: 'var(--color-text-tertiary)', fontWeight: 600 }}>
-              ตรวจเช็คภาพถ่ายชิ้นงานอิสระระดับสากล เปิดหลายหน้าต่างซ้อนลากได้อิสระ
+              Independent multi-window photo inspection with free dragging
             </span>
           </div>
           <span style={{
@@ -425,7 +425,7 @@ export function PhotoGalleryModal({ lines, onClose }: { lines: Record<string, un
                   onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface-2)'}
                   onMouseLeave={e => e.currentTarget.style.background = 'var(--color-surface-1)'}
                 >
-                  🔍 {win.isZoomed ? 'ZOOM OUT' : 'ZOOM IN (ขยาย 2.5 เท่า)'}
+                  🔍 {win.isZoomed ? 'ZOOM OUT' : 'ZOOM IN (Zoom 2.5x)'}
                 </button>
               </div>
 
@@ -443,23 +443,23 @@ export function PhotoGalleryModal({ lines, onClose }: { lines: Record<string, un
                 gap: '8px 12px'
               }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                  <span style={{ fontSize: '0.58rem', color: 'var(--color-text-tertiary)', fontWeight: 800, textTransform: 'capitalize' }}>ITEM NO / รหัสสินค้า</span>
+                  <span style={{ fontSize: '0.58rem', color: 'var(--color-text-tertiary)', fontWeight: 800, textTransform: 'capitalize' }}>ITEM NO / Product Code</span>
                   <span style={{ fontWeight: 800, color: 'var(--color-brand-600)', fontFamily: 'monospace' }}>{String(win.line.ItemNo)}</span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                  <span style={{ fontSize: '0.58rem', color: 'var(--color-text-tertiary)', fontWeight: 800, textTransform: 'capitalize' }}>SIZE / ขนาดชิ้นงาน</span>
+                  <span style={{ fontSize: '0.58rem', color: 'var(--color-text-tertiary)', fontWeight: 800, textTransform: 'capitalize' }}>SIZE / Item Size</span>
                   <span style={{ fontWeight: 700, color: 'var(--color-text-primary)' }}>{String(win.line.ItemSize || '—')}</span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                  <span style={{ fontSize: '0.58rem', color: 'var(--color-text-tertiary)', fontWeight: 800, textTransform: 'capitalize' }}>METAL / ตัวเรือน</span>
+                  <span style={{ fontSize: '0.58rem', color: 'var(--color-text-tertiary)', fontWeight: 800, textTransform: 'capitalize' }}>METAL / Setting</span>
                   <span style={{ fontWeight: 700, color: 'var(--color-text-primary)' }}>{String(win.line.ItemMat || '—')}</span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                  <span style={{ fontSize: '0.58rem', color: 'var(--color-text-tertiary)', fontWeight: 800, textTransform: 'capitalize' }}>STONE / ข้อมูลพลอย</span>
+                  <span style={{ fontSize: '0.58rem', color: 'var(--color-text-tertiary)', fontWeight: 800, textTransform: 'capitalize' }}>STONE / Stone Info</span>
                   <span style={{ fontWeight: 700, color: 'var(--color-text-primary)' }}>{String(win.line.Stone || '—')}</span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', gridColumn: 'span 2' }}>
-                  <span style={{ fontSize: '0.58rem', color: 'var(--color-text-tertiary)', fontWeight: 800, textTransform: 'capitalize' }}>DESCRIPTION / รายละเอียด</span>
+                  <span style={{ fontSize: '0.58rem', color: 'var(--color-text-tertiary)', fontWeight: 800, textTransform: 'capitalize' }}>DESCRIPTION / Details</span>
                   <span style={{ fontWeight: 700, color: 'var(--color-text-secondary)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{String(win.line.ItemDesc || '—')}</span>
                 </div>
               </div>

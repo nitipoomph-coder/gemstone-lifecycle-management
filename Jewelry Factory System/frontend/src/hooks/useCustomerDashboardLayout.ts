@@ -91,7 +91,7 @@ export function useCustomerDashboardLayout() {
   const [draftCompareActive2, setDraftCompareActive2] = useState<boolean>(compareActive2);
   const [draftCompareYearVal2, setDraftCompareYearVal2] = useState<string>(compareYearVal2);
 
-  // States สำหรับสลับปีที่นำมาเปรียบเทียบใน KPI การ์ด
+  // States สำหรับสลับYearที่นำมาเปรียบเทียบใน KPI การ์ด
   const [kpiCompareYear, setKpiCompareYear] = useState<string>(() => {
     const fromParam = searchParams.get('kpiCompare');
     return fromParam || requestedYears[1] || '';
@@ -112,7 +112,7 @@ export function useCustomerDashboardLayout() {
     }
   }, [availableYears, selectedYears, draftYear, draftCompareYearVal1, draftCompareYearVal2]);
 
-  // Sync draft เมื่อ Popover เปิด
+  // Sync draft เมื่อ Popover เClose
   const syncDraftPeriods = () => {
     setDraftPreset(periodPreset);
     setDraftStart(monthStart);

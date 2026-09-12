@@ -1,25 +1,25 @@
 /**
  * Customer Group Configuration
  * 
- * Single Source of Truth สำหรับการจัดกลุ่มลูกค้าในระบบ
- * ใช้ใน: CustomerDashboard, CustomerDetailModal
+ * Single Source of Truth for customer grouping in the system
+ * Used in: CustomerDashboard, CustomerDetailModal
  * 
- * กฎ: ห้าม Hardcode group logic ลงใน Component โดยตรง
+ * Rule: Do not hardcode group logic directly in Components
  */
 
 export interface CustomerGroup {
   id: string;
   label: string;
   color: string;
-  /** รหัสลูกค้าที่อยู่ในกลุ่มนี้ (exact match กับ prefix ของ CustCode) */
+  /** Customer codes belonging to this group (exact match with CustCode prefix) */
   prefixes: string[];
-  /** สถานะการแสดงผลเป็น Default (ถ้าเป็น false จะไม่ถูกเลือกเป็นค่าเริ่มต้นและถือเป็นกลุ่มเก่า) */
+  /** Default visibility status (if false, it won't be selected by default and is considered legacy) */
   isActive?: boolean;
 }
 
 /**
- * กลุ่มลูกค้าทั้งหมด (ไม่รวม General)
- * General = ลูกค้าทุกรหัสที่ไม่ตรงกับกลุ่ม 1-5
+ * All customer groups (excluding General)
+ * General = Any customer code that does not match defined groups
  */
 export const CUSTOMER_GROUPS: CustomerGroup[] = [
   {
@@ -69,7 +69,7 @@ export const CUSTOMER_GROUPS: CustomerGroup[] = [
   },
 ];
 
-/** กลุ่ม General (ลูกค้าที่ไม่ตรงกับกลุ่มไหนเลย) */
+/** General Group (Customers not matching any defined group) */
 export const GENERAL_GROUP: CustomerGroup = {
   id: 'General',
   label: 'General',
@@ -78,16 +78,16 @@ export const GENERAL_GROUP: CustomerGroup = {
   isActive: false,
 };
 
-/** ALL_GROUPS รวม General — ใช้สำหรับ UI toggle / legend */
+/** ALL_GROUPS including General — Used for UI toggle / legend */
 export const ALL_GROUPS: CustomerGroup[] = [...CUSTOMER_GROUPS, GENERAL_GROUP];
 
-/** กลุ่มที่ถูก Active หรือถูกเลือกแสดงผลเป็นค่าเริ่มต้น */
+/** Active groups or those selected for default display */
 export const ACTIVE_GROUP_IDS: string[] = ALL_GROUPS.filter(g => g.isActive).map(g => g.id);
 
 /**
- * หาว่าลูกค้ารหัสนี้อยู่ในกลุ่มไหน
- * @param custCode รหัสลูกค้า เช่น "N008", "U411", "N048"
- * @returns group ID เช่น "N008", "MLT", "General"
+ * Determine which group a customer belongs to
+ * @param custCode Customer code e.g. "N008", "U411", "N048"
+ * @returns group ID e.g. "N008", "MLT", "General"
  */
 export function getCustomerGroupId(custCode: string): string {
   const code = custCode.toUpperCase().trim();

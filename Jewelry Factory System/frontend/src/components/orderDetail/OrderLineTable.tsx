@@ -8,7 +8,7 @@ import { ORDER_DETAIL_COLUMNS, type OrderDetailColumn } from '../../config/order
 import { formatColumnValue } from './format';
 import { psPhotoUrl, attachPhotoFallback } from '../../utils/photoUrl';
 
-// รูปดึงจาก network path (ps ก่อน, onError fallback ไป cad, ถ้าไม่มีทั้งคู่จะซ่อนรูปเผยไอคอน placeholder ด้านหลัง)
+// รูปดึงfrom network path (ps ก่อน, onError fallback ไป cad, ถ้าไม่มีทั้งคู่จะซ่อนรูปเผยไอคอน placeholder ด้านหลัง)
 // วางไอคอนเป็น layer ด้านหลัง + <img> ทับด้านบน (key={itemNo} รีเซ็ตทุกครั้งที่สลับ item) — ไม่ต้องใช้ state/effect
 function PhotoThumbCell({ line, onPhotoClick }: { line: Record<string, unknown>, onPhotoClick?: (itemNo: string) => void }) {
   const itemNo = line.ItemNo as string | undefined;

@@ -10,17 +10,17 @@ export interface ProductionStep {
 }
 
 export const PRODUCTION_STEPS: ProductionStep[] = [
-  { code: 'GR', nameEN: 'Grind',          nameTH: 'งานลงหิน' },
-  { code: 'TB', nameEN: 'Tumbling',       nameTH: 'งานร่อน' },
-  { code: 'AS', nameEN: 'Assemble',       nameTH: 'งานประกอบ' },
-  { code: 'LS', nameEN: 'Laser',          nameTH: 'งานเลเซอร์' },
-  { code: 'FL', nameEN: 'Filing',         nameTH: 'งานกระดาษทราย' },
-  { code: 'LP', nameEN: 'Lapping',        nameTH: 'งานตัดเหลี่ยม' },
-  { code: 'EP', nameEN: 'Epoxy',          nameTH: 'งานอีพ็อกซี่' },
-  { code: 'PL', nameEN: 'Polish',         nameTH: 'งานขัดเงา' },
-  { code: 'CP', nameEN: 'Copper Plating', nameTH: 'งานชุบทองแดง' },
-  { code: 'IQ', nameEN: 'IQC',            nameTH: 'งานตรวจสอบคุณภาพ' },
-  { code: 'PT', nameEN: 'Plating',        nameTH: 'งานชุบ' },
+  { code: 'GR', nameEN: 'Grind',          nameTH: 'Stone Setting' },
+  { code: 'TB', nameEN: 'Tumbling',       nameTH: 'Sifting' },
+  { code: 'AS', nameEN: 'Assemble',       nameTH: 'Assembly' },
+  { code: 'LS', nameEN: 'Laser',          nameTH: 'Laser' },
+  { code: 'FL', nameEN: 'Filing',         nameTH: 'Sanding' },
+  { code: 'LP', nameEN: 'Lapping',        nameTH: 'Cutting' },
+  { code: 'EP', nameEN: 'Epoxy',          nameTH: 'Epoxy' },
+  { code: 'PL', nameEN: 'Polish',         nameTH: 'Polishing' },
+  { code: 'CP', nameEN: 'Copper Plating', nameTH: 'Copper Plating' },
+  { code: 'IQ', nameEN: 'IQC',            nameTH: 'QC' },
+  { code: 'PT', nameEN: 'Plating',        nameTH: 'Plating' },
 ];
 
 // ─── Production Modes ───────────────────────────────────────────────────────
@@ -32,10 +32,10 @@ export interface ProductionMode {
 }
 
 export const PRODUCTION_MODES: ProductionMode[] = [
-  { key: 'good',    label: 'Good Output',     labelTH: 'ยอดผลิตเสร็จ/ส่งงาน' },
-  { key: 'receive', label: 'Receive',         labelTH: 'ยอดรับงานเข้า' },
-  { key: 'bbs',     label: 'BBS Output',      labelTH: 'ยอดกำไลผลิตเสร็จ' },
-  { key: 'nonbbs',  label: 'Non-BBS Output',  labelTH: 'ยอดผลิตเสร็จไม่รวมกำไล' },
+  { key: 'good',    label: 'Good Output',     labelTH: 'Completed Qty/Send Work' },
+  { key: 'receive', label: 'Receive',         labelTH: 'Received Qty' },
+  { key: 'bbs',     label: 'BBS Output',      labelTH: 'Bangle completed qty' },
+  { key: 'nonbbs',  label: 'Non-BBS Output',  labelTH: 'Completed qty (excl. bangle)' },
 ];
 
 // ─── View Modes ─────────────────────────────────────────────────────────────

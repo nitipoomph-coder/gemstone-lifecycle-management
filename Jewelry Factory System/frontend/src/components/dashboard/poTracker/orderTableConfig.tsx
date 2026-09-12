@@ -14,14 +14,14 @@ type ColDef = {
   cellStyle?: (o: OrderSummary) => React.CSSProperties;
 };
 
-// คอลัมน์ข้อความ/สถานะ (Track / QC / Pack) — โชว์ค่าตรง ๆ, ว่างถ้าไม่มี
+// คอลัมน์ข้อความ/Status (Track / QC / Pack) — โชว์ค่าตรง ๆ, ว่างถ้าไม่มี
 const txt = (label: string, key: keyof OrderSummary, w = 100, align: 'left' | 'center' | 'right' = 'center'): ColDef => ({
   label, w, align,
   render: (o) => (o[key] as string | null) || '',
   cellStyle: () => ({ fontWeight: 600, color: 'var(--color-text-secondary)', fontSize: 'var(--erp-text-control)' }),
 });
 
-// คอลัมน์จำนวนงานค้าง (Pending Qty) — ติดลบ = ค้าง แสดงสีแดงพื้นแดงอ่อน, ว่างถ้า 0 หรือ null
+// คอลัมน์QtyWorkค้าง (Pending Qty) — ติดDelete = ค้าง แสดงสีแดงพื้นแดงอ่อน, ว่างถ้า 0 หรือ null
 const pen = (label: string, key: keyof OrderSummary, w = 78): ColDef => ({
   label, w, align: 'right',
   render: (o) => { const v = o[key] as number | null; return v != null && v !== 0 ? v.toLocaleString() : ''; },
@@ -33,8 +33,8 @@ const pen = (label: string, key: keyof OrderSummary, w = 78): ColDef => ({
 });
 
 // ─── Master column catalog ─────────────────────────────────────────────────────
-// ลำดับ key = ลำดับการแสดงผลซ้าย→ขวา (activeCols filter จาก Object.keys ตามลำดับนี้)
-// mapping อ้างอิง production_stages_mapping_log.md + PO_TRACKER_REVAMP_PLAN.md
+// ลำดับ key = ลำดับการDisplayซ้าย→ขวา (activeCols filter from Object.keys ตามลำดับนี้)
+// mapping Ref production_stages_mapping_log.md + PO_TRACKER_REVAMP_PLAN.md
 export const MASTER_COLS: Record<string, ColDef> = {
   // ── Always-on / pinned ──
   no: {
@@ -165,15 +165,15 @@ export const MASTER_COLS: Record<string, ColDef> = {
   // แก้ชื่อในเครื่องหมาย ''
   qa_n044: txt('Inspection', 'TrackTest', 100),
   cardBox_n044: txt('BBQ/Top', 'PackCard', 120),
-  orderTicket_n044: txt('ส่ง Test', 'TickOrd', 110),
-  receiveTicket_n044: txt('1.ส่ง Ticket', 'TickRec', 130),
-  sample_n044: txt('1.จัดส่ง Ticket', 'TrackSam', 90),
-  custCT_n044: txt('2.สั่ง Card', 'TrackCT', 90),
-  mf_n044: txt('2.เบิก/จัด Card', 'TrackMF', 90),
-  packScanDo_n044: txt('3.สั่ง Box', 'PackScanDo', 160),
-  packScanSen_n044: txt('3.เบิก/จัด Box', 'PackScanSen', 160),
-  packScan_n044: txt('4.สั่ง Pouch', 'PackScanAppv', 100),
-  packScanMF_n044: txt('4.เบิก/จัด Pouch', 'PackScanMF', 170),
+  orderTicket_n044: txt('Send Test', 'TickOrd', 110),
+  receiveTicket_n044: txt('1.Send Ticket', 'TickRec', 130),
+  sample_n044: txt('1.Delivery Ticket', 'TrackSam', 90),
+  custCT_n044: txt('2.Order Card', 'TrackCT', 90),
+  mf_n044: txt('2.Requisition/Arrange Card', 'TrackMF', 90),
+  packScanDo_n044: txt('3.Order Box', 'PackScanDo', 160),
+  packScanSen_n044: txt('3.Requisition/Arrange Box', 'PackScanSen', 160),
+  packScan_n044: txt('4.Order Pouch', 'PackScanAppv', 100),
+  packScanMF_n044: txt('4.Requisition/Arrange Pouch', 'PackScanMF', 170),
   polyOrd_n044: txt('Remark', 'PolyOrd', 120),
   polyRec_n044: txt('Pack Scan', 'PolyRec', 130),
   tagRcyRec_n044: txt('Upload MF', 'TagRcyRec', 180),
@@ -217,8 +217,8 @@ export const MASTER_COLS: Record<string, ColDef> = {
   }
 };
 
-// ── คอลัมน์ที่ฝ่ายผลิต "คีย์เอง" (ข้อมูลติดตามงานจากตาราง OrdTrackDT) ──
-// ลงสีพื้นอำพัน (amber) เพื่อแยกให้เห็นชัดจากคอลัมน์ออเดอร์/ยอดที่ระบบคำนวณอัตโนมัติ (OrdHD/OrdDT)
+// ── คอลัมน์ที่ฝ่ายผลิต "คีย์เอง" (ข้อมูลติดตามWorkfromตาราง OrdTrackDT) ──
+// ลงสีพื้นอำพัน (amber) เพื่อแยกให้เห็นชัดfromคอลัมน์Order/ยอดที่SystemคำนวณAuto (OrdHD/OrdDT)
 export const USER_INPUT_KEYS = new Set<string>([
   'qa', 'sgs', 'oor', 'remark',
   'bookInspect', 'bookShip',
@@ -242,8 +242,8 @@ export const METRICS_KEYS = new Set<string>(['sku', 'qty', 'amount']);
 export const METRICS_BG = 'color-mix(in srgb, var(--color-brand-500) 10%, transparent)';
 export const METRICS_HEAD_BG = 'color-mix(in srgb, var(--color-brand-500) 12%, var(--color-surface-1))';
 
-// Default columns ต่อกลุ่ม (จากระบบเก่า — ดู PO_TRACKER_REVAMP_PLAN.md §4)
-// ลำดับใน array ไม่มีผล (เป็น membership set) — ลำดับแสดงผลมาจาก key order ของ MASTER_COLS
+// Default columns ต่อกลุ่ม (fromSystemเก่า — ดู PO_TRACKER_REVAMP_PLAN.md §4)
+// ลำดับใน array ไม่มีผล (เป็น membership set) — ลำดับDisplayมาfrom key order ของ MASTER_COLS
 export const GROUP_PRESETS: Record<string, string[]> = {
   // General (ปุ่ม "General" map มาที่ key ALL)
   ALL: [

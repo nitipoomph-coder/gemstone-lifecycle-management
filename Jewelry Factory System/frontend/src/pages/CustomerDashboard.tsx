@@ -208,7 +208,7 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
                     type="button"
                     onClick={handleToggleLabels}
                     className="flex items-center justify-center w-8 h-8 rounded-lg border-none bg-transparent text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-brand-600)] transition-colors shrink-0 cursor-pointer p-0"
-                    title={showLabels ? 'ซ่อนป้ายกำกับ (Hide Labels)' : 'แสดงป้ายกำกับ (Show Labels)'}
+                    title={showLabels ? 'Hide Labels' : 'Show Labels'}
                     aria-label={showLabels ? 'Hide Labels' : 'Show Labels'}
                   >
                     {showLabels ? (

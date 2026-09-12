@@ -128,7 +128,7 @@ export async function generateNextDocumentNumber(docType: string): Promise<strin
   return json.data;
 }
 
-// ✅ ฟังก์ชันใหม่ — อัปเดต header กลับไปที่ DB
+// ✅ ฟังก์ชันNew — อัปเดต header กลับไปที่ DB
 /** Update document header fields (PUT) */
 export async function updateDocumentHeader(
   docNo: string,

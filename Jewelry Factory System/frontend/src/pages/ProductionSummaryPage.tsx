@@ -355,7 +355,7 @@ export default function ProductionSummaryPage() {
         return helperCtx.fillStyle;
       };
 
-      // 1) แคปภาพหน้าจอความละเอียดสูง (2x Retina / 300 DPI) เหมือน DrawToBitmap ในระบบเดิม
+      // 1) แคปภาพหน้าจอความละเอียดHeight (2x Retina / 300 DPI) เหมือน DrawToBitmap ในSystemเดิม
       const canvas = await html2canvas(printRef.current, {
         scale: 2,
         useCORS: true,
@@ -364,7 +364,7 @@ export default function ProductionSummaryPage() {
         onclone: (_clonedDoc, clonedElement) => {
           clonedElement.style.setProperty('background', 'var(--color-ui-surface)');
 
-          // แปลงสี CSS Variables และ OKLCH ในองค์ประกอบ SVG ทั้งหมดให้เป็น HEX/RGB มาตรฐาน
+          // แปลงสี CSS Variables and OKLCH ในองค์Assembly SVG Allให้เป็น HEX/RGB มาตรฐาน
           const origSvgElements = printRef.current?.querySelectorAll('svg, svg *') || [];
           const clonedSvgElements = clonedElement.querySelectorAll('svg, svg *');
 
@@ -426,7 +426,7 @@ export default function ProductionSummaryPage() {
 
       const imgData = canvas.toDataURL('image/png');
 
-      // 2) ส่งภาพที่แคปได้ไปพิมพ์ลงกระดาษ A4 แนวนอน
+      // 2) Sendภาพที่แคปได้ไปPrintลงกระดาษ A4 แนวนอน
       const printWindow = window.open('', '_blank');
       if (printWindow) {
         printWindow.document.write(`
@@ -745,7 +745,7 @@ export default function ProductionSummaryPage() {
             <ProductionDashboardSkeleton />
           ) : (
             <>
-              {/* กล่องกราฟ (ปรับความสูงเป็น 500px) */}
+              {/* กล่องกราฟ (ปรับความHeightเป็น 500px) */}
               <div className="print-chart-box" style={{ height: '500px', width: '100%' }}>
                 <ProductionSummaryChart data={data} title={chartTitle} showAvgLine={tab === 'year' || tab === 'week'} />
               </div>
@@ -806,7 +806,7 @@ export default function ProductionSummaryPage() {
             display: flex !important;
           }
 
-          /* กล่องกราฟ: ปรับความสูงอัตโนมัติ ไม่ตัดขอบกราฟ */
+          /* กล่องกราฟ: ปรับความHeightAuto ไม่ตัดขอบกราฟ */
           .print-chart-box {
             width: 100% !important;
             height: auto !important;

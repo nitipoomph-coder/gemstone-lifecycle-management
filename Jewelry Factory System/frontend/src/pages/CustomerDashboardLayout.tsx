@@ -114,7 +114,7 @@ export default function CustomerDashboardLayout() {
 
                 {showPeriodPopover && (
                   <div className="sales-gallery-period-menu absolute left-0 z-[110] mt-2 period-popover-animate" style={{ width: 480, position: 'absolute', top: '100%' }}>
-                    {/* ตัวกรองตัวใหม่: Period Setup สำหรับทุกหน้าจอ */}
+                    {/* New Filter: Period Setup for all screens */}
                     <div className="flex items-center justify-between border-b border-[var(--color-border-light)] pb-2.5 mb-3">
                       <span className="text-xs font-black capitalize tracking-wider text-[var(--color-text-primary)]">
                         Period Setup
@@ -193,7 +193,7 @@ export default function CustomerDashboardLayout() {
                       </div>
                     </div>
 
-                    {/* Compare Years Section (แถวแนวนอนเดียวกันเพื่อประหยัดพื้นที่อย่างคุ้มค่า) */}
+                    {/* Compare Years Section (Horizontal row for space efficiency) */}
                     <div className="mt-4 pt-3.5 border-t border-[var(--color-border-light)]">
                       <div className="mb-2.5 text-[10px] font-black capitalize tracking-wider text-[var(--color-text-tertiary)]">
                         Compare Target Years
@@ -261,7 +261,7 @@ export default function CustomerDashboardLayout() {
                           </div>
                         </div>
 
-                        {/* KPI YoY Base (ตัวสลับปีเปรียบเทียบของ KPI) */}
+                        {/* KPI YoY Base (KPI compare year toggle) */}
                         <div className="flex flex-col gap-1 bg-[var(--color-surface-1)] p-2 rounded-lg border border-[var(--color-border-light)]">
                           <span className="text-[10px] font-black text-[var(--color-text-secondary)]">KPI YoY Base</span>
                           <div className="mt-4">

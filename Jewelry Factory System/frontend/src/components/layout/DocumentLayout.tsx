@@ -124,7 +124,7 @@ export default function DocumentLayout({
       }));
     };
 
-    // รูปดึงจาก network path อย่างเดียว (relative ผ่าน Photo Bridge) — เลิกใช้ base64 fallback แล้ว
+    // รูปดึงfrom network path อย่างเดียว (relative ผ่าน Photo Bridge) — เลิกใช้ base64 fallback แล้ว
     const psTargetUrl = psPhotoUrl(photoKey);
     const imgPs = new window.Image();
     imgPs.src = psTargetUrl;
@@ -156,7 +156,7 @@ export default function DocumentLayout({
     if (key === 'seq') return idx + 1;
     const colDef = formConfig?.tableColumns?.find(c => c.key === key);
     const label = colDef?.label || '';
-    const isHeightLabel = label.includes('สูง') || label.includes('สุง');
+    const isHeightLabel = label.includes('Height') || label.includes('Height');
     const val = line[key] ??
       (key === 'stone' || key === 'stoneName' ? (line.stoneName || line.stoneCode || line.ItemStone || line.GoodCode) :
         key === 'color' ? (line.color || line.GoodColorCode) :
@@ -216,9 +216,9 @@ export default function DocumentLayout({
       reason: h.reason || h.ResCode || h.SenRemark || '',
       note: h.note || h.SenRemark || '',
       department: h.department || h.DeptCode || '',
-      status: (h.status === 'N' || h.DocuStatus === 'N') ? 'ปกติ' :
-        (h.status === 'C' || h.DocuStatus === 'C') ? 'ยกเลิก' :
-          (h.status === 'A' || h.DocuStatus === 'A') ? 'อนุมัติ' :
+      status: (h.status === 'N' || h.DocuStatus === 'N') ? 'Normal' :
+        (h.status === 'C' || h.DocuStatus === 'C') ? 'Cancel' :
+          (h.status === 'A' || h.DocuStatus === 'A') ? 'Approve' :
             (h.status || h.DocuStatus || h.SenStatus || ''),
     };
     const finalVal = map[name] ?? h[name];
@@ -235,13 +235,13 @@ export default function DocumentLayout({
         {/* Toolbar */}
         <div className="document-toolbar flex h-14 items-center gap-1 border-b border-[var(--color-border-light)] bg-[var(--color-ui-surface)] px-4 shrink-0 overflow-x-auto z-10" style={{ boxShadow: 'var(--shadow-panel)' }}>
           <button onClick={onNew} className="flex items-center gap-1.5 rounded-lg bg-[var(--color-brand-500)] text-[var(--color-ui-on-interactive)] px-3 py-1.5 text-[13px] font-bold transition-colors hover:bg-[var(--color-brand-600)]">
-            <FilePlus size={15} /> <span className="hidden md:inline">สร้างใหม่</span>
+            <FilePlus size={15} /> <span className="hidden md:inline">Create New</span>
           </button>
           <button onClick={onSave} disabled={detailLoading || !docDetail || (!isEditing && !!selectedDocNo)} className="flex items-center gap-1.5 rounded-lg border border-[var(--color-border-light)] px-3 py-1.5 text-[13px] font-medium transition-colors hover:bg-[var(--color-surface-2)] disabled:opacity-50 text-[var(--color-text-secondary)] bg-[var(--color-surface-0)] ml-2">
-            <Save size={15} /> <span className="hidden md:inline">บันทึก</span>
+            <Save size={15} /> <span className="hidden md:inline">Save</span>
           </button>
           <button onClick={onEdit} disabled={!docDetail || isEditing} className="flex items-center gap-1.5 rounded-lg border border-[var(--color-border-light)] px-3 py-1.5 text-[13px] font-medium transition-colors hover:bg-[var(--color-surface-2)] disabled:opacity-50 text-[var(--color-text-secondary)] bg-[var(--color-surface-0)]">
-            <Edit3 size={15} /> <span className="hidden md:inline">แก้ไข</span>
+            <Edit3 size={15} /> <span className="hidden md:inline">Edit</span>
           </button>
 
           <span className="mx-2 h-6 w-px bg-[var(--color-border-light)]" />
@@ -252,7 +252,7 @@ export default function DocumentLayout({
               <input
                 type="text"
                 autoFocus
-                placeholder="ระบุเลขที่เอกสาร..."
+                placeholder="Specify Doc No...."
                 value={toolbarSearchText}
                 onChange={e => setToolbarSearchText(e.target.value)}
                 onKeyDown={e => {
@@ -276,21 +276,21 @@ export default function DocumentLayout({
                 onSearchClick();
               }
             }} className="flex items-center gap-1.5 rounded-lg border border-[var(--color-border-light)] px-3 py-1.5 text-[13px] font-medium transition-colors hover:bg-[var(--color-surface-2)] text-[var(--color-text-secondary)] bg-[var(--color-surface-0)]">
-              <Search size={15} /> <span className="hidden md:inline">ค้นหา</span>
+              <Search size={15} /> <span className="hidden md:inline">Search</span>
             </button>
           )}
 
           <button onClick={onDelete} disabled={!docDetail} className="flex items-center gap-1.5 rounded-lg border border-[var(--color-danger-200)] px-3 py-1.5 text-[13px] font-medium transition-colors text-[var(--color-danger-600)] hover:bg-[var(--color-danger-50)] bg-[var(--color-surface-0)] disabled:opacity-50 ml-1">
-            <Trash2 size={15} /> <span className="hidden md:inline">ลบ</span>
+            <Trash2 size={15} /> <span className="hidden md:inline">Delete</span>
           </button>
           <button onClick={onCancel} className="flex items-center gap-1.5 rounded-lg border border-[var(--color-border-light)] px-3 py-1.5 text-[13px] font-medium transition-colors hover:bg-[var(--color-surface-2)] text-[var(--color-text-secondary)] bg-[var(--color-surface-0)]">
-            <CornerUpLeft size={15} /> <span className="hidden md:inline">ยกเลิก</span>
+            <CornerUpLeft size={15} /> <span className="hidden md:inline">Cancel</span>
           </button>
 
           <div className="flex-1"></div>
 
           <button onClick={() => window.print()} className="flex items-center gap-1.5 rounded-lg border border-[var(--color-border-light)] px-3 py-1.5 text-[13px] font-medium transition-colors hover:bg-[var(--color-surface-2)] text-[var(--color-text-secondary)] bg-[var(--color-surface-0)]">
-            <Printer size={15} /> <span className="hidden md:inline">พิมพ์</span>
+            <Printer size={15} /> <span className="hidden md:inline">Print</span>
           </button>
           <button className="flex items-center gap-1.5 rounded-lg border border-[var(--color-border-light)] px-3 py-1.5 text-[13px] font-medium transition-colors text-[var(--color-text-secondary)] hover:bg-[var(--color-ui-raised)] bg-[var(--color-ui-surface)]">
             <FileSpreadsheet size={15} /> <span className="hidden md:inline">Excel</span>
@@ -299,11 +299,11 @@ export default function DocumentLayout({
           <span className="mx-2 h-6 w-px bg-[var(--color-border-light)]" />
 
           <button onClick={() => navigate('/')} className="flex items-center gap-1.5 rounded-lg border border-[var(--color-border-light)] px-3 py-1.5 text-[13px] font-medium transition-colors hover:bg-[var(--color-surface-2)] text-[var(--color-text-secondary)] bg-[var(--color-surface-0)]">
-            <X size={15} /> <span className="hidden md:inline">ปิด</span>
+            <X size={15} /> <span className="hidden md:inline">Close</span>
           </button>
 
           <div className="flex flex-col text-right ml-2 mr-2">
-            <span className="text-[12px] font-bold text-[var(--color-text-secondary)]">{docList.length} เอกสาร</span>
+            <span className="text-[12px] font-bold text-[var(--color-text-secondary)]">{docList.length} Document</span>
             {isServerSide && totalPages > 1 && (
               <span className="text-[10px] text-[var(--color-text-tertiary)]">{page} / {totalPages}</span>
             )}
@@ -320,7 +320,7 @@ export default function DocumentLayout({
             </div>
           ) : filteredDocs.length === 0 ? (
             <div className="flex items-center justify-center w-full text-[var(--color-text-tertiary)] text-xs">
-              ไม่พบเอกสาร
+              Document not found
             </div>
           ) : (
             <>
@@ -368,7 +368,7 @@ export default function DocumentLayout({
             {!docDetail && !isEditingRef ? (
               <div className="p-8 flex flex-col items-center justify-center h-full text-[var(--color-overlay-text-muted)] opacity-60 text-center">
                 <Package size={48} className="mb-4 opacity-50" />
-                <p className="text-sm font-medium">กรุณาเลือกเอกสารจากรายการด้านบน</p>
+                <p className="text-sm font-medium">Please select a document from the list above</p>
               </div>
             ) : (
               <>
@@ -396,7 +396,7 @@ export default function DocumentLayout({
                 {/* Metrics Section */}
                 <div className="p-6 flex flex-col gap-6 flex-1">
                   <div className="flex flex-col gap-1.5">
-                    <span className="text-[10px] font-bold capitalize text-[var(--color-overlay-text-muted)] opacity-60 tracking-widest">มูลค่ารวม - Total Value</span>
+                    <span className="text-[10px] font-bold capitalize text-[var(--color-overlay-text-muted)] opacity-60 tracking-widest">Total Value - Total Value</span>
                     <div className="flex items-baseline gap-2">
                       <span className="text-[22px] font-black text-[var(--color-overlay-text)] font-mono tracking-tight">
                         {Number(getHeaderValue(header, 'totalAmount') || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -406,17 +406,17 @@ export default function DocumentLayout({
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <span className="text-[10px] font-bold capitalize text-[var(--color-overlay-text-muted)] opacity-60 tracking-widest">จำนวนรวม - Quantity</span>
+                    <span className="text-[10px] font-bold capitalize text-[var(--color-overlay-text-muted)] opacity-60 tracking-widest">Total Qty - Quantity</span>
                     <div className="flex items-baseline gap-2">
                       <span className="text-[22px] font-black text-[var(--color-overlay-text)] font-mono tracking-tight">
                         {Number(getHeaderValue(header, 'totalQty') || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </span>
                     </div>
-                    <span className="text-[10px] font-medium text-[var(--color-overlay-text-muted)]">กิโลกรัม (KG)</span>
+                    <span className="text-[10px] font-medium text-[var(--color-overlay-text-muted)]">kg (KG)</span>
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <span className="text-[10px] font-bold capitalize text-[var(--color-overlay-text-muted)] opacity-60 tracking-widest">น้ำหนักสุทธิ - Net Weight</span>
+                    <span className="text-[10px] font-bold capitalize text-[var(--color-overlay-text-muted)] opacity-60 tracking-widest">Net Weight - Net Weight</span>
                     <div className="flex items-baseline gap-2">
                       <span className="text-[22px] font-black text-[var(--color-overlay-text)] font-mono tracking-tight">
                         {totalWeight.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}
@@ -428,7 +428,7 @@ export default function DocumentLayout({
                   {/* GEM INFO BOX */}
                   {lines[selectedLineIdx] && (
                     <div className="mt-auto flex flex-col pt-6 border-t border-[var(--color-overlay-border)]">
-                      <span className="text-[10px] font-bold capitalize text-[var(--color-overlay-text-muted)] opacity-60 tracking-widest mb-3">ข้อมูลพลอย - GEM</span>
+                      <span className="text-[10px] font-bold capitalize text-[var(--color-overlay-text-muted)] opacity-60 tracking-widest mb-3">Stone Info - GEM</span>
                       <div className="bg-[var(--color-overlay-control)] rounded-lg border border-[var(--color-overlay-border)] p-4 flex flex-col gap-3 shadow-inner">
                         <div className="flex flex-col">
                           <span className="text-sm font-black text-[var(--color-overlay-text)] leading-tight">
@@ -461,7 +461,7 @@ export default function DocumentLayout({
                       <div className="w-px flex-1 bg-[var(--color-overlay-border)] my-1"></div>
                     </div>
                     <div className="flex flex-col pb-2">
-                      <span className="text-xs font-bold text-[var(--color-overlay-text)] tracking-wide">สร้างเอกสาร</span>
+                      <span className="text-xs font-bold text-[var(--color-overlay-text)] tracking-wide">Create Document</span>
                       <span className="text-[11px] font-medium text-[var(--color-overlay-text-muted)] mt-0.5 font-mono">{getHeaderValue(header, 'docDate')} - 12:00</span>
                     </div>
                   </div>
@@ -493,7 +493,7 @@ export default function DocumentLayout({
                 <div className="bg-[var(--color-surface-0)] rounded-lg shadow-sm border border-[var(--color-border-light)] overflow-visible">
                   <div className="border-b border-[var(--color-border-light)] px-6 py-4 flex items-center gap-4 bg-[var(--color-surface-0)] rounded-t-lg">
                     <div className="bg-[var(--color-brand-500)] text-[var(--color-ui-on-interactive)] text-xs font-black w-8 h-8 rounded-lg flex items-center justify-center shadow-sm">01</div>
-                    <h2 className="text-base font-bold text-[var(--color-text-primary)] tracking-wide">ข้อมูลเอกสาร <span className="text-[var(--color-text-tertiary)] font-medium text-sm ml-2">Order Information</span></h2>
+                    <h2 className="text-base font-bold text-[var(--color-text-primary)] tracking-wide">Document Info <span className="text-[var(--color-text-tertiary)] font-medium text-sm ml-2">Order Information</span></h2>
                   </div>
                   <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-6">
                     {formConfig?.headerFields.map(f => {
@@ -512,7 +512,7 @@ export default function DocumentLayout({
                         onChange={e => onFieldChange?.(f.name, e.target.value)}
                         className="h-[42px] w-full rounded-lg border border-[var(--color-border-default)] bg-transparent px-3 text-[13px] font-bold text-[var(--color-text-primary)] outline-none focus:border-[var(--color-brand-500)] focus:ring-2 focus:ring-[var(--color-brand-500)]/20 disabled:bg-[var(--color-surface-1)] disabled:text-[var(--color-text-secondary)] transition-colors pt-1"
                       >
-                        <option value="">{val !== '' ? val : '-- เลือก --'}</option>
+                        <option value="">{val !== '' ? val : '-- Select --'}</option>
                         {f.options.map(o => <option key={o} value={o}>{o}</option>)}
                       </select>
                     ) : (
@@ -535,7 +535,7 @@ export default function DocumentLayout({
               <div className="bg-[var(--color-surface-0)] rounded-lg shadow-sm border border-[var(--color-border-light)] overflow-visible">
                 <div className="border-b border-[var(--color-border-light)] px-6 py-4 flex items-center gap-4 bg-[var(--color-surface-0)] rounded-t-lg">
                   <div className="bg-[var(--color-brand-500)] text-[var(--color-ui-on-interactive)] text-xs font-black w-8 h-8 rounded-lg flex items-center justify-center shadow-sm">02</div>
-                  <h2 className="text-base font-bold text-[var(--color-text-primary)] tracking-wide">ข้อมูลพลอย <span className="text-[var(--color-text-tertiary)] font-medium text-sm ml-2">Gemstone Specification</span></h2>
+                  <h2 className="text-base font-bold text-[var(--color-text-primary)] tracking-wide">Stone Info <span className="text-[var(--color-text-tertiary)] font-medium text-sm ml-2">Gemstone Specification</span></h2>
                 </div>
                 <div className="p-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-x-6 gap-y-6">
                   {formConfig.stoneFields.map(f => {
@@ -561,11 +561,11 @@ export default function DocumentLayout({
               <div className="bg-[var(--color-surface-0)] rounded-lg shadow-sm border border-[var(--color-border-light)] overflow-visible">
                 <div className="border-b border-[var(--color-border-light)] px-6 py-4 flex items-center gap-4 bg-[var(--color-surface-0)] rounded-t-lg">
                   <div className="bg-[var(--color-brand-500)] text-[var(--color-ui-on-interactive)] text-xs font-black w-8 h-8 rounded-lg flex items-center justify-center shadow-sm">03</div>
-                  <h2 className="text-base font-bold text-[var(--color-text-primary)] tracking-wide">หมายเหตุ <span className="text-[var(--color-text-tertiary)] font-medium text-sm ml-2">Notes & Remarks</span></h2>
+                  <h2 className="text-base font-bold text-[var(--color-text-primary)] tracking-wide">Remark <span className="text-[var(--color-text-tertiary)] font-medium text-sm ml-2">Notes & Remarks</span></h2>
                 </div>
                 <div className="p-6">
                   <div className="flex flex-col gap-2 relative">
-                    <label className="text-[11px] font-bold text-[var(--color-text-tertiary)] capitalize flex items-center gap-1 z-10 bg-[var(--color-surface-0)] px-1 absolute -top-2.5 left-2">หมายเหตุ 1</label>
+                    <label className="text-[11px] font-bold text-[var(--color-text-tertiary)] capitalize flex items-center gap-1 z-10 bg-[var(--color-surface-0)] px-1 absolute -top-2.5 left-2">Remark 1</label>
                     <textarea
                       value={(isEditing && editDraft['note'] !== undefined) ? editDraft['note'] : getHeaderValue(header, 'note')}
                       readOnly={!isEditing}
@@ -583,11 +583,11 @@ export default function DocumentLayout({
               <div className="border-b border-[var(--color-border-light)] px-6 py-4 flex items-center justify-between bg-[var(--color-surface-0)] rounded-t-lg">
                 <div className="flex items-center gap-4">
                   <div className="bg-[var(--color-brand-500)] text-[var(--color-ui-on-interactive)] text-xs font-black w-8 h-8 rounded-lg flex items-center justify-center shadow-sm">04</div>
-                  <h2 className="text-base font-bold text-[var(--color-text-primary)] tracking-wide">รายการสั่งซื้อ <span className="text-[var(--color-text-tertiary)] font-medium text-sm ml-2">Line Items • {lines.length} รายการ</span></h2>
+                  <h2 className="text-base font-bold text-[var(--color-text-primary)] tracking-wide">Purchase Items <span className="text-[var(--color-text-tertiary)] font-medium text-sm ml-2">Line Items • {lines.length} Item</span></h2>
                 </div>
                 {!isEditing && (
                   <button className="px-4 py-2 rounded-lg border border-[var(--color-border-default)] text-[13px] font-bold text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-1)] transition-colors flex items-center gap-1.5 shadow-sm">
-                    + เพิ่มรายการ
+                    + Add Item
                   </button>
                 )}
               </div>
@@ -626,7 +626,7 @@ export default function DocumentLayout({
                     {lines.length === 0 && (
                       <tr>
                         <td colSpan={tableColumns.length} className="py-16 text-center text-sm font-medium text-[var(--color-text-tertiary)] bg-[var(--color-surface-1)]/30 rounded-b-lg">
-                          ไม่มีรายการสินค้า
+                          No items
                         </td>
                       </tr>
                     )}
@@ -655,7 +655,7 @@ export default function DocumentLayout({
         >
           <div className="w-full flex items-center justify-between border-b border-[var(--color-border-light)] pb-2 mb-3">
             <div className="flex flex-col">
-              <span className="text-[10px] font-extrabold capitalize tracking-wider text-[var(--color-text-tertiary)]">เปรียบเทียบรูปชิ้นงานและแบบต้นแบบ (PS vs CAD)</span>
+              <span className="text-[10px] font-extrabold capitalize tracking-wider text-[var(--color-text-tertiary)]">Compare real photo and prototype (PS vs CAD)</span>
               <span className="text-base font-black text-[var(--color-text-primary)] font-mono">{activeItemNo}</span>
             </div>
             <button
@@ -668,13 +668,13 @@ export default function DocumentLayout({
           <div className="flex-1 w-full grid grid-cols-1 md:grid-cols-2 gap-4 min-h-[350px] md:min-h-[500px] lg:min-h-[600px] overflow-hidden">
             <div className="flex flex-col border border-[var(--color-border-light)] rounded-lg bg-[var(--color-surface-1)] overflow-hidden">
               <div className="bg-[var(--color-surface-2)] px-3 py-1.5 border-b border-[var(--color-border-light)] font-bold text-[11px] text-[var(--color-text-primary)] flex justify-between items-center">
-                <span>PS (รูปถ่ายชิ้นงานจริง)</span>
+                <span>PS (Real Item Photo)</span>
                 <span className="text-[9px] font-black capitalize bg-[var(--color-success-500)]/10 text-[var(--color-success-600)] border border-[var(--color-success-500)]/20 px-2 py-0.5 rounded">REAL PHOTO</span>
               </div>
               <div className="flex-1 p-3 flex items-center justify-center overflow-hidden min-h-[250px] bg-[var(--color-surface-2)]/30">
                 {psLoading ? (
                   <div className="flex items-center gap-2 text-xs text-[var(--color-text-tertiary)]">
-                    <RefreshCw size={14} className="animate-spin" /> โหลดรูป PS...
+                    <RefreshCw size={14} className="animate-spin" /> Load Photo PS...
                   </div>
                 ) : psUrl ? (
                   <img src={psUrl} alt="PS Item" className="max-w-full max-h-[62vh] object-contain rounded drop-shadow-md select-none" />
@@ -683,7 +683,7 @@ export default function DocumentLayout({
                     <div className="w-20 h-20 border-2 border-dashed border-[var(--color-border-light)] rounded-lg flex items-center justify-center bg-[var(--color-surface-1)]">
                       <span className="opacity-50 font-bold">NO PS</span>
                     </div>
-                    <span>ไม่พบรูปชิ้นงานจริง</span>
+                    <span>Real photo not found</span>
                   </div>
                 )}
               </div>
@@ -691,13 +691,13 @@ export default function DocumentLayout({
 
             <div className="flex flex-col border border-[var(--color-border-light)] rounded-lg bg-[var(--color-surface-1)] overflow-hidden">
               <div className="bg-[var(--color-surface-2)] px-3 py-1.5 border-b border-[var(--color-border-light)] font-bold text-[11px] text-[var(--color-text-primary)] flex justify-between items-center">
-                <span>CAD (แบบดีไซน์ 3D / แม่พิมพ์)</span>
+                <span>CAD (Design 3D / Mold)</span>
                 <span className="text-[9px] font-black capitalize bg-[var(--color-brand-500)]/10 text-[var(--color-brand-600)] border border-[var(--color-brand-500)]/20 px-2 py-0.5 rounded">3D BLUEPRINT</span>
               </div>
               <div className="flex-1 p-3 flex items-center justify-center overflow-hidden min-h-[250px] bg-[var(--color-surface-2)]/30">
                 {cadLoading ? (
                   <div className="flex items-center gap-2 text-xs text-[var(--color-text-tertiary)]">
-                    <RefreshCw size={14} className="animate-spin" /> โหลดแบบ CAD...
+                    <RefreshCw size={14} className="animate-spin" /> Load Design CAD...
                   </div>
                 ) : cadUrl ? (
                   <img src={cadUrl} alt="CAD Item" className="max-w-full max-h-[62vh] object-contain rounded drop-shadow-md select-none" />
@@ -706,7 +706,7 @@ export default function DocumentLayout({
                     <div className="w-20 h-20 border-2 border-dashed border-[var(--color-border-light)] rounded-lg flex items-center justify-center bg-[var(--color-surface-1)]">
                       <span className="opacity-50 font-bold">NO CAD</span>
                     </div>
-                    <span>ไม่พบแบบดีไซน์ CAD (Mold)</span>
+                    <span>Design not found CAD (Mold)</span>
                   </div>
                 )}
               </div>
@@ -714,9 +714,9 @@ export default function DocumentLayout({
           </div>
 
           <div className="w-full mt-3 pt-2 border-t border-[var(--color-border-light)] flex items-center justify-between text-xs text-[var(--color-text-tertiary)]">
-            <span>เบอร์งาน: <strong className="font-mono text-[var(--color-text-primary)] font-extrabold">{activeItemNo}</strong></span>
-            <span>พลอย: <strong className="text-[var(--color-text-primary)] font-extrabold">{lines[selectedLineIdx]?.GoodCode || '—'}</strong></span>
-            <span>จำนวนใช้พลอย: <strong className="text-[var(--color-text-primary)] font-extrabold">{lines[selectedLineIdx]?.GoodQty || lines[selectedLineIdx]?.ItemQty || 0}</strong></span>
+            <span>Item No: <strong className="font-mono text-[var(--color-text-primary)] font-extrabold">{activeItemNo}</strong></span>
+            <span>Stone: <strong className="text-[var(--color-text-primary)] font-extrabold">{lines[selectedLineIdx]?.GoodCode || '—'}</strong></span>
+            <span>Stone Usage Qty: <strong className="text-[var(--color-text-primary)] font-extrabold">{lines[selectedLineIdx]?.GoodQty || lines[selectedLineIdx]?.ItemQty || 0}</strong></span>
           </div>
         </div>
       </div>

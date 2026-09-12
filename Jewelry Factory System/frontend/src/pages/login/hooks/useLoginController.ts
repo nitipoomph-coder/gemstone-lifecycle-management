@@ -5,15 +5,13 @@ import { authAPI } from '../../../services/authAPI';
 import {
   BACKGROUND_IMAGES,
   EMPTY_REGISTRATION,
-  LOGIN_COPY,
-  type LoginLanguage,
+  LOGIN_TEXT,
   type RegistrationValues,
 } from '../login.constants';
 
 export function useLoginController() {
   const navigate = useNavigate();
   const { showToast } = useToast();
-  const [language, setLanguage] = useState<LoginLanguage>('EN');
   const [backgroundIndex, setBackgroundIndex] = useState(0);
   const [isRequestAccess, setIsRequestAccess] = useState(false);
 
@@ -29,7 +27,7 @@ export function useLoginController() {
   const [adminPassword, setAdminPassword] = useState('');
   const [isAdminLoading, setIsAdminLoading] = useState(false);
 
-  const copy = LOGIN_COPY[language];
+  const copy = LOGIN_TEXT;
 
   useEffect(() => {
     localStorage.setItem('app-theme', 'royal-white');
@@ -131,7 +129,6 @@ export function useLoginController() {
     isAdminLoading,
     isLoading,
     isRequestAccess,
-    language,
     password,
     registration,
     showAdminModal,
@@ -147,7 +144,6 @@ export function useLoginController() {
     openForgotModal: () => setShowForgotModal(true),
     returnToLogin: () => setIsRequestAccess(false),
     setAdminPassword,
-    setLanguage,
     setPassword,
     setUsername,
     togglePasswordVisibility: () => setShowPassword((current) => !current),

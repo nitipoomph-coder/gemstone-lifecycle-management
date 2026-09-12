@@ -99,7 +99,7 @@ function SVGLineChart({
   const points1: { x: number; y: number; val: number; label: string }[] = [];
   const points2: { x: number; y: number; val: number; label: string }[] = [];
 
-  const marginX = 40; // ระยะห่างด้านซ้าย-ขวา เพื่อไม่ให้ตัวเลขกราฟจุดแรกและจุดสุดท้ายชนกับแกน Y และขอบขวา
+  const marginX = 40; // ระยะห่างด้านซ้าย-ขวา เพื่อไม่ให้ตัวเลขกราฟจุดแรกandจุดสุดท้ายชนกับแกน Y andขอบขวา
   monthly.forEach((m, i) => {
     const x = paddingLeft + marginX + (i / (N - 1)) * (chartWidth - 2 * marginX);
     
@@ -419,7 +419,7 @@ function SVGLineChart({
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, color: 'var(--color-overlay-text-muted)' }}>
                 <span style={{ width: 8, height: 8, borderRadius: '50%', background: accentColor, display: 'inline-block' }} />
-                {cardType === 'today' ? 'Daily Actual' : `ปี ${year1}`}
+                {cardType === 'today' ? 'Daily Actual' : `Year ${year1}`}
               </span>
               <span style={{ fontWeight: 900, color: accentColor, fontFamily: 'var(--font-sans)', fontSize: '0.85rem' }}>
                 {hoveredPoint1.val.toLocaleString()}
@@ -432,7 +432,7 @@ function SVGLineChart({
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, color: 'var(--color-overlay-text-muted)' }}>
                 <span style={{ width: 8, height: 8, borderRadius: '50%', border: `1.5px dashed color-mix(in srgb, ${accentColor} 60%, var(--color-overlay-text))`, display: 'inline-block', background: 'var(--color-overlay-control)' }} />
-                {cardType === 'today' ? '7d Average' : `ปี ${year2}`}
+                {cardType === 'today' ? '7d Average' : `Year ${year2}`}
               </span>
               <span style={{ fontWeight: 900, color: 'var(--color-overlay-text)', fontFamily: 'var(--font-sans)', fontSize: '0.85rem' }}>
                 {hoveredPoint2.val.toLocaleString()}
@@ -443,7 +443,7 @@ function SVGLineChart({
           {/* Comparison / Difference if both points are valid */}
           {hoveredPoint1 && hoveredPoint2 && (
             <div style={{ borderTop: '1px solid var(--color-overlay-border)', paddingTop: '6px', marginTop: '2px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontWeight: 700, color: 'var(--color-overlay-text-muted)', fontSize: '0.68rem' }}>ผลต่าง (Diff)</span>
+              <span style={{ fontWeight: 700, color: 'var(--color-overlay-text-muted)', fontSize: '0.68rem' }}>Diff (Diff)</span>
               {(() => {
                 const diffVal = hoveredPoint1.val - hoveredPoint2.val;
                 const pct = hoveredPoint2.val > 0 ? +((diffVal / hoveredPoint2.val) * 100).toFixed(1) : 0;
@@ -535,7 +535,7 @@ export default function CardDetailPanel({ cardType, selectedYear, onClose }: { c
               {cardType === 'today' 
                 ? `${meta.title} — Moving Average` 
                 : cardType === 'wip'
-                ? `WIP by Customer (งานค้างตามรายชื่อลูกค้า)`
+                ? `WIP by Customer (Pending by Customer)`
                 : `${meta.title} — Year Comparison`
               }
             </h3>
@@ -559,7 +559,7 @@ export default function CardDetailPanel({ cardType, selectedYear, onClose }: { c
           ) : (
             <div style={{ display:'flex', alignItems:'center', gap:8, padding:'6px 12px', borderRadius:14, background:'var(--color-surface-1)', border:'1px solid var(--color-border-light)' }}>
               <Calendar size={14} style={{ color:'var(--color-text-tertiary)' }}/>
-              <span style={{ fontSize:'0.72rem', fontWeight:800, color:'var(--color-text-secondary)' }}>เปรียบเทียบกับปี:</span>
+              <span style={{ fontSize:'0.72rem', fontWeight:800, color:'var(--color-text-secondary)' }}>Compare with year:</span>
               <select value={compareYear} onChange={e => setCompareSelection({ baseYear: extYear, year: +e.target.value })} style={{ border:'none', background:'transparent', fontSize:'0.8rem', fontWeight:800, color: meta.accent, outline:'none', cursor:'pointer' }}>
                 {years.map(y => <option key={y} value={y}>{y}</option>)}
               </select>
@@ -690,7 +690,7 @@ export default function CardDetailPanel({ cardType, selectedYear, onClose }: { c
                     }} />
                   </div>
                   <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--color-text-secondary)', textTransform: 'capitalize', letterSpacing: '0.04em' }}>
-                    แสดงตัวเลข (Show Labels)
+                    Show Numbers (Show Labels)
                   </span>
                 </label>
 
@@ -715,13 +715,13 @@ export default function CardDetailPanel({ cardType, selectedYear, onClose }: { c
                       <svg width="20" height="6" style={{ overflow:'visible', display:'inline-block' }}>
                         <line x1="0" y1="3" x2="20" y2="3" stroke={meta.accent} strokeWidth="3" strokeLinecap="round"/>
                       </svg>
-                      ปี {year1}
+                      Year {year1}
                     </span>
                     <span style={{ display:'flex', alignItems:'center', gap:8, fontSize:'0.65rem', fontWeight:700, color:'var(--color-text-tertiary)' }}>
                       <svg width="20" height="6" style={{ overflow:'visible', display:'inline-block' }}>
                         <line x1="0" y1="3" x2="20" y2="3" stroke={`color-mix(in srgb, ${meta.accent} 42%, transparent)`} strokeWidth="2.2" strokeDasharray="3 3" strokeLinecap="round"/>
                       </svg>
-                      ปี {year2}
+                      Year {year2}
                     </span>
                   </div>
                 )}

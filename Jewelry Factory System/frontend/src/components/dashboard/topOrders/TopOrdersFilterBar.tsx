@@ -43,6 +43,9 @@ interface TopOrdersFilterBarProps {
   analyticsPath?: string;
   productType: string;
   setProductType: (type: string) => void;
+  selTypes?: string[];
+  setSelTypes?: (types: string[]) => void;
+  toggleType?: (type: string) => void;
   searchDraft: string;
   setSearchDraft: (v: string) => void;
   searchQuery: string;
@@ -73,6 +76,9 @@ interface TopOrdersFilterBarProps {
 export function TopOrdersFilterBar({
   productType,
   setProductType,
+  selTypes,
+  setSelTypes,
+  toggleType,
   searchDraft,
   setSearchDraft,
   searchQuery,
@@ -109,6 +115,31 @@ export function TopOrdersFilterBar({
   const activeCustomerGroups = ALL_GROUPS.filter(g => g.id !== 'N083');
   const inactiveCustomerGroups = ALL_GROUPS.filter(g => g.id === 'N083');
 
+  const typeOptions = PRODUCT_TYPE_OPTIONS.filter(opt => opt.value !== 'ALL');
+  const activeTypes = selTypes ?? (productType && productType !== 'ALL' ? productType.split(',') : []);
+
+  const handleToggleType = (val: string) => {
+    startFilterTransition();
+    if (toggleType) {
+      toggleType(val);
+    } else if (setSelTypes) {
+      setSelTypes(activeTypes.includes(val) ? activeTypes.filter(t => t !== val) : [...activeTypes, val]);
+    } else if (setProductType) {
+      const next = activeTypes.includes(val) ? activeTypes.filter(t => t !== val) : [...activeTypes, val];
+      setProductType(next.length === 0 ? 'ALL' : next.join(','));
+    }
+  };
+
+  const handleSelectAllTypes = () => {
+    startFilterTransition();
+    const next = activeTypes.length === typeOptions.length ? [] : typeOptions.map(t => t.value);
+    if (setSelTypes) {
+      setSelTypes(next);
+    } else if (setProductType) {
+      setProductType(next.length === 0 ? 'ALL' : next.join(','));
+    }
+  };
+
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
       if (yearMenuRef.current && !yearMenuRef.current.contains(e.target as Node)) {
@@ -138,11 +169,9 @@ export function TopOrdersFilterBar({
   };
 
   const openPeriodMenu = () => {
-    if (showYearMenu) {
-      setShowYearMenu(false);
-      return;
+    if (!periodDraft) {
+      setPeriodDraft(buildPeriodDraft());
     }
-    setPeriodDraft(buildPeriodDraft());
     setShowYearMenu(true);
   };
 
@@ -157,11 +186,9 @@ export function TopOrdersFilterBar({
     return selectedPeriodLabel === 'Full Year' ? 'Full Year' : 'Custom';
   })();
 
-  const currentTypeOption = PRODUCT_TYPE_OPTIONS.find(p => p.value === productType) || PRODUCT_TYPE_OPTIONS[0];
-
   return (
     <div className="sales-gallery-topbar-tools flex min-w-0 flex-1 items-center gap-2 pr-2">
-      {/* Perspective Toggle: Combined (รวมสะสม) vs Compare (เทียบปี) */}
+      {/* Perspective Toggle: Combined (รวมสะสม) vs Compare (เทียบYear) */}
       <div className="flex items-center gap-1.5 shrink-0">
         <ErpSegmentedControl
           ariaLabel="Perspective Mode"
@@ -179,13 +206,11 @@ export function TopOrdersFilterBar({
         />
         {perspectiveMode === 'compare' && (
           <span
-            role="status"
             style={{
               padding: '2px 8px',
-              height: 24,
               borderRadius: 6,
-              background: 'var(--color-ui-selected)',
-              color: 'var(--color-ui-interactive)',
+              background: 'var(--color-surface-0)',
+              color: 'var(--color-text-secondary)',
               fontWeight: 800,
               fontSize: 'var(--erp-text-control)',
               border: '1px solid var(--color-border-light)',
@@ -199,7 +224,7 @@ export function TopOrdersFilterBar({
         )}
       </div>
 
-      {/* Product Type Custom Dropdown Selector */}
+      {/* Product Type Multi-Select Dropdown Popover */}
       <div className="relative z-[100]" ref={typeMenuRef}>
         <button
           type="button"
@@ -208,26 +233,24 @@ export function TopOrdersFilterBar({
             display: 'flex',
             alignItems: 'center',
             gap: 6,
-            padding: '6px 11px',
-            background: showTypeMenu || productType !== 'ALL' ? 'var(--color-brand-50)' : 'var(--color-surface-0)',
-            border: `1px solid ${showTypeMenu || productType !== 'ALL' ? 'var(--color-brand-400)' : 'var(--color-border-light)'}`,
-            borderRadius: 8,
-            fontSize: '0.82rem',
-            fontWeight: 800,
-            color: showTypeMenu || productType !== 'ALL' ? 'var(--color-brand-700)' : 'var(--color-text-primary)',
+            padding: '6px 10px',
+            background: showTypeMenu ? 'var(--color-surface-2)' : 'transparent',
+            border: 'none',
+            borderRadius: 6,
+            fontSize: '0.85rem',
+            fontWeight: 900,
+            color: 'var(--color-text-primary)',
             cursor: 'pointer',
             whiteSpace: 'nowrap',
             fontFamily: 'var(--font-display)',
-            boxShadow: '0 2px 4px color-mix(in srgb, var(--color-surface-900) 3%, transparent)',
-            transition: 'all 0.15s ease'
+            transition: 'background 0.15s'
           }}
-          className="hover:bg-[var(--color-surface-1)] hover:border-[var(--color-border-default)]"
+          className="hover:bg-[var(--color-surface-1)]"
         >
-          <Tag size={13} style={{ color: 'var(--color-brand-600)' }} />
-          <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.74rem', fontWeight: 700 }}>Type:</span>
-          <span>{currentTypeOption.label}</span>
+          <Tag size={14} style={{ color: 'var(--color-brand-500)' }} />
+          <span>Type: <strong>{activeTypes.length}/{typeOptions.length}</strong></span>
           <ChevronDown
-            size={13}
+            size={14}
             style={{
               color: 'var(--color-text-tertiary)',
               transform: showTypeMenu ? 'rotate(180deg)' : 'none',
@@ -239,47 +262,66 @@ export function TopOrdersFilterBar({
         {showTypeMenu && (
           <div
             className="sales-summary-popover"
-            style={{ width: 230, right: 0, left: 'auto', zIndex: 110, padding: 8 }}
+            style={{ width: 250, right: 0, left: 'auto', zIndex: 110, padding: 8 }}
           >
-            <div style={{ padding: '4px 8px 8px', fontSize: 'var(--erp-text-meta)', fontWeight: 800, color: 'var(--color-text-tertiary)', textTransform: 'uppercase', borderBottom: '1px solid var(--color-border-light)', marginBottom: 6 }}>
-              Product Type (หมวดสินค้า)
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, paddingBottom: 6, borderBottom: '1px solid var(--color-border-light)' }}>
+              <span style={{ fontWeight: 900, fontSize: 'var(--erp-text-control)', color: 'var(--color-text-primary)' }}>
+                Product Types
+              </span>
+              <button
+                type="button"
+                onClick={handleSelectAllTypes}
+                style={{
+                  fontSize: 'var(--erp-text-meta)',
+                  fontWeight: 800,
+                  background: 'none',
+                  border: 'none',
+                  color: activeTypes.length === typeOptions.length ? 'var(--color-danger-500)' : 'var(--color-ui-interactive)',
+                  cursor: 'pointer'
+                }}
+              >
+                {activeTypes.length === typeOptions.length ? 'None' : 'All'}
+              </button>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              {PRODUCT_TYPE_OPTIONS.map((opt) => {
-                const active = productType === opt.value;
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {typeOptions.map((opt) => {
+                const on = activeTypes.includes(opt.value);
                 return (
                   <button
                     key={opt.value}
                     type="button"
-                    onClick={() => {
-                      startFilterTransition();
-                      setProductType(opt.value);
-                      setShowTypeMenu(false);
-                    }}
+                    onClick={() => handleToggleType(opt.value)}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
-                      padding: '7px 10px',
+                      padding: '6px 10px',
                       borderRadius: 6,
-                      fontSize: '0.8rem',
+                      fontSize: 'var(--erp-text-control)',
                       fontWeight: 800,
-                      border: `1px solid ${active ? 'var(--color-brand-400)' : 'transparent'}`,
-                      background: active ? 'var(--color-brand-50)' : 'transparent',
-                      color: active ? 'var(--color-brand-600)' : 'var(--color-text-primary)',
+                      border: `1px solid ${on ? 'var(--color-brand-500)' : 'var(--color-border-light)'}`,
+                      background: on ? 'var(--color-brand-50)' : 'var(--color-surface-1)',
+                      color: on ? 'var(--color-brand-600)' : 'var(--color-text-tertiary)',
                       cursor: 'pointer',
                       textAlign: 'left',
                       transition: 'all 0.15s'
                     }}
                     className="hover:bg-[var(--color-surface-2)]"
                   >
-                    <span>
-                      {opt.label}{' '}
-                      <span style={{ fontSize: '0.72rem', color: 'var(--color-text-tertiary)', fontWeight: 600 }}>
-                        ({opt.fullLabel})
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <input
+                        type="checkbox"
+                        checked={on}
+                        onChange={() => {}}
+                        style={{ accentColor: 'var(--color-brand-600)', cursor: 'pointer', margin: 0 }}
+                      />
+                      <span>
+                        {opt.label}{' '}
+                        <span style={{ fontSize: '0.72rem', color: on ? 'var(--color-brand-700)' : 'var(--color-text-tertiary)', fontWeight: 600 }}>
+                          ({opt.fullLabel})
+                        </span>
                       </span>
-                    </span>
-                    {active && <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--color-brand-500)' }} />}
+                    </div>
                   </button>
                 );
               })}

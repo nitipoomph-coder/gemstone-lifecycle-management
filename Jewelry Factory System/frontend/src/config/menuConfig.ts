@@ -2,7 +2,7 @@ import type { NavMenuGroup } from '../types';
 
 
 export const menuConfig: NavMenuGroup[] = [
-  // ── ภาพรวม ──
+  // ── Overview ──
   {
     id: 'home',
     label: 'Factory Overview',
@@ -10,7 +10,7 @@ export const menuConfig: NavMenuGroup[] = [
     path: '/',
     accentColor: 'var(--color-brand-500)',
     roles: ['admin'],
-    section: 'ภาพรวม',
+    section: 'Overview',
   },
   {
     id: 'sales-dashboard',
@@ -18,7 +18,7 @@ export const menuConfig: NavMenuGroup[] = [
     icon: 'trending-up',
     accentColor: 'var(--color-brand-500)',
     roles: ['admin', 'sales'],
-    section: 'ภาพรวม',
+    section: 'Overview',
     items: [
       { id: 'dash-cust', label: 'Sales Summary', path: '/dashboard/customer' },
       { id: 'dash-matrix', label: 'Customer Report Matrix', path: '/dashboard/customer/matrix' },
@@ -28,14 +28,14 @@ export const menuConfig: NavMenuGroup[] = [
     ],
   },
 
-  // ── การผลิตและจัดซื้อ ──
+  // ── Production and Procurement ──
   {
     id: 'order-tracker',
     label: 'Production',
     icon: 'layout-list',
     accentColor: 'var(--color-brand-500)',
     roles: ['admin', 'sales'],
-    section: 'การผลิตและจัดซื้อ',
+    section: 'Production and Procurement',
     items: [
       { id: 'po-tracker', label: 'PO Tracker', path: '/po-tracker' },
       { id: 'pro-sum', label: 'Production Summary', path: '/dashboard/production-summary' },
@@ -49,7 +49,7 @@ export const menuConfig: NavMenuGroup[] = [
     icon: 'handshake',
     accentColor: 'var(--color-brand-500)',
     roles: ['admin'],
-    section: 'การผลิตและจัดซื้อ',
+    section: 'Production and Procurement',
     items: [
       { id: 'sub-vendor-performance', label: 'Vendor Performance Dashboard', path: '/subcontract/vendor-performance', roles: ['admin'] },
       { id: 'sub-vendor-price', label: 'Vendor Price History', path: '/subcontract/vendor-price-history' },
@@ -62,7 +62,7 @@ export const menuConfig: NavMenuGroup[] = [
     icon: 'package-check',
     accentColor: 'var(--color-brand-500)',
     roles: ['admin'],
-    section: 'การผลิตและจัดซื้อ',
+    section: 'Production and Procurement',
     items: [
       { id: 'spa', label: 'Gem Purchase Order', code: 'SPA', path: '/procurement/purchase' },
       { id: 'sra', label: 'Gem Receipt', code: 'SRA', path: '/procurement/receive' },
@@ -76,7 +76,7 @@ export const menuConfig: NavMenuGroup[] = [
     icon: 'clipboard-list',
     accentColor: 'var(--color-brand-500)',
     roles: ['admin'],
-    section: 'การผลิตและจัดซื้อ',
+    section: 'Production and Procurement',
     items: [
       { id: 'soa', label: 'Gem Order', code: 'SOA', path: '/orders/create' },
       { id: 'sia', label: 'Gem Issue', code: 'SIA', path: '/orders/issue' },
@@ -91,21 +91,21 @@ export const menuConfig: NavMenuGroup[] = [
     icon: 'flask-conical',
     accentColor: 'var(--color-brand-500)',
     roles: ['admin'],
-    section: 'การผลิตและจัดซื้อ',
+    section: 'Production and Procurement',
     items: [
       { id: 'ssa', label: 'Sample Request', code: 'SSA', path: '/sample/order' },
       { id: 'sim', label: 'Sample Dispatch', code: 'SIM', path: '/sample/dispatch' },
     ],
   },
 
-  // ── คลังและอะไหล่ ──
+  // ── Warehouse and Parts ──
   {
     id: 'inventory',
     label: 'Inventory Control',
     icon: 'bar-chart-3',
     accentColor: 'var(--color-brand-500)',
     roles: ['admin'],
-    section: 'คลังและอะไหล่',
+    section: 'Warehouse and Parts',
     items: [
       { id: 'check-dispatch', label: 'Check Dispatch for Order', path: '/inventory/check-dispatch' },
       { id: 'check-sample', label: 'Check Sample Issue', path: '/inventory/check-sample' },
@@ -121,7 +121,7 @@ export const menuConfig: NavMenuGroup[] = [
     icon: 'wrench',
     accentColor: 'var(--color-brand-500)',
     roles: ['admin'],
-    section: 'คลังและอะไหล่',
+    section: 'Warehouse and Parts',
     items: [
       { id: 'sp-order', label: 'Spare Parts Order', path: '/spare-parts/order' },
       { id: 'sp-issue', label: 'Spare Parts Issue', path: '/spare-parts/issue' },

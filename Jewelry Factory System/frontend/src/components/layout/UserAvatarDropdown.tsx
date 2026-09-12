@@ -105,17 +105,17 @@ export default function UserAvatarDropdown() {
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editName.trim()) {
-      setProfileError('กรุณากรอกชื่อผู้ใช้');
+      setProfileError('Please enter username');
       return;
     }
 
     if (!editDeskPhone.trim()) {
-      setProfileError('กรุณากรอกเบอร์โทรศัพท์โต๊ะ');
+      setProfileError('Please enter desk phone');
       return;
     }
 
     if (!isValidDeskPhone(editDeskPhone)) {
-      setProfileError('รูปแบบเบอร์โทรศัพท์โต๊ะไม่ถูกต้อง (เช่น 02-123-4567)');
+      setProfileError('Invalid desk phone format (e.g. 02-123-4567)');
       return;
     }
 
@@ -138,10 +138,10 @@ export default function UserAvatarDropdown() {
       setUserName(editName.trim());
       setDeskPhone(editDeskPhone.trim());
 
-      showToast('บันทึกข้อมูลผู้ใช้เรียบร้อยแล้ว', 'success');
+      showToast('User profile saved successfully', 'success');
       setShowProfileModal(false);
     } catch (err: any) {
-      setProfileError(err?.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+      setProfileError(err?.message || 'Error saving data');
     } finally {
       setIsSubmittingProfile(false);
     }
@@ -151,15 +151,15 @@ export default function UserAvatarDropdown() {
   const handleSavePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentPassword) {
-      setPasswordError('กรุณาระบุรหัสผ่านปัจจุบัน');
+      setPasswordError('Please enter current password');
       return;
     }
     if (newPassword.length < 6) {
-      setPasswordError('รหัสผ่านใหม่ต้องมีความยาวอย่างน้อย 6 ตัวอักษร');
+      setPasswordError('New password must be at least 6 characters');
       return;
     }
     if (newPassword !== confirmPassword) {
-      setPasswordError('รหัสผ่านใหม่และการยืนยันรหัสผ่านไม่ตรงกัน');
+      setPasswordError('Passwords do not match');
       return;
     }
 
@@ -176,10 +176,10 @@ export default function UserAvatarDropdown() {
       // });
       await new Promise(resolve => setTimeout(resolve, 500)); // Mock network delay
 
-      showToast('เปลี่ยนรหัสผ่านสำเร็จแล้ว', 'success');
+      showToast('Password changed successfully', 'success');
       setShowPasswordModal(false);
     } catch (err: any) {
-      setPasswordError(err?.message || 'ไม่สามารถเปลี่ยนรหัสผ่านได้ กรุณาตรวจสอบรหัสผ่านปัจจุบัน');
+      setPasswordError(err?.message || 'Cannot change password. Check current password.');
     } finally {
       setIsSubmittingPassword(false);
     }
@@ -194,7 +194,7 @@ export default function UserAvatarDropdown() {
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-2 rounded-lg py-1 px-1.5 sm:px-2 border-none bg-transparent hover:bg-[var(--color-surface-2)] transition-colors cursor-pointer outline-none group"
-        title={`โปรไฟล์: ${userName} (${role})`}
+        title={`Profile: ${userName} (${role})`}
         aria-label="User profile menu"
       >
         <div
@@ -249,7 +249,7 @@ export default function UserAvatarDropdown() {
               {deskPhone && (
                 <div className="text-[11px] text-[var(--color-text-tertiary)] flex items-center gap-1.5 mt-1 truncate">
                   <Phone size={11} className="shrink-0" />
-                  <span className="truncate">โต๊ะ: {deskPhone}</span>
+                  <span className="truncate">Desk: {deskPhone}</span>
                 </div>
               )}
             </div>
@@ -263,7 +263,7 @@ export default function UserAvatarDropdown() {
               className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-semibold text-[var(--color-text-primary)] hover:bg-[var(--color-surface-2)] transition-colors border-none bg-transparent cursor-pointer text-left"
             >
               <UserPen size={15} className="text-[var(--color-text-secondary)]" />
-              <span>แก้ไขชื่อและเบอร์โทรศัพท์โต๊ะ</span>
+              <span>Edit name and desk phone</span>
             </button>
 
             <button
@@ -272,7 +272,7 @@ export default function UserAvatarDropdown() {
               className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-semibold text-[var(--color-text-primary)] hover:bg-[var(--color-surface-2)] transition-colors border-none bg-transparent cursor-pointer text-left"
             >
               <KeyRound size={15} className="text-[var(--color-text-secondary)]" />
-              <span>แก้ไขรหัสผ่าน</span>
+              <span>Change Password</span>
             </button>
           </div>
 
@@ -285,7 +285,7 @@ export default function UserAvatarDropdown() {
             className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-bold text-[var(--color-danger-500)] hover:bg-[var(--color-danger-50)] transition-colors border-none bg-transparent cursor-pointer text-left"
           >
             <LogOut size={15} />
-            <span>ออกจากระบบ (Logout)</span>
+            <span>Logout (Logout)</span>
           </button>
         </div>
       )}
@@ -302,7 +302,7 @@ export default function UserAvatarDropdown() {
               <div className="flex items-center gap-2">
                 <UserPen size={18} className="text-[var(--color-brand-600)]" />
                 <h2 className="text-sm font-bold text-[var(--color-text-primary)] m-0">
-                  แก้ไขข้อมูลผู้ใช้
+                  Edit Profile
                 </h2>
               </div>
               <button
@@ -324,14 +324,14 @@ export default function UserAvatarDropdown() {
               {/* User Name Field */}
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-bold text-[var(--color-text-secondary)]">
-                  ชื่อผู้ใช้ (Name / Username)
+                  Username (Name / Username)
                 </label>
                 <input
                   type="text"
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
                   className="rounded-lg border border-[var(--color-border-light)] bg-[var(--color-surface-1)] px-3 py-2 text-xs text-[var(--color-text-primary)] outline-none focus:border-[var(--color-brand-500)] focus:ring-1 focus:ring-[var(--color-brand-500)]"
-                  placeholder="กรอกชื่อของคุณ"
+                  placeholder="Enter your name"
                   required
                 />
               </div>
@@ -339,7 +339,7 @@ export default function UserAvatarDropdown() {
               {/* Desk Phone Field */}
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-bold text-[var(--color-text-secondary)]">
-                  เบอร์โทรศัพท์โต๊ะ (Desk Phone)
+                  Desk Phone (Desk Phone)
                 </label>
                 <div className="relative">
                   <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)]">
@@ -350,12 +350,12 @@ export default function UserAvatarDropdown() {
                     value={editDeskPhone}
                     onChange={(e) => setEditDeskPhone(e.target.value)}
                     className="w-full rounded-lg border border-[var(--color-border-light)] bg-[var(--color-surface-1)] pl-8 pr-3 py-2 text-xs text-[var(--color-text-primary)] outline-none focus:border-[var(--color-brand-500)] focus:ring-1 focus:ring-[var(--color-brand-500)]"
-                    placeholder="เช่น 02-123-4567"
+                    placeholder="e.g. 02-123-4567"
                     required
                   />
                 </div>
                 <span className="text-[10px] text-[var(--color-text-tertiary)]">
-                  * ระบุเบอร์โทรศัพท์โต๊ะทำงาน เช่น 02-123-4567
+                  * Enter desk phone e.g. 02-123-4567
                 </span>
               </div>
 
@@ -366,14 +366,14 @@ export default function UserAvatarDropdown() {
                   onClick={() => setShowProfileModal(false)}
                   className="rounded-lg border border-[var(--color-border-light)] bg-[var(--color-surface-1)] px-3.5 py-2 text-xs font-semibold text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-2)] cursor-pointer"
                 >
-                  ยกเลิก
+                  Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmittingProfile}
                   className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--color-brand-500)] px-4 py-2 text-xs font-bold text-[var(--color-ui-on-interactive)] hover:bg-[var(--color-brand-600)] transition-colors cursor-pointer disabled:opacity-50 border-none"
                 >
-                  <Check size={14} /> {isSubmittingProfile ? 'กำลังบันทึก...' : 'บันทึกข้อมูล'}
+                  <Check size={14} /> {isSubmittingProfile ? 'Saving...' : 'Save Data'}
                 </button>
               </div>
             </form>
@@ -393,7 +393,7 @@ export default function UserAvatarDropdown() {
               <div className="flex items-center gap-2">
                 <KeyRound size={18} className="text-[var(--color-brand-600)]" />
                 <h2 className="text-sm font-bold text-[var(--color-text-primary)] m-0">
-                  แก้ไขรหัสผ่าน
+                  Change Password
                 </h2>
               </div>
               <button
@@ -415,14 +415,14 @@ export default function UserAvatarDropdown() {
               {/* Current Password */}
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-bold text-[var(--color-text-secondary)]">
-                  รหัสผ่านปัจจุบัน (Current Password)
+                  Current Password (Current Password)
                 </label>
                 <input
                   type="password"
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
                   className="rounded-lg border border-[var(--color-border-light)] bg-[var(--color-surface-1)] px-3 py-2 text-xs text-[var(--color-text-primary)] outline-none focus:border-[var(--color-brand-500)] focus:ring-1 focus:ring-[var(--color-brand-500)]"
-                  placeholder="กรอกรหัสผ่านปัจจุบัน"
+                  placeholder="Enter current password"
                   required
                 />
               </div>
@@ -430,14 +430,14 @@ export default function UserAvatarDropdown() {
               {/* New Password */}
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-bold text-[var(--color-text-secondary)]">
-                  รหัสผ่านใหม่ (New Password)
+                  New Password (New Password)
                 </label>
                 <input
                   type="password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   className="rounded-lg border border-[var(--color-border-light)] bg-[var(--color-surface-1)] px-3 py-2 text-xs text-[var(--color-text-primary)] outline-none focus:border-[var(--color-brand-500)] focus:ring-1 focus:ring-[var(--color-brand-500)]"
-                  placeholder="อย่างน้อย 6 ตัวอักษร"
+                  placeholder="at least 6 chars"
                   required
                 />
               </div>
@@ -445,14 +445,14 @@ export default function UserAvatarDropdown() {
               {/* Confirm New Password */}
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-bold text-[var(--color-text-secondary)]">
-                  ยืนยันรหัสผ่านใหม่ (Confirm Password)
+                  Confirm New Password (Confirm Password)
                 </label>
                 <input
                   type="password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   className="rounded-lg border border-[var(--color-border-light)] bg-[var(--color-surface-1)] px-3 py-2 text-xs text-[var(--color-text-primary)] outline-none focus:border-[var(--color-brand-500)] focus:ring-1 focus:ring-[var(--color-brand-500)]"
-                  placeholder="กรอกรหัสผ่านใหม่อีกครั้ง"
+                  placeholder="Re-enter new password"
                   required
                 />
               </div>
@@ -464,14 +464,14 @@ export default function UserAvatarDropdown() {
                   onClick={() => setShowPasswordModal(false)}
                   className="rounded-lg border border-[var(--color-border-light)] bg-[var(--color-surface-1)] px-3.5 py-2 text-xs font-semibold text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-2)] cursor-pointer"
                 >
-                  ยกเลิก
+                  Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmittingPassword}
                   className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--color-brand-500)] px-4 py-2 text-xs font-bold text-[var(--color-ui-on-interactive)] hover:bg-[var(--color-brand-600)] transition-colors cursor-pointer disabled:opacity-50 border-none"
                 >
-                  <Check size={14} /> {isSubmittingPassword ? 'กำลังเปลี่ยน...' : 'บันทึกรหัสผ่าน'}
+                  <Check size={14} /> {isSubmittingPassword ? 'Changing...' : 'Save Password'}
                 </button>
               </div>
             </form>

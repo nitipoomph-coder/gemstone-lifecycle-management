@@ -165,7 +165,7 @@ export function CustomerSalesChart({
     let minTot = Number.MAX_VALUE;
     const keys = monthlySeries === 'group' ? sortedSel : activeYears;
 
-    // หา Max Bar และคำนวณ Total ของแต่ละช่วง
+    // หา Max Bar andคำนวณ Total ของแต่ละช่วง
     chartData.forEach((d: any) => {
       let tot = 0;
       keys.forEach(k => {

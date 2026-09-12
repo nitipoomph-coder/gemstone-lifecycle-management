@@ -37,6 +37,9 @@ export default function TopOrdersGalleryPage() {
     getDefaultCompareYear,
     productType,
     setProductType,
+    selTypes,
+    setSelTypes,
+    toggleType,
     perspectiveMode,
     setPerspectiveMode,
     swapYears,
@@ -48,6 +51,7 @@ export default function TopOrdersGalleryPage() {
     startFilterTransition,
     summary,
     items,
+    portfolioAllItems,
     previewItem,
     setPreviewItem,
     resetFilters,
@@ -66,20 +70,23 @@ export default function TopOrdersGalleryPage() {
   };
   const fmtQty = (value: number) => value.toLocaleString(undefined, { maximumFractionDigits: 0 });
 
-  // Compute Product Type Significance KPI
+  // Compute Product Type Significance KPI (using portfolioAllItems so breakdown is always preserved even when Type filtered)
   const typeSignificance = useMemo(() => {
-    if (!items || items.length === 0) return null;
+    const targetItems = (portfolioAllItems && portfolioAllItems.length > 0) ? portfolioAllItems : items;
+    if (!targetItems || targetItems.length === 0) return null;
     const typeMap: Record<string, { label: string; totalQty: number; totalAmnt: number; count: number }> = {};
     let grandQty = 0;
     let grandAmnt = 0;
 
-    for (const it of items) {
-      const label = it.productTypeLabel || it.productType || 'Other';
+    for (const it of targetItems) {
+      const raw = String(it.productType || it.productCategory || 'OTH').trim().toUpperCase();
+      const label = raw === 'OTHER' || raw === 'OTHERS' ? 'OTH' : raw;
       if (!typeMap[label]) {
         typeMap[label] = { label, totalQty: 0, totalAmnt: 0, count: 0 };
       }
       const qty = perspectiveMode === 'compare' ? it.baseYearQty : it.totalCombinedQty;
       const amnt = perspectiveMode === 'compare' ? it.baseYearAmnt : it.totalCombinedAmnt;
+
       typeMap[label].totalQty += qty;
       typeMap[label].totalAmnt += amnt;
       typeMap[label].count += 1;
@@ -98,19 +105,89 @@ export default function TopOrdersGalleryPage() {
     const grandVal = metric === 'amount' ? grandAmnt : grandQty;
     const leaderSharePct = grandVal > 0 ? (leaderVal / grandVal) * 100 : 0;
 
-    // Top runner-ups summary footnote
-    const runnerUps = sorted.slice(1, 4).map(t => {
-      const share = grandVal > 0 ? ((metric === 'amount' ? t.totalAmnt : t.totalQty) / grandVal) * 100 : 0;
-      return `${t.label}: ${share.toFixed(0)}%`;
-    }).join(' · ');
+    let displayLabel = leader.label;
+    let displaySharePct = leaderSharePct;
+
+    if (selTypes && selTypes.length > 0) {
+      displayLabel = selTypes.map(s => s.toUpperCase()).join('+');
+      let sumVal = 0;
+      for (const t of selTypes) {
+        const key = t.toUpperCase();
+        const entry = typeMap[key];
+        if (entry) {
+          sumVal += metric === 'amount' ? entry.totalAmnt : entry.totalQty;
+        }
+      }
+      displaySharePct = grandVal > 0 ? (sumVal / grandVal) * 100 : 0;
+    }
+
+    // 4-Color Category Segments: Leader + Top 2 Runner-ups + Others
+    const colors = [
+      'var(--color-chart-1, #3b82f6)',
+      'var(--color-chart-2, #10b981)',
+      'var(--color-chart-3, #f59e0b)',
+      'var(--color-chart-4, #8b5cf6)',
+    ];
+
+    const segments: Array<{ label: string; sharePct: number; color: string }> = [];
+
+    if (sorted.length > 0) {
+      // 1. Leader
+      segments.push({
+        label: leader.label,
+        sharePct: leaderSharePct,
+        color: colors[0],
+      });
+
+      // 2. Runner-up 1
+      if (sorted.length > 1) {
+        const val1 = metric === 'amount' ? sorted[1].totalAmnt : sorted[1].totalQty;
+        const share1 = grandVal > 0 ? (val1 / grandVal) * 100 : 0;
+        segments.push({
+          label: sorted[1].label,
+          sharePct: share1,
+          color: colors[1],
+        });
+      }
+
+      // 3. Runner-up 2
+      if (sorted.length > 2) {
+        const val2 = metric === 'amount' ? sorted[2].totalAmnt : sorted[2].totalQty;
+        const share2 = grandVal > 0 ? (val2 / grandVal) * 100 : 0;
+        segments.push({
+          label: sorted[2].label,
+          sharePct: share2,
+          color: colors[2],
+        });
+      }
+
+      // 4. Others (remaining categories combined)
+      if (sorted.length > 3) {
+        let remainingVal = 0;
+        for (let i = 3; i < sorted.length; i++) {
+          remainingVal += metric === 'amount' ? sorted[i].totalAmnt : sorted[i].totalQty;
+        }
+        const remainingShare = grandVal > 0 ? (remainingVal / grandVal) * 100 : 0;
+        segments.push({
+          label: sorted.length === 4 ? sorted[3].label : 'OTH',
+          sharePct: remainingShare,
+          color: colors[3],
+        });
+      }
+    }
 
     return {
+      displayLabel,
+      displaySharePct,
       leaderLabel: leader.label,
       leaderSharePct,
       leaderCount: leader.count,
-      runnerUps,
+      segments,
     };
-  }, [items, metric, perspectiveMode]);
+  }, [portfolioAllItems, items, metric, perspectiveMode, selTypes]);
+
+  const debugSkeleton = new URLSearchParams(location.search).get('debugSkeleton') === '1';
+  const showInitialLoading = isInitialLoading || debugSkeleton;
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-[var(--color-surface-1)]">
@@ -122,6 +199,9 @@ export default function TopOrdersGalleryPage() {
             <TopOrdersFilterBar
               productType={productType}
               setProductType={setProductType}
+              selTypes={selTypes}
+              setSelTypes={setSelTypes}
+              toggleType={toggleType}
               searchDraft={searchDraft}
               setSearchDraft={setSearchDraft}
               searchQuery={searchQuery}
@@ -232,7 +312,7 @@ export default function TopOrdersGalleryPage() {
         `}</style>
 
         {/* WCAG 2.1 AA — Portfolio Summary Sub-header with Accessible KPI Cards */}
-        {summary.totalItemsCount > 0 && (
+        {!showInitialLoading && summary.totalItemsCount > 0 && (
           <div
             role="banner"
             aria-label="Portfolio summary and key performance indicators"
@@ -278,8 +358,18 @@ export default function TopOrdersGalleryPage() {
               </span>
             </div>
 
-            {/* Right Side: KPI Cards for Volume, Value & Product Type Significance */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            {/* Right Side: KPI Cards for Volume, Value & Product Type Significance (1fr 1fr 2fr) */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr 2fr',
+                gap: 12,
+                alignItems: 'stretch',
+                flex: 1,
+                minWidth: 'min(100%, 740px)',
+                maxWidth: 1060,
+              }}
+            >
               {(() => {
                 const isCompare = perspectiveMode === 'compare';
                 const hasVolDelta = summary.compareYearTotalQty > 0 && summary.baseYearTotalQty > 0;
@@ -327,15 +417,8 @@ export default function TopOrdersGalleryPage() {
                         : undefined}
                     />
                     {typeSignificance && (
-                      <GallerySummaryKpi
-                        label="Top Product Type"
-                        value={typeSignificance.leaderLabel}
-                        unit={`${typeSignificance.leaderSharePct.toFixed(1)}% Share`}
-                        ariaLabel={`Top Product Type: ${typeSignificance.leaderLabel}, ${typeSignificance.leaderSharePct.toFixed(1)}% share`}
-                        deltaPct={null}
-                        deltaVsYear=""
-                        showHeaderDelta={false}
-                        footnote={typeSignificance.runnerUps ? typeSignificance.runnerUps : `${typeSignificance.leaderCount} items`}
+                      <ProductTypeSignificanceKpi
+                        typeSignificance={typeSignificance}
                       />
                     )}
                   </>
@@ -345,7 +428,7 @@ export default function TopOrdersGalleryPage() {
           </div>
         )}
 
-        {isInitialLoading ? (
+        {showInitialLoading ? (
           <TopOrdersSkeleton />
         ) : (
           <TopOrdersGalleryGrid
@@ -361,7 +444,7 @@ export default function TopOrdersGalleryPage() {
           />
         )}
 
-        {isFilterLoading && !isInitialLoading && (
+        {isFilterLoading && !showInitialLoading && (
           <div
             style={{
               position: "absolute",
@@ -373,28 +456,26 @@ export default function TopOrdersGalleryPage() {
               background: "color-mix(in srgb, var(--color-surface-0) 65%, transparent)",
               backdropFilter: "blur(2px)",
               cursor: "wait",
-              userSelect: "none",
-              pointerEvents: "all",
+              animation: "galleryFadeIn 0.15s ease",
             }}
           >
             <div
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: 10,
-                border: "1px solid var(--color-border-light)",
-                borderRadius: 8,
+                gap: 8,
+                padding: "8px 16px",
+                borderRadius: 20,
                 background: "var(--color-surface-0)",
+                border: "1px solid var(--color-border-light)",
+                boxShadow: "var(--shadow-lg)",
+                fontSize: "var(--erp-text-control)",
+                fontWeight: 700,
                 color: "var(--color-text-primary)",
-                padding: "10px 16px",
-                boxShadow: "0 10px 30px color-mix(in srgb, var(--color-surface-900) 18%, transparent)",
-                fontSize: "0.82rem",
-                fontWeight: 900,
-                cursor: "wait",
               }}
             >
-              <span className="gallery-filter-spinner" style={{ width: 16, height: 16, border: "2px solid color-mix(in srgb, var(--color-brand-500) 22%, transparent)", borderTopColor: "var(--color-brand-500)", borderRadius: "50%" }} />
-              Updating portfolio results...
+              <RefreshCw size={14} className="gallery-filter-spinner" style={{ color: "var(--color-brand-600)" }} />
+              <span>Updating Top 50 Items...</span>
             </div>
           </div>
         )}
@@ -403,10 +484,10 @@ export default function TopOrdersGalleryPage() {
       <TopOrdersItemPreview
         item={previewItem}
         onClose={() => setPreviewItem(null)}
+        metric={metric}
         baseYear={baseYear}
         compareYear={compareYear}
         compareEnabled={compareEnabled}
-        metric={metric}
         perspectiveMode={perspectiveMode}
         fmt={fmt}
         fmtQty={fmtQty}
@@ -420,7 +501,7 @@ const kpiTileStyle: CSSProperties = {
   borderRadius: 8,
   background: "var(--color-surface-1)",
   border: "1px solid var(--color-border-light)",
-  minWidth: 190,
+  minWidth: 0,
   display: "flex",
   flexDirection: "column",
   gap: 2,
@@ -448,41 +529,164 @@ function GallerySummaryKpi({
   footnote?: string;
 }) {
   return (
-    <div role="region" aria-label={ariaLabel} style={kpiTileStyle}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-        <span style={{ fontSize: "var(--erp-text-control)", fontWeight: 800, color: "var(--color-text-tertiary)" }}>
-          {label}
-        </span>
-        {showHeaderDelta && deltaPct !== null && (
-          <span title={deltaTitle} style={comparisonTextStyle(deltaPct)}>
-            {formatSignedPct(deltaPct)} vs {deltaVsYear}
-          </span>
-        )}
-      </div>
-      <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
-        <span
-          aria-live="polite"
-          style={{
-            fontSize: "var(--erp-text-kpi)",
-            fontWeight: 800,
-            color: "var(--color-text-primary)",
-            fontFamily: "var(--font-display)",
-            letterSpacing: 0,
-          }}
-        >
-          {value}
-        </span>
-        {unit ? (
+    <div role="region" aria-label={ariaLabel} style={{ ...kpiTileStyle, height: '100%', justifyContent: 'space-between' }}>
+      <div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
           <span style={{ fontSize: "var(--erp-text-control)", fontWeight: 800, color: "var(--color-text-tertiary)" }}>
-            {unit}
+            {label}
           </span>
-        ) : null}
+          {showHeaderDelta && deltaPct !== null && (
+            <span title={deltaTitle} style={comparisonTextStyle(deltaPct)}>
+              {formatSignedPct(deltaPct)} vs {deltaVsYear}
+            </span>
+          )}
+        </div>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginTop: 2 }}>
+          <span
+            aria-live="polite"
+            style={{
+              fontSize: "var(--erp-text-kpi)",
+              fontWeight: 800,
+              color: "var(--color-text-primary)",
+              fontFamily: "var(--font-display)",
+              letterSpacing: 0,
+            }}
+          >
+            {value}
+          </span>
+          {unit ? (
+            <span style={{ fontSize: "var(--erp-text-control)", fontWeight: 800, color: "var(--color-text-tertiary)" }}>
+              {unit}
+            </span>
+          ) : null}
+        </div>
       </div>
       {footnote ? (
-        <span style={{ fontSize: "var(--erp-text-dense)", color: "var(--color-text-tertiary)", fontWeight: 700 }}>
+        <span style={{ fontSize: "var(--erp-text-dense)", color: "var(--color-text-tertiary)", fontWeight: 700, marginTop: 4 }}>
           {footnote}
         </span>
       ) : null}
     </div>
   );
 }
+
+function ProductTypeSignificanceKpi({
+  typeSignificance,
+}: {
+  typeSignificance: {
+    displayLabel: string;
+    displaySharePct: number;
+    leaderLabel: string;
+    leaderSharePct: number;
+    leaderCount: number;
+    segments: Array<{ label: string; sharePct: number; color: string }>;
+  };
+}) {
+  return (
+    <div
+      role="region"
+      aria-label={`Top Product Type: ${typeSignificance.displayLabel} ${typeSignificance.displaySharePct.toFixed(2)}%`}
+      style={{
+        ...kpiTileStyle,
+        minWidth: 0,
+        height: '100%',
+        justifyContent: 'space-between',
+        position: 'relative',
+      }}
+    >
+      <div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+          <span style={{ fontSize: "var(--erp-text-control)", fontWeight: 800, color: "var(--color-text-tertiary)" }}>
+            Top Product Type
+          </span>
+        </div>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginTop: 2 }}>
+          <span
+            style={{
+              fontSize: "var(--erp-text-kpi)",
+              fontWeight: 800,
+              color: "var(--color-text-primary)",
+              fontFamily: "var(--font-display)",
+              letterSpacing: 0,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
+            {typeSignificance.displayLabel}
+          </span>
+          <span style={{ fontSize: "var(--erp-text-control)", fontWeight: 800, color: "var(--color-text-tertiary)", whiteSpace: "nowrap" }}>
+            {typeSignificance.displaySharePct.toFixed(2)}%
+          </span>
+        </div>
+      </div>
+
+      {/* Segmented Bar (แถบRatioสี 4 สี) */}
+      <div
+        style={{
+          width: "100%",
+          height: 6,
+          borderRadius: 3,
+          background: "var(--color-surface-2)",
+          display: "flex",
+          overflow: "hidden",
+          gap: 1.5,
+          marginTop: 6,
+          marginBottom: 4,
+        }}
+        title={typeSignificance.segments.map(s => `${s.label}: ${s.sharePct.toFixed(2)}%`).join(' | ')}
+      >
+        {typeSignificance.segments.map((seg, idx) => (
+          <div
+            key={idx}
+            style={{
+              width: `${Math.max(seg.sharePct, 0.5)}%`,
+              height: "100%",
+              backgroundColor: seg.color,
+              transition: "width 0.3s ease",
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Legend below the bar (จุดสีเล็กๆ บอกชื่อหมวด + %) */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          flexWrap: "wrap",
+          rowGap: 2,
+        }}
+      >
+        {typeSignificance.segments.map((seg, idx) => (
+          <div
+            key={idx}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 4,
+              fontSize: "0.7rem",
+              color: "var(--color-text-secondary)",
+              fontWeight: 700,
+            }}
+          >
+            <span
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: "50%",
+                backgroundColor: seg.color,
+                flexShrink: 0,
+              }}
+            />
+            <span style={{ whiteSpace: "nowrap" }}>
+              {seg.label} <strong style={{ color: "var(--color-text-primary)", fontWeight: 800 }}>{seg.sharePct.toFixed(2)}%</strong>
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+

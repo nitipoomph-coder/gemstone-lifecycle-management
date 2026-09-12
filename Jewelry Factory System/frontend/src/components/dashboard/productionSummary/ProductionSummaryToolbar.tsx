@@ -164,7 +164,7 @@ export function ProductionSummaryToolbar(props: ToolbarProps) {
               opacity: loading ? 0.7 : 1
             }}
           >
-            {loading ? 'Loading...' : 'Show / แสดงผล'}
+            {loading ? 'Loading...' : 'Show / Display'}
           </button>
 
           <button

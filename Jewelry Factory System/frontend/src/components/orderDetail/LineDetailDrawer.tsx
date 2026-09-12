@@ -24,13 +24,13 @@ interface Remarks {
 }
 
 const REMARK_FIELDS: { key: keyof Remarks; label: string }[] = [
-  { key: 'RecRemark', label: 'Receive (รับงาน)' },
-  { key: 'EnaRemark', label: 'Enamel (ทาสี)' },
-  { key: 'CryRemark', label: 'Crystal (ติดคริสตัล)' },
-  { key: 'AsmRemark', label: 'Assembly (ประกอบ)' },
-  { key: 'ShfRemark', label: 'Shelf (ขึ้นชั้น)' },
-  { key: 'PkRemark', label: 'Pack (แพ็ค)' },
-  { key: 'ProdRemark', label: 'Prod Remark (หมายเหตุ)' },
+  { key: 'RecRemark', label: 'Receive (Receive Work)' },
+  { key: 'EnaRemark', label: 'Enamel (Painting)' },
+  { key: 'CryRemark', label: 'Crystal (Crystal Setting)' },
+  { key: 'AsmRemark', label: 'Assembly (Assembly)' },
+  { key: 'ShfRemark', label: 'Shelf (Shelf)' },
+  { key: 'PkRemark', label: 'Pack (Pack)' },
+  { key: 'ProdRemark', label: 'Prod Remark (Remark)' },
 ];
 
 interface LineDetailDrawerProps {
@@ -54,7 +54,7 @@ export default function LineDetailDrawer({ line, index, onClose, onSaved }: Line
   const { showToast } = useToast();
   const [isImageOpen, setIsImageOpen] = useState(false);
 
-  // รูปดึงจาก network path อย่างเดียว (ps ก่อน, onError fallback ไป cad)
+  // รูปดึงfrom network path อย่างเดียว (ps ก่อน, onError fallback ไป cad)
   const itemNo = line.ItemNo as string | undefined;
   const photoUrl = itemNo ? psPhotoUrl(itemNo) : '';
 
@@ -282,13 +282,13 @@ export default function LineDetailDrawer({ line, index, onClose, onSaved }: Line
 
             {!isEditing ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <DataPair label="Receive (รับงาน)" value={line.RecRemark} />
-                <DataPair label="Enamel (ทาสี)" value={line.EnaRemark} />
-                <DataPair label="Crystal (ติดคริสตัล)" value={line.CryRemark} />
-                <DataPair label="Assembly (ประกอบ)" value={line.AsmRemark} />
-                <DataPair label="Shelf (ขึ้นชั้น)" value={line.ShfRemark} />
-                <DataPair label="Pack (แพ็ค)" value={line.PkRemark} />
-                <DataPair label="Prod Remark (หมายเหตุ)" value={line.ProdRemark} />
+                <DataPair label="Receive (Receive Work)" value={line.RecRemark} />
+                <DataPair label="Enamel (Painting)" value={line.EnaRemark} />
+                <DataPair label="Crystal (Crystal Setting)" value={line.CryRemark} />
+                <DataPair label="Assembly (Assembly)" value={line.AsmRemark} />
+                <DataPair label="Shelf (Shelf)" value={line.ShfRemark} />
+                <DataPair label="Pack (Pack)" value={line.PkRemark} />
+                <DataPair label="Prod Remark (Remark)" value={line.ProdRemark} />
                 <DataPair label="Order Remark" value={line.OrdRemark} />
               </div>
             ) : (

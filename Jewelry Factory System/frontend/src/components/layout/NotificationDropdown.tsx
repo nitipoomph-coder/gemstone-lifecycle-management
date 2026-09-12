@@ -14,33 +14,33 @@ export interface NotificationItem {
 const INITIAL_NOTIFICATIONS: NotificationItem[] = [
   {
     id: 'notif-1',
-    title: 'PO #PO-2026-088 อนุมัติเสร็จสมบูรณ์',
-    message: 'ฝ่ายจัดซื้อได้อนุมัติเอกสารสั่งซื้อพลอยเรียบร้อยแล้ว พร้อมส่งต่อไปขั้นตอนรับเข้า (SRA)',
-    timestamp: '10 นาทีที่แล้ว',
+    title: 'PO #PO-2026-088 Fully Approved',
+    message: 'Procurement approved PO. Ready for receiving. (SRA)',
+    timestamp: '10 minutes ago',
     read: false,
     type: 'order',
   },
   {
     id: 'notif-2',
-    title: 'มีการเบิกพลอย Gem Issue (SIA) ใหม่',
-    message: 'แผนกผลิตเบิกพลอยสำหรับออเดอร์ #ORD-4421 จำนวน 45 เม็ด',
-    timestamp: '1 ชั่วโมงที่แล้ว',
+    title: 'Stone requisitioned Gem Issue (SIA) New',
+    message: 'Production requisition stone for order #ORD-4421 45 pcs',
+    timestamp: '1 hours ago',
     read: false,
     type: 'order',
   },
   {
     id: 'notif-3',
-    title: 'วัตถุดิบ Gem Emerald ถึงระดับ Safety Stock',
-    message: 'จำนวนคงเหลือในคลังหลักต่ำกว่าเกณฑ์ 100 กะรัต แนะนำให้เปิดใบขอซื้อ (SPA)',
-    timestamp: '3 ชั่วโมงที่แล้ว',
+    title: 'Material Gem Emerald up to Safety Stock',
+    message: 'Main warehouse stock below 100 ct. PR recommended. (SPA)',
+    timestamp: '3 hours ago',
     read: false,
     type: 'inventory',
   },
   {
     id: 'notif-4',
-    title: 'การสำรองข้อมูลระบบประจำสัปดาห์เสร็จสิ้น',
-    message: 'ระบบ ERP ได้สร้าง Snapshot ฐานข้อมูลประจำวันอาทิตย์สมบูรณ์ 100%',
-    timestamp: 'เมื่อวานนี้',
+    title: 'Weekly system backup completed',
+    message: 'System ERP created Snapshot Sunday database backup completed 100%',
+    timestamp: 'Yesterday',
     read: true,
     type: 'system',
   },
@@ -93,7 +93,7 @@ export default function NotificationDropdown() {
             ? 'bg-[var(--color-brand-50)] text-[var(--color-brand-600)]'
             : 'bg-transparent text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-brand-600)]'
         }`}
-        title="การแจ้งเตือน (Notifications)"
+        title="Notifications (Notifications)"
         aria-label="Open notifications panel"
       >
         <Bell size={18} />
@@ -117,11 +117,11 @@ export default function NotificationDropdown() {
           <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border-light)] bg-[var(--color-surface-0)]">
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold text-[var(--color-text-primary)]">
-                การแจ้งเตือน
+                Notifications
               </span>
               {unreadCount > 0 && (
                 <span className="rounded-full bg-[var(--color-brand-50)] px-2 py-0.5 text-[10px] font-bold text-[var(--color-brand-600)]">
-                  {unreadCount} ใหม่
+                  {unreadCount} New
                 </span>
               )}
             </div>
@@ -131,7 +131,7 @@ export default function NotificationDropdown() {
                 onClick={handleMarkAllAsRead}
                 className="inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--color-brand-600)] hover:underline border-none bg-transparent cursor-pointer p-0"
               >
-                <CheckCheck size={13} /> อ่านทั้งหมด
+                <CheckCheck size={13} /> Read All
               </button>
             )}
           </div>
@@ -141,7 +141,7 @@ export default function NotificationDropdown() {
             {notifications.length === 0 ? (
               <div className="flex flex-col items-center justify-center p-8 text-center text-[var(--color-text-tertiary)]">
                 <Sparkles size={24} className="mb-2 opacity-50 text-[var(--color-brand-500)]" />
-                <span className="text-xs font-semibold">ไม่มีการแจ้งเตือนใหม่</span>
+                <span className="text-xs font-semibold">No new notifications</span>
               </div>
             ) : (
               notifications.map((item) => {
@@ -209,7 +209,7 @@ export default function NotificationDropdown() {
 
           {/* Footer Notice */}
           <div className="border-t border-[var(--color-border-light)] bg-[var(--color-surface-0)] px-4 py-2 text-center text-[10px] text-[var(--color-text-tertiary)]">
-            <span>เชื่อมต่อกับระบบ ERP อัตโนมัติ (Mock Data)</span>
+            <span>Connected to system ERP Auto (Mock Data)</span>
           </div>
         </div>
       )}

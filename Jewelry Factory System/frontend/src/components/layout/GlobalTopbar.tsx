@@ -111,7 +111,7 @@ export default function GlobalTopbar({ isSidebarOpen, onToggleSidebar }: GlobalT
             type="button"
             onClick={onToggleSidebar}
             className="flex items-center justify-center w-8 h-8 rounded-lg text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-brand-600)] transition-colors shrink-0 cursor-pointer border-none bg-transparent"
-            title={isSidebarOpen ? 'ซ่อนเมนู (Collapse sidebar) [Ctrl+B]' : 'แสดงเมนู (Expand sidebar) [Ctrl+B]'}
+            title={isSidebarOpen ? 'Hide Menu (Collapse sidebar) [Ctrl+B]' : 'Show Menu (Expand sidebar) [Ctrl+B]'}
             aria-label="Toggle sidebar navigation"
           >
             <PanelLeft size={18} strokeWidth={1.75} />
@@ -153,7 +153,7 @@ export default function GlobalTopbar({ isSidebarOpen, onToggleSidebar }: GlobalT
             type="button"
             onClick={() => navigate(-1)}
             className="flex items-center justify-center w-8 h-8 rounded-lg border-none bg-transparent text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-brand-600)] transition-colors shrink-0 cursor-pointer p-0"
-            title="ย้อนกลับ (Back)"
+            title="Back (Back)"
             aria-label="Go back"
           >
             <ChevronLeft size={18} strokeWidth={1.75} />
@@ -211,7 +211,7 @@ export default function GlobalTopbar({ isSidebarOpen, onToggleSidebar }: GlobalT
                 ? 'bg-[var(--color-brand-50)] text-[var(--color-brand-600)]'
                 : 'bg-transparent text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-brand-600)]'
             }`}
-            title="ส่งออกหน้านี้"
+            title="Export this page"
             aria-label="Export or Print this page"
           >
             <Printer size={18} strokeWidth={1.75} />
@@ -223,7 +223,7 @@ export default function GlobalTopbar({ isSidebarOpen, onToggleSidebar }: GlobalT
               style={{ boxShadow: 'var(--shadow-dropdown)' }}
             >
               <div className="mb-1 px-3 pt-1 text-[length:var(--erp-text-meta)] font-bold uppercase tracking-wider text-[var(--color-text-tertiary)]">
-                ส่งออกหน้านี้
+                Export this page
               </div>
               <button
                 type="button"
@@ -267,7 +267,7 @@ export default function GlobalTopbar({ isSidebarOpen, onToggleSidebar }: GlobalT
                 ? 'bg-[var(--color-brand-50)] text-[var(--color-brand-600)]'
                 : 'bg-transparent text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-brand-600)]'
             }`}
-            title="เปลี่ยนธีมสี (Theme)"
+            title="Change Theme (Theme)"
             aria-label="Change theme"
           >
             <Palette size={18} strokeWidth={1.75} />

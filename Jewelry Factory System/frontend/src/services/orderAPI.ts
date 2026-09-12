@@ -19,7 +19,7 @@ export interface OrderSummary {
   TotalQty: number;
   NumSKU: number;
   Amount: number | null;
-  SampleItemNo: string | null; // ItemNo ตัวแทนของกลุ่ม (ใช้ประกอบ URL รูปจาก network path)
+  SampleItemNo: string | null; // ItemNo ตัวแทนของกลุ่ม (ใช้Assembly URL รูปfrom network path)
   TrackTest: string | null;
   OrdSGS: string | null;
   CustQCDate: string | null;
@@ -39,7 +39,7 @@ export interface OrderSummary {
   EXNo: string | null;          // PO2
   OrdMaker: string | null;      // Group
 
-  // ─── Production stage pending qty (ตัวเลข; ติดลบ = ค้าง) ───
+  // ─── Production stage pending qty (ตัวเลข; ติดDelete = ค้าง) ───
   StonePenQty: number | null;
   FitPenQty: number | null;     // Finding
   WijPenQty: number | null;     // Wax
@@ -109,10 +109,10 @@ export const fetchOrders = async (params: { status?: 'pending' | 'finish' | 'all
 
     const result = await response.json();
 
-    // รองรับกรณี Backend ส่งมาเป็น Array ตรงๆ หรือส่งมาเป็น { ok: true, data: [...] }
+    // Waitงรับกรณี Backend Sendมาเป็น Array ตรงๆ หรือSendมาเป็น { ok: true, data: [...] }
     const rawData = Array.isArray(result) ? result : (Array.isArray(result.data) ? result.data : []);
 
-    // ⭐️ DATA MAPPING: ดักจับชื่อ Key เผื่อ Backend (C#) ส่งมาเป็นตัวพิมพ์เล็ก
+    // ⭐️ DATA MAPPING: ดักจับชื่อ Key เผื่อ Backend (C#) Sendมาเป็นตัวPrintเล็ก
     const mappedData: OrderSummary[] = (rawData as RawOrderSummary[]).map((item) => ({
       Week: item.OrdWeek || item.Week || item.week || '-',
       OrdNo: item.OrdNo || item.ordNo || item.ord_no || '-',

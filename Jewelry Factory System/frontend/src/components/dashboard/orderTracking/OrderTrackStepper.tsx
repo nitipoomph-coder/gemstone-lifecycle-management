@@ -12,23 +12,23 @@ export const OrderTrackStepper: React.FC<OrderTrackStepperProps> = ({ steps }) =
     return (
         <div style={{ width: '100%', overflowX: 'auto', padding: '2px 0' }}>
             <div style={{ minWidth: 980, padding: '2px 0' }}>
-                {/* แถวของขั้นตอน 17 สเต็ป: เชื่อมต่อด้วยเส้นที่ไม่มีการซ้อนทับ ไม่ยื่นเลยหัวท้าย */}
+                {/* แถวของStep 17 สเต็ป: เชื่อมต่อด้วยเส้นที่ไม่มีการซ้อนทับ ไม่ยื่นเลยหัวท้าย */}
                 <div role="list" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', width: '100%' }}>
                     {steps.map((step, idx) => {
                         const isDone = step.status === 2;
                         const isCurrent = step.status === 1;
-                        const statusLabel = isDone ? 'เสร็จสมบูรณ์' : isCurrent ? 'กำลังดำเนินการ' : 'รอดำเนินการ';
+                        const statusLabel = isDone ? 'Completed' : isCurrent ? 'In Progress' : 'Pending';
 
-                        // เส้นเชื่อมฝั่งซ้าย: สีเขียวเมื่อขั้นตอนก่อนหน้าเสร็จและขั้นตอนนี้กำลังทำหรือเสร็จ
+                        // เส้นเชื่อมฝั่งซ้าย: สีเขียวเมื่อStepก่อนหน้าเสร็จandStepนี้In Progressหรือเสร็จ
                         const isLeftActive = idx > 0 && steps[idx - 1].status === 2 && step.status >= 1;
-                        // เส้นเชื่อมฝั่งขวา: สีเขียวเมื่อขั้นตอนนี้เสร็จและขั้นตอนถัดไปกำลังทำหรือเสร็จ
+                        // เส้นเชื่อมฝั่งขวา: สีเขียวเมื่อStepนี้เสร็จandStepถัดไปIn Progressหรือเสร็จ
                         const isRightActive = idx < steps.length - 1 && isDone && steps[idx + 1].status >= 1;
 
                         return (
                             <div
                                 key={step.stepIndex}
                                 role="listitem"
-                                aria-label={`ขั้นตอนที่ ${step.stepIndex}: ${step.nameEN} (${step.nameTH}) - สถานะ ${statusLabel}`}
+                                aria-label={`Step No. ${step.stepIndex}: ${step.nameEN} (${step.nameTH}) - Status ${statusLabel}`}
                                 style={{
                                     display: 'flex',
                                     flexDirection: 'column',
@@ -38,7 +38,7 @@ export const OrderTrackStepper: React.FC<OrderTrackStepperProps> = ({ steps }) =
                                     minWidth: 0,
                                 }}
                             >
-                                {/* แถว Node และเส้นเชื่อมต่อ (ต่อชิดขอบวงกลมพอดี ไม่ลอดใต้ ไม่ทับซ้อน) */}
+                                {/* แถว Node andเส้นเชื่อมต่อ (ต่อชิดขอบวงกmmพอดี ไม่ลอดใต้ ไม่ทับซ้อน) */}
                                 <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
                                     {/* เส้นครึ่งซ้าย */}
                                     <div
@@ -53,7 +53,7 @@ export const OrderTrackStepper: React.FC<OrderTrackStepperProps> = ({ steps }) =
                                         }}
                                     />
 
-                                    {/* จุดวงกลม Node */}
+                                    {/* จุดวงกmm Node */}
                                     <div
                                         aria-hidden="true"
                                         className={isCurrent ? 'step-current-blink' : undefined}
@@ -102,7 +102,7 @@ export const OrderTrackStepper: React.FC<OrderTrackStepperProps> = ({ steps }) =
                                     />
                                 </div>
 
-                                {/* ชื่อขั้นตอน EN / TH */}
+                                {/* ชื่อStep EN / TH */}
                                 <div style={{ marginTop: 6, maxWidth: 68 }}>
                                     <div
                                         style={{
@@ -139,7 +139,7 @@ export const OrderTrackStepper: React.FC<OrderTrackStepperProps> = ({ steps }) =
                                     </div>
                                 </div>
 
-                                {/* สถานะ / วันที่ (Date / In-Progress Blink / Waiting) - ตัด Qty ออกตามที่ผู้ใช้สั่ง */}
+                                {/* Status / Date (Date / In-Progress Blink / Waiting) - ตัด Qty ออกตามที่ผู้ใช้Order */}
                                 <div style={{ marginTop: 4, fontSize: '11px' }}>
                                     {isCurrent ? (
                                         <div
@@ -151,7 +151,7 @@ export const OrderTrackStepper: React.FC<OrderTrackStepperProps> = ({ steps }) =
                                                 letterSpacing: '0.02em',
                                             }}
                                         >
-                                            กำลังทำ
+                                            In Progress
                                         </div>
                                     ) : isDone ? (
                                         <div style={{ color: 'var(--color-text-secondary)', fontWeight: 600 }}>
@@ -161,7 +161,7 @@ export const OrderTrackStepper: React.FC<OrderTrackStepperProps> = ({ steps }) =
                                         </div>
                                     ) : (
                                         <div style={{ color: 'var(--color-text-tertiary)', fontWeight: 600 }}>
-                                            รอ
+                                            Wait
                                         </div>
                                     )}
                                 </div>

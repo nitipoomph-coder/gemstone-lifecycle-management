@@ -179,7 +179,7 @@ function RequisitionDocWorkspace({ docType }: { docType: string }) {
       });
       const json = await res.json();
       if (!json.ok) {
-        showToast(`ไม่สามารถแก้ไขได้: ${json.error} (Locked by ${json.lockedBy || 'someone'})`, 'error');
+        showToast(`Cannot edit: ${json.error} (Locked by ${json.lockedBy || 'someone'})`, 'error');
         return;
       }
       setIsEditing(true);
@@ -194,7 +194,7 @@ function RequisitionDocWorkspace({ docType }: { docType: string }) {
     if (!docDetail?.header) return;
 
     if (formConfig?.apiType === 'none') {
-      showToast('ระบบนี้อยู่ในช่วงพัฒนา (UI Only)', 'warning');
+      showToast('System in development phase (UI Only)', 'warning');
       return;
     }
 
@@ -206,7 +206,7 @@ function RequisitionDocWorkspace({ docType }: { docType: string }) {
         lines: docDetail.lines
       };
       await saveRequisitionDocument(payload);
-      showToast('บันทึกเอกสารสำเร็จ!', 'success');
+      showToast('Document saved successfully!', 'success');
       handleClear();
       loadDocList();
     } catch (requestError: unknown) {

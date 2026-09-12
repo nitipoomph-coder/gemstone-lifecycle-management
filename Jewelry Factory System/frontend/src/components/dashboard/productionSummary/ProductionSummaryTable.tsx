@@ -38,7 +38,7 @@ export function ProductionSummaryTable({ data, tab }: TableProps) {
     return Number(val).toLocaleString(undefined, { maximumFractionDigits: 0 });
   };
 
-  // ปรับขนาดฟอนต์อัตโนมัติตามจำนวนคอลัมน์ (ยิ่งวันเยอะ ยิ่งปรับฟอนต์ให้กะทัดรัด)
+  // ปรับSizeฟอนต์AutoตามQtyคอลัมน์ (ยิ่งวันเยอะ ยิ่งปรับฟอนต์ให้กะทัดรัด)
   const cellFontSize = totalCols > 25 ? '10px' : totalCols > 15 ? '10.5px' : '11px';
 
   return (
@@ -83,9 +83,9 @@ export function ProductionSummaryTable({ data, tab }: TableProps) {
 
             </th>
 
-            {/* คอลัมน์ข้อมูล (เฉลี่ยความกว้างเท่ากันทั้งหมด) */}
+            {/* คอลัมน์ข้อมูล (เฉลี่ยความกว้างเท่ากันAll) */}
             {data.map((d) => {
-              // ในโหมด Month ย่อหัวตารางเหลือแค่เลขวัน เช่น "01", "02" .. "31"
+              // ในโหมด Month ย่อหัวตารางเหลือแค่เลขวัน e.g. "01", "02" .. "31"
               const headerLabel = isDaily && d.periodLabel?.includes('/')
                 ? d.periodLabel.split('/')[0]
                 : d.periodLabel || d.period;
@@ -129,7 +129,7 @@ export function ProductionSummaryTable({ data, tab }: TableProps) {
         </thead>
 
         <tbody>
-          {/* แถว 3 กลุ่มลูกค้า */}
+          {/* แถว 3 กลุ่มCustomer */}
           {PROD_CUSTOMER_GROUPS.map((g: ProdCustomerGroup) => (
             <tr
               key={g.id}
@@ -227,7 +227,7 @@ export function ProductionSummaryTable({ data, tab }: TableProps) {
             </td>
           </tr>
 
-          {/* แถว Avg. (เฉพาะโหมด Year และ Week - พื้นหลังสีม่วงอ่อน) */}
+          {/* แถว Avg. (เฉพาะโหมด Year and Week - พื้นหลังสีม่วงอ่อน) */}
           {!isDaily && (
             <tr
               style={{

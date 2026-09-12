@@ -46,8 +46,8 @@ export default function VendorPerformanceDashboardPage() {
         }}>
           <AlertTriangle size={18} style={{ color: 'var(--color-warning-600)', flexShrink: 0, marginTop: '2px' }} />
           <div style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>
-            <strong style={{ color: 'var(--color-warning-600)' }}>ยังไม่เชื่อมต่อข้อมูลจริง: </strong>
-            ตัวกรอง KPI กราฟ และตารางจะแสดงผลได้เมื่อมี Stored Procedure สำหรับข้อมูล Vendor/Subcontract
+            <strong style={{ color: 'var(--color-warning-600)' }}>Not connected to real data: </strong>
+            Filter KPI Charts and tables will display when there is Stored Procedure for data Vendor/Subcontract
           </div>
         </div>
 
@@ -83,7 +83,7 @@ export default function VendorPerformanceDashboardPage() {
           </div>
           <button
             disabled
-            title="ยังไม่เชื่อมต่อข้อมูลจริง"
+            title="Not connected to real data"
             style={{
               display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', borderRadius: '8px',
               background: 'var(--color-surface-2)', color: 'var(--color-text-quaternary)', border: 'none',
@@ -160,7 +160,7 @@ export default function VendorPerformanceDashboardPage() {
                   <td colSpan={11} style={{ padding: '80px 24px', textAlign: 'center', color: 'var(--color-text-quaternary)', fontSize: '0.85rem', borderBottom: '1px solid var(--color-border-strong)' }}>
                     <ClipboardList size={28} style={{ margin: '0 auto 12px', opacity: 0.35 }} />
                     <div style={{ fontWeight: 800 }}>No vendor performance data available</div>
-                    <div style={{ fontSize: '0.75rem', marginTop: '4px', opacity: 0.7 }}>ยังไม่เชื่อมต่อกับฐานข้อมูลจริง</div>
+                    <div style={{ fontSize: '0.75rem', marginTop: '4px', opacity: 0.7 }}>Not connected to database</div>
                   </td>
                 </tr>
               </tbody>

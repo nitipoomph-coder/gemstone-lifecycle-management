@@ -124,7 +124,7 @@ export async function fetchOrders(params?: {
   const res = await fetchWithAuth(`${BASE_URL}/orders?${qs}`);
   if (!res.ok) throw new Error(`API error: ${res.status}`);
   const json = await res.json();
-  // backend ส่ง { ok, data, count }
+  // backend Send { ok, data, count }
   return { ok: json.ok ?? true, data: json.data ?? [], count: json.count ?? 0 };
 }
 
@@ -142,7 +142,7 @@ export interface OrderDetailByPo {
   ok: boolean;
   header: OrderHeader & {
     PONo: string;
-    OrdNos: string[];    // รายการ OrdNo ทั้งหมดใต้ PO นี้
+    OrdNos: string[];    // Item OrdNo Allใต้ PO นี้
     OrdKind: string | null;
     Week: string | null;
   };

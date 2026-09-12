@@ -404,7 +404,9 @@ router.get('/top-gallery', async (req, res) => {
     const baseYear = req.query.baseYear ? parseInt(req.query.baseYear, 10) : years[years.length - 1];
     const compareYear = req.query.compareYear ? parseInt(req.query.compareYear, 10) : (years.length > 1 ? years[0] : null);
     const groupFilter = req.query.groups ? String(req.query.groups).split(',').map(g => g.trim()).filter(Boolean) : [];
-    const productTypeFilter = String(req.query.productType || 'ALL').toUpperCase().trim();
+    const productTypeFilter = req.query.productType
+      ? String(req.query.productType).toUpperCase().split(',').map(s => s.trim()).filter(Boolean)
+      : [];
     const metric = String(req.query.metric || 'qty').toLowerCase() === 'amount' ? 'amount' : 'qty';
     const rankBy = String(req.query.rankBy || 'combined').toLowerCase().trim(); // 'combined' | 'base' | 'growth'
     const searchQuery = String(req.query.search || '').toUpperCase().trim();
@@ -482,8 +484,8 @@ router.get('/top-gallery', async (req, res) => {
       const prefix3 = itemNo.substring(0, 3);
 
       // Apply product type filter
-      if (productTypeFilter !== 'ALL') {
-        if (rawProductType !== productTypeFilter) continue;
+      if (productTypeFilter.length > 0 && !productTypeFilter.includes('ALL')) {
+        if (!productTypeFilter.includes(rawProductType)) continue;
       }
 
       const yr = Number(r.OrdYear);

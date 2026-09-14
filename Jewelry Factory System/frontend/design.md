@@ -56,7 +56,7 @@ Every exception must include a second cue such as text, icon, value, ordering, o
 - Never use CSS `zoom` or viewport-based font scaling to make a page fit. Reflow grids, wrap controls, or add local table/toolbar scrolling instead.
 - Keep the compact ERP type scale fixed. Larger screens gain columns and working area, not oversized text; smaller screens stack content without shrinking labels below the defined tokens.
 - Tables may scroll horizontally inside their own region. The document itself must not overflow horizontally.
-- Loading keeps the real sidebar and topbar visible and replaces only data-dependent content with footprint-matched skeletons. Theme changes never show a loading screen.
+- Loading keeps the real sidebar and topbar visible and replaces only data-dependent content with footprint-matched skeletons for initial loads. For data refetching (Refresh), use a unified Dim Effect (`opacity-50 pointer-events-none` for ~450ms) on the target container instead of rendering full spinners or skeletons, keeping the UI stable. Theme changes never show a loading screen.
 - Verify representative screens at 390x844, 1440x900, and 2560x1440 in all three themes.
 
 ## 6. Data Visualization

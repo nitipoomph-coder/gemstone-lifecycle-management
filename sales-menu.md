@@ -175,6 +175,8 @@ Do not link Customer Trends, Sales & Qty Summary, Matrix, or Top Item flows into
 - Avoid decorative hero sections, glass effects, gradients, oversized marketing composition, and card-heavy replacement for dense data tables
 - Filter areas should be compact ERP controls, not large marketing panels
 - Search fields should not trigger heavy refresh on every keypress unless the page was explicitly designed for debounced search
+- **Dimming Effect (Loading State)**: All Sales Analytics pages must use a unified dimming effect during data refetch instead of full-page spinners. Apply `opacity-50 pointer-events-none` for a fixed duration (e.g. ~450ms) on the main data container when refreshing.
+- **Refresh Button Placement**: For the Sales Summary (Chart) page, the global Refresh button is located in the `PageHeader` (next to the tab switcher) and uses a permanent `text-[var(--color-brand-600)]` icon. Other pages (Matrix, Order Trends, Top Items) keep their local refresh buttons in their respective card toolbars.
 
 ## Role Access
 Sales users can access Sales Analytics and customer summary/reporting pages. Admin users can access all pages.

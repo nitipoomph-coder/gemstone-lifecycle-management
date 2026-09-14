@@ -290,7 +290,8 @@ gemstone-lifecycle-management/
    - Headings: `font-display` → Roboto
    - Body text: `font-body` → Roboto
    - Logo/Brand: `font-logo` → Cinzel
-10. **Loading Skeletons**: เมื่อมีการเพิ่ม/แก้ไข กล่องข้อมูล (Boxes/Cards) ในหน้าจอใด ๆ ต้องอัปเดตส่วนแสดงสถานะกำลังโหลด (Loading Skeleton) ให้สอดคล้องกันทั้งหน้าจอ เพื่อหลีกเลี่ยงอาการ Layout Shift โดยส่วนโหลดนี้ต้องคลุมเฉพาะพื้นที่แสดงผลของหน้านั้น ๆ (Content Outlet) ไม่ต้องโหลดส่วนเมนู (Sidebar/Topbar) ซ้ำ
+10. **Loading Skeletons & Refetching**: เมื่อมีการเพิ่ม/แก้ไข กล่องข้อมูล (Boxes/Cards) ในหน้าจอใด ๆ ต้องอัปเดตส่วนแสดงสถานะกำลังโหลด (Loading Skeleton) ให้สอดคล้องกันทั้งหน้าจอ เพื่อลด Layout Shift สำหรับการโหลดครั้งแรก (Initial Load)
+    - **สำหรับการโหลดซ้ำ (Refetch/Refresh)**: ให้ใช้ Dim Effect (`opacity-50 pointer-events-none` เป็นเวลา ~450ms) ครอบพื้นที่ข้อมูลเป้าหมายแทนการแสดง Spinner หรือ Skeleton ซ้ำ เพื่อไม่ให้รบกวนสายตาและบล็อกการกดรัวๆ
 11. **UI Components & UX**:
     - หลีกเลี่ยงการใช้ native `<datalist>` สำหรับ Dropdown ที่ซับซ้อน ให้ใช้ Custom React Dropdown component แทน เพื่อให้สามารถกำหนด CSS, z-index, hover states และ interaction ได้เต็มที่
     - **Accessibility & Contrast**: สีตัวอักษรปกติต้องมี Contrast ratio อย่างน้อย 4.5:1 และข้อความขนาดใหญ่ต้องอย่างน้อย 3:1 ทุกธีม ใช้พื้นผิวทึบเมื่อพื้นหลังรบกวนการอ่าน

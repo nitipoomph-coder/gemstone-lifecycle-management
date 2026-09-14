@@ -280,9 +280,9 @@ export function useCustomerDashboardLayout() {
 
   const isFiltered = useMemo(() => {
     const isPeriodFiltered = periodPreset !== 'full-year' || monthStart !== 1 || monthEnd !== 12 || compareActive1 || compareActive2;
-    const isGroupsFiltered = selGroups.length !== dynamicActiveGroups.length || !dynamicActiveGroups.every((id: any) => selGroups.includes(id));
+    const isGroupsFiltered = selGroups.length !== ACTIVE_GROUP_IDS.length || !ACTIVE_GROUP_IDS.every((id: any) => selGroups.includes(id));
     return isPeriodFiltered || isGroupsFiltered;
-  }, [periodPreset, monthStart, monthEnd, compareActive1, compareActive2, selGroups, dynamicActiveGroups]);
+  }, [periodPreset, monthStart, monthEnd, compareActive1, compareActive2, selGroups]);
 
   const resetFilters = useCallback(() => {
     const defaultYear = availableYears[0] || '';
@@ -307,9 +307,9 @@ export function useCustomerDashboardLayout() {
     setDraftCompareYearVal2('');
     setKpiCompareYear('');
     setDraftKpiCompareYear('');
-    setSelGroups(dynamicActiveGroups);
+    setSelGroups(ACTIVE_GROUP_IDS);
     setSearchParams({}, { replace: true });
-  }, [availableYears, dynamicActiveGroups, setSearchParams]);
+  }, [availableYears, setSearchParams]);
 
   return {
     activeTab,

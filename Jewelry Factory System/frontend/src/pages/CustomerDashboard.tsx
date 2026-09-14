@@ -18,7 +18,7 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
   const { theme } = useTheme();
   const [searchParams, setSearchParams] = useSearchParams();
   const metric = (searchParams.get('metric') as Metric) || propMetric;
-  const { selectedYears, selectedMonths, selGroups, availableYears, kpiCompareYear, refreshCounter, triggerRefresh, isRefreshing } = useOutletContext<any>();
+  const { selectedYears, selectedMonths, selGroups, availableYears, kpiCompareYear, refreshCounter, triggerRefresh, isRefreshing, setIsRefreshing } = useOutletContext<any>();
   const [custData, setCustData] = useState<CustomerSummaryRow[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -69,10 +69,12 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
         .then(data => {
           setCustData(data as CustomerSummaryRow[]);
           setLoading(false);
+          if (setIsRefreshing) setIsRefreshing(false);
         })
         .catch(err => {
           console.error('Error fetching customer summary:', err);
           setLoading(false);
+          if (setIsRefreshing) setIsRefreshing(false);
         });
     }, 0);
     return () => window.clearTimeout(loadTimer);
@@ -216,15 +218,6 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
                     ) : (
                       <EyeOff size={16} strokeWidth={1.75} className="text-[var(--color-text-tertiary)] opacity-65" />
                     )}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={triggerRefresh}
-                    className="flex items-center justify-center w-8 h-8 rounded-lg border-none bg-transparent text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-brand-600)] transition-colors shrink-0 cursor-pointer p-0"
-                    title="Refresh Data"
-                    aria-label="Refresh Data"
-                  >
-                    <RefreshCw size={16} strokeWidth={1.75} className={isRefreshing ? 'animate-spin text-[var(--color-brand-600)]' : ''} />
                   </button>
                 </div>
               </div>

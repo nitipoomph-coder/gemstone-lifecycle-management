@@ -115,6 +115,9 @@ export default function CustomerReportTable({
   const isSearchActive = searchDraft.trim().length > 0;
 
   const resetMatrix = () => {
+    if (resetPendingTimerRef.current) window.clearTimeout(resetPendingTimerRef.current);
+    setResetPending(true);
+    resetPendingTimerRef.current = window.setTimeout(() => setResetPending(false), 450);
     setSearchDraft('');
     if (onResetMatrix) {
       onResetMatrix();
@@ -337,6 +340,17 @@ export default function CustomerReportTable({
 
         <span className="customer-matrix-count">{tableData.rows.length} customers</span>
         <span className="customer-matrix-control-spacer" />
+
+        <ErpButton
+          size="sm"
+          variant="ghost"
+          icon={<RotateCcw size={13} />}
+          onClick={resetMatrix}
+          disabled={resetPending}
+          style={{ color: 'var(--color-text-tertiary)' }}
+        >
+          Reset View
+        </ErpButton>
 
         {onRefresh && (
           <ErpButton

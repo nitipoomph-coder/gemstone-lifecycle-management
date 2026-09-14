@@ -1,8 +1,9 @@
+import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import PageHeader from '../components/layout/PageHeader';
 import { BREADCRUMBS } from '../config/breadcrumbs';
 import CustomSelect from '../components/ui/CustomSelect';
-import { CalendarDays, ChevronDown, Users, BarChart3, Table2, LineChart, FilterX } from 'lucide-react';
+import { CalendarDays, ChevronDown, Users, BarChart3, Table2, LineChart, FilterX, RefreshCw } from 'lucide-react';
 import { ALL_GROUPS } from '../config/customerGroups';
 import { ErpSegmentedControl } from '../components/ui/ErpButtons';
 import './CustomerDashboard.css';
@@ -55,6 +56,15 @@ export default function CustomerDashboardLayout() {
     isFiltered,
     resetFilters
   } = useCustomerDashboardLayout();
+
+  const [refreshCounter, setRefreshCounter] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const triggerRefresh = () => {
+    setIsRefreshing(true);
+    setRefreshCounter(c => c + 1);
+    setTimeout(() => setIsRefreshing(false), 500);
+  };
+
   return (
     <>
       <PageHeader
@@ -62,17 +72,19 @@ export default function CustomerDashboardLayout() {
         contentLayout="workspace"
         hideTitle={true}
         rightContent={
-          <div style={{ display: 'flex', alignItems: 'center', background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)', borderRadius: 8, padding: 4 }}>
-            <ErpSegmentedControl
-              ariaLabel="View Mode"
-              value={activeTab}
-              onChange={(v) => handleTabChange(v as string)}
-              options={[
-                { value: 'dashboard', label: 'Chart', icon: <BarChart3 size={13} /> },
-                { value: 'trends', label: 'Order Trends', icon: <LineChart size={13} /> },
-                { value: 'matrix', label: 'Matrix', icon: <Table2 size={13} /> }
-              ]}
-            />
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)', borderRadius: 8, padding: 4 }}>
+              <ErpSegmentedControl
+                ariaLabel="View Mode"
+                value={activeTab}
+                onChange={(v) => handleTabChange(v as string)}
+                options={[
+                  { value: 'dashboard', label: 'Chart', icon: <BarChart3 size={13} /> },
+                  { value: 'trends', label: 'Order Trends', icon: <LineChart size={13} /> },
+                  { value: 'matrix', label: 'Matrix', icon: <Table2 size={13} /> }
+                ]}
+              />
+            </div>
           </div>
         }
         bottomContent={
@@ -409,7 +421,7 @@ export default function CustomerDashboardLayout() {
       />
 
       {/* Shared Layout Main Content Area */}
-      <Outlet context={{ selectedYears, selectedMonths, selGroups, availableYears, kpiCompareYear, setKpiCompareYear }} />
+      <Outlet context={{ selectedYears, selectedMonths, selGroups, availableYears, kpiCompareYear, setKpiCompareYear, refreshCounter, isRefreshing, triggerRefresh }} />
     </>
   );
 }

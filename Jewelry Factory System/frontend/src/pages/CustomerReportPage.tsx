@@ -37,7 +37,9 @@ export default function CustomerReportPage() {
     currentYearStr,
     currentMonthIdx,
     tableData,
-    groupKpis
+    groupKpis,
+    triggerRefresh,
+    isRefreshing
   } = useCustomerReportData();
 
   const handleRenderGrowthAmt = useCallback((baseVal: number, compVal: number) => {
@@ -53,7 +55,7 @@ export default function CustomerReportPage() {
       <div className="content-scrollbar flex-1 overflow-y-auto" style={{ background: 'var(--color-surface-1)' }}>
         <div className="app-content-frame app-content-frame--dashboard-wide sales-report-page">
           {/* Loading Skeletons for KPIs */}
-          {(loading) && (
+          {(loading && tableData.rows.length === 0) && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 20, marginBottom: 20 }}>
               {/* Year KPI Skeletons */}
               <div className="sales-report-kpis flex-wrap" style={{ display: 'flex', gap: 12, marginBottom: 1 }}>
@@ -124,8 +126,8 @@ export default function CustomerReportPage() {
             </div>
           )}
 
-          {(!loading) && (
-            <div key={`kpis-${displayYears.join(',')}-${selGroups.join(',')}-${selMonths.join(',')}-${metric}`}>
+          {(!loading || tableData.rows.length > 0) && (
+            <div className={`transition-opacity duration-300 ${loading ? 'opacity-50 pointer-events-none' : 'opacity-100'}`} key={`kpis-${displayYears.join(',')}-${selGroups.join(',')}-${selMonths.join(',')}-${metric}`}>
               <div className="sales-report-kpis flex-wrap" style={{ display: 'flex', gap: 12, marginBottom: 1 }}>
                 {displayYears.map((yr, yIdx) => (
                   <div
@@ -240,10 +242,10 @@ export default function CustomerReportPage() {
             </div>
           )}
 
-          <div className="sales-report-table-region">
+          <div className={`sales-report-table-region transition-opacity duration-300 ${loading ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
             <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
               <CustomerReportTable
-                loading={loading}
+                loading={loading && tableData.rows.length === 0}
                 baseYear={baseYear}
                 viewMode={viewMode}
                 setViewMode={setViewMode}
@@ -267,6 +269,8 @@ export default function CustomerReportPage() {
                 showFilters={isFilterOpen}
                 setShowFilters={setIsFilterOpen}
                 onResetMatrix={resetMatrixView}
+                onRefresh={triggerRefresh}
+                isRefreshing={isRefreshing}
               />
             </div>
           </div>

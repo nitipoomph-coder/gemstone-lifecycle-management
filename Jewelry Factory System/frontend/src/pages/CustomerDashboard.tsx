@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useOutletContext, useSearchParams } from 'react-router-dom';
-import { DollarSign, Hash, Calendar, CalendarDays, Layers, Users, Eye, EyeOff } from 'lucide-react';
+import { DollarSign, Hash, Calendar, CalendarDays, Layers, Users, Eye, EyeOff, RefreshCw } from 'lucide-react';
 import { fetchCustomerSummary } from '../services/customerSummaryAPI';
 import { ALL_GROUPS } from '../config/customerGroups';
 import { ErpSegmentedControl } from '../components/ui/ErpButtons';
@@ -18,7 +18,7 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
   const { theme } = useTheme();
   const [searchParams, setSearchParams] = useSearchParams();
   const metric = (searchParams.get('metric') as Metric) || propMetric;
-  const { selectedYears, selectedMonths, selGroups, availableYears, kpiCompareYear } = useOutletContext<any>();
+  const { selectedYears, selectedMonths, selGroups, availableYears, kpiCompareYear, refreshCounter, triggerRefresh, isRefreshing } = useOutletContext<any>();
   const [custData, setCustData] = useState<CustomerSummaryRow[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -76,7 +76,7 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
         });
     }, 0);
     return () => window.clearTimeout(loadTimer);
-  }, [availableYears]);
+  }, [availableYears, refreshCounter]);
 
   // Keep groups in ALL_GROUPS order for consistent colors
   const sortedSel = useMemo(
@@ -181,13 +181,13 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
     setSearchParams(nextParams, { replace: true });
   };
 
-  if (loading) {
+  if (loading && custData.length === 0) {
     return <CustomerDashboardSkeleton sortedSel={sortedSel} activeYears={activeYears} />;
   }
 
   return (
     <>
-      <div className="content-scrollbar flex-1 overflow-y-auto" style={{ background: 'var(--color-surface-1)' }}>
+      <div className={`content-scrollbar flex-1 overflow-y-auto transition-opacity duration-300 ${loading ? 'opacity-50 pointer-events-none' : 'opacity-100'}`} style={{ background: 'var(--color-surface-1)' }}>
         <div className="app-content-frame app-content-frame--workspace app-page-content sales-summary-page" style={{ paddingTop: 16 }}>
 
           {/* Main Content Grid: Chart on Left, YoY Cards on Right */}
@@ -216,6 +216,15 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
                     ) : (
                       <EyeOff size={16} strokeWidth={1.75} className="text-[var(--color-text-tertiary)] opacity-65" />
                     )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={triggerRefresh}
+                    className="flex items-center justify-center w-8 h-8 rounded-lg border-none bg-transparent text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-brand-600)] transition-colors shrink-0 cursor-pointer p-0"
+                    title="Refresh Data"
+                    aria-label="Refresh Data"
+                  >
+                    <RefreshCw size={16} strokeWidth={1.75} className={isRefreshing ? 'animate-spin text-[var(--color-brand-600)]' : ''} />
                   </button>
                 </div>
               </div>

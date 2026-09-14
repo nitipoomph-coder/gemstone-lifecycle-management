@@ -164,35 +164,21 @@ export function TopOrdersItemPreview({
             }}
           >
             {/* Image Preview Box */}
-            <div
-              style={{
-                width: '100%',
-                height: 230,
-                borderRadius: 10,
-                background: 'var(--color-surface-0)',
-                border: '1px solid var(--color-border-light)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: 12,
-                position: 'relative',
-              }}
-            >
-              <img
-                src={`/api/photos/ps/${item.itemNo}`}
-                alt={item.itemNo}
-                style={{ objectFit: 'contain', width: '100%', height: '100%' }}
-                onError={(event: SyntheticEvent<HTMLImageElement>) => {
-                  const image = event.currentTarget;
-                  if (!image.dataset.triedCad) {
-                    image.dataset.triedCad = "true";
-                    image.src = `/api/photos/cad/${item.itemNo}`;
-                  } else {
-                    image.style.display = "none";
-                  }
-                }}
-              />
-            </div>
+            <fieldset className="w-full h-[250px] bg-[var(--color-surface-0)] border border-[var(--color-border-light)] flex flex-col px-3 pb-3 relative">
+              <legend className="text-[13px] font-bold text-[var(--color-brand-700)] px-2 ml-2 tracking-wide">
+                Item Photo
+              </legend>
+              <div className="flex-1 border border-[var(--color-border-strong)] bg-[var(--color-surface-1)] flex items-center justify-center overflow-hidden relative">
+                <img
+                  src={`/api/photos/ps/${item.itemNo}`}
+                  alt={item.itemNo}
+                  className="object-contain w-full h-full"
+                  onError={(event: SyntheticEvent<HTMLImageElement>) => {
+                    event.currentTarget.style.display = "none";
+                  }}
+                />
+              </div>
+            </fieldset>
 
             {/* Significance Strip */}
             <div
@@ -215,7 +201,7 @@ export function TopOrdersItemPreview({
                     padding: '2px 8px',
                     borderRadius: 5,
                     background: 'var(--color-brand-500)',
-                    color: '#FFF',
+                    color: 'var(--color-text-inverse)',
                     fontSize: '0.8rem',
                     fontWeight: 950,
                   }}

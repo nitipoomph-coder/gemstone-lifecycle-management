@@ -36,7 +36,7 @@ function csv(value: string | null) {
 export function useCustomerReportData() {
   const { theme } = useTheme();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { selectedYears, selectedMonths, selGroups, kpiCompareYear } = useOutletContext<any>();
+  const { selectedYears, selectedMonths, selGroups, kpiCompareYear, refreshCounter, triggerRefresh, isRefreshing } = useOutletContext<any>();
   const metric = searchParams.get('metric') || 'amount';
 
   const handleSetMetric = useCallback((nextMetric: 'amount' | 'qty') => {
@@ -122,7 +122,7 @@ export function useCustomerReportData() {
       cancelled = true;
       window.clearTimeout(loadTimer);
     };
-  }, [dataYears, selMonths]);
+  }, [dataYears, selMonths, refreshCounter]);
 
   const groupCustomers = useMemo(() => {
     return custData
@@ -326,6 +326,8 @@ export function useCustomerReportData() {
     currentYearStr,
     currentMonthIdx,
     tableData,
-    groupKpis
+    groupKpis,
+    triggerRefresh,
+    isRefreshing
   };
 }

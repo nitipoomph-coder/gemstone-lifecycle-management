@@ -95,7 +95,7 @@ export default function OrderVolumeSummaryPage() {
             loadOverviewData={loadOverviewData}
           />
 
-          {loading ? (
+          {(loading && !hasOverviewData) ? (
             <CustomerTrendsLoadingState
               activeView={activeView}
               granularity="monthly"
@@ -109,7 +109,7 @@ export default function OrderVolumeSummaryPage() {
               </div>
             </div>
           ) : (
-            <>
+            <div className={`transition-opacity duration-300 ${loading ? 'opacity-50 pointer-events-none' : 'opacity-100'} flex-1 flex flex-col min-h-0`}>
               {activeView === 'overview' && (
                 <section className="customer-trends-summary" aria-label="Risk and WIP summary">
                   <SummaryMetric
@@ -284,7 +284,8 @@ export default function OrderVolumeSummaryPage() {
                   setSelectedCustGroup={data.setSelectedCustGroup}
                 />
               )}
-            </>
+
+            </div>
           )}
         </div>
       </div>

@@ -142,7 +142,7 @@ export default function TopOrdersAnalyticsPage() {
           </div>
         </header>
 
-        <section className={["sales-dense-panel flex min-h-[520px] flex-1 flex-col overflow-hidden", searchDraft.trim() ? "sales-dense-panel--searching" : ""].filter(Boolean).join(" ")}>
+        <section className={[`sales-dense-panel flex min-h-[520px] flex-1 flex-col overflow-hidden transition-opacity duration-300 ${loading || isBusy ? 'opacity-50 pointer-events-none' : 'opacity-100'}`, searchDraft.trim() ? "sales-dense-panel--searching" : ""].filter(Boolean).join(" ")}>
           <div className="sales-dense-panel__header">
             <div>
               <div className="sales-dense-panel__title">Item Qty Comparison</div>
@@ -154,7 +154,7 @@ export default function TopOrdersAnalyticsPage() {
           </div>
 
           <div className="content-scrollbar sales-dense-scroll min-h-0 flex-1">
-            <TopAnalyticsTable rows={rows} loading={loading} />
+            <TopAnalyticsTable rows={rows} loading={loading && rows.length === 0} />
           </div>
         </section>
       </main>

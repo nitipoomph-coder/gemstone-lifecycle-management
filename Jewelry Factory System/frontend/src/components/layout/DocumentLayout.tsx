@@ -6,7 +6,7 @@ import {
   FilePlus, Save, Edit3, Search, Trash2, CornerUpLeft, Printer, X,
   Package, Calendar, RefreshCw, FileSpreadsheet
 } from 'lucide-react';
-import { psPhotoUrl, cadPhotoUrl } from '../../utils/photoUrl';
+import { psPhotoUrl } from '../../utils/photoUrl';
 
 export interface DocListItem {
   no: string;
@@ -96,7 +96,7 @@ export default function DocumentLayout({
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
 
   const [photoState, setPhotoState] = useState({
-    itemNo: '', psUrl: '', cadUrl: '', psLoaded: false, cadLoaded: false,
+    itemNo: '', psUrl: '', psLoaded: false,
   });
 
   const lines = docDetail?.lines || [];
@@ -106,9 +106,7 @@ export default function DocumentLayout({
   const photoKey = isPhotoModalOpen && activeItemNo ? String(activeItemNo) : '';
   const hasCurrentPhoto = photoState.itemNo === photoKey;
   const psUrl = hasCurrentPhoto ? photoState.psUrl : '';
-  const cadUrl = hasCurrentPhoto ? photoState.cadUrl : '';
   const psLoading = Boolean(photoKey) && (!hasCurrentPhoto || !photoState.psLoaded);
-  const cadLoading = Boolean(photoKey) && (!hasCurrentPhoto || !photoState.cadLoaded);
 
   React.useEffect(() => {
     if (!photoKey) return;
@@ -119,7 +117,7 @@ export default function DocumentLayout({
       setPhotoState((previous) => ({
         ...(previous.itemNo === photoKey
           ? previous
-          : { itemNo: photoKey, psUrl: '', cadUrl: '', psLoaded: false, cadLoaded: false }),
+          : { itemNo: photoKey, psUrl: '', psLoaded: false }),
         ...update,
       }));
     };
@@ -130,12 +128,6 @@ export default function DocumentLayout({
     imgPs.src = psTargetUrl;
     imgPs.onload = () => updatePhoto({ psUrl: psTargetUrl, psLoaded: true });
     imgPs.onerror = () => updatePhoto({ psUrl: '', psLoaded: true });
-
-    const cadTargetUrl = cadPhotoUrl(photoKey);
-    const imgCad = new window.Image();
-    imgCad.src = cadTargetUrl;
-    imgCad.onload = () => updatePhoto({ cadUrl: cadTargetUrl, cadLoaded: true });
-    imgCad.onerror = () => updatePhoto({ cadUrl: '', cadLoaded: true });
 
     return () => { cancelled = true; };
   }, [photoKey]);
@@ -655,7 +647,7 @@ export default function DocumentLayout({
         >
           <div className="w-full flex items-center justify-between border-b border-[var(--color-border-light)] pb-2 mb-3">
             <div className="flex flex-col">
-              <span className="text-[10px] font-extrabold capitalize tracking-wider text-[var(--color-text-tertiary)]">Compare real photo and prototype (PS vs CAD)</span>
+              <span className="text-[10px] font-extrabold capitalize tracking-wider text-[var(--color-text-tertiary)]">View real photo (PS)</span>
               <span className="text-base font-black text-[var(--color-text-primary)] font-mono">{activeItemNo}</span>
             </div>
             <button
@@ -665,19 +657,18 @@ export default function DocumentLayout({
             </button>
           </div>
 
-          <div className="flex-1 w-full grid grid-cols-1 md:grid-cols-2 gap-4 min-h-[350px] md:min-h-[500px] lg:min-h-[600px] overflow-hidden">
-            <div className="flex flex-col border border-[var(--color-border-light)] rounded-lg bg-[var(--color-surface-1)] overflow-hidden">
-              <div className="bg-[var(--color-surface-2)] px-3 py-1.5 border-b border-[var(--color-border-light)] font-bold text-[11px] text-[var(--color-text-primary)] flex justify-between items-center">
-                <span>PS (Real Item Photo)</span>
-                <span className="text-[9px] font-black capitalize bg-[var(--color-success-500)]/10 text-[var(--color-success-600)] border border-[var(--color-success-500)]/20 px-2 py-0.5 rounded">REAL PHOTO</span>
-              </div>
-              <div className="flex-1 p-3 flex items-center justify-center overflow-hidden min-h-[250px] bg-[var(--color-surface-2)]/30">
+          <div className="flex-1 w-full flex min-h-[350px] md:min-h-[500px] lg:min-h-[600px] p-2">
+            <fieldset className="w-full flex flex-col border border-[var(--color-border-light)] bg-[var(--color-surface-0)] px-3 pb-3 pt-0 relative">
+              <legend className="text-[13px] font-bold text-[var(--color-brand-700)] px-2 ml-2 tracking-wide">
+                รูปงาน ( Item Photo )
+              </legend>
+              <div className="flex-1 border border-[var(--color-border-strong)] bg-[var(--color-surface-1)] flex items-center justify-center overflow-hidden relative">
                 {psLoading ? (
                   <div className="flex items-center gap-2 text-xs text-[var(--color-text-tertiary)]">
                     <RefreshCw size={14} className="animate-spin" /> Load Photo PS...
                   </div>
                 ) : psUrl ? (
-                  <img src={psUrl} alt="PS Item" className="max-w-full max-h-[62vh] object-contain rounded drop-shadow-md select-none" />
+                  <img src={psUrl} alt="PS Item" className="max-w-full max-h-[62vh] object-contain drop-shadow-md select-none" />
                 ) : (
                   <div className="text-[var(--color-text-tertiary)] text-[10px] flex flex-col items-center gap-2">
                     <div className="w-20 h-20 border-2 border-dashed border-[var(--color-border-light)] rounded-lg flex items-center justify-center bg-[var(--color-surface-1)]">
@@ -687,30 +678,7 @@ export default function DocumentLayout({
                   </div>
                 )}
               </div>
-            </div>
-
-            <div className="flex flex-col border border-[var(--color-border-light)] rounded-lg bg-[var(--color-surface-1)] overflow-hidden">
-              <div className="bg-[var(--color-surface-2)] px-3 py-1.5 border-b border-[var(--color-border-light)] font-bold text-[11px] text-[var(--color-text-primary)] flex justify-between items-center">
-                <span>CAD (Design 3D / Mold)</span>
-                <span className="text-[9px] font-black capitalize bg-[var(--color-brand-500)]/10 text-[var(--color-brand-600)] border border-[var(--color-brand-500)]/20 px-2 py-0.5 rounded">3D BLUEPRINT</span>
-              </div>
-              <div className="flex-1 p-3 flex items-center justify-center overflow-hidden min-h-[250px] bg-[var(--color-surface-2)]/30">
-                {cadLoading ? (
-                  <div className="flex items-center gap-2 text-xs text-[var(--color-text-tertiary)]">
-                    <RefreshCw size={14} className="animate-spin" /> Load Design CAD...
-                  </div>
-                ) : cadUrl ? (
-                  <img src={cadUrl} alt="CAD Item" className="max-w-full max-h-[62vh] object-contain rounded drop-shadow-md select-none" />
-                ) : (
-                  <div className="text-[var(--color-text-tertiary)] text-[10px] flex flex-col items-center gap-2">
-                    <div className="w-20 h-20 border-2 border-dashed border-[var(--color-border-light)] rounded-lg flex items-center justify-center bg-[var(--color-surface-1)]">
-                      <span className="opacity-50 font-bold">NO CAD</span>
-                    </div>
-                    <span>Design not found CAD (Mold)</span>
-                  </div>
-                )}
-              </div>
-            </div>
+            </fieldset>
           </div>
 
           <div className="w-full mt-3 pt-2 border-t border-[var(--color-border-light)] flex items-center justify-between text-xs text-[var(--color-text-tertiary)]">

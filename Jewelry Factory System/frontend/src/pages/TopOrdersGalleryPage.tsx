@@ -316,6 +316,7 @@ export default function TopOrdersGalleryPage() {
           <div
             role="banner"
             aria-label="Portfolio summary and key performance indicators"
+            className={`transition-opacity duration-300 ${isFilterLoading ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}
             style={{
               padding: '12px 20px',
               display: 'flex',
@@ -431,54 +432,21 @@ export default function TopOrdersGalleryPage() {
         {showInitialLoading ? (
           <TopOrdersSkeleton />
         ) : (
-          <TopOrdersGalleryGrid
-            items={items}
-            metric={metric}
-            compareEnabled={compareEnabled}
-            baseYear={baseYear}
-            compareYear={compareYear}
-            perspectiveMode={perspectiveMode}
-            openPreview={(item) => setPreviewItem(item)}
-            fmt={fmt}
-            fmtQty={fmtQty}
-          />
-        )}
-
-        {isFilterLoading && !showInitialLoading && (
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              zIndex: 50,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              background: "color-mix(in srgb, var(--color-surface-0) 65%, transparent)",
-              backdropFilter: "blur(2px)",
-              cursor: "wait",
-              animation: "galleryFadeIn 0.15s ease",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                padding: "8px 16px",
-                borderRadius: 20,
-                background: "var(--color-surface-0)",
-                border: "1px solid var(--color-border-light)",
-                boxShadow: "var(--shadow-lg)",
-                fontSize: "var(--erp-text-control)",
-                fontWeight: 700,
-                color: "var(--color-text-primary)",
-              }}
-            >
-              <RefreshCw size={14} className="gallery-filter-spinner" style={{ color: "var(--color-brand-600)" }} />
-              <span>Updating Top 50 Items...</span>
-            </div>
+          <div className={`transition-opacity duration-300 ${isFilterLoading ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
+            <TopOrdersGalleryGrid
+              items={items}
+              metric={metric}
+              compareEnabled={compareEnabled}
+              baseYear={baseYear}
+              compareYear={compareYear}
+              perspectiveMode={perspectiveMode}
+              openPreview={(item) => setPreviewItem(item)}
+              fmt={fmt}
+              fmtQty={fmtQty}
+            />
           </div>
         )}
+
       </div>
 
       <TopOrdersItemPreview

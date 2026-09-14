@@ -6,11 +6,11 @@ import { comparisonTextStyle, formatSignedPct } from './galleryComparison';
 /**
  * Category-based image scale mapping.
  * Adjust scale factor here for each product type.
- * Default is 1.0 (100%), Necklace (BNS) is set to 0.75 (75%).
+ * Default is 1.0 (100%)
  */
 export const CATEGORY_IMAGE_SCALES: Record<string, number> = {
-  BNS: 0.75, // Necklace = 75%
-  NECKLACE: 0.75,
+  BNS: 1.0, // Necklace = 100%
+  NECKLACE: 1.0,
   BBS: 1.0,  // Bracelet & Bangle = 100%
   BES: 1.0,  // Earring = 100%
   BRS: 1.0,  // Ring = 100%
@@ -30,7 +30,8 @@ export const getCategoryImageScale = (productType?: string, productTypeLabel?: s
     return CATEGORY_IMAGE_SCALES[labelKey];
   }
   if (labelKey.includes('NECKLACE') || labelKey.includes('Necklace')) {
-    return 0.75;
+    return 1.0
+      ;
   }
   return 1.0;
 };

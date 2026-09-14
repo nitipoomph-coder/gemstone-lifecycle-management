@@ -42,6 +42,8 @@ interface CustomerReportTableProps {
   showFilters?: boolean;
   setShowFilters?: (value: boolean) => void;
   onResetMatrix?: () => void;
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
 }
 
 type MatrixSkeletonStyle = React.CSSProperties & {
@@ -71,7 +73,11 @@ export default function CustomerReportTable({
   renderGrowthPct,
   searchQuery = '',
   setSearchQuery,
+  showFilters,
+  setShowFilters,
   onResetMatrix,
+  onRefresh,
+  isRefreshing,
 }: CustomerReportTableProps) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -109,9 +115,6 @@ export default function CustomerReportTable({
   const isSearchActive = searchDraft.trim().length > 0;
 
   const resetMatrix = () => {
-    if (resetPendingTimerRef.current) window.clearTimeout(resetPendingTimerRef.current);
-    setResetPending(true);
-    resetPendingTimerRef.current = window.setTimeout(() => setResetPending(false), 450);
     setSearchDraft('');
     if (onResetMatrix) {
       onResetMatrix();
@@ -335,16 +338,18 @@ export default function CustomerReportTable({
         <span className="customer-matrix-count">{tableData.rows.length} customers</span>
         <span className="customer-matrix-control-spacer" />
 
-        <ErpButton
-          size="sm"
-          variant="ghost"
-          icon={<RotateCcw size={13} />}
-          onClick={resetMatrix}
-          disabled={resetPending}
-          style={{ color: 'var(--color-text-tertiary)' }}
-        >
-          Reset View
-        </ErpButton>
+        {onRefresh && (
+          <ErpButton
+            size="sm"
+            variant="ghost"
+            icon={<RefreshCw size={13} className={isRefreshing ? 'animate-spin' : ''} />}
+            onClick={onRefresh}
+            disabled={isRefreshing}
+            style={{ color: 'var(--color-text-tertiary)' }}
+          >
+            Refresh
+          </ErpButton>
+        )}
       </div>
 
       <div className="customer-matrix-scroll content-scrollbar">

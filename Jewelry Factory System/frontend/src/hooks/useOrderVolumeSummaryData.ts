@@ -163,12 +163,14 @@ export const fmtAxis = (value: number, metric: Metric) => metric === 'amount' ? 
 
 export function useOrderVolumeSummaryData() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { selectedYears, selectedMonths, selGroups: selectedGroups, availableYears, kpiCompareYear } = useOutletContext<{
+  const { selectedYears, selectedMonths, selGroups: selectedGroups, availableYears, kpiCompareYear, draftYear, compareYearVal1 } = useOutletContext<{
     selectedYears: string[];
     selectedMonths: string[];
     selGroups: string[];
     availableYears: string[];
     kpiCompareYear?: string;
+    draftYear?: string;
+    compareYearVal1?: string;
   }>();
 
   const loadRequestIdRef = useRef(0);
@@ -278,10 +280,10 @@ export function useOrderVolumeSummaryData() {
     loadRequestIdRef.current += 1;
   }, []);
 
-  const primaryYear = selectedYears[selectedYears.length - 1] || availableYears[availableYears.length - 1] || '';
+  const primaryYear = draftYear || availableYears[availableYears.length - 1] || '';
   const compareYear = (kpiCompareYear && selectedYears.includes(kpiCompareYear) && kpiCompareYear !== primaryYear)
     ? kpiCompareYear
-    : (selectedYears.find(year => year !== primaryYear) || 'none');
+    : compareYearVal1 || 'none';
   const hasCompareYear = compareYear !== 'none';
 
   const primaryTotals = useMemo(() => calcTotalsFromMonthly(monthlyData, primaryYear), [monthlyData, primaryYear]);

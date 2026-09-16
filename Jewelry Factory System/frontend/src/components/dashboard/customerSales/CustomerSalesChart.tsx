@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList, ReferenceLine } from 'recharts';
+import { ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList } from 'recharts';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ALL_GROUPS } from '../../../config/customerGroups';
 import type { ChartDatum, Metric } from '../../../hooks/useCustomerSalesData';
@@ -8,7 +8,7 @@ import './CustomerSales.css';
 
 const YEAR_COLORS = ['var(--color-chart-1)', 'var(--color-chart-2)', 'var(--color-chart-3)', 'var(--color-chart-4)', 'var(--color-chart-5)', 'var(--color-chart-6)'];
 
-type TooltipPayloadEntry = { value?: number; color?: string; dataKey?: string | number; name?: string };
+type TooltipPayloadEntry = { value?: number; color?: string; dataKey?: string | number; name?: string; payload?: any };
 type CustomTooltipProps = { active?: boolean; payload?: TooltipPayloadEntry[]; label?: string; metric: Metric; chartData?: any[]; mode?: string; monthlySeries?: string; };
 
 const CustomTooltip = ({ active, payload, label, metric, chartData, mode, monthlySeries }: CustomTooltipProps) => {

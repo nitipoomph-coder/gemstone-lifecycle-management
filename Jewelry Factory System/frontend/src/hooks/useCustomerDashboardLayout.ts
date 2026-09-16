@@ -3,26 +3,10 @@ import { useLocation, useSearchParams, useNavigate } from 'react-router-dom';
 import { fetchAvailableYears } from '../services/dashboardAPI';
 import { fetchCustomerSummary, type CustomerSummaryRecord } from '../services/customerSummaryAPI';
 import { ALL_GROUPS, ACTIVE_GROUP_IDS, getCustomerGroupId } from '../config/customerGroups';
+import { parseListParam } from '../utils/periodUtils';
+import { usePeriodSetup } from './usePeriodSetup';
 
-export const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-export const MONTH_PARAM_IDS = MONTHS.map((_, index) => String(index + 1));
 export const ALL_GROUP_IDS = ALL_GROUPS.map((group: any) => group.id);
-
-
-
-export function csv(value: string | null) {
-  return String(value || '').split(',').map(item => item.trim()).filter(Boolean);
-}
-
-export function parseMonths(value: string | null) {
-  const months = csv(value).map(item => {
-    const numeric = Number(item);
-    if (Number.isInteger(numeric) && numeric >= 1 && numeric <= 12) return String(numeric);
-    const mIdx = MONTHS.findIndex(m => m.toLowerCase() === item.toLowerCase());
-    return mIdx !== -1 ? String(mIdx + 1) : '';
-  }).filter(Boolean);
-  return Array.from(new Set(months));
-}
 
 export function parseGroups(value: string | null) {
   const normalized = String(value || '').trim().toLowerCase();
@@ -30,7 +14,7 @@ export function parseGroups(value: string | null) {
   if (normalized === 'all') return ALL_GROUP_IDS;
   if (normalized === 'none') return [];
   const groupIds = new Set(ALL_GROUP_IDS);
-  return csv(value).filter(groupId => groupIds.has(groupId));
+  return parseListParam(value).filter(groupId => groupIds.has(groupId));
 }
 
 export function useCustomerDashboardLayout() {
@@ -46,136 +30,34 @@ export function useCustomerDashboardLayout() {
 
   // Global Filter States
   const hasGroupsParam = searchParams.has('groups');
-  const requestedYears = useMemo(() => csv(searchParams.get('years')), [searchParams]);
-  const requestedMonths = useMemo(() => parseMonths(searchParams.get('months')), [searchParams]);
   const requestedGroups = useMemo(() => parseGroups(searchParams.get('groups')), [searchParams]);
   const defaultGroups = ACTIVE_GROUP_IDS;
 
   const [availableYears, setAvailableYears] = useState<string[]>([]);
-  const [selectedYears, setSelectedYears] = useState<string[]>(requestedYears);
-  const [selectedMonths, setSelectedMonths] = useState<string[]>(requestedMonths.length ? requestedMonths : MONTH_PARAM_IDS);
   const [selGroups, setSelGroups] = useState<string[]>(hasGroupsParam ? requestedGroups : defaultGroups);
   const [custData, setCustData] = useState<CustomerSummaryRecord[]>([]);
 
-  // Period Filter Setup states
-  const [monthStart, setMonthStart] = useState<number>(() => {
-    if (!requestedMonths.length) return 1;
-    const sorted = [...requestedMonths].map(Number).sort((a, b) => a - b);
-    return sorted[0];
-  });
-  const [monthEnd, setMonthEnd] = useState<number>(() => {
-    if (!requestedMonths.length) return 12;
-    const sorted = [...requestedMonths].map(Number).sort((a, b) => a - b);
-    return sorted[sorted.length - 1];
-  });
-  const [periodPreset, setPeriodPreset] = useState<'full-year' | 'ytd' | 'this-month' | 'last-month' | 'custom'>(() => {
-    if (!requestedMonths.length || requestedMonths.length === 12) return 'full-year';
-    return 'custom';
-  });
-
-  const [draftPreset, setDraftPreset] = useState<typeof periodPreset>(periodPreset);
-  const [draftStart, setDraftStart] = useState<number>(monthStart);
-  const [draftEnd, setDraftEnd] = useState<number>(monthEnd);
-  const [draftYear, setDraftYear] = useState<string>('');
-
-  // States สำหรับ Compare Years
-  const [compareActive1, setCompareActive1] = useState<boolean>(() => requestedYears.length > 1);
-  const [compareYearVal1, setCompareYearVal1] = useState<string>(() => requestedYears[1] || '');
-
-  const [compareActive2, setCompareActive2] = useState<boolean>(() => requestedYears.length > 2);
-  const [compareYearVal2, setCompareYearVal2] = useState<string>(() => requestedYears[2] || '');
-
-  const [draftCompareActive1, setDraftCompareActive1] = useState<boolean>(compareActive1);
-  const [draftCompareYearVal1, setDraftCompareYearVal1] = useState<string>(compareYearVal1);
-
-  const [draftCompareActive2, setDraftCompareActive2] = useState<boolean>(compareActive2);
-  const [draftCompareYearVal2, setDraftCompareYearVal2] = useState<string>(compareYearVal2);
-
-  // States สำหรับสลับYearที่นำมาเปรียบเทียบใน KPI การ์ด
-  const [kpiCompareYear, setKpiCompareYear] = useState<string>(() => {
-    const fromParam = searchParams.get('kpiCompare');
-    return fromParam || requestedYears[1] || '';
-  });
-  const [draftKpiCompareYear, setDraftKpiCompareYear] = useState<string>(kpiCompareYear);
-
-  useEffect(() => {
-    if (availableYears.length > 0) {
-      if (!draftYear) {
-        setDraftYear(selectedYears[0] || availableYears[0]);
-      }
-      if (!draftCompareYearVal1) {
-        setDraftCompareYearVal1(selectedYears[1] || availableYears[1] || availableYears[0]);
-      }
-      if (!draftCompareYearVal2) {
-        setDraftCompareYearVal2(selectedYears[2] || availableYears[2] || 'none');
-      }
+  // Initialize unified Period Setup Hook
+  const matrixPeriod = usePeriodSetup({
+    availableYears,
+    syncToUrl: true,
+    presets: ['full-year', 'ytd', 'this-month', 'last-month', 'custom'],
+    compareSlots: 2,
+    allowWeekRange: false,
+    onReset: () => {
+      setSelGroups(ACTIVE_GROUP_IDS);
     }
-  }, [availableYears, selectedYears, draftYear, draftCompareYearVal1, draftCompareYearVal2]);
+  });
 
-  // Sync draft เมื่อ Popover เClose
-  const syncDraftPeriods = () => {
-    setDraftPreset(periodPreset);
-    setDraftStart(monthStart);
-    setDraftEnd(monthEnd);
-    setDraftYear(selectedYears[0] || availableYears[0] || '');
+  const selectedYears = matrixPeriod.committed.selectedYears;
+  const selectedMonths = matrixPeriod.committed.selectedMonths;
 
-    setDraftCompareActive1(compareActive1);
-    setDraftCompareYearVal1(compareYearVal1 || selectedYears[1] || availableYears[1] || '');
-
-    setDraftCompareActive2(compareActive2);
-    setDraftCompareYearVal2(compareYearVal2 || selectedYears[2] || 'none');
-
-    setDraftKpiCompareYear(kpiCompareYear || selectedYears[1] || availableYears[1] || '');
-  };
-
-  const applyPeriodPresetLayout = (preset: typeof periodPreset) => {
-    setDraftPreset(preset);
-    const current = new Date().getMonth() + 1;
-    if (preset === 'ytd') {
-      setDraftStart(1);
-      setDraftEnd(current);
-    } else if (preset === 'this-month') {
-      setDraftStart(current);
-      setDraftEnd(current);
-    } else if (preset === 'last-month') {
-      const last = current === 1 ? 12 : current - 1;
-      setDraftStart(last);
-      setDraftEnd(last);
-    } else {
-      setDraftStart(1);
-      setDraftEnd(12);
-    }
+  const applyPeriodPresetLayout = (preset: any) => {
+    matrixPeriod.actions.applyPreset(preset);
   };
 
   const applyPeriodChangesLayout = () => {
-    setPeriodPreset(draftPreset);
-    setMonthStart(draftStart);
-    setMonthEnd(draftEnd);
-
-    setCompareActive1(draftCompareActive1);
-    setCompareYearVal1(draftCompareYearVal1);
-
-    setCompareActive2(draftCompareActive2);
-    setCompareYearVal2(draftCompareYearVal2);
-
-    setKpiCompareYear(draftKpiCompareYear);
-
-    const nextYears: string[] = [];
-    if (draftYear) nextYears.push(draftYear);
-    if (draftCompareActive1 && draftCompareYearVal1 && draftCompareYearVal1 !== 'none') nextYears.push(draftCompareYearVal1);
-    if (draftCompareActive2 && draftCompareYearVal2 && draftCompareYearVal2 !== 'none') nextYears.push(draftCompareYearVal2);
-
-    setSelectedYears(Array.from(new Set(nextYears)));
-
-    const start = Math.min(draftStart, draftEnd);
-    const end = Math.max(draftStart, draftEnd);
-    const newMonths = Array.from({ length: end - start + 1 }, (_, i) => String(start + i));
-    setSelectedMonths(newMonths);
-
-    const newParams = new URLSearchParams(searchParams);
-    newParams.set('kpiCompare', draftKpiCompareYear);
-    setSearchParams(newParams);
-
+    matrixPeriod.actions.apply();
     setShowPeriodPopover(false);
   };
 
@@ -224,34 +106,26 @@ export function useCustomerDashboardLayout() {
     fetchAvailableYears().then((years: any) => {
       const stringYears = years.map(String).sort((a: any, b: any) => b.localeCompare(a));
       setAvailableYears(stringYears);
-      if (selectedYears.length === 0 && stringYears.length > 0) {
-        setSelectedYears([stringYears[0]]);
-      }
 
       fetchCustomerSummary(stringYears).then(setCustData).catch(console.error);
     });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
-    const currentYears = searchParams.get('years') || '';
-    const targetYears = selectedYears.length > 0 ? selectedYears.join(',') : '';
-
-    const isAllMonths = selectedMonths.length === MONTH_PARAM_IDS.length;
-    const currentMonths = searchParams.get('months') || '';
-    const targetMonths = isAllMonths ? '' : selectedMonths.slice().sort((a, b) => Number(a) - Number(b)).join(',');
-
+    // Only URL sync groups here since period is handled by usePeriodSetup
     const isAllGroups = selGroups.length === ALL_GROUP_IDS.length;
     const currentGroups = searchParams.get('groups') || '';
     const targetGroups = selGroups.length === 0 ? 'none' : isAllGroups ? 'all' : selGroups.join(',');
 
-    if (currentYears !== targetYears || currentMonths !== targetMonths || currentGroups !== targetGroups) {
-      const newParams = new URLSearchParams(searchParams);
-      if (targetYears) newParams.set('years', targetYears); else newParams.delete('years');
-      if (targetMonths) newParams.set('months', targetMonths); else newParams.delete('months');
-      if (targetGroups) newParams.set('groups', targetGroups); else newParams.delete('groups');
-      setSearchParams(newParams, { replace: true });
+    if (currentGroups !== targetGroups) {
+      setSearchParams(prev => {
+        const next = new URLSearchParams(prev);
+        if (targetGroups) next.set('groups', targetGroups);
+        else next.delete('groups');
+        return next;
+      }, { replace: true });
     }
-  }, [selectedYears, selectedMonths, selGroups, searchParams, setSearchParams]);
+  }, [selGroups, searchParams, setSearchParams]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -279,37 +153,14 @@ export function useCustomerDashboardLayout() {
   };
 
   const isFiltered = useMemo(() => {
-    const isPeriodFiltered = periodPreset !== 'full-year' || monthStart !== 1 || monthEnd !== 12 || compareActive1 || compareActive2;
+    const isPeriodFiltered = matrixPeriod.committed.preset !== 'full-year' || matrixPeriod.committed.monthStart !== 1 || matrixPeriod.committed.monthEnd !== 12 || matrixPeriod.committed.compareActive1 || matrixPeriod.committed.compareActive2;
     const isGroupsFiltered = selGroups.length !== ACTIVE_GROUP_IDS.length || !ACTIVE_GROUP_IDS.every((id: any) => selGroups.includes(id));
     return isPeriodFiltered || isGroupsFiltered;
-  }, [periodPreset, monthStart, monthEnd, compareActive1, compareActive2, selGroups]);
+  }, [matrixPeriod.committed, selGroups]);
 
   const resetFilters = useCallback(() => {
-    const defaultYear = availableYears[0] || '';
-    setPeriodPreset('full-year');
-    setDraftPreset('full-year');
-    setMonthStart(1);
-    setMonthEnd(12);
-    setDraftStart(1);
-    setDraftEnd(12);
-    if (defaultYear) {
-      setSelectedYears([defaultYear]);
-      setDraftYear(defaultYear);
-    }
-    setSelectedMonths(MONTH_PARAM_IDS);
-    setCompareActive1(false);
-    setCompareYearVal1('');
-    setCompareActive2(false);
-    setCompareYearVal2('');
-    setDraftCompareActive1(false);
-    setDraftCompareYearVal1('');
-    setDraftCompareActive2(false);
-    setDraftCompareYearVal2('');
-    setKpiCompareYear('');
-    setDraftKpiCompareYear('');
-    setSelGroups(ACTIVE_GROUP_IDS);
-    setSearchParams({}, { replace: true });
-  }, [availableYears, setSearchParams]);
+    matrixPeriod.actions.reset();
+  }, [matrixPeriod.actions]);
 
   return {
     activeTab,
@@ -318,34 +169,35 @@ export function useCustomerDashboardLayout() {
     selectedMonths,
     selGroups,
     availableYears,
-    kpiCompareYear,
-    setKpiCompareYear,
-    monthStart,
-    monthEnd,
-    periodPreset,
-    draftPreset,
-    setDraftPreset,
-    draftStart,
-    setDraftStart,
-    draftEnd,
-    setDraftEnd,
-    draftYear,
-    setDraftYear,
-    compareActive1,
-    compareYearVal1,
-    compareActive2,
-    compareYearVal2,
-    draftCompareActive1,
-    setDraftCompareActive1,
-    draftCompareYearVal1,
-    setDraftCompareYearVal1,
-    draftCompareActive2,
-    setDraftCompareActive2,
-    draftCompareYearVal2,
-    setDraftCompareYearVal2,
-    draftKpiCompareYear,
-    setDraftKpiCompareYear,
-    syncDraftPeriods,
+    kpiCompareYear: matrixPeriod.committed.kpiCompareYear,
+    setKpiCompareYear: (val: string) => matrixPeriod.actions.setDraftField({ kpiCompareYear: val }),
+    monthStart: matrixPeriod.committed.monthStart,
+    monthEnd: matrixPeriod.committed.monthEnd,
+    periodPreset: matrixPeriod.committed.preset,
+    draftPreset: matrixPeriod.draft.preset,
+    setDraftPreset: (val: any) => matrixPeriod.actions.setDraftField({ preset: val }),
+    draftStart: matrixPeriod.draft.monthStart,
+    setDraftStart: (val: number) => matrixPeriod.actions.setDraftField({ monthStart: val }),
+    draftEnd: matrixPeriod.draft.monthEnd,
+    setDraftEnd: (val: number) => matrixPeriod.actions.setDraftField({ monthEnd: val }),
+    baseYear: matrixPeriod.committed.baseYear,
+    draftYear: matrixPeriod.draft.baseYear,
+    setDraftYear: (val: string) => matrixPeriod.actions.setDraftField({ baseYear: val }),
+    compareActive1: matrixPeriod.committed.compareActive1,
+    compareYearVal1: matrixPeriod.committed.compareYear1,
+    compareActive2: matrixPeriod.committed.compareActive2,
+    compareYearVal2: matrixPeriod.committed.compareYear2,
+    draftCompareActive1: matrixPeriod.draft.compareActive1,
+    setDraftCompareActive1: (val: boolean) => matrixPeriod.actions.setDraftField({ compareActive1: val }),
+    draftCompareYearVal1: matrixPeriod.draft.compareYear1,
+    setDraftCompareYearVal1: (val: string) => matrixPeriod.actions.setDraftField({ compareYear1: val }),
+    draftCompareActive2: matrixPeriod.draft.compareActive2,
+    setDraftCompareActive2: (val: boolean) => matrixPeriod.actions.setDraftField({ compareActive2: val }),
+    draftCompareYearVal2: matrixPeriod.draft.compareYear2,
+    setDraftCompareYearVal2: (val: string) => matrixPeriod.actions.setDraftField({ compareYear2: val }),
+    draftKpiCompareYear: matrixPeriod.draft.kpiCompareYear,
+    setDraftKpiCompareYear: (val: string) => matrixPeriod.actions.setDraftField({ kpiCompareYear: val }),
+    syncDraftPeriods: matrixPeriod.actions.syncDraft,
     applyPeriodPresetLayout,
     applyPeriodChangesLayout,
     dynamicActiveGroups,

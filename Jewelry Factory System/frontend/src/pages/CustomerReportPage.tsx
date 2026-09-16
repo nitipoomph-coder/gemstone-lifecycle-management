@@ -18,6 +18,7 @@ export default function CustomerReportPage() {
     activeYears,
     displayYears,
     displayMonths,
+    displayWeeks,
     selMonths,
     selGroups,
     kpiCompareYear,
@@ -25,7 +26,6 @@ export default function CustomerReportPage() {
     isFilterOpen,
     setIsFilterOpen,
     viewMode,
-    setViewMode,
     aggregationMode,
     setAggregationMode,
     searchQuery,
@@ -37,9 +37,7 @@ export default function CustomerReportPage() {
     currentYearStr,
     currentMonthIdx,
     tableData,
-    groupKpis,
-    triggerRefresh,
-    isRefreshing
+    groupKpis
   } = useCustomerReportData();
 
   const handleRenderGrowthAmt = useCallback((baseVal: number, compVal: number) => {
@@ -59,7 +57,7 @@ export default function CustomerReportPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 20, marginBottom: 20 }}>
               {/* Year KPI Skeletons */}
               <div className="sales-report-kpis flex-wrap" style={{ display: 'flex', gap: 12, marginBottom: 1 }}>
-                {(displayYears.length > 0 ? displayYears : ['2025', '2024']).map((yr, i) => (
+                {(displayYears.length > 0 ? displayYears : ['2025', '2024']).map((yr: string, i: number) => (
                   <div
                     key={`kpi-skeleton-yr-${yr}`}
                     style={{
@@ -129,7 +127,7 @@ export default function CustomerReportPage() {
           {(!loading || tableData.rows.length > 0) && (
             <div className={`transition-opacity duration-300 ${loading ? 'opacity-50 pointer-events-none' : 'opacity-100'}`} key={`kpis-${displayYears.join(',')}-${selGroups.join(',')}-${selMonths.join(',')}-${metric}`}>
               <div className="sales-report-kpis flex-wrap" style={{ display: 'flex', gap: 12, marginBottom: 1 }}>
-                {displayYears.map((yr, yIdx) => (
+                {displayYears.map((yr: string, yIdx: number) => (
                   <div
                     key={yr}
                     className="kpi-card"
@@ -248,12 +246,12 @@ export default function CustomerReportPage() {
                 loading={loading && tableData.rows.length === 0}
                 baseYear={baseYear}
                 viewMode={viewMode}
-                setViewMode={setViewMode}
                 aggregationMode={aggregationMode}
                 setAggregationMode={setAggregationMode}
                 tableData={tableData}
                 displayYears={displayYears}
                 displayMonths={displayMonths}
+                displayWeeks={displayWeeks}
                 currentYearStr={currentYearStr}
                 currentMonthIdx={currentMonthIdx}
                 growthComparisons={growthComparisons}
@@ -269,8 +267,6 @@ export default function CustomerReportPage() {
                 showFilters={isFilterOpen}
                 setShowFilters={setIsFilterOpen}
                 onResetMatrix={resetMatrixView}
-                onRefresh={triggerRefresh}
-                isRefreshing={isRefreshing}
               />
             </div>
           </div>

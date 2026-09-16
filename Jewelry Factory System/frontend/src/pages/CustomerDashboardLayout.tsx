@@ -7,7 +7,8 @@ import { CalendarDays, ChevronDown, Users, BarChart3, Table2, LineChart, FilterX
 import { ALL_GROUPS } from '../config/customerGroups';
 import { ErpSegmentedControl } from '../components/ui/ErpButtons';
 import './CustomerDashboard.css';
-import { useCustomerDashboardLayout, MONTHS } from '../hooks/useCustomerDashboardLayout';
+import { useCustomerDashboardLayout } from '../hooks/useCustomerDashboardLayout';
+import { MONTHS } from '../utils/periodUtils';
 
 export default function CustomerDashboardLayout() {
   const {
@@ -21,16 +22,20 @@ export default function CustomerDashboardLayout() {
     setKpiCompareYear,
     monthStart,
     monthEnd,
+    periodPreset,
     draftPreset,
     setDraftPreset,
     draftStart,
     setDraftStart,
     draftEnd,
     setDraftEnd,
+    baseYear,
     draftYear,
     setDraftYear,
     compareActive1,
     compareYearVal1,
+    compareActive2,
+    compareYearVal2,
     draftCompareActive1,
     setDraftCompareActive1,
     draftCompareYearVal1,
@@ -72,7 +77,7 @@ export default function CustomerDashboardLayout() {
         hideTitle={true}
         rightContent={
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            {activeTab === 'dashboard' && (
+            {(activeTab === 'dashboard' || activeTab === 'matrix') && (
               <button
                 type="button"
                 onClick={triggerRefresh}
@@ -185,7 +190,7 @@ export default function CustomerDashboardLayout() {
                           <PeriodSelect
                             label="Start Month"
                             value={draftStart}
-                            options={MONTHS.map((month, index) => ({ value: index + 1, label: month }))}
+                            options={MONTHS.map((month: string, index: number) => ({ value: index + 1, label: month }))}
                             onChange={(value) => {
                               setDraftPreset('custom');
                               setDraftStart(Number(value));
@@ -194,7 +199,7 @@ export default function CustomerDashboardLayout() {
                           <PeriodSelect
                             label="End Month"
                             value={draftEnd}
-                            options={MONTHS.map((month, index) => ({ value: index + 1, label: month }))}
+                            options={MONTHS.map((month: string, index: number) => ({ value: index + 1, label: month }))}
                             onChange={(value) => {
                               setDraftPreset('custom');
                               setDraftEnd(Number(value));
@@ -431,7 +436,7 @@ export default function CustomerDashboardLayout() {
       />
 
       {/* Shared Layout Main Content Area */}
-      <Outlet context={{ selectedYears, selectedMonths, selGroups, availableYears, kpiCompareYear, setKpiCompareYear, refreshCounter, isRefreshing, triggerRefresh, setIsRefreshing }} />
+      <Outlet context={{ selectedYears, selectedMonths, selGroups, availableYears, kpiCompareYear, setKpiCompareYear, refreshCounter, isRefreshing, triggerRefresh, setIsRefreshing, draftYear: baseYear, compareYearVal1, compareYearVal2, compareActive1, compareActive2, monthStart, monthEnd, periodPreset, resetFilters }} />
     </>
   );
 }

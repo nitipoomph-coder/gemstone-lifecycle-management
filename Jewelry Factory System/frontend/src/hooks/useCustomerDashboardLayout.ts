@@ -38,26 +38,28 @@ export function useCustomerDashboardLayout() {
   const [custData, setCustData] = useState<CustomerSummaryRecord[]>([]);
 
   // Initialize unified Period Setup Hook
-  const matrixPeriod = usePeriodSetup({
+  const periodSetupConfig = useMemo(() => ({
     availableYears,
     syncToUrl: true,
-    presets: ['full-year', 'ytd', 'this-month', 'last-month', 'custom'],
-    compareSlots: 2,
-    allowWeekRange: false,
+    presets: ['ytd', 'custom', 'month', 'week', 'day'] as any,
+    compareSlots: 2 as const,
+    allowWeekRange: true,
     onReset: () => {
       setSelGroups(ACTIVE_GROUP_IDS);
     }
-  });
+  }), [availableYears]);
 
-  const selectedYears = matrixPeriod.committed.selectedYears;
-  const selectedMonths = matrixPeriod.committed.selectedMonths;
+  const periodSetup = usePeriodSetup(periodSetupConfig);
+
+  const selectedYears = periodSetup.committed.selectedYears;
+  const selectedMonths = periodSetup.committed.selectedMonths;
 
   const applyPeriodPresetLayout = (preset: any) => {
-    matrixPeriod.actions.applyPreset(preset);
+    periodSetup.actions.applyPreset(preset);
   };
 
   const applyPeriodChangesLayout = () => {
-    matrixPeriod.actions.apply();
+    periodSetup.actions.apply();
     setShowPeriodPopover(false);
   };
 
@@ -129,9 +131,7 @@ export function useCustomerDashboardLayout() {
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (periodPopoverRef.current && !periodPopoverRef.current.contains(event.target as Node)) {
-        setShowPeriodPopover(false);
-      }
+      
       if (groupPopoverRef.current && !groupPopoverRef.current.contains(event.target as Node)) {
         setShowGroupPopover(false);
       }
@@ -153,14 +153,14 @@ export function useCustomerDashboardLayout() {
   };
 
   const isFiltered = useMemo(() => {
-    const isPeriodFiltered = matrixPeriod.committed.preset !== 'full-year' || matrixPeriod.committed.monthStart !== 1 || matrixPeriod.committed.monthEnd !== 12 || matrixPeriod.committed.compareActive1 || matrixPeriod.committed.compareActive2;
+    const isPeriodFiltered = periodSetup.committed.preset !== 'full-year' || periodSetup.committed.monthFrom !== 1 || periodSetup.committed.monthTo !== 12 || periodSetup.committed.compareActive1 || periodSetup.committed.compareActive2;
     const isGroupsFiltered = selGroups.length !== ACTIVE_GROUP_IDS.length || !ACTIVE_GROUP_IDS.every((id: any) => selGroups.includes(id));
     return isPeriodFiltered || isGroupsFiltered;
-  }, [matrixPeriod.committed, selGroups]);
+  }, [periodSetup.committed, selGroups]);
 
   const resetFilters = useCallback(() => {
-    matrixPeriod.actions.reset();
-  }, [matrixPeriod.actions]);
+    periodSetup.actions.reset();
+  }, [periodSetup.actions]);
 
   return {
     activeTab,
@@ -169,43 +169,10 @@ export function useCustomerDashboardLayout() {
     selectedMonths,
     selGroups,
     availableYears,
-    kpiCompareYear: matrixPeriod.committed.kpiCompareYear,
-    setKpiCompareYear: (val: string) => matrixPeriod.actions.setDraftField({ kpiCompareYear: val }),
-    monthStart: matrixPeriod.committed.monthStart,
-    monthEnd: matrixPeriod.committed.monthEnd,
-    periodPreset: matrixPeriod.committed.preset,
-    draftPreset: matrixPeriod.draft.preset,
-    setDraftPreset: (val: any) => matrixPeriod.actions.setDraftField({ preset: val }),
-    draftStart: matrixPeriod.draft.monthStart,
-    setDraftStart: (val: number) => matrixPeriod.actions.setDraftField({ monthStart: val }),
-    draftEnd: matrixPeriod.draft.monthEnd,
-    setDraftEnd: (val: number) => matrixPeriod.actions.setDraftField({ monthEnd: val }),
-    baseYear: matrixPeriod.committed.baseYear,
-    draftYear: matrixPeriod.draft.baseYear,
-    setDraftYear: (val: string) => matrixPeriod.actions.setDraftField({ baseYear: val }),
-    compareActive1: matrixPeriod.committed.compareActive1,
-    compareYearVal1: matrixPeriod.committed.compareYear1,
-    compareActive2: matrixPeriod.committed.compareActive2,
-    compareYearVal2: matrixPeriod.committed.compareYear2,
-    draftCompareActive1: matrixPeriod.draft.compareActive1,
-    setDraftCompareActive1: (val: boolean) => matrixPeriod.actions.setDraftField({ compareActive1: val }),
-    draftCompareYearVal1: matrixPeriod.draft.compareYear1,
-    setDraftCompareYearVal1: (val: string) => matrixPeriod.actions.setDraftField({ compareYear1: val }),
-    draftCompareActive2: matrixPeriod.draft.compareActive2,
-    setDraftCompareActive2: (val: boolean) => matrixPeriod.actions.setDraftField({ compareActive2: val }),
-    draftCompareYearVal2: matrixPeriod.draft.compareYear2,
-    setDraftCompareYearVal2: (val: string) => matrixPeriod.actions.setDraftField({ compareYear2: val }),
-    draftKpiCompareYear: matrixPeriod.draft.kpiCompareYear,
-    setDraftKpiCompareYear: (val: string) => matrixPeriod.actions.setDraftField({ kpiCompareYear: val }),
-    syncDraftPeriods: matrixPeriod.actions.syncDraft,
-    applyPeriodPresetLayout,
-    applyPeriodChangesLayout,
+    periodSetup,
     dynamicActiveGroups,
-    showPeriodPopover,
-    setShowPeriodPopover,
     showGroupPopover,
     setShowGroupPopover,
-    periodPopoverRef,
     groupPopoverRef,
     toggleGroup,
     setSelGroups,
@@ -213,3 +180,4 @@ export function useCustomerDashboardLayout() {
     resetFilters
   };
 }
+

@@ -126,8 +126,8 @@ export function useTopOrdersGalleryData() {
   const [searchDraft, setSearchDraft] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
 
-  const [monthStart, setMonthStart] = useState(1);
-  const [monthEnd, setMonthEnd] = useState(12);
+  const [monthFrom, setmonthFrom] = useState(1);
+  const [monthTo, setmonthTo] = useState(12);
   const [periodPreset, setPeriodPreset] = useState<PeriodPreset>("full-year");
   const [periodDraft, setPeriodDraft] = useState<PeriodDraft | null>(null);
 
@@ -138,8 +138,8 @@ export function useTopOrdersGalleryData() {
   const filterTransitionTimer = useRef<ReturnType<typeof window.setTimeout> | null>(null);
   const hasLoadedInitialRef = useRef(false);
 
-  const selectedMonthNumbers = useMemo(() => monthRange(monthStart, monthEnd), [monthStart, monthEnd]);
-  const selectedPeriodLabel = monthRangeLabel(monthStart, monthEnd);
+  const selectedMonthNumbers = useMemo(() => monthRange(monthFrom, monthTo), [monthFrom, monthTo]);
+  const selectedPeriodLabel = monthRangeLabel(monthFrom, monthTo);
   const selectedGroupsKey = selGroups.join(",");
 
   const analyticsPath = useMemo(() => {
@@ -272,8 +272,8 @@ export function useTopOrdersGalleryData() {
     return {
       preset: periodPreset,
       baseYear: activeBase,
-      startMonth: monthStart,
-      endMonth: monthEnd,
+      startMonth: monthFrom,
+      endMonth: monthTo,
       compareEnabled,
       compareYear: activeComp,
     };
@@ -310,8 +310,8 @@ export function useTopOrdersGalleryData() {
     if (!periodDraft) return;
     startFilterTransition();
     setPeriodPreset(periodDraft.preset);
-    setMonthStart(periodDraft.startMonth);
-    setMonthEnd(periodDraft.endMonth);
+    setmonthFrom(periodDraft.startMonth);
+    setmonthTo(periodDraft.endMonth);
     setBaseYear(periodDraft.baseYear);
     setCompareEnabled(periodDraft.compareEnabled);
     setCompareYear(periodDraft.compareYear);
@@ -342,8 +342,8 @@ export function useTopOrdersGalleryData() {
     setProductType('ALL');
     setSearchDraft('');
     setSearchQuery('');
-    setMonthStart(1);
-    setMonthEnd(12);
+    setmonthFrom(1);
+    setmonthTo(12);
     setPeriodPreset('full-year');
     setPeriodDraft(null);
     setBaseYear(defaultBase);
@@ -367,10 +367,10 @@ export function useTopOrdersGalleryData() {
     const isPerspectiveFiltered = perspectiveMode !== 'combined';
     const isProductTypeFiltered = productType !== 'ALL';
     const isSearchFiltered = searchQuery.trim() !== '' || searchDraft.trim() !== '';
-    const isPeriodFiltered = periodPreset !== 'full-year' || monthStart !== 1 || monthEnd !== 12 || (baseYear !== '' && baseYear !== defaultBase);
+    const isPeriodFiltered = periodPreset !== 'full-year' || monthFrom !== 1 || monthTo !== 12 || (baseYear !== '' && baseYear !== defaultBase);
     const isGroupsFiltered = selGroups.length !== ACTIVE_GROUP_IDS.length || !ACTIVE_GROUP_IDS.every(id => selGroups.includes(id));
     return isPerspectiveFiltered || isProductTypeFiltered || isSearchFiltered || isPeriodFiltered || isGroupsFiltered;
-  }, [baseYear, monthEnd, monthStart, periodPreset, perspectiveMode, productType, searchDraft, searchQuery, selGroups]);
+  }, [baseYear, monthTo, monthFrom, periodPreset, perspectiveMode, productType, searchDraft, searchQuery, selGroups]);
 
   const refreshData = useCallback(() => {
     startFilterTransition(400);
@@ -400,10 +400,10 @@ export function useTopOrdersGalleryData() {
     setSearchDraft,
     searchQuery,
     setSearchQuery,
-    monthStart,
-    setMonthStart,
-    monthEnd,
-    setMonthEnd,
+    monthFrom,
+    setmonthFrom,
+    monthTo,
+    setmonthTo,
     periodPreset,
     setPeriodPreset,
     periodDraft,
@@ -430,3 +430,4 @@ export function useTopOrdersGalleryData() {
     refreshData,
   };
 }
+

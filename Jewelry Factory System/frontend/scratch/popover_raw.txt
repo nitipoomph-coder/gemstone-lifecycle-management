@@ -1,0 +1,222 @@
+{/* Period Dropdown Popover */}
+              <div style={{ position: 'relative' }} ref={periodPopoverRef}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!showPeriodPopover) {
+                      periodSetup.actions.syncDraft();
+                    }
+                    setShowPeriodPopover(!showPeriodPopover);
+                  }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px',
+                    background: showPeriodPopover ? 'var(--color-surface-2)' : 'transparent',
+                    border: 'none', borderRadius: 6,
+                    fontSize: '0.85rem', fontWeight: 900, color: 'var(--color-text-primary)',
+                    cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'var(--font-display)',
+                    transition: 'background 0.15s'
+                  }}
+                  className="hover:bg-[var(--color-surface-1)]"
+                >
+                  <CalendarDays size={14} style={{ color: 'var(--color-brand-500)' }} />
+                  <>
+                    <span style={{ color: "var(--color-text-secondary)", fontSize: "0.76rem", fontWeight: 700 }}>
+                      Period:
+                    </span>
+                    <span>{periodSetup.draft.preset === 'full-year' ? 'Full Year' : periodSetup.draft.preset === 'ytd' ? 'YTD' : periodSetup.draft.preset === 'this-month' ? 'This Month' : periodSetup.draft.preset === 'last-month' ? 'Last Month' : 'Custom'}</span>
+                    <span style={{ color: "var(--color-text-tertiary)", fontSize: "0.72rem", fontWeight: 800 }}>
+                      ({selectedYears[0] || ''} {periodSetup.committed.monthStart === 1 && periodSetup.committed.monthEnd === 12 ? 'Full Year' : `${MONTHS[periodSetup.committed.monthStart - 1]}-${MONTHS[periodSetup.committed.monthEnd - 1]}`})
+                    </span>
+                  </>
+                  <ChevronDown size={14} style={{ color: 'var(--color-text-tertiary)' }} />
+                </button>
+
+                {showPeriodPopover && (
+                  <div className="sales-gallery-period-menu absolute left-0 z-[110] mt-2 period-popover-animate" style={{ width: 480, position: 'absolute', top: '100%' }}>
+                    {/* New Filter: Period Setup for all screens */}
+                    <div className="flex items-center justify-between border-b border-[var(--color-border-light)] pb-2.5 mb-3">
+                      <span className="text-xs font-black capitalize tracking-wider text-[var(--color-text-primary)]">
+                        Period Setup
+                      </span>
+                      <span className="text-[11px] font-bold text-[var(--color-text-secondary)]">
+                        {selectedYears[0]} {periodSetup.committed.monthStart === 1 && periodSetup.committed.monthEnd === 12 ? 'Full Year' : `(${MONTHS[periodSetup.committed.monthStart - 1]}-${MONTHS[periodSetup.committed.monthEnd - 1]})`}
+                        {periodSetup.committed.compareActive1 && ` vs ${periodSetup.committed.compareYear1}`}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-[140px_1fr] gap-4">
+                      {/* Left: Quick Presets */}
+                      <div className="flex flex-col gap-2 border-r border-[var(--color-border-light)] pr-3">
+                        <div className="text-[10px] font-black capitalize tracking-wider text-[var(--color-text-tertiary)]">
+                          Quick Presets
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                          {[
+                            { id: 'full-year', label: 'Full Year' },
+                            { id: 'ytd', label: 'YTD' },
+                            { id: 'this-month', label: 'This Month' },
+                            { id: 'last-month', label: 'Last Month' }
+                          ].map((preset) => {
+                            const active = periodSetup.draft.preset === preset.id;
+                            return (
+                              <button
+                                key={preset.id}
+                                type="button"
+                                onClick={() => periodSetup.actions.applyPreset(preset.id as any)}
+                                className={`rounded-lg border px-3 py-2 text-left text-xs font-black transition-colors ${active ? "border-[var(--color-brand-300)] bg-[color-mix(in_srgb,var(--color-brand-500)_9%,var(--color-surface-0))] text-[var(--color-brand-600)]" : "border-[var(--color-border-light)] bg-[var(--color-surface-0)] text-[var(--color-text-primary)] hover:border-[var(--color-brand-400)] hover:text-[var(--color-brand-600)]"}`}
+                              >
+                                {preset.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Right: Custom Options & Base Year */}
+                      <div className="flex flex-col gap-3">
+                        <div className="text-[10px] font-black capitalize tracking-wider text-[var(--color-text-tertiary)]">
+                          Custom Month Range
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2.5">
+                          <PeriodSelect
+                            label="Start Month"
+                            value={periodSetup.draft.monthStart}
+                            options={MONTHS.map((month: string, index: number) => ({ value: index + 1, label: month }))}
+                            onChange={(value) => {
+                              periodSetup.actions.setDraftField({ preset: 'custom' });
+                              periodSetup.actions.setDraftField({ monthStart: Number(value) });
+                            }}
+                          />
+                          <PeriodSelect
+                            label="End Month"
+                            value={periodSetup.draft.monthEnd}
+                            options={MONTHS.map((month: string, index: number) => ({ value: index + 1, label: month }))}
+                            onChange={(value) => {
+                              periodSetup.actions.setDraftField({ preset: 'custom' });
+                              periodSetup.actions.setDraftField({ monthEnd: Number(value) });
+                            }}
+                          />
+                        </div>
+
+                        <PeriodSelect
+                          label="Year (Base Year)"
+                          value={periodSetup.draft.baseYear}
+                          options={availableYears.filter(yr => {
+                            if (periodSetup.draft.compareActive1 && yr === periodSetup.draft.compareYear1) return false;
+                            if (periodSetup.draft.compareActive2 && yr === periodSetup.draft.compareYear2 && yr !== 'none') return false;
+                            return true;
+                          }).map(yr => ({ value: yr, label: yr }))}
+                          onChange={(value) => periodSetup.actions.setDraftField({ baseYear: String(value) })}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Compare Years Section (Horizontal row for space efficiency) */}
+                    <div className="mt-4 pt-3.5 border-t border-[var(--color-border-light)]">
+                      <div className="mb-2.5 text-[10px] font-black capitalize tracking-wider text-[var(--color-text-tertiary)]">
+                        Compare Target Years
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2.5">
+                        {/* Compare Year 1 */}
+                        <div className="flex flex-col gap-1 bg-[var(--color-surface-1)] p-2 rounded-lg border border-[var(--color-border-light)]">
+                          <label className="flex items-center gap-1.5 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={periodSetup.draft.compareActive1}
+                              onChange={(e) => periodSetup.actions.setDraftField({ compareActive1: e.target.checked })}
+                              className="rounded border-[var(--color-border-light)] text-[var(--color-brand-600)] focus:ring-[var(--color-brand-400)]"
+                            />
+                            <span className="text-[10px] font-black text-[var(--color-text-secondary)]">Compare 1</span>
+                          </label>
+                          <div className="mt-1">
+                            <CustomSelect
+                              value={periodSetup.draft.compareYear1}
+                              disabled={!periodSetup.draft.compareActive1}
+                              onChange={(val: string) => {
+                                periodSetup.actions.setDraftField({ compareYear1: val });
+                                periodSetup.actions.setDraftField({ kpiCompareYear: val });
+                              }}
+                              options={availableYears.filter(yr => {
+                                if (yr === periodSetup.draft.baseYear) return false;
+                                if (periodSetup.draft.compareActive2 && yr === periodSetup.draft.compareYear2 && yr !== 'none') return false;
+                                return true;
+                              }).map(yr => ({ value: yr, label: yr }))}
+                              ariaLabel="Compare Year 1"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Compare Year 2 */}
+                        <div className="flex flex-col gap-1 bg-[var(--color-surface-1)] p-2 rounded-lg border border-[var(--color-border-light)]">
+                          <label className="flex items-center gap-1.5 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={periodSetup.draft.compareActive2}
+                              onChange={(e) => periodSetup.actions.setDraftField({ compareActive2: e.target.checked })}
+                              className="rounded border-[var(--color-border-light)] text-[var(--color-brand-600)] focus:ring-[var(--color-brand-400)]"
+                            />
+                            <span className="text-[10px] font-black text-[var(--color-text-secondary)]">Compare 2</span>
+                          </label>
+                          <div className="mt-1">
+                            <CustomSelect
+                              value={periodSetup.draft.compareYear2}
+                              disabled={!periodSetup.draft.compareActive2}
+                              onChange={(val: string) => {
+                                periodSetup.actions.setDraftField({ compareYear2: val });
+                                if (val !== 'none') periodSetup.actions.setDraftField({ kpiCompareYear: val });
+                              }}
+                              options={[
+                                { value: 'none', label: 'None' },
+                                ...availableYears.filter(yr => {
+                                  if (yr === periodSetup.draft.baseYear) return false;
+                                  if (periodSetup.draft.compareActive1 && yr === periodSetup.draft.compareYear1) return false;
+                                  return true;
+                                }).map(yr => ({ value: yr, label: yr }))
+                              ]}
+                              ariaLabel="Compare Year 2"
+                            />
+                          </div>
+                        </div>
+
+                        {/* KPI YoY Base (KPI compare year toggle) */}
+                        <div className="flex flex-col gap-1 bg-[var(--color-surface-1)] p-2 rounded-lg border border-[var(--color-border-light)]">
+                          <span className="text-[10px] font-black text-[var(--color-text-secondary)]">KPI YoY Base</span>
+                          <div className="mt-4">
+                            <CustomSelect
+                              value={periodSetup.draft.kpiCompareYear}
+                              disabled={!periodSetup.draft.compareActive1 && !periodSetup.draft.compareActive2}
+                              onChange={(val: string) => periodSetup.actions.setDraftField({ kpiCompareYear: val })}
+                              options={[
+                                ...(periodSetup.draft.compareActive1 && periodSetup.draft.compareYear1 && periodSetup.draft.compareYear1 !== 'none' ? [{ value: periodSetup.draft.compareYear1, label: periodSetup.draft.compareYear1 }] : []),
+                                ...(periodSetup.draft.compareActive2 && periodSetup.draft.compareYear2 && periodSetup.draft.compareYear2 !== 'none' ? [{ value: periodSetup.draft.compareYear2, label: periodSetup.draft.compareYear2 }] : [])
+                              ].filter((opt, index, self) => self.findIndex(t => t.value === opt.value) === index)}
+                              ariaLabel="KPI YoY Base Year"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 pt-3 border-t border-[var(--color-border-light)] flex justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowPeriodPopover(false)}
+                        className="rounded-lg border border-[var(--color-border-light)] bg-[var(--color-surface-0)] px-4 py-2 text-xs font-black text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { periodSetup.actions.apply(); setShowPeriodPopover(false); }}
+                        className="rounded-lg border border-[var(--color-brand-300)] bg-[color-mix(in_srgb,var(--color-brand-500)_12%,var(--color-surface-0))] px-4 py-2 text-xs font-black text-[var(--color-brand-600)] hover:bg-[color-mix(in_srgb,var(--color-brand-500)_16%,var(--color-surface-0))]"
+                      >
+                        Apply
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              

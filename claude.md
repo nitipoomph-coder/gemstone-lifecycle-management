@@ -952,3 +952,14 @@ Inside route handlers, add only short section labels for important boxes/queries
    - เมื่อแสดงผล: ตัวเลขเปอร์เซ็นต์ขนาดใหญ่ `24px` หนา คมชัด พร้อมคำว่า `ความคืบหน้า`
    - สถิติตัวเลข 4 ช่อง: ขนาด `26px` ไร้กรอบ (ทั้งหมด=สีน้ำเงิน, เสร็จแล้ว=สีเขียว, กำลังทำ=สีส้ม, คงเหลือ=สีกรม/เทา)
 
+### 4. Current Work: Refactoring Period Setup (Sept 2026)
+- **Goal**: Consolidate redundant "Period Setup" logic (currently spread across multiple hooks like `useCustomerDashboardLayout` and `useCustomerReportData`) into a single, centralized hook named `usePeriodSetup`.
+- **Scope**:
+  - `CustomerDashboardLayout.tsx` (Dashboard/Trends)
+  - `CustomerReportPage.tsx` (Matrix)
+- **Key Improvements**:
+  - Unified Type definitions (`PeriodState`, `PeriodSetupConfig`).
+  - Unified period selection logic (`getDefaultCompareYear`, `parseMonths`) housed in `periodUtils.ts`.
+  - Fixes bugs in older positional-based comparison year selections, moving to a smarter numeric proximity logic.
+  - Standardizes URL syncing and State syncing correctly avoiding duplicate URL states (`groups` vs `period`).
+- **Status**: Currently at Step 3 (Migrating Dashboard/Trends to use the new hook).

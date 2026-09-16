@@ -17,6 +17,8 @@ export interface CustomerSummaryRecord {
   monthlyQty?: Record<string, Record<string, number | string>>;
   weekly?: Record<string, Record<string, number | string>>;
   weeklyQty?: Record<string, Record<string, number | string>>;
+  daily?: Record<string, Record<string, number | string>>;
+  dailyQty?: Record<string, Record<string, number | string>>;
 }
 
 export interface CustomerReportMatrixRow extends Record<string, unknown> {
@@ -36,7 +38,10 @@ function csv(value: string | null) {
 export function useCustomerReportData() {
   const { theme } = useTheme();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { selectedYears, selectedMonths, selGroups, kpiCompareYear, refreshCounter, triggerRefresh, isRefreshing } = useOutletContext<any>();
+  const { periodSetup, selGroups, refreshCounter, triggerRefresh, isRefreshing } = useOutletContext<any>();
+  const selectedYears = periodSetup.committed.selectedYears;
+  const selectedMonths = periodSetup.committed.selectedMonths;
+  const kpiCompareYear = periodSetup.committed.kpiCompareYear;
   const metric = searchParams.get('metric') || 'amount';
 
   const handleSetMetric = useCallback((nextMetric: 'amount' | 'qty') => {
@@ -50,7 +55,6 @@ export function useCustomerReportData() {
   }, [searchParams, setSearchParams]);
 
   const requestedCustomers = useMemo(() => csv(searchParams.get('customers')).map(customer => customer.toUpperCase()), [searchParams]);
-  const requestedViewMode: 'ytd' | 'quarterly' | 'monthly' | 'weekly' = searchParams.get('view') === 'monthly' ? 'monthly' : searchParams.get('view') === 'quarterly' ? 'quarterly' : searchParams.get('view') === 'weekly' ? 'weekly' : 'ytd';
 
   const fmt = useCallback((val: number) => {
     if (metric === 'qty') return val.toLocaleString(undefined, { maximumFractionDigits: 0 });
@@ -67,9 +71,11 @@ export function useCustomerReportData() {
   const [custData, setCustData] = useState<CustomerSummaryRecord[]>([]);
   const [firstDataYear, setFirstDataYear] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isFilterOpen, setIsFilterOpen] = useState(true);
 
-  const [viewMode, setViewMode] = useState<'ytd' | 'quarterly' | 'monthly' | 'weekly'>(requestedViewMode);
+  const periodSetupPreset = periodSetup.committed.preset;
+  const viewMode: 'ytd' | 'monthly' | 'weekly' | 'daily' = periodSetupPreset === 'day' ? 'daily' : periodSetupPreset === 'week' ? 'weekly' : (periodSetupPreset === 'custom' || periodSetupPreset === 'month' ? 'monthly' : 'ytd');
+  const setViewMode = () => {}; // mock to satisfy props for now
+
   const [aggregationMode, setAggregationMode] = useState<'group' | 'customer'>('group');
 
   useEffect(() => {
@@ -82,13 +88,25 @@ export function useCustomerReportData() {
   const [growthComparisons, setGrowthComparisons] = useState<{ a: string; b: string }[]>([]);
   const resetMatrixView = useCallback(() => {
     setSortOrder('desc');
-    setViewMode('ytd');
   }, []);
 
   const currentDate = useMemo(() => new Date(), []);
   const currentYearStr = String(currentDate.getFullYear());
   const currentMonthIdx = currentDate.getMonth();
   const displayMonths = useMemo(() => MONTHS.filter(m => selMonths.includes(m)), [selMonths]);
+
+  const displayDays = useMemo(() => {
+    if (viewMode !== 'day' || !layoutContext.periodSetup.committed.dateFrom || !layoutContext.periodSetup.committed.dateTo) return [];
+    const start = new Date(layoutContext.periodSetup.committed.dateFrom);
+    const end = new Date(layoutContext.periodSetup.committed.dateTo);
+    const days: string[] = [];
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      days.push(`${mm}-${dd}`);
+    }
+    return days;
+  }, [viewMode, layoutContext.periodSetup.committed.dateFrom, layoutContext.periodSetup.committed.dateTo]);
 
   const dataYears = useMemo(() => {
     if (firstDataYear === null) return [];
@@ -176,6 +194,7 @@ export function useCustomerReportData() {
           displayMonths.forEach((m: string) => { groupRows[gId][`${yr}_${m}`] = 0; });
           QUARTERS.forEach(q => { groupRows[gId][`${yr}_${q}`] = 0; });
           for (let w = 1; w <= 53; w++) { groupRows[gId][`${yr}_W${w}`] = 0; }
+          displayDays.forEach((dStr: string) => { groupRows[gId][`${yr}_D_${dStr}`] = 0; });
           groupRows[gId][`${yr}_total`] = 0;
         });
       });
@@ -203,6 +222,11 @@ export function useCustomerReportData() {
             const wVal = weekSource?.[yr]?.[String(w)] || 0;
             row[`${yr}_W${w}`] = Number(row[`${yr}_W${w}`]) + Number(wVal);
           }
+          const daySource = metric === 'qty' ? cust.dailyQty : cust.daily;
+          for (let d = 1; d <= 31; d++) {
+            const dVal = daySource?.[yr]?.[String(d)] || 0;
+            row[`${yr}_D${d}`] = Number(row[`${yr}_D${d}`]) + Number(dVal);
+          }
         });
       });
 
@@ -222,6 +246,7 @@ export function useCustomerReportData() {
             displayMonths.forEach((m: string) => { custRows[cId][`${yr}_${m}`] = 0; });
             QUARTERS.forEach(q => { custRows[cId][`${yr}_${q}`] = 0; });
             for (let w = 1; w <= 53; w++) { custRows[cId][`${yr}_W${w}`] = 0; }
+            displayDays.forEach((dStr: string) => { custRows[cId][`${yr}_D_${dStr}`] = 0; });
             custRows[cId][`${yr}_total`] = 0;
           });
         }
@@ -244,6 +269,11 @@ export function useCustomerReportData() {
             const wVal = weekSource?.[yr]?.[String(w)] || 0;
             row[`${yr}_W${w}`] = Number(row[`${yr}_W${w}`]) + Number(wVal);
           }
+          const daySource = metric === 'qty' ? cust.dailyQty : cust.daily;
+          for (let d = 1; d <= 31; d++) {
+            const dVal = daySource?.[yr]?.[String(d)] || 0;
+            row[`${yr}_D${d}`] = Number(row[`${yr}_D${d}`]) + Number(dVal);
+          }
         });
       });
 
@@ -262,6 +292,7 @@ export function useCustomerReportData() {
       displayMonths.forEach((m: string) => { colTotals[`${yr}_${m}`] = 0; });
       QUARTERS.forEach(q => { colTotals[`${yr}_${q}`] = 0; });
       for (let w = 1; w <= 53; w++) { colTotals[`${yr}_W${w}`] = 0; }
+      displayDays.forEach((dStr: string) => { colTotals[`${yr}_D_${dStr}`] = 0; });
     });
     rows.forEach(r => {
       activeYears.forEach((yr: string) => {
@@ -269,11 +300,12 @@ export function useCustomerReportData() {
         displayMonths.forEach((m: string) => { colTotals[`${yr}_${m}`] += Number(r[`${yr}_${m}`] || 0); });
         QUARTERS.forEach(q => { colTotals[`${yr}_${q}`] += Number(r[`${yr}_${q}`] || 0); });
         for (let w = 1; w <= 53; w++) { colTotals[`${yr}_W${w}`] += Number(r[`${yr}_W${w}`] || 0); }
+        displayDays.forEach((dStr: string) => { colTotals[`${yr}_D_${dStr}`] += Number(r[`${yr}_D_${dStr}`] || 0); });
       });
     });
 
     return { rows, colTotals, activeYears };
-  }, [custData, baseYear, activeYears, activeCustomers, searchQuery, displayMonths, metric, sortOrder, aggregationMode, selGroups]);
+  }, [custData, baseYear, activeYears, activeCustomers, searchQuery, displayMonths, displayDays, metric, sortOrder, aggregationMode, selGroups]);
 
   const groupKpis = useMemo(() => {
     if (tableData.rows.length <= 1 && activeYears.length <= 1) return [];
@@ -307,12 +339,11 @@ export function useCustomerReportData() {
     activeYears,
     displayYears,
     displayMonths,
+    displayDays,
     selMonths,
     selGroups,
     kpiCompareYear,
     loading,
-    isFilterOpen,
-    setIsFilterOpen,
     viewMode,
     setViewMode,
     aggregationMode,

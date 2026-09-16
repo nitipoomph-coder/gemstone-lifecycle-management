@@ -163,15 +163,17 @@ export const fmtAxis = (value: number, metric: Metric) => metric === 'amount' ? 
 
 export function useOrderVolumeSummaryData() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { selectedYears, selectedMonths, selGroups: selectedGroups, availableYears, kpiCompareYear, draftYear, compareYearVal1 } = useOutletContext<{
-    selectedYears: string[];
-    selectedMonths: string[];
+  const { periodSetup, selGroups: selectedGroups, availableYears } = useOutletContext<{
+    periodSetup: ReturnType<typeof usePeriodSetup>;
     selGroups: string[];
     availableYears: string[];
-    kpiCompareYear?: string;
-    draftYear?: string;
-    compareYearVal1?: string;
   }>();
+
+  const selectedYears = periodSetup?.committed?.selectedYears || [];
+  const selectedMonths = periodSetup?.committed?.selectedMonths || [];
+  const kpiCompareYear = periodSetup?.committed?.kpiCompareYear;
+  const draftYear = periodSetup?.draft?.baseYear;
+  const compareYearVal1 = periodSetup?.draft?.compareYear1;
 
   const loadRequestIdRef = useRef(0);
   const urlMetric = searchParams.get('metric') as Metric | null;
@@ -510,3 +512,4 @@ export function useOrderVolumeSummaryData() {
     riskData
   };
 }
+

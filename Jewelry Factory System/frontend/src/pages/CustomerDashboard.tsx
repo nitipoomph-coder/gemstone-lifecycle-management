@@ -18,7 +18,10 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
   const { theme } = useTheme();
   const [searchParams, setSearchParams] = useSearchParams();
   const metric = (searchParams.get('metric') as Metric) || propMetric;
-  const { selectedYears, selectedMonths, selGroups, availableYears, kpiCompareYear, refreshCounter, triggerRefresh, isRefreshing, setIsRefreshing } = useOutletContext<any>();
+  const { periodSetup, selGroups, availableYears, refreshCounter, triggerRefresh, isRefreshing, setIsRefreshing } = useOutletContext<any>();
+  const selectedYears = periodSetup.committed.selectedYears;
+  const selectedMonths = periodSetup.committed.selectedMonths;
+  const kpiCompareYear = periodSetup.committed.kpiCompareYear;
   const [custData, setCustData] = useState<CustomerSummaryRow[]>([]);
   const [loading, setLoading] = useState(true);
 

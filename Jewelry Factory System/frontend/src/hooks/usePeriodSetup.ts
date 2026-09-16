@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { getDefaultCompareYear, monthRange, parseMonths } from '../utils/periodUtils';
 
-export type PeriodPreset = 'full-year' | 'ytd' | 'this-month' | 'last-month' | 'month' | 'week' | 'custom';
+export type PeriodPreset = 'full-year' | 'ytd' | 'this-month' | 'last-month' | 'month' | 'week' | 'day' | 'custom';
 
 export interface PeriodSetupConfig {
   presets: PeriodPreset[];
@@ -12,10 +12,12 @@ export interface PeriodSetupConfig {
   availableYears: string[]; // Needs to be passed in to compute default compare years
   initialValues?: {
     preset?: PeriodPreset;
-    monthStart?: number;
-    monthEnd?: number;
-    weekStart?: number;
-    weekEnd?: number;
+    monthFrom?: number;
+    monthTo?: number;
+    weekFrom?: number;
+    weekTo?: number;
+  dateFrom?: string;
+  dateTo?: string;
     baseYear?: string;
     compareActive1?: boolean;
     compareYear1?: string;
@@ -28,10 +30,12 @@ export interface PeriodSetupConfig {
 
 export interface PeriodState {
   preset: PeriodPreset;
-  monthStart: number;
-  monthEnd: number;
-  weekStart?: number;
-  weekEnd?: number;
+  monthFrom: number;
+  monthTo: number;
+  weekFrom?: number;
+  weekTo?: number;
+  dateFrom?: string;
+  dateTo?: string;
   baseYear: string;
   compareActive1: boolean;
   compareYear1: string;
@@ -54,24 +58,52 @@ export interface PeriodState {
 export function usePeriodSetup(config: PeriodSetupConfig) {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Initialization: read from URL if syncToUrl is true, otherwise use initialValues
-  const initializeState = (): PeriodState => {
+  // Initialization: read from URL if syncToUrl is true (and not ignored), otherwise use initialValues
+  const initializeState = useCallback((ignoreUrl = false): PeriodState => {
     let preset: PeriodPreset = config.initialValues?.preset || 'full-year';
-    let monthStart = config.initialValues?.monthStart || 1;
-    let monthEnd = config.initialValues?.monthEnd || 12;
-    let weekStart = config.initialValues?.weekStart || 1;
-    let weekEnd = config.initialValues?.weekEnd || 53;
+    let monthFrom = config.initialValues?.monthFrom || 1;
+    let monthTo = config.initialValues?.monthTo || 12;
+    let weekFrom = config.initialValues?.weekFrom || 1;
+    let weekTo = config.initialValues?.weekTo || 53;
+      let dateFrom = config.initialValues?.dateFrom;
+      let dateTo = config.initialValues?.dateTo;
     let baseYear = config.initialValues?.baseYear || (config.availableYears.length > 0 ? config.availableYears[0] : String(new Date().getFullYear()));
     let compareActive1 = config.initialValues?.compareActive1 || false;
     let compareYear1 = config.initialValues?.compareYear1 || getDefaultCompareYear(baseYear, config.availableYears);
     let compareActive2 = config.initialValues?.compareActive2 || false;
-    let compareYear2 = config.initialValues?.compareYear2 || (config.compareSlots === 2 && config.availableYears.length > 2 ? config.availableYears[2] : 'none');
+    let compareYear2 = config.initialValues?.compareYear2 || 'none';
+    if (compareYear2 === 'none' && config.compareSlots === 2 && config.availableYears.length > 0) {
+      const remainingYears = config.availableYears.filter(y => y !== compareYear1 && y !== baseYear);
+      if (remainingYears.length > 0) {
+        compareYear2 = getDefaultCompareYear(baseYear, remainingYears);
+      }
+    }
     let kpiCompareYear = config.initialValues?.kpiCompareYear || compareYear1;
 
-    if (config.syncToUrl) {
+    if (config.syncToUrl && !ignoreUrl) {
       const urlYears = searchParams.get('years')?.split(',').filter(Boolean) || [];
       const urlMonths = parseMonths(searchParams.get('months'));
       const urlKpi = searchParams.get('kpiCompare');
+      const urlPreset = searchParams.get('preset') as PeriodPreset | null;
+            const urlWStart = searchParams.get('wStart');
+      const urlWEnd = searchParams.get('wEnd');
+      const urlDateFrom = searchParams.get('dateFrom');
+      const urlDateTo = searchParams.get('dateTo');
+
+      if (urlPreset) preset = urlPreset;
+      if (urlWStart) weekFrom = Number(urlWStart);
+      if (urlWEnd) weekTo = Number(urlWEnd);
+      if (urlDateFrom) dateFrom = urlDateFrom;
+      if (urlDateTo) dateTo = urlDateTo;
+
+      if (urlMonths.length > 0) {
+        const numMonths = urlMonths.map(Number).sort((a, b) => a - b);
+        monthFrom = numMonths[0];
+        monthTo = numMonths[numMonths.length - 1];
+        if (!urlPreset) preset = urlMonths.length === 12 ? 'full-year' : 'custom';
+      } else {
+        if (!urlPreset) preset = 'full-year';
+      }
 
       if (urlYears.length > 0) {
         baseYear = urlYears[0];
@@ -79,25 +111,14 @@ export function usePeriodSetup(config: PeriodSetupConfig) {
           compareActive1 = true;
           compareYear1 = urlYears[1];
         }
-        if (urlYears.length > 2) {
+        if (config.compareSlots === 2 && urlYears.length > 2) {
           compareActive2 = true;
           compareYear2 = urlYears[2];
         }
       }
-      
+
       if (urlKpi) {
         kpiCompareYear = urlKpi;
-      } else if (compareActive1) {
-        kpiCompareYear = compareYear1;
-      }
-
-      if (urlMonths.length > 0) {
-        const numMonths = urlMonths.map(Number).sort((a, b) => a - b);
-        monthStart = numMonths[0];
-        monthEnd = numMonths[numMonths.length - 1];
-        preset = urlMonths.length === 12 ? 'full-year' : 'custom';
-      } else {
-        preset = 'full-year';
       }
     }
 
@@ -106,15 +127,15 @@ export function usePeriodSetup(config: PeriodSetupConfig) {
     if (compareActive1 && compareYear1 && compareYear1 !== 'none') selectedYears.push(compareYear1);
     if (config.compareSlots === 2 && compareActive2 && compareYear2 && compareYear2 !== 'none') selectedYears.push(compareYear2);
     
-    const selectedMonths = monthRange(monthStart, monthEnd).map(String);
-    const selectedWeeks = config.allowWeekRange ? Array.from({ length: weekEnd - weekStart + 1 }, (_, i) => String(weekStart + i)) : undefined;
+    const selectedMonths = monthRange(monthFrom, monthTo).map(String);
+    const selectedWeeks = config.allowWeekRange ? Array.from({ length: weekTo - weekFrom + 1 }, (_, i) => String(weekFrom + i)) : undefined;
 
     return {
-      preset, monthStart, monthEnd, weekStart, weekEnd,
+      preset, monthFrom, monthTo, weekFrom, weekTo, dateFrom, dateTo,
       baseYear, compareActive1, compareYear1, compareActive2, compareYear2, kpiCompareYear,
       selectedYears, selectedMonths, selectedWeeks
     };
-  };
+  }, [config.initialValues, config.availableYears, config.syncToUrl, config.compareSlots, config.allowWeekRange, searchParams]);
 
   const [committed, setCommitted] = useState<PeriodState>(initializeState);
   const [draft, setDraft] = useState<PeriodState>(committed);
@@ -146,7 +167,8 @@ export function usePeriodSetup(config: PeriodSetupConfig) {
       // If compareYear2 is not valid, reset it
       if (config.compareSlots === 2) {
         if (!next.compareYear2 || next.compareYear2 === 'none' || !config.availableYears.includes(next.compareYear2)) {
-          next.compareYear2 = next.selectedYears[2] || (config.availableYears.length > 2 ? config.availableYears[2] : 'none');
+          const remainingYears = config.availableYears.filter(y => y !== next.compareYear1 && y !== next.baseYear);
+          next.compareYear2 = next.selectedYears[2] || (remainingYears.length > 0 ? getDefaultCompareYear(next.baseYear, remainingYears) : 'none');
           changed = true;
         }
       }
@@ -174,8 +196,8 @@ export function usePeriodSetup(config: PeriodSetupConfig) {
 
   const applyPreset = useCallback((preset: PeriodPreset) => {
     const currentMonth = new Date().getMonth() + 1;
-    let newStart = draft.monthStart;
-    let newEnd = draft.monthEnd;
+    let newStart = draft.monthFrom;
+    let newEnd = draft.monthTo;
     
     if (preset === 'ytd') {
       newStart = 1;
@@ -194,10 +216,10 @@ export function usePeriodSetup(config: PeriodSetupConfig) {
     setDraft(prev => ({
       ...prev,
       preset,
-      monthStart: newStart,
-      monthEnd: newEnd
+      monthFrom: newStart,
+      monthTo: newEnd
     }));
-  }, [draft.monthStart, draft.monthEnd]);
+  }, [draft.monthFrom, draft.monthTo]);
 
   const syncDraft = useCallback(() => {
     setDraft(committed);
@@ -209,9 +231,9 @@ export function usePeriodSetup(config: PeriodSetupConfig) {
     if (draft.compareActive1 && draft.compareYear1 && draft.compareYear1 !== 'none') selectedYears.push(draft.compareYear1);
     if (config.compareSlots === 2 && draft.compareActive2 && draft.compareYear2 && draft.compareYear2 !== 'none') selectedYears.push(draft.compareYear2);
     
-    const selectedMonths = monthRange(draft.monthStart, draft.monthEnd).map(String);
-    const selectedWeeks = config.allowWeekRange && draft.weekStart && draft.weekEnd 
-      ? Array.from({ length: draft.weekEnd - draft.weekStart + 1 }, (_, i) => String(draft.weekStart! + i)) 
+    const selectedMonths = monthRange(draft.monthFrom, draft.monthTo).map(String);
+    const selectedWeeks = config.allowWeekRange && draft.weekFrom && draft.weekTo 
+      ? Array.from({ length: draft.weekTo - draft.weekFrom + 1 }, (_, i) => String(draft.weekFrom! + i)) 
       : undefined;
 
     const newCommitted = {
@@ -227,11 +249,30 @@ export function usePeriodSetup(config: PeriodSetupConfig) {
       setSearchParams(prev => {
         const next = new URLSearchParams(prev);
         next.set('years', selectedYears.join(','));
+        next.set('preset', newCommitted.preset);
+        
         if (selectedMonths.length === 12) {
           next.delete('months');
         } else {
           next.set('months', selectedMonths.join(','));
         }
+
+        if (newCommitted.preset === 'week' && newCommitted.weekFrom && newCommitted.weekTo) {
+          next.set('wStart', String(newCommitted.weekFrom));
+          next.set('wEnd', String(newCommitted.weekTo));
+        } else {
+          next.delete('wStart');
+          next.delete('wEnd');
+        }
+
+        if (newCommitted.preset === 'day' && newCommitted.dateFrom && newCommitted.dateTo) {
+          next.set('dateFrom', newCommitted.dateFrom);
+          next.set('dateTo', newCommitted.dateTo);
+        } else {
+          next.delete('dateFrom');
+          next.delete('dateTo');
+        }
+
         if (draft.kpiCompareYear && draft.kpiCompareYear !== 'none') {
           next.set('kpiCompare', draft.kpiCompareYear);
         } else {
@@ -243,7 +284,7 @@ export function usePeriodSetup(config: PeriodSetupConfig) {
   }, [draft, config.compareSlots, config.allowWeekRange, config.syncToUrl, setSearchParams]);
 
   const reset = useCallback(() => {
-    const newState = initializeState();
+    const newState = initializeState(true);
     setCommitted(newState);
     setDraft(newState);
     if (config.syncToUrl) {
@@ -251,6 +292,11 @@ export function usePeriodSetup(config: PeriodSetupConfig) {
         const next = new URLSearchParams(prev);
         next.delete('years');
         next.delete('months');
+        next.delete('preset');
+        next.delete('wStart');
+        next.delete('wEnd');
+        next.delete('dateFrom');
+        next.delete('dateTo');
         next.delete('kpiCompare');
         return next;
       }, { replace: true });
@@ -260,7 +306,7 @@ export function usePeriodSetup(config: PeriodSetupConfig) {
     if (config.onReset) {
       config.onReset();
     }
-  }, [config.syncToUrl, setSearchParams, config.availableYears, config.onReset, initializeState]);
+  }, [config.syncToUrl, setSearchParams, config.onReset, initializeState]);
 
   return {
     committed,
@@ -295,3 +341,6 @@ export function usePeriodSetup(config: PeriodSetupConfig) {
 //   syncToUrl: false,
 //   availableYears: ['2026', '2025', '2024']
 // });
+
+
+

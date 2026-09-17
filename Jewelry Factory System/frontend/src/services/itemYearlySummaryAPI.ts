@@ -63,22 +63,24 @@ export const fetchItemYearlySummary = async (styleNo: string, years: string[]): 
 };
 
 // Customer+item comparison data used by Top Orders compare mode.
-export const fetchItemCustomerYearlySummary = async (pairs: ItemCustomerYearlySummaryPair[], years: string[], months?: string[]): Promise<ItemCustomerYearlySummaryResponse> => {
+export const fetchItemCustomerYearlySummary = async (pairs: ItemCustomerYearlySummaryPair[], years: string[], months?: string[], dateField?: string): Promise<ItemCustomerYearlySummaryResponse> => {
   const qs = new URLSearchParams();
   const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   if (pairs.length) qs.set('pairs', pairs.map(pair => `${pair.customerCode}|${pair.styleNo}`).join(','));
   if (years.length) qs.set('years', years.join(','));
   if (months && months.length > 0) qs.set('months', months.map(m => MONTHS.indexOf(m) + 1).join(','));
+  if (dateField) qs.set('dateField', dateField);
   const res = await fetchWithAuth(`${BASE_URL}/items/yearly-summary?${qs.toString()}`);
   if (!res.ok) throw new Error(`Item customer yearly summary API error: ${res.status}`);
   return await res.json();
 };
 
 // Batch item trend lookup for multi-item yearly summaries.
-export const fetchItemsYearlySummary = async (styleNos: string[], years: string[]): Promise<ItemsYearlySummaryResponse> => {
+export const fetchItemsYearlySummary = async (styleNos: string[], years: string[], dateField?: string): Promise<ItemsYearlySummaryResponse> => {
   const qs = new URLSearchParams();
   if (styleNos.length) qs.set('styles', styleNos.join(','));
   if (years.length) qs.set('years', years.join(','));
+  if (dateField) qs.set('dateField', dateField);
   const res = await fetchWithAuth(`${BASE_URL}/items/yearly-summary?${qs.toString()}`);
   if (!res.ok) throw new Error(`Items yearly summary API error: ${res.status}`);
   return await res.json();
@@ -155,6 +157,7 @@ export interface TopGalleryParams {
   search?: string;
   limit?: number;
   rankBy?: 'combined' | 'base' | 'growth';
+  dateField?: 'ordDate' | 'dueDate';
 }
 
 export const fetchTopItemsGallery = async (params: TopGalleryParams): Promise<TopGalleryResponse> => {
@@ -169,6 +172,7 @@ export const fetchTopItemsGallery = async (params: TopGalleryParams): Promise<To
   if (params.search) qs.set('search', params.search);
   if (params.limit) qs.set('limit', String(params.limit));
   if (params.rankBy) qs.set('rankBy', params.rankBy);
+  if (params.dateField) qs.set('dateField', params.dateField);
 
   const res = await fetchWithAuth(`${BASE_URL}/items/top-gallery?${qs.toString()}`);
   if (!res.ok) throw new Error(`Top gallery API error: ${res.status}`);

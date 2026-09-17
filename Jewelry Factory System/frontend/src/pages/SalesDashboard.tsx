@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { CSSProperties, KeyboardEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, BarChart3, ChevronDown, Filter, RefreshCw, Search, Trophy } from 'lucide-react';
+import { ArrowLeft, BarChart3, ChevronDown, Filter, RefreshCw, Search } from 'lucide-react';
 import PageHeader from '../components/layout/PageHeader';
 import { BREADCRUMBS } from '../config/breadcrumbs';
 import '../components/sales/SalesDenseTable.css';
@@ -379,7 +379,6 @@ const compareLine: CSSProperties = { display: 'flex', alignItems: 'center', gap:
 const filterFooter: CSSProperties = { display: 'flex', justifyContent: 'flex-end', gap: 8, paddingTop: 8, borderTop: '1px solid var(--color-border-light)' };
 const applyButton: CSSProperties = { ...toolButton, background: 'var(--color-brand-500)', color: 'var(--color-text-inverse)', borderColor: 'var(--color-brand-500)' };
 const titleRow: CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', padding: '2px 2px 0' };
-const pageTitle: CSSProperties = { margin: 0, display: 'flex', alignItems: 'center', gap: 8, color: 'var(--color-text-primary)', fontSize: 'var(--erp-text-section)', lineHeight: 1.2, fontWeight: 850, letterSpacing: 0 };
 const summaryStrip: CSSProperties = { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' };
 const metricPill: CSSProperties = { height: 32, display: 'inline-flex', alignItems: 'center', gap: 8, border: '1px solid var(--color-border-light)', borderRadius: 8, background: 'var(--color-surface-0)', padding: '0 10px', color: 'var(--color-text-primary)' };
 const errorBox: CSSProperties = { padding: '10px 12px', borderRadius: 8, border: '1px solid color-mix(in oklch, var(--color-danger-500) 35%, var(--color-border-light))', color: 'var(--color-danger-500)', background: 'color-mix(in oklch, var(--color-danger-500) 9%, var(--color-surface-0))', fontWeight: 780, fontSize: 'var(--erp-text-body)' };

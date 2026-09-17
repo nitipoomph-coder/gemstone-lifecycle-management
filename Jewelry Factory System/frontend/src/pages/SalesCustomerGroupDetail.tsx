@@ -344,7 +344,6 @@ function DetailSkeletonRows({ columns, rows = 10 }: { columns: number; rows?: nu
 
 const pageHeader: CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 16, flexWrap: 'wrap' };
 const backButton: CSSProperties = { display: 'flex', alignItems: 'center', gap: 6, color: 'var(--color-text-tertiary)', fontSize: 'var(--erp-text-control)', fontWeight: 900, marginBottom: 8, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'var(--font-body)' };
-const pageTitle: CSSProperties = { margin: 0, fontSize: 'var(--erp-text-page)', lineHeight: 1.2, fontWeight: 900, color: 'var(--color-text-primary)', fontFamily: 'var(--font-display)' };
 const pageSubtitle: CSSProperties = { marginTop: 4, color: 'var(--color-text-tertiary)', fontSize: 'var(--erp-text-control)', fontWeight: 800 };
 const headerActions: CSSProperties = { display: 'flex', gap: 8, flexWrap: 'wrap' };
 const kpiGrid: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 };

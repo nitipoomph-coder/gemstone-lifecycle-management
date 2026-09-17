@@ -411,6 +411,7 @@ router.get('/top-gallery', async (req, res) => {
     const rankBy = String(req.query.rankBy || 'combined').toLowerCase().trim(); // 'combined' | 'base' | 'growth'
     const searchQuery = String(req.query.search || '').toUpperCase().trim();
     const limit = parseInt(req.query.limit || '50', 10);
+    const dateField = req.query.dateField === 'dueDate' ? 'DueDate' : 'OrdDate';
 
     const pool = await getPool();
     const request = pool.request();
@@ -419,7 +420,7 @@ router.get('/top-gallery', async (req, res) => {
     function buildDateCondition(yearList, monthList) {
       if (!yearList || yearList.length === 0) return '1=1';
       if (!monthList || monthList.length === 0) {
-        return '(' + yearList.map(y => `(OrdDate >= '${y}-01-01' AND OrdDate < '${y + 1}-01-01')`).join(' OR ') + ')';
+        return '(' + yearList.map(y => `(${dateField} >= '${y}-01-01' AND ${dateField} < '${y + 1}-01-01')`).join(' OR ') + ')';
       }
       const conditions = [];
       for (const y of yearList) {
@@ -428,7 +429,7 @@ router.get('/top-gallery', async (req, res) => {
           const eM_val = m + 1;
           const eY = eM_val > 12 ? y + 1 : y;
           const eM = (eM_val > 12 ? 1 : eM_val).toString().padStart(2, '0');
-          conditions.push(`(OrdDate >= '${y}-${sM}-01' AND OrdDate < '${eY}-${eM}-01')`);
+          conditions.push(`(${dateField} >= '${y}-${sM}-01' AND ${dateField} < '${eY}-${eM}-01')`);
         }
       }
       return '(' + conditions.join(' OR ') + ')';
@@ -442,9 +443,8 @@ router.get('/top-gallery', async (req, res) => {
         MAX(ISNULL(ItemDesc, '')) AS ItemDesc,
         MAX(ISNULL(ItemType, '')) AS ItemType,
         UPPER(LTRIM(RTRIM(ISNULL(CustCode, '')))) AS CustCode,
-        OrdYear,
-        OrdMonth,
-        OrdWeek,
+        YEAR(${dateField}) AS OrdYear,
+        MONTH(${dateField}) AS OrdMonth,
         SUM(ISNULL(ItemQty, 0)) AS TotalQty,
         SUM(ISNULL(ItemAmnt, 0)) AS TotalAmnt
       FROM VW_Web_SalesDashboard
@@ -453,9 +453,8 @@ router.get('/top-gallery', async (req, res) => {
       GROUP BY 
         UPPER(LTRIM(RTRIM(ISNULL(ItemNo, '')))),
         UPPER(LTRIM(RTRIM(ISNULL(CustCode, '')))),
-        OrdYear,
-        OrdMonth,
-        OrdWeek
+        YEAR(${dateField}),
+        MONTH(${dateField})
     `;
 
     const result = await request.query(query);

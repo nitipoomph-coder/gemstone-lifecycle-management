@@ -4,6 +4,7 @@ import { fetchAvailableYearsMeta } from '../services/dashboardAPI';
 import { fetchCustomerSummary } from '../services/customerSummaryAPI';
 import { ALL_GROUPS, getCustomerGroupId } from '../config/customerGroups';
 import { useTheme } from '../contexts/useTheme';
+import { useCustomerPageFilters } from './useCustomerPageFilters';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 export const YEAR_COLORS = ['var(--color-chart-1)', 'var(--color-chart-2)', 'var(--color-chart-3)', 'var(--color-chart-4)', 'var(--color-chart-5)', 'var(--color-chart-6)'];
@@ -38,7 +39,17 @@ function csv(value: string | null) {
 export function useCustomerReportData() {
   const { theme } = useTheme();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { periodSetup, selGroups, refreshCounter, triggerRefresh, isRefreshing } = useOutletContext<any>();
+  const { availableYears, refreshCounter, setIsRefreshing, triggerRefresh, isRefreshing } = useOutletContext<any>();
+
+  const { periodSetup, selGroups, setSelGroups, toggleGroup, dynamicActiveGroups, isFiltered, resetFilters } = useCustomerPageFilters(
+    availableYears, 
+    { 
+      presets: ['ytd', 'custom', 'month', 'week', 'day'],
+      allowWeekRange: true 
+    },
+    [] 
+  );
+
   const selectedYears = periodSetup.committed.selectedYears;
   const selectedMonths = periodSetup.committed.selectedMonths;
   const kpiCompareYear = periodSetup.committed.kpiCompareYear;
@@ -96,9 +107,9 @@ export function useCustomerReportData() {
   const displayMonths = useMemo(() => MONTHS.filter(m => selMonths.includes(m)), [selMonths]);
 
   const displayDays = useMemo(() => {
-    if (viewMode !== 'day' || !layoutContext.periodSetup.committed.dateFrom || !layoutContext.periodSetup.committed.dateTo) return [];
-    const start = new Date(layoutContext.periodSetup.committed.dateFrom);
-    const end = new Date(layoutContext.periodSetup.committed.dateTo);
+    if (viewMode !== 'daily' || !periodSetup.committed.dateFrom || !periodSetup.committed.dateTo) return [];
+    const start = new Date(periodSetup.committed.dateFrom);
+    const end = new Date(periodSetup.committed.dateTo);
     const days: string[] = [];
     for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
       const mm = String(d.getMonth() + 1).padStart(2, '0');
@@ -106,7 +117,12 @@ export function useCustomerReportData() {
       days.push(`${mm}-${dd}`);
     }
     return days;
-  }, [viewMode, layoutContext.periodSetup.committed.dateFrom, layoutContext.periodSetup.committed.dateTo]);
+  }, [viewMode, periodSetup.committed.dateFrom, periodSetup.committed.dateTo]);
+
+  const displayWeeks = useMemo(() => {
+    if (viewMode !== 'weekly' || !periodSetup.committed.selectedWeeks) return [];
+    return periodSetup.committed.selectedWeeks.map((w: string) => Number(w)).sort((a: number, b: number) => a - b);
+  }, [viewMode, periodSetup.committed.selectedWeeks]);
 
   const dataYears = useMemo(() => {
     if (firstDataYear === null) return [];
@@ -339,6 +355,7 @@ export function useCustomerReportData() {
     activeYears,
     displayYears,
     displayMonths,
+    displayWeeks,
     displayDays,
     selMonths,
     selGroups,
@@ -359,6 +376,13 @@ export function useCustomerReportData() {
     tableData,
     groupKpis,
     triggerRefresh,
-    isRefreshing
+    isRefreshing,
+    periodSetup,
+    setSelGroups,
+    toggleGroup,
+    dynamicActiveGroups,
+    isFiltered,
+    resetFilters,
+    availableYears
   };
 }

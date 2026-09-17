@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { CalendarDays, ChevronDown } from 'lucide-react';
 import CustomSelect from '../ui/CustomSelect';
 import { MONTHS } from '../../utils/periodUtils';
@@ -83,12 +83,12 @@ export default function PeriodSetupPanel({ periodSetup, availableYears }: Period
           </span>
           <span>{periodSetup.draft.preset === 'ytd' ? 'Year' : periodSetup.draft.preset === 'custom' ? 'Month' : periodSetup.draft.preset === 'week' ? 'Week' : periodSetup.draft.preset === 'day' ? 'Day' : 'Year'}</span>
           <span style={{ color: "var(--color-text-tertiary)", fontSize: "0.72rem", fontWeight: 800 }}>
-            ({selectedYears[0] || ''} 
-             {periodSetup.committed.preset === 'week' 
-               ? ` W${periodSetup.committed.weekFrom}-W${periodSetup.committed.weekTo}` 
-               : (periodSetup.committed.monthFrom === 1 && periodSetup.committed.monthTo === 12 
-                   ? ' Full Year' 
-                   : ` ${MONTHS[periodSetup.committed.monthFrom - 1]}-${MONTHS[periodSetup.committed.monthTo - 1]}`)})
+            ({selectedYears[0] || ''}
+            {periodSetup.committed.preset === 'week'
+              ? ` W${periodSetup.committed.weekFrom}-W${periodSetup.committed.weekTo}`
+              : (periodSetup.committed.monthFrom === 1 && periodSetup.committed.monthTo === 12
+                ? ' Full Year'
+                : ` ${MONTHS[periodSetup.committed.monthFrom - 1]}-${MONTHS[periodSetup.committed.monthTo - 1]}`)})
           </span>
         </>
         <ChevronDown size={14} style={{ color: 'var(--color-text-tertiary)' }} />
@@ -98,14 +98,34 @@ export default function PeriodSetupPanel({ periodSetup, availableYears }: Period
         <div className="sales-gallery-period-menu absolute left-0 z-[110] mt-2 period-popover-animate" style={{ width: 480, position: 'absolute', top: '100%' }}>
           {/* New Filter: Period Setup for all screens */}
           <div className="flex items-center justify-between border-b border-[var(--color-border-light)] pb-2.5 mb-3">
-            <span className="text-xs font-black capitalize tracking-wider text-[var(--color-text-primary)]">
-              Period Setup
-            </span>
+            <div className="flex items-center gap-4">
+              <span className="text-xs font-black capitalize tracking-wider text-[var(--color-text-primary)]">
+                Period Setup
+              </span>
+              {periodSetup.config.allowDateFieldToggle && (
+                <div className="flex items-center bg-[var(--color-surface-2)] p-0.5 rounded-md border border-[var(--color-border-light)]">
+                  <button
+                    type="button"
+                    onClick={() => periodSetup.actions.setDraftField({ dateField: 'ordDate' })}
+                    className={`px-2 py-0.5 text-[10px] font-bold rounded-sm transition-colors ${periodSetup.draft.dateField === 'ordDate' ? 'bg-[var(--color-surface-0)] text-[var(--color-brand-600)] shadow-sm' : 'text-[var(--color-text-tertiary)] hover:text-[var(--color-text-secondary)]'}`}
+                  >
+                    Order Date
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => periodSetup.actions.setDraftField({ dateField: 'dueDate' })}
+                    className={`px-2 py-0.5 text-[10px] font-bold rounded-sm transition-colors ${periodSetup.draft.dateField === 'dueDate' ? 'bg-[var(--color-surface-0)] text-[var(--color-brand-600)] shadow-sm' : 'text-[var(--color-text-tertiary)] hover:text-[var(--color-text-secondary)]'}`}
+                  >
+                    Due Date
+                  </button>
+                </div>
+              )}
+            </div>
             <span className="text-[11px] font-bold text-[var(--color-text-secondary)]">
-              {selectedYears[0]} 
-              {periodSetup.committed.preset === 'week' 
-               ? ` (W${periodSetup.committed.weekFrom}-W${periodSetup.committed.weekTo})` 
-               : (periodSetup.committed.monthFrom === 1 && periodSetup.committed.monthTo === 12 ? ' Full Year' : ` (${MONTHS[periodSetup.committed.monthFrom - 1]}-${MONTHS[periodSetup.committed.monthTo - 1]})`)}
+              {selectedYears[0]}
+              {periodSetup.committed.preset === 'week'
+                ? ` (W${periodSetup.committed.weekFrom}-W${periodSetup.committed.weekTo})`
+                : (periodSetup.committed.monthFrom === 1 && periodSetup.committed.monthTo === 12 ? ' Full Year' : ` (${MONTHS[periodSetup.committed.monthFrom - 1]}-${MONTHS[periodSetup.committed.monthTo - 1]})`)}
               {periodSetup.committed.compareActive1 && ` vs ${periodSetup.committed.compareYear1}`}
             </span>
           </div>
@@ -114,37 +134,62 @@ export default function PeriodSetupPanel({ periodSetup, availableYears }: Period
             {/* Left: Quick Presets (Modes) */}
             <div className="flex flex-col gap-2 border-r border-[var(--color-border-light)] pr-3">
               <div className="text-[10px] font-black capitalize tracking-wider text-[var(--color-text-tertiary)]">
-                Mode
+                {periodSetup.config.allowWeekRange ? 'Mode' : 'Quick Presets'}
               </div>
               <div className="flex flex-col gap-1.5">
-                {[
-                  { id: 'ytd', label: 'Year' },
-                  { id: 'custom', label: 'Month' },
-                  { id: 'week', label: 'Week' },
+                {periodSetup.config.allowWeekRange ? (
+                  // MATRIX PAGE MODE
+                  [
+                    { id: 'ytd', label: 'Year' },
+                    { id: 'custom', label: 'Month' },
+                    { id: 'week', label: 'Week' },
                     { id: 'day', label: 'Day' }
-                ].map((preset) => {
-                  const active = periodSetup.draft.preset === preset.id || (preset.id === 'ytd' && periodSetup.draft.preset === 'full-year');
-                  return (
-                    <button
-                      key={preset.id}
-                      type="button"
-                      onClick={() => {
-                        if (preset.id === 'ytd') {
-                          periodSetup.actions.setDraftField({ preset: 'ytd', monthFrom: 1, monthTo: 12 });
-                        } else if (preset.id === 'custom') {
-                          periodSetup.actions.setDraftField({ preset: 'custom' });
-                        } else if (preset.id === 'week') {
-                          periodSetup.actions.setDraftField({ preset: 'week' });
-                        } else if (preset.id === 'day') {
-                          periodSetup.actions.setDraftField({ preset: 'day' });
-                        }
-                      }}
-                      className={`rounded-lg border px-3 py-2 text-left text-xs font-black transition-colors ${active ? "border-[var(--color-brand-300)] bg-[color-mix(in_srgb,var(--color-brand-500)_9%,var(--color-surface-0))] text-[var(--color-brand-600)]" : "border-[var(--color-border-light)] bg-[var(--color-surface-0)] text-[var(--color-text-primary)] hover:border-[var(--color-brand-400)] hover:text-[var(--color-brand-600)]"}`}
-                    >
-                      {preset.label}
-                    </button>
-                  );
-                })}
+                  ].map((preset) => {
+                    const active = periodSetup.draft.preset === preset.id || (preset.id === 'ytd' && periodSetup.draft.preset === 'full-year');
+                    return (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        onClick={() => {
+                          if (preset.id === 'ytd') {
+                            periodSetup.actions.setDraftField({ preset: 'ytd', monthFrom: 1, monthTo: 12 });
+                          } else if (preset.id === 'custom') {
+                            periodSetup.actions.setDraftField({ preset: 'custom' });
+                          } else if (preset.id === 'week') {
+                            periodSetup.actions.setDraftField({ preset: 'week' });
+                          } else if (preset.id === 'day') {
+                            periodSetup.actions.setDraftField({ preset: 'day' });
+                          }
+                        }}
+                        className={`rounded-lg border px-3 py-2 text-left text-xs font-black transition-colors ${active ? "border-[var(--color-brand-300)] bg-[color-mix(in_srgb,var(--color-brand-500)_9%,var(--color-surface-0))] text-[var(--color-brand-600)]" : "border-[var(--color-border-light)] bg-[var(--color-surface-0)] text-[var(--color-text-primary)] hover:border-[var(--color-brand-400)] hover:text-[var(--color-brand-600)]"}`}
+                      >
+                        {preset.label}
+                      </button>
+                    );
+                  })
+                ) : (
+                  // DASHBOARD & TRENDS PRESETS (Matching Top Item Gallery)
+                  [
+                    { id: 'full-year', label: 'Full Year' },
+                    { id: 'ytd', label: 'YTD' },
+                    { id: 'this-month', label: 'This Month' },
+                    { id: 'last-month', label: 'Last Month' }
+                  ].map((preset) => {
+                    const active = periodSetup.draft.preset === preset.id;
+                    return (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        onClick={() => {
+                          periodSetup.actions.applyPreset(preset.id as any);
+                        }}
+                        className={`rounded-lg border px-3 py-2 text-left text-xs font-black transition-colors ${active ? "border-[var(--color-brand-300)] bg-[color-mix(in_srgb,var(--color-brand-500)_9%,var(--color-surface-0))] text-[var(--color-brand-600)]" : "border-[var(--color-border-light)] bg-[var(--color-surface-0)] text-[var(--color-text-primary)] hover:border-[var(--color-brand-400)] hover:text-[var(--color-brand-600)]"}`}
+                      >
+                        {preset.label}
+                      </button>
+                    );
+                  })
+                )}
               </div>
             </div>
 
@@ -154,12 +199,12 @@ export default function PeriodSetupPanel({ periodSetup, availableYears }: Period
                 Period Range
               </div>
 
-                            {/* Dynamic Range Form */}
+              {/* Dynamic Range Form */}
               {periodSetup.draft.preset === 'day' && (
                 <div className="grid grid-cols-2 gap-2.5">
                   <div className="flex flex-col gap-1">
                     <label className="text-[10px] font-bold text-[var(--color-text-secondary)]">From Date</label>
-                    <input 
+                    <input
                       type="date"
                       className="rounded border border-[var(--color-border-light)] p-1.5 text-xs focus:border-[var(--color-brand-400)] focus:ring-1 focus:ring-[var(--color-brand-400)] outline-none"
                       value={periodSetup.draft.dateFrom || ''}
@@ -168,8 +213,8 @@ export default function PeriodSetupPanel({ periodSetup, availableYears }: Period
                         const dateStart = new Date(newDate);
                         const dateEnd = new Date(periodSetup.draft.dateTo || newDate);
                         const diffTime = Math.abs(dateEnd.getTime() - dateStart.getTime());
-                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-                        
+                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
                         let finalDateTo = periodSetup.draft.dateTo || newDate;
                         if (diffDays > 30) {
                           showToast("Maximum 31 days allowed. Consider using Month or Week mode.", "warning");
@@ -177,9 +222,9 @@ export default function PeriodSetupPanel({ periodSetup, availableYears }: Period
                           maxDateEnd.setDate(dateStart.getDate() + 30);
                           finalDateTo = maxDateEnd.toISOString().split('T')[0];
                         }
-                        
-                        periodSetup.actions.setDraftField({ 
-                          dateFrom: newDate, 
+
+                        periodSetup.actions.setDraftField({
+                          dateFrom: newDate,
                           dateTo: finalDateTo,
                           baseYear: String(dateStart.getFullYear())
                         });
@@ -188,7 +233,7 @@ export default function PeriodSetupPanel({ periodSetup, availableYears }: Period
                   </div>
                   <div className="flex flex-col gap-1">
                     <label className="text-[10px] font-bold text-[var(--color-text-secondary)]">To Date</label>
-                    <input 
+                    <input
                       type="date"
                       className="rounded border border-[var(--color-border-light)] p-1.5 text-xs focus:border-[var(--color-brand-400)] focus:ring-1 focus:ring-[var(--color-brand-400)] outline-none"
                       value={periodSetup.draft.dateTo || ''}
@@ -197,8 +242,8 @@ export default function PeriodSetupPanel({ periodSetup, availableYears }: Period
                         const dateEnd = new Date(newDate);
                         const dateStart = new Date(periodSetup.draft.dateFrom || newDate);
                         const diffTime = Math.abs(dateEnd.getTime() - dateStart.getTime());
-                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-                        
+                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
                         let finalDateFrom = periodSetup.draft.dateFrom || newDate;
                         if (diffDays > 30) {
                           showToast("Maximum 31 days allowed. Consider using Month or Week mode.", "warning");
@@ -206,9 +251,9 @@ export default function PeriodSetupPanel({ periodSetup, availableYears }: Period
                           maxDateStart.setDate(dateEnd.getDate() - 30);
                           finalDateFrom = maxDateStart.toISOString().split('T')[0];
                         }
-                        
-                        periodSetup.actions.setDraftField({ 
-                          dateTo: newDate, 
+
+                        periodSetup.actions.setDraftField({
+                          dateTo: newDate,
                           dateFrom: finalDateFrom,
                           baseYear: String(dateEnd.getFullYear())
                         });
@@ -360,8 +405,10 @@ export default function PeriodSetupPanel({ periodSetup, availableYears }: Period
 
               {/* KPI YoY Base (KPI compare year toggle) */}
               <div className="flex flex-col gap-1 bg-[var(--color-surface-1)] p-2 rounded-lg border border-[var(--color-border-light)]">
-                <span className="text-[10px] font-black text-[var(--color-text-secondary)]">KPI YoY Base</span>
-                <div className="mt-4">
+                <div className="flex items-center gap-1.5 cursor-pointer">
+                  <span className="text-[10px] font-black text-[var(--color-text-secondary)]">KPI YoY Base</span>
+                </div>
+                <div className="mt-1">
                   <CustomSelect
                     value={periodSetup.draft.kpiCompareYear}
                     disabled={!periodSetup.draft.compareActive1 && !periodSetup.draft.compareActive2}

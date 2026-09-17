@@ -7,6 +7,7 @@ export type PeriodPreset = 'full-year' | 'ytd' | 'this-month' | 'last-month' | '
 export interface PeriodSetupConfig {
   presets: PeriodPreset[];
   allowWeekRange?: boolean;
+  allowDateFieldToggle?: boolean;
   compareSlots: 1 | 2;
   syncToUrl?: boolean;
   availableYears: string[]; // Needs to be passed in to compute default compare years
@@ -24,6 +25,7 @@ export interface PeriodSetupConfig {
     compareActive2?: boolean;
     compareYear2?: string;
     kpiCompareYear?: string;
+    dateField?: 'ordDate' | 'dueDate';
   };
   onReset?: () => void;
 }
@@ -45,6 +47,7 @@ export interface PeriodState {
   selectedYears: string[];
   selectedMonths: string[];
   selectedWeeks?: string[];
+  dateField: 'ordDate' | 'dueDate';
 }
 
 /**
@@ -79,22 +82,25 @@ export function usePeriodSetup(config: PeriodSetupConfig) {
       }
     }
     let kpiCompareYear = config.initialValues?.kpiCompareYear || compareYear1;
+    let dateField: 'ordDate' | 'dueDate' = config.initialValues?.dateField || 'ordDate';
 
     if (config.syncToUrl && !ignoreUrl) {
       const urlYears = searchParams.get('years')?.split(',').filter(Boolean) || [];
       const urlMonths = parseMonths(searchParams.get('months'));
       const urlKpi = searchParams.get('kpiCompare');
       const urlPreset = searchParams.get('preset') as PeriodPreset | null;
-            const urlWStart = searchParams.get('wStart');
+      const urlWStart = searchParams.get('wStart');
       const urlWEnd = searchParams.get('wEnd');
       const urlDateFrom = searchParams.get('dateFrom');
       const urlDateTo = searchParams.get('dateTo');
+      const urlDateField = searchParams.get('dateField') as 'ordDate' | 'dueDate' | null;
 
       if (urlPreset) preset = urlPreset;
       if (urlWStart) weekFrom = Number(urlWStart);
       if (urlWEnd) weekTo = Number(urlWEnd);
       if (urlDateFrom) dateFrom = urlDateFrom;
       if (urlDateTo) dateTo = urlDateTo;
+      if (urlDateField) dateField = urlDateField;
 
       if (urlMonths.length > 0) {
         const numMonths = urlMonths.map(Number).sort((a, b) => a - b);
@@ -133,7 +139,7 @@ export function usePeriodSetup(config: PeriodSetupConfig) {
     return {
       preset, monthFrom, monthTo, weekFrom, weekTo, dateFrom, dateTo,
       baseYear, compareActive1, compareYear1, compareActive2, compareYear2, kpiCompareYear,
-      selectedYears, selectedMonths, selectedWeeks
+      selectedYears, selectedMonths, selectedWeeks, dateField
     };
   }, [config.initialValues, config.availableYears, config.syncToUrl, config.compareSlots, config.allowWeekRange, searchParams]);
 
@@ -238,9 +244,11 @@ export function usePeriodSetup(config: PeriodSetupConfig) {
 
     const newCommitted = {
       ...draft,
+      ...draft,
       selectedYears,
       selectedMonths,
-      selectedWeeks
+      selectedWeeks,
+      dateField: draft.dateField
     };
     
     setCommitted(newCommitted);
@@ -278,6 +286,13 @@ export function usePeriodSetup(config: PeriodSetupConfig) {
         } else {
           next.delete('kpiCompare');
         }
+
+        if (draft.dateField === 'dueDate') {
+          next.set('dateField', 'dueDate');
+        } else {
+          next.delete('dateField');
+        }
+
         return next;
       }, { replace: true });
     }
@@ -317,7 +332,8 @@ export function usePeriodSetup(config: PeriodSetupConfig) {
       syncDraft,
       apply,
       reset
-    }
+    },
+    config
   };
 }
 

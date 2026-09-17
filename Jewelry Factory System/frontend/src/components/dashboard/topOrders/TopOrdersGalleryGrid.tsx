@@ -76,7 +76,6 @@ export function TopOrdersGalleryGrid({
     <div className="gallery-grid" style={{ padding: '16px 20px' }}>
       {items.map((item) => {
         const isTop3 = item.rank <= 3;
-        const sharePct = metric === 'amount' ? item.shareOfPortfolioAmntPct : item.shareOfPortfolioQtyPct;
         const isCompare = perspectiveMode === 'compare';
         const imgScale = getCategoryImageScale(item.productType, item.productTypeLabel);
 

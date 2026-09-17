@@ -1,11 +1,16 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useOutletContext, useSearchParams } from 'react-router-dom';
-import { DollarSign, Hash, Calendar, CalendarDays, Layers, Users, Eye, EyeOff, RefreshCw } from 'lucide-react';
+import { DollarSign, Hash, Calendar, CalendarDays, Layers, Users, Eye, EyeOff } from 'lucide-react';
 import { fetchCustomerSummary } from '../services/customerSummaryAPI';
 import { ALL_GROUPS } from '../config/customerGroups';
 import { ErpSegmentedControl } from '../components/ui/ErpButtons';
 import { printChartDashboard } from '../utils/printChart';
-import { useTheme } from '../contexts/useTheme';
+import PageHeader from '../components/layout/PageHeader';
+import { BREADCRUMBS } from '../config/breadcrumbs';
+import PeriodSetupPanel from '../components/period/PeriodSetupPanel';
+import { CustomerGroupFilter } from '../components/dashboard/customerSales/CustomerGroupFilter';
+import { useCustomerPageFilters } from '../hooks/useCustomerPageFilters';
+import { FilterX, RefreshCw } from 'lucide-react';
 import { useCustomerSalesData, type Metric, type CustomerSummaryRow } from '../hooks/useCustomerSalesData';
 import { CustomerSalesChart } from '../components/dashboard/customerSales/CustomerSalesChart';
 import { CustomerKpiCards } from '../components/dashboard/customerSales/CustomerKpiCards';
@@ -15,14 +20,24 @@ import './CustomerDashboard.css';
 const YEAR_COLORS = ['var(--color-chart-1)', 'var(--color-chart-2)', 'var(--color-chart-3)', 'var(--color-chart-4)', 'var(--color-chart-5)', 'var(--color-chart-6)'];
 
 export default function CustomerDashboard({ metric: propMetric = 'amount' }: { metric?: Metric }) {
-  const { theme } = useTheme();
   const [searchParams, setSearchParams] = useSearchParams();
   const metric = (searchParams.get('metric') as Metric) || propMetric;
-  const { periodSetup, selGroups, availableYears, refreshCounter, triggerRefresh, isRefreshing, setIsRefreshing } = useOutletContext<any>();
+  const { availableYears, refreshCounter, setIsRefreshing, triggerRefresh, isRefreshing } = useOutletContext<any>();
+  const [custData, setCustData] = useState<CustomerSummaryRow[]>([]);
+  
+  const {
+    periodSetup,
+    selGroups,
+    setSelGroups,
+    toggleGroup,
+    dynamicActiveGroups,
+    isFiltered,
+    resetFilters
+  } = useCustomerPageFilters(availableYears, { presets: ['full-year', 'ytd', 'this-month', 'last-month', 'custom'] }, custData);
+
   const selectedYears = periodSetup.committed.selectedYears;
   const selectedMonths = periodSetup.committed.selectedMonths;
   const kpiCompareYear = periodSetup.committed.kpiCompareYear;
-  const [custData, setCustData] = useState<CustomerSummaryRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   // New State mappings
@@ -93,9 +108,6 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
     chartData,
     summaries,
     yearSummaries,
-    grandTotal,
-    grandYoy,
-    grandLatestYear
   } = useCustomerSalesData({
     custData,
     availableYears,
@@ -192,9 +204,61 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
 
   return (
     <>
-      <div className={`content-scrollbar flex-1 overflow-y-auto transition-opacity duration-300 ${loading ? 'opacity-50 pointer-events-none' : 'opacity-100'}`} style={{ background: 'var(--color-surface-1)' }}>
-        <div className="app-content-frame app-content-frame--workspace app-page-content sales-summary-page" style={{ paddingTop: 16 }}>
-
+      <PageHeader
+        breadcrumb={BREADCRUMBS.CUSTOMER_DASHBOARD_TAB('dashboard')}
+        contentLayout="workspace"
+        hideTitle={true}
+        rightContent={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <button
+              type="button"
+              onClick={triggerRefresh}
+              className="flex items-center justify-center w-8 h-8 rounded-lg border-none bg-transparent hover:bg-[var(--color-surface-2)] transition-colors shrink-0 cursor-pointer p-0"
+              title="Refresh Data"
+              aria-label="Refresh Data"
+            >
+              <RefreshCw size={16} strokeWidth={1.75} className={`text-[var(--color-brand-600)] ${isRefreshing ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
+        }
+        bottomContent={
+          <div className="sales-global-filters flex items-center flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <PeriodSetupPanel periodSetup={periodSetup} availableYears={availableYears} />
+              <CustomerGroupFilter
+                selGroups={selGroups}
+                setSelGroups={setSelGroups}
+                dynamicActiveGroups={dynamicActiveGroups}
+                toggleGroup={toggleGroup}
+              />
+              {isFiltered && (
+                <button
+                  type="button"
+                  onClick={resetFilters}
+                  style={{
+                    background: "none", border: "none", padding: "6px",
+                    color: "var(--color-text-secondary)", cursor: "pointer",
+                    display: "inline-flex", alignItems: "center", justifyContent: "center",
+                    borderRadius: 6, transition: "all 0.15s ease", flexShrink: 0,
+                  }}
+                  className="hover:bg-[var(--color-surface-2)] active:scale-95"
+                  title="Reset filters"
+                  aria-label="Reset filters"
+                >
+                  <FilterX size={14} />
+                </button>
+              )}
+            </div>
+          </div>
+        }
+      />
+      <div className="content-scrollbar flex-1 overflow-y-auto" style={{
+        background: 'var(--color-surface-2)',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column'
+      }}>
+        <div className="app-content-frame app-content-frame--workspace app-page-content" style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 12, maxWidth: '1440px', margin: '0 auto', width: '100%' }}>
           {/* Main Content Grid: Chart on Left, YoY Cards on Right */}
           <div className="sales-summary-main-grid">
 

@@ -2,7 +2,11 @@ import { useCallback } from 'react';
 import { DollarSign, Hash } from 'lucide-react';
 import './SalesResponsive.css';
 import { ALL_GROUPS } from '../config/customerGroups';
-
+import PageHeader from '../components/layout/PageHeader';
+import { BREADCRUMBS } from '../config/breadcrumbs';
+import PeriodSetupPanel from '../components/period/PeriodSetupPanel';
+import { CustomerGroupFilter } from '../components/dashboard/customerSales/CustomerGroupFilter';
+import { FilterX, RefreshCw } from 'lucide-react';
 import CustomerReportTable from '../components/report/CustomerReportTable';
 import { useCustomerReportData, YEAR_COLORS } from '../hooks/useCustomerReportData';
 import { renderGrowthAmt, renderGrowthPct } from '../components/dashboard/customerReport/GrowthHelpers';
@@ -18,6 +22,8 @@ export default function CustomerReportPage() {
     activeYears,
     displayYears,
     displayMonths,
+    displayWeeks,
+    displayDays,
     selMonths,
     selGroups,
     kpiCompareYear,
@@ -36,6 +42,13 @@ export default function CustomerReportPage() {
     currentMonthIdx,
     tableData,
     groupKpis,
+    periodSetup,
+    setSelGroups,
+    toggleGroup,
+    dynamicActiveGroups,
+    isFiltered,
+    resetFilters,
+    availableYears,
     triggerRefresh,
     isRefreshing
   } = useCustomerReportData();
@@ -50,6 +63,54 @@ export default function CustomerReportPage() {
 
   return (
     <>
+      <PageHeader
+        breadcrumb={BREADCRUMBS.CUSTOMER_DASHBOARD_TAB('matrix')}
+        contentLayout="dashboard-wide"
+        hideTitle={true}
+        rightContent={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <button
+              type="button"
+              onClick={triggerRefresh}
+              className="flex items-center justify-center w-8 h-8 rounded-lg border-none bg-transparent hover:bg-[var(--color-surface-2)] transition-colors shrink-0 cursor-pointer p-0"
+              title="Refresh Data"
+              aria-label="Refresh Data"
+            >
+              <RefreshCw size={16} strokeWidth={1.75} className={`text-[var(--color-brand-600)] ${isRefreshing ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
+        }
+        bottomContent={
+          <div className="sales-global-filters flex items-center flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <PeriodSetupPanel periodSetup={periodSetup} availableYears={availableYears} />
+              <CustomerGroupFilter
+                selGroups={selGroups}
+                setSelGroups={setSelGroups}
+                dynamicActiveGroups={dynamicActiveGroups}
+                toggleGroup={toggleGroup}
+              />
+              {isFiltered && (
+                <button
+                  type="button"
+                  onClick={resetFilters}
+                  style={{
+                    background: "none", border: "none", padding: "6px",
+                    color: "var(--color-text-secondary)", cursor: "pointer",
+                    display: "inline-flex", alignItems: "center", justifyContent: "center",
+                    borderRadius: 6, transition: "all 0.15s ease", flexShrink: 0,
+                  }}
+                  className="hover:bg-[var(--color-surface-2)] active:scale-95"
+                  title="Reset filters"
+                  aria-label="Reset filters"
+                >
+                  <FilterX size={14} />
+                </button>
+              )}
+            </div>
+          </div>
+        }
+      />
       <div className="content-scrollbar flex-1 overflow-y-auto" style={{ background: 'var(--color-surface-1)' }}>
         <div className="app-content-frame app-content-frame--dashboard-wide sales-report-page">
           {/* Loading Skeletons for KPIs */}
@@ -252,6 +313,8 @@ export default function CustomerReportPage() {
                 tableData={tableData}
                 displayYears={displayYears}
                 displayMonths={displayMonths}
+                displayWeeks={displayWeeks}
+                displayDays={displayDays}
                 currentYearStr={currentYearStr}
                 currentMonthIdx={currentMonthIdx}
                 growthComparisons={growthComparisons}

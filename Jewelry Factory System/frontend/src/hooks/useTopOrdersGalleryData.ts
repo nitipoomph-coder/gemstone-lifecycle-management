@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { fetchAvailableYears } from '../services/dashboardAPI';
 import { fetchTopItemsGallery, type TopGalleryItem, type TopGalleryResponse } from '../services/itemYearlySummaryAPI';
 import { ALL_GROUPS, ACTIVE_GROUP_IDS } from '../config/customerGroups';
+import { usePeriodSetup } from './usePeriodSetup';
 
 // --- Shared Constants & Types ---
 export const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -36,14 +37,7 @@ export const PRODUCT_TYPE_OPTIONS: ProductTypeOption[] = [
 
 export type PerspectiveMode = 'combined' | 'compare';
 
-export interface PeriodDraft {
-  preset: PeriodPreset;
-  baseYear: string;
-  startMonth: number;
-  endMonth: number;
-  compareEnabled: boolean;
-  compareYear: string;
-}
+
 
 // --- Helper Functions ---
 export const getDefaultCompareYear = (baseYear: string, years: string[]) => {
@@ -126,10 +120,13 @@ export function useTopOrdersGalleryData() {
   const [searchDraft, setSearchDraft] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
 
-  const [monthFrom, setmonthFrom] = useState(1);
-  const [monthTo, setmonthTo] = useState(12);
-  const [periodPreset, setPeriodPreset] = useState<PeriodPreset>("full-year");
-  const [periodDraft, setPeriodDraft] = useState<PeriodDraft | null>(null);
+  const periodSetup = usePeriodSetup({
+    presets: ['full-year', 'ytd', 'this-month', 'last-month', 'custom'],
+    compareSlots: 1,
+    syncToUrl: true,
+    availableYears: availableYears,
+    allowDateFieldToggle: true,
+  });
 
   const [galleryResponse, setGalleryResponse] = useState<TopGalleryResponse | null>(null);
   const [portfolioAllResponse, setPortfolioAllResponse] = useState<TopGalleryResponse | null>(null);
@@ -138,20 +135,24 @@ export function useTopOrdersGalleryData() {
   const filterTransitionTimer = useRef<ReturnType<typeof window.setTimeout> | null>(null);
   const hasLoadedInitialRef = useRef(false);
 
-  const selectedMonthNumbers = useMemo(() => monthRange(monthFrom, monthTo), [monthFrom, monthTo]);
-  const selectedPeriodLabel = monthRangeLabel(monthFrom, monthTo);
+  const selectedMonthNumbers = useMemo(() => {
+    return monthRange(periodSetup.committed.monthFrom, periodSetup.committed.monthTo);
+  }, [periodSetup.committed.monthFrom, periodSetup.committed.monthTo]);
+  
+  const selectedPeriodLabel = monthRangeLabel(periodSetup.committed.monthFrom, periodSetup.committed.monthTo);
   const selectedGroupsKey = selGroups.join(",");
 
   const analyticsPath = useMemo(() => {
     const params = new URLSearchParams();
     params.set("metric", metric);
-    if (baseYear) params.set("year", baseYear);
-    if (compareEnabled && compareYear) params.set("compareYear", compareYear);
+    if (periodSetup.committed.baseYear) params.set("year", periodSetup.committed.baseYear);
+    if (periodSetup.committed.compareActive1 && periodSetup.committed.compareYear1) params.set("compareYear", periodSetup.committed.compareYear1);
     if (selectedMonthNumbers.length) params.set("months", selectedMonthNumbers.join(","));
+    if (periodSetup.committed.dateField !== 'ordDate') params.set("dateField", periodSetup.committed.dateField);
     if (selectedGroupsKey) params.set("groups", selectedGroupsKey);
     if (selTypes.length > 0) params.set("type", selTypes.join(','));
     return `/dashboard/top-orders/analytics?${params.toString()}`;
-  }, [baseYear, compareEnabled, compareYear, metric, selTypes, selectedGroupsKey, selectedMonthNumbers]);
+  }, [periodSetup.committed, metric, selTypes, selectedGroupsKey, selectedMonthNumbers]);
 
   const startFilterTransition = (duration = 600) => {
     setFilterLoading(true);
@@ -174,8 +175,13 @@ export function useTopOrdersGalleryData() {
         const stringYears = (years || []).map(String).sort((a: any, b: any) => b.localeCompare(a));
         if (stringYears.length > 0) {
           setAvailableYears(stringYears);
-          setBaseYear((prev) => (prev && stringYears.includes(prev) ? prev : stringYears[0]));
-          setCompareYear((prev) => (prev && stringYears.includes(prev) ? prev : (stringYears[1] || '')));
+          if (!periodSetup.committed.baseYear) {
+            periodSetup.actions.setDraftField({
+              baseYear: stringYears[0],
+              compareYear1: stringYears[1] || ''
+            });
+            periodSetup.actions.apply();
+          }
         }
       })
       .catch((err) => {
@@ -190,30 +196,34 @@ export function useTopOrdersGalleryData() {
 
   // 2. Fetch Top Gallery items from API
   useEffect(() => {
-    if (!baseYear || availableYears.length === 0) return;
+    if (!periodSetup.committed.baseYear || availableYears.length === 0) return;
 
     let cancelled = false;
     if (hasLoadedInitialRef.current) {
       setFilterLoading(true);
     }
     setLoading(true);
+    
+    const baseYr = periodSetup.committed.baseYear;
+    const compYr = periodSetup.committed.compareActive1 ? periodSetup.committed.compareYear1 : undefined;
 
-    const yearsToFetch = compareEnabled && compareYear && compareYear !== baseYear
-      ? [compareYear, baseYear]
-      : [baseYear];
+    const yearsToFetch = compYr && compYr !== baseYr
+      ? [compYr, baseYr]
+      : [baseYr];
 
     const monthsToFetch = selectedMonthNumbers.map(String);
 
     const commonParams = {
       years: yearsToFetch,
       months: monthsToFetch,
-      baseYear,
-      compareYear: compareEnabled ? compareYear : undefined,
+      baseYear: baseYr,
+      compareYear: compYr,
       groups: selGroups.length === ALL_GROUPS.length ? ['all'] : selGroups,
       metric,
       search: searchQuery,
       limit: 50,
       rankBy: (perspectiveMode === 'compare' ? 'base' : 'combined') as 'base' | 'combined',
+      dateField: periodSetup.committed.dateField,
     };
 
     const mainFetch = fetchTopItemsGallery({
@@ -252,7 +262,7 @@ export function useTopOrdersGalleryData() {
     return () => {
       cancelled = true;
     };
-  }, [availableYears, baseYear, compareEnabled, compareYear, metric, perspectiveMode, productType, searchQuery, selGroups, selectedMonthNumbers, refreshVersion]);
+  }, [availableYears, periodSetup.committed, metric, perspectiveMode, productType, searchQuery, selGroups, selectedMonthNumbers, refreshVersion]);
 
   const items = galleryResponse?.items || [];
   const portfolioAllItems = portfolioAllResponse?.items || galleryResponse?.items || [];
@@ -266,56 +276,7 @@ export function useTopOrdersGalleryData() {
     compareYearTotalAmnt: 0,
   };
 
-  const buildPeriodDraft = (): PeriodDraft => {
-    const activeBase = baseYear || availableYears[0] || String(CURRENT_YEAR);
-    const activeComp = compareYear || getDefaultCompareYear(activeBase, availableYears);
-    return {
-      preset: periodPreset,
-      baseYear: activeBase,
-      startMonth: monthFrom,
-      endMonth: monthTo,
-      compareEnabled,
-      compareYear: activeComp,
-    };
-  };
 
-  const applyPeriodPreset = (preset: PeriodPreset) => {
-    const range = presetRange(preset);
-    setPeriodDraft((prev) =>
-      prev
-        ? { ...prev, preset, startMonth: range.startMonth, endMonth: range.endMonth }
-        : {
-            preset,
-            baseYear,
-            startMonth: range.startMonth,
-            endMonth: range.endMonth,
-            compareEnabled,
-            compareYear: compareYear || getDefaultCompareYear(baseYear, availableYears),
-          }
-    );
-  };
-
-  const updatePeriodDraft = (patch: Partial<PeriodDraft>) => {
-    setPeriodDraft((prev) => {
-      const base = prev || buildPeriodDraft();
-      const next = { ...base, ...patch };
-      if (patch.startMonth !== undefined || patch.endMonth !== undefined) {
-        next.preset = 'custom';
-      }
-      return next;
-    });
-  };
-
-  const applyPeriodDraft = () => {
-    if (!periodDraft) return;
-    startFilterTransition();
-    setPeriodPreset(periodDraft.preset);
-    setmonthFrom(periodDraft.startMonth);
-    setmonthTo(periodDraft.endMonth);
-    setBaseYear(periodDraft.baseYear);
-    setCompareEnabled(periodDraft.compareEnabled);
-    setCompareYear(periodDraft.compareYear);
-  };
 
   const toggleGroup = (gId: string) => {
     startFilterTransition();
@@ -325,12 +286,14 @@ export function useTopOrdersGalleryData() {
   };
 
   const swapYears = () => {
-    if (!compareEnabled || !compareYear || compareYear === baseYear) return;
+    if (!periodSetup.committed.compareActive1 || !periodSetup.committed.compareYear1 || periodSetup.committed.compareYear1 === periodSetup.committed.baseYear) return;
     startFilterTransition();
-    const oldBase = baseYear;
-    const oldCompare = compareYear;
-    setBaseYear(oldCompare);
-    setCompareYear(oldBase);
+    
+    periodSetup.actions.setDraftField({
+      baseYear: periodSetup.committed.compareYear1,
+      compareYear1: periodSetup.committed.baseYear,
+    });
+    periodSetup.actions.apply();
   };
 
   const resetFilters = useCallback(() => {
@@ -342,13 +305,18 @@ export function useTopOrdersGalleryData() {
     setProductType('ALL');
     setSearchDraft('');
     setSearchQuery('');
-    setmonthFrom(1);
-    setmonthTo(12);
-    setPeriodPreset('full-year');
-    setPeriodDraft(null);
-    setBaseYear(defaultBase);
-    setCompareYear(defaultComp);
-    setCompareEnabled(true);
+    
+    periodSetup.actions.reset();
+    periodSetup.actions.setDraftField({
+      preset: 'full-year',
+      monthFrom: 1,
+      monthTo: 12,
+      baseYear: defaultBase,
+      compareActive1: true,
+      compareYear1: defaultComp,
+    });
+    periodSetup.actions.apply();
+    
     setSelGroups(ACTIVE_GROUP_IDS);
     setRefreshVersion((v) => v + 1);
 
@@ -360,17 +328,17 @@ export function useTopOrdersGalleryData() {
       }
       setSearchParams(nextParams, { replace: true });
     }
-  }, [availableYears, searchParams, setSearchParams]);
+  }, [availableYears, periodSetup, searchParams, setSearchParams]);
 
   const isFiltered = useMemo(() => {
     const defaultBase = String(CURRENT_YEAR);
     const isPerspectiveFiltered = perspectiveMode !== 'combined';
     const isProductTypeFiltered = productType !== 'ALL';
     const isSearchFiltered = searchQuery.trim() !== '' || searchDraft.trim() !== '';
-    const isPeriodFiltered = periodPreset !== 'full-year' || monthFrom !== 1 || monthTo !== 12 || (baseYear !== '' && baseYear !== defaultBase);
+    const isPeriodFiltered = periodSetup.isFiltered ?? (periodSetup.committed.preset !== 'full-year' || periodSetup.committed.monthFrom !== 1 || periodSetup.committed.monthTo !== 12 || (periodSetup.committed.baseYear !== '' && periodSetup.committed.baseYear !== defaultBase));
     const isGroupsFiltered = selGroups.length !== ACTIVE_GROUP_IDS.length || !ACTIVE_GROUP_IDS.every(id => selGroups.includes(id));
     return isPerspectiveFiltered || isProductTypeFiltered || isSearchFiltered || isPeriodFiltered || isGroupsFiltered;
-  }, [baseYear, monthTo, monthFrom, periodPreset, perspectiveMode, productType, searchDraft, searchQuery, selGroups]);
+  }, [periodSetup, perspectiveMode, productType, searchDraft, searchQuery, selGroups]);
 
   const refreshData = useCallback(() => {
     startFilterTransition(400);
@@ -382,12 +350,10 @@ export function useTopOrdersGalleryData() {
     isInitialLoading: loading && !galleryResponse,
     isFilterLoading: filterLoading || (loading && !!galleryResponse),
     availableYears,
-    baseYear,
-    setBaseYear,
-    compareYear,
-    setCompareYear,
-    compareEnabled,
-    setCompareEnabled,
+    periodSetup,
+    baseYear: periodSetup.committed.baseYear,
+    compareYear: periodSetup.committed.compareYear1,
+    compareEnabled: periodSetup.committed.compareActive1,
     selGroups,
     setSelGroups,
     toggleGroup,
@@ -400,19 +366,10 @@ export function useTopOrdersGalleryData() {
     setSearchDraft,
     searchQuery,
     setSearchQuery,
-    monthFrom,
-    setmonthFrom,
-    monthTo,
-    setmonthTo,
-    periodPreset,
-    setPeriodPreset,
-    periodDraft,
-    setPeriodDraft,
-    buildPeriodDraft,
-    applyPeriodPreset,
-    updatePeriodDraft,
-    applyPeriodDraft,
-    getDefaultCompareYear,
+    periodPreset: periodSetup.committed.preset,
+    periodDraft: periodSetup.draft,
+    setPeriodDraft: periodSetup.actions.setDraftField,
+    applyPeriodDraft: periodSetup.actions.apply,
     items,
     portfolioAllItems,
     summary,

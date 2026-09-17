@@ -16,8 +16,8 @@ interface CustomerReportRow extends Record<string, unknown> {
 interface CustomerReportTableProps {
   loading: boolean;
   baseYear: string;
-  viewMode: 'ytd' | 'quarterly' | 'monthly' | 'weekly';
-  setViewMode?: (v: 'ytd' | 'quarterly' | 'monthly' | 'weekly') => void;
+  viewMode: 'ytd' | 'quarterly' | 'monthly' | 'weekly' | 'daily';
+  setViewMode?: (v: 'ytd' | 'quarterly' | 'monthly' | 'weekly' | 'daily') => void;
   aggregationMode?: 'group' | 'customer';
   setAggregationMode?: (v: 'group' | 'customer') => void;
   tableData: {
@@ -27,6 +27,8 @@ interface CustomerReportTableProps {
   };
   displayYears: string[];
   displayMonths: string[];
+  displayWeeks?: number[];
+  displayDays?: string[];
   currentYearStr: string;
   currentMonthIdx: number;
   growthComparisons: { a: string; b: string }[];
@@ -39,8 +41,6 @@ interface CustomerReportTableProps {
   renderGrowthPct: (baseVal: number, compVal: number, isTrulyNew?: boolean) => { node: React.ReactNode, bgColor: string };
   searchQuery?: string;
   setSearchQuery?: (value: string) => void;
-  showFilters?: boolean;
-  setShowFilters?: (value: boolean) => void;
   onResetMatrix?: () => void;
   onRefresh?: () => void;
   isRefreshing?: boolean;
@@ -55,12 +55,13 @@ export default function CustomerReportTable({
   loading,
   baseYear,
   viewMode,
-  setViewMode,
   aggregationMode = 'group',
   setAggregationMode,
   tableData,
   displayYears,
   displayMonths,
+  displayWeeks,
+  displayDays = [],
   currentYearStr,
   currentMonthIdx,
   growthComparisons,
@@ -73,8 +74,6 @@ export default function CustomerReportTable({
   renderGrowthPct,
   searchQuery = '',
   setSearchQuery,
-  showFilters,
-  setShowFilters,
   onResetMatrix,
   onRefresh,
   isRefreshing,
@@ -740,7 +739,7 @@ export default function CustomerReportTable({
                 </tfoot>
               )}
             </>
-          ) : viewMode === 'day' ? (
+          ) : viewMode === 'daily' ? (
             <>
               <thead>
                 <tr>
@@ -854,13 +853,13 @@ export default function CustomerReportTable({
               <thead>
                 <tr>
                   {customerIdTh(2)}
-                  {Array.from({ length: 53 }, (_, i) => i + 1).map((w) => (
+                  {(displayWeeks || Array.from({ length: 53 }, (_, i) => i + 1)).map((w) => (
                     <th key={`w_${w}`} colSpan={displayYears.length + activeGrowthCount * 2} className="customer-matrix-th customer-matrix-th--top">W{w}</th>
                   ))}
                   <th colSpan={displayYears.length} className="customer-matrix-th customer-matrix-th--top">{metric === 'qty' ? 'Grand Total QTY' : 'Grand Total Sales'}</th>
                 </tr>
                 <tr>
-                  {Array.from({ length: 53 }, (_, i) => i + 1).map((w) => (
+                  {(displayWeeks || Array.from({ length: 53 }, (_, i) => i + 1)).map((w) => (
                     <React.Fragment key={`w_sub_${w}`}>
                       {displayYears.map((yr) => <th key={`${w}_${yr}`} className={`customer-matrix-th customer-matrix-th--sub customer-matrix-td--number`}>{yr}</th>)}
                       {displayYears.length > 1 && growthComparisons.map((comp, idx) => (
@@ -887,7 +886,7 @@ export default function CustomerReportTable({
 
               <tbody>
                 {tableData.rows.length === 0 ? (
-                  <tr><td colSpan={1 + 53 * displayYears.length + displayYears.length} className="customer-matrix-empty">No customers match the current filter.</td></tr>
+                  <tr><td colSpan={1 + (displayWeeks ? displayWeeks.length : 53) * displayYears.length + displayYears.length} className="customer-matrix-empty">No customers match the current filter.</td></tr>
                 ) : tableData.rows.map((row) => (
                   <tr key={row.id} className="customer-matrix-row">
                     <td className="customer-matrix-td customer-matrix-td--customer">
@@ -899,7 +898,7 @@ export default function CustomerReportTable({
                         {row.label}
                       </button>
                     </td>
-                    {Array.from({ length: 53 }, (_, i) => i + 1).map((w) => (
+                    {(displayWeeks || Array.from({ length: 53 }, (_, i) => i + 1)).map((w) => (
                       <React.Fragment key={`w_cell_${w}`}>
                         {displayYears.map((yr) => {
                           const val = Number(row[`${yr}_W${w}`] || 0);
@@ -925,7 +924,7 @@ export default function CustomerReportTable({
                 <tfoot className="customer-matrix-footer">
                   <tr className="customer-matrix-row customer-matrix-row--total">
                     <td className="customer-matrix-td customer-matrix-td--customer customer-matrix-footer-label" style={{ textAlign: 'center' }}>Total Row</td>
-                    {Array.from({ length: 53 }, (_, i) => i + 1).map((w) => (
+                    {(displayWeeks || Array.from({ length: 53 }, (_, i) => i + 1)).map((w) => (
                       <React.Fragment key={`tot_row_w_${w}`}>
                         {displayYears.map((yr) => (
                           <td key={`tot_row_${w}_${yr}`} className={`customer-matrix-td customer-matrix-td--number`} style={{ textAlign: 'center' }}>

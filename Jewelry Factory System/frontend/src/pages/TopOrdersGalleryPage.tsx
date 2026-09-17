@@ -19,22 +19,12 @@ export default function TopOrdersGalleryPage() {
     isFilterLoading,
     availableYears,
     baseYear,
-    setBaseYear,
     compareYear,
-    setCompareYear,
     compareEnabled,
-    setCompareEnabled,
     selGroups,
     setSelGroups,
     toggleGroup,
-    periodPreset,
-    periodDraft,
-    setPeriodDraft,
-    buildPeriodDraft,
-    applyPeriodPreset,
-    updatePeriodDraft,
-    applyPeriodDraft,
-    getDefaultCompareYear,
+    periodSetup,
     productType,
     setProductType,
     selTypes,
@@ -207,17 +197,10 @@ export default function TopOrdersGalleryPage() {
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
               startFilterTransition={startFilterTransition}
-              periodDraft={periodDraft}
-              setPeriodDraft={setPeriodDraft}
-              buildPeriodDraft={buildPeriodDraft}
-              applyPeriodPreset={applyPeriodPreset}
-              updatePeriodDraft={updatePeriodDraft}
-              applyPeriodDraft={applyPeriodDraft}
-              getDefaultCompareYear={getDefaultCompareYear}
+              periodSetup={periodSetup}
               availableYears={availableYears}
               baseYear={baseYear}
               compareYear={compareYear}
-              periodButtonLabel={baseYear}
               selectedPeriodLabel={selectedPeriodLabel}
               selGroups={selGroups}
               setSelGroups={setSelGroups}

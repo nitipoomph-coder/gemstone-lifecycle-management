@@ -13,6 +13,7 @@ import {
   type SalesAnalyticsParams
 } from '../services/orderVolumeSummaryAPI';
 import { CUSTOMER_GROUPS, getCustomerGroupId } from '../config/customerGroups';
+import { useCustomerPageFilters } from './useCustomerPageFilters';
 
 // --- Types ---
 export type Metric = 'amount' | 'qty';
@@ -163,11 +164,11 @@ export const fmtAxis = (value: number, metric: Metric) => metric === 'amount' ? 
 
 export function useOrderVolumeSummaryData() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { periodSetup, selGroups: selectedGroups, availableYears } = useOutletContext<{
-    periodSetup: ReturnType<typeof usePeriodSetup>;
-    selGroups: string[];
-    availableYears: string[];
-  }>();
+  const { availableYears, refreshCounter, setIsRefreshing, triggerRefresh, isRefreshing } = useOutletContext<any>();
+
+  // Pass an empty custData for now or fetch it if needed for dynamic groups, but typically Trends can just use availableYears.
+  // Wait, does Trends need dynamic active groups? It's fine to just use the default.
+  const { periodSetup, selGroups: selectedGroups, setSelGroups, toggleGroup, dynamicActiveGroups, isFiltered, resetFilters } = useCustomerPageFilters(availableYears, { presets: ['full-year', 'ytd', 'this-month', 'last-month', 'custom'] }, []);
 
   const selectedYears = periodSetup?.committed?.selectedYears || [];
   const selectedMonths = periodSetup?.committed?.selectedMonths || [];
@@ -509,7 +510,17 @@ export function useOrderVolumeSummaryData() {
     filteredOrderRows,
     selectedYears, selectedGroups, availableYears,
     openChartDetail,
-    riskData
+    riskData,
+    periodSetup,
+    setSelGroups,
+    toggleGroup,
+    dynamicActiveGroups,
+    isFiltered,
+    resetFilters,
+    refreshCounter,
+    setIsRefreshing,
+    triggerRefresh,
+    isRefreshing
   };
 }
 

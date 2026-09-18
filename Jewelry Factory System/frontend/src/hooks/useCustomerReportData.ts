@@ -39,7 +39,7 @@ function csv(value: string | null) {
 export function useCustomerReportData() {
   const { theme } = useTheme();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { availableYears, refreshCounter, setIsRefreshing, triggerRefresh, isRefreshing } = useOutletContext<any>();
+  const { availableYears, refreshCounter, triggerRefresh, isRefreshing } = useOutletContext<any>();
 
   const { periodSetup, selGroups, setSelGroups, toggleGroup, dynamicActiveGroups, isFiltered, resetFilters } = useCustomerPageFilters(
     availableYears, 

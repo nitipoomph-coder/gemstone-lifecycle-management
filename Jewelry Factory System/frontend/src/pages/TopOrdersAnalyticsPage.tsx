@@ -60,7 +60,8 @@ export default function TopOrdersAnalyticsPage() {
         contentLayout="workspace"
         bottomContent={
           <div className="flex items-center gap-2 flex-wrap min-w-0">
-            <TopOrdersFilterBar 
+            <TopOrdersFilterBar
+              periodButtonLabel={selectedPeriodLabel} 
               {...dataProps} 
               onReset={dataProps.resetFilters} 
             />

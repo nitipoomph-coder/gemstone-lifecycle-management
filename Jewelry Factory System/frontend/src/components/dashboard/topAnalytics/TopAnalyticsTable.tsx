@@ -17,7 +17,8 @@ export function TopAnalyticsTable({
   loading, 
   displayYears,
   perspectiveMode,
-  compareEnabled
+  compareEnabled,
+  onPhotoClick
 }: { 
   rows: TopGalleryItem[]; 
   loading: boolean;

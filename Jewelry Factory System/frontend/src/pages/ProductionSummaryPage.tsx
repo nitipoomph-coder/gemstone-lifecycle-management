@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import PageHeader from '../components/layout/PageHeader';
 import { BREADCRUMBS } from '../config/breadcrumbs';
-import { ErpIconButton } from '../components/ui/ErpButtons';
+
 import { RefreshCw } from 'lucide-react';
 import CustomSelect from '../components/ui/CustomSelect';
 import { ProductionSummaryChart } from '../components/dashboard/productionSummary/ProductionSummaryChart';
@@ -68,13 +68,6 @@ function getWorkDaysInMonth(year: number, month: number, holidays: string[]): nu
   return workDays;
 }
 
-function getCurrentWeek() {
-  const now = new Date();
-  const start = new Date(now.getFullYear(), 0, 1);
-  const days = Math.floor((now.getTime() - start.getTime()) / (24 * 60 * 60 * 1000));
-  return Math.ceil((now.getDay() + 1 + days) / 7);
-}
-
 export default function ProductionSummaryPage() {
   const [step, setStep] = useState('GR');
   const [mode, setMode] = useState('good');
@@ -87,7 +80,8 @@ export default function ProductionSummaryPage() {
     availableYears: yearsStr
   });
 
-  const [maxWeek, setMaxWeek] = useState(52);
+
+
   const [holidays, setHolidays] = useState<string[]>([]);
   const [isReady, setIsReady] = useState(false);
 
@@ -111,13 +105,12 @@ export default function ProductionSummaryPage() {
     async function initYear() {
       try {
         setIsReady(false);
-        const [mw, hols] = await Promise.all([
+        const [, hols] = await Promise.all([
           getMaxWeek(activeYear),
           getHolidays(activeYear)
         ]);
-        setMaxWeek(mw || 52);
 
-        const cleanHols = hols.map(h => {
+        const cleanHols = hols.map((h: any) => {
           if (h.includes('T')) return h.split('T')[0];
           return h;
         });

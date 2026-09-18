@@ -203,6 +203,7 @@ export default function TopOrdersGalleryPage() {
         bottomContent={
           <div className="flex items-center gap-2 flex-wrap min-w-0">
             <TopOrdersFilterBar
+              periodButtonLabel={selectedPeriodLabel}
               productType={productType}
               setProductType={setProductType}
               selTypes={selTypes}

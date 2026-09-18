@@ -51,9 +51,7 @@ export default function OrderVolumeSummaryPage() {
     toggleGroup,
     dynamicActiveGroups,
     isFiltered,
-    resetFilters,
-    triggerRefresh,
-    isRefreshing
+    resetFilters
   } = data;
 
   const selectedYearSummary = hasCompareYear ? `${primaryYear} vs ${compareYear}` : primaryYear || '-';

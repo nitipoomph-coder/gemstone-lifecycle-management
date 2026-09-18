@@ -10,7 +10,7 @@ import { BREADCRUMBS } from '../config/breadcrumbs';
 import PeriodSetupPanel from '../components/period/PeriodSetupPanel';
 import { CustomerGroupFilter } from '../components/dashboard/customerSales/CustomerGroupFilter';
 import { useCustomerPageFilters } from '../hooks/useCustomerPageFilters';
-import { FilterX, RefreshCw } from 'lucide-react';
+import { FilterX } from 'lucide-react';
 import { useCustomerSalesData, type Metric, type CustomerSummaryRow } from '../hooks/useCustomerSalesData';
 import { CustomerSalesChart } from '../components/dashboard/customerSales/CustomerSalesChart';
 import { CustomerKpiCards } from '../components/dashboard/customerSales/CustomerKpiCards';
@@ -22,7 +22,7 @@ const YEAR_COLORS = ['var(--color-chart-1)', 'var(--color-chart-2)', 'var(--colo
 export default function CustomerDashboard({ metric: propMetric = 'amount' }: { metric?: Metric }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const metric = (searchParams.get('metric') as Metric) || propMetric;
-  const { availableYears, refreshCounter, setIsRefreshing, triggerRefresh, isRefreshing } = useOutletContext<any>();
+  const { availableYears, refreshCounter, setIsRefreshing } = useOutletContext<any>();
   const [custData, setCustData] = useState<CustomerSummaryRow[]>([]);
 
   const {

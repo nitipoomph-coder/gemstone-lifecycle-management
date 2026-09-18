@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useBreadcrumbs } from '../contexts/BreadcrumbContext';
 import { BREADCRUMBS } from '../config/breadcrumbs';

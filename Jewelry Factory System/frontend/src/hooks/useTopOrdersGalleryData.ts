@@ -84,10 +84,6 @@ export function useTopOrdersGalleryData() {
   const [filterLoading, setFilterLoading] = useState(false);
   const [refreshVersion, setRefreshVersion] = useState(0);
 
-  const [baseYear, setBaseYear] = useState<string>(String(CURRENT_YEAR));
-  const [compareYear, setCompareYear] = useState<string>(String(CURRENT_YEAR - 1));
-  const [compareEnabled, setCompareEnabled] = useState(true);
-
   const [selGroups, setSelGroups] = useState<string[]>(() => {
     const urlGroups = searchParams.get("groups");
     return urlGroups ? urlGroups.split(",").filter(Boolean) : ACTIVE_GROUP_IDS;
@@ -342,7 +338,7 @@ export function useTopOrdersGalleryData() {
     const isPerspectiveFiltered = perspectiveMode !== 'combined';
     const isProductTypeFiltered = productType !== 'ALL';
     const isSearchFiltered = searchQuery.trim() !== '' || searchDraft.trim() !== '';
-    const isPeriodFiltered = periodSetup.isFiltered ?? (periodSetup.committed.preset !== 'full-year' || periodSetup.committed.monthFrom !== 1 || periodSetup.committed.monthTo !== 12 || (periodSetup.committed.baseYear !== '' && periodSetup.committed.baseYear !== defaultBase));
+    const isPeriodFiltered = (periodSetup.committed.preset !== 'full-year' || periodSetup.committed.monthFrom !== 1 || periodSetup.committed.monthTo !== 12 || (periodSetup.committed.baseYear !== '' && periodSetup.committed.baseYear !== defaultBase));
     const isGroupsFiltered = selGroups.length !== ACTIVE_GROUP_IDS.length || !ACTIVE_GROUP_IDS.every(id => selGroups.includes(id));
     return isPerspectiveFiltered || isProductTypeFiltered || isSearchFiltered || isPeriodFiltered || isGroupsFiltered;
   }, [periodSetup, perspectiveMode, productType, searchDraft, searchQuery, selGroups]);

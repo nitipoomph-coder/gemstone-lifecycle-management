@@ -1,38 +1,13 @@
 import { useState, useRef, useEffect, type KeyboardEvent } from 'react';
-import { Search, X, CalendarDays, Users, Tag, ChevronDown, Layers, ArrowLeftRight, FilterX } from 'lucide-react';
+import { Search, X, Users, Tag, ChevronDown, Layers, ArrowLeftRight, FilterX } from 'lucide-react';
 import { ALL_GROUPS } from '../../../config/customerGroups';
-import { PERIOD_PRESETS, MONTHS, PRODUCT_TYPE_OPTIONS, type PerspectiveMode } from '../../../hooks/useTopOrdersGalleryData';
-import CustomSelect from '../../ui/CustomSelect';
+import { PRODUCT_TYPE_OPTIONS, type PerspectiveMode } from '../../../hooks/useTopOrdersGalleryData';
+
 import { ErpSegmentedControl } from '../../ui/ErpButtons';
 import PeriodSetupPanel from '../../period/PeriodSetupPanel';
 import { usePeriodSetup } from '../../../hooks/usePeriodSetup';
 
-interface PeriodSelectProps {
-  label: string;
-  value: string | number;
-  options: Array<{ value: string | number; label: string }>;
-  disabled?: boolean;
-  className?: string;
-  onChange: (value: string | number) => void;
-}
 
-function PeriodSelect({ label, value, options, disabled = false, className = "", onChange }: PeriodSelectProps) {
-  const customOptions = options.map(opt => ({ value: String(opt.value), label: opt.label }));
-  return (
-    <div className={`flex flex-col gap-1.5 ${className}`}>
-      <span className="text-[10px] font-black capitalize tracking-wider text-[var(--color-text-tertiary)]">
-        {label}
-      </span>
-      <CustomSelect
-        value={String(value)}
-        disabled={disabled}
-        onChange={(val: string) => onChange(val)}
-        options={customOptions}
-        ariaLabel={label}
-      />
-    </div>
-  );
-}
 
 interface TopOrdersFilterBarProps {
   analyticsPath?: string;
@@ -77,7 +52,7 @@ export function TopOrdersFilterBar({
   availableYears,
   baseYear = '',
   compareYear = '',
-  selectedPeriodLabel,
+
   selGroups,
   setSelGroups,
   toggleGroup,

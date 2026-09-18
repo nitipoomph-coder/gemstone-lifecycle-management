@@ -6,7 +6,7 @@ import PageHeader from '../components/layout/PageHeader';
 import { BREADCRUMBS } from '../config/breadcrumbs';
 import PeriodSetupPanel from '../components/period/PeriodSetupPanel';
 import { CustomerGroupFilter } from '../components/dashboard/customerSales/CustomerGroupFilter';
-import { FilterX, RefreshCw } from 'lucide-react';
+import { FilterX } from 'lucide-react';
 import CustomerReportTable from '../components/report/CustomerReportTable';
 import { useCustomerReportData, YEAR_COLORS } from '../hooks/useCustomerReportData';
 import { renderGrowthAmt, renderGrowthPct } from '../components/dashboard/customerReport/GrowthHelpers';

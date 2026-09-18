@@ -25,11 +25,6 @@ export function useCustomerPageFilters(availableYears: string[], configOverrides
     return parseGroups(searchParams.get('groups'));
   }, [searchParams]);
 
-  const dateFrom = searchParams.get('dateFrom') || undefined;
-  const dateTo = searchParams.get('dateTo') || undefined;
-  const wStart = searchParams.get('wStart') || undefined;
-  const wEnd = searchParams.get('wEnd') || undefined;
-  
   const defaultGroups = ACTIVE_GROUP_IDS;
 
   const [selGroups, setSelGroups] = useState<string[]>(hasGroupsParam ? requestedGroups : defaultGroups);
@@ -98,14 +93,6 @@ export function useCustomerPageFilters(availableYears: string[], configOverrides
   const toggleGroup = (id: string) => {
     setSelGroups(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   };
-
-  const fetchParams = useMemo(() => ({
-    startDate: periodSetup.committed.dateFrom,
-    endDate: periodSetup.committed.dateTo,
-    wStart: periodSetup.committed.weekFrom,
-    wEnd: periodSetup.committed.weekTo,
-    dateField: periodSetup.committed.dateField,
-  }), [periodSetup.committed]);
 
   const isFiltered = useMemo(() => {
     const isPeriodFiltered = periodSetup.committed.preset !== 'full-year' || periodSetup.committed.monthFrom !== 1 || periodSetup.committed.monthTo !== 12 || periodSetup.committed.compareActive1 || periodSetup.committed.compareActive2;

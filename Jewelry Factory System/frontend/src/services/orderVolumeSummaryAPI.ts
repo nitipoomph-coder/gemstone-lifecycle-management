@@ -138,8 +138,11 @@ export interface SalesAnalyticsParams {
   customers?: string[];
   types?: string[];
   dateView?: SalesDateView;
+  dateField?: 'ordDate' | 'dueDate';
   startDate?: string;
   endDate?: string;
+  wStart?: number;
+  wEnd?: number;
   bucket?: string;
   department?: string;
 }
@@ -152,8 +155,11 @@ const salesAnalyticsQuery = (params: SalesAnalyticsParams = {}) => {
   if (params.customers?.length) qs.set('customers', params.customers.join(','));
   if (params.types?.length) qs.set('types', params.types.join(','));
   if (params.dateView) qs.set('dateView', params.dateView);
+  if (params.dateField) qs.set('dateField', params.dateField);
   if (params.startDate) qs.set('startDate', params.startDate);
   if (params.endDate) qs.set('endDate', params.endDate);
+  if (params.wStart) qs.set('wStart', String(params.wStart));
+  if (params.wEnd) qs.set('wEnd', String(params.wEnd));
   if (params.bucket) qs.set('bucket', params.bucket);
   if (params.department) qs.set('department', params.department);
   return qs;

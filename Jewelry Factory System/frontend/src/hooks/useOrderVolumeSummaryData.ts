@@ -168,7 +168,7 @@ export function useOrderVolumeSummaryData() {
 
   // Pass an empty custData for now or fetch it if needed for dynamic groups, but typically Trends can just use availableYears.
   // Wait, does Trends need dynamic active groups? It's fine to just use the default.
-  const { periodSetup, selGroups: selectedGroups, setSelGroups, toggleGroup, dynamicActiveGroups, isFiltered, resetFilters } = useCustomerPageFilters(availableYears, { presets: ['full-year', 'ytd', 'this-month', 'last-month', 'custom'] }, []);
+  const { periodSetup, selGroups: selectedGroups, setSelGroups, toggleGroup, dynamicActiveGroups, isFiltered, resetFilters } = useCustomerPageFilters(availableYears, { presets: ['full-year', 'ytd', 'month', 'week', 'day', 'custom'], allowWeekRange: true }, []);
 
   const selectedYears = periodSetup?.committed?.selectedYears || [];
   const selectedMonths = periodSetup?.committed?.selectedMonths || [];
@@ -240,6 +240,11 @@ export function useOrderVolumeSummaryData() {
       years: selectedYearsKey ? selectedYearsKey.split('|') : [],
       months: selectedMonthsKey ? selectedMonthsKey.split('|') : [],
       customers: customersKey ? customersKey.split('|') : [],
+      startDate: periodSetup.committed.dateFrom,
+      endDate: periodSetup.committed.dateTo,
+      wStart: periodSetup.committed.weekFrom,
+      wEnd: periodSetup.committed.weekTo,
+      dateField: periodSetup.committed.dateField,
     };
 
     try {

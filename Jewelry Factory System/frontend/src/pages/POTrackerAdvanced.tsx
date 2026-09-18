@@ -5,6 +5,8 @@ import CustomViewModal from '../components/dashboard/poTracker/CustomViewModal';
 import CustomSelect from '../components/ui/CustomSelect';
 import { RefreshCw, AlertTriangle, Filter, X, Layers } from 'lucide-react';
 import { usePOTrackerAdvanced } from '../hooks/usePOTrackerAdvanced';
+import { useTopbarActions } from '../contexts/TopbarActionContext';
+import { useEffect } from 'react';
 
 export default function POTrackerAdvanced() {
   const {
@@ -53,6 +55,21 @@ export default function POTrackerAdvanced() {
     pageNumbers,
     activeFilterCount
   } = usePOTrackerAdvanced();
+
+  const { setTopbarActions } = useTopbarActions();
+  useEffect(() => {
+    setTopbarActions(
+      <button onClick={load} style={{ width:36, height:36, borderRadius:8, border:'none', background:'transparent', color:'var(--color-text-secondary)', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', transition:'all 0.2s' }}
+        onMouseEnter={e => { e.currentTarget.style.background='var(--color-surface-2)'; e.currentTarget.style.color='var(--color-brand-600)'; }}
+        onMouseLeave={e => { e.currentTarget.style.background='transparent'; e.currentTarget.style.color='var(--color-text-secondary)'; }}
+        title="Refresh Data"
+        aria-label="Refresh Data"
+      >
+        <RefreshCw size={18} strokeWidth={1.75} className={loading ? 'animate-spin text-[var(--color-brand-600)]' : ''} />
+      </button>
+    );
+    return () => setTopbarActions(null);
+  }, [setTopbarActions, load, loading]);
 
   return (
     <div className="app-page font-body">
@@ -324,22 +341,6 @@ export default function POTrackerAdvanced() {
                <span style={{ fontSize: '0.7rem', color: 'var(--color-text-tertiary)', fontWeight: 700 }}>
                  Last updated: Just now
                </span>
-               <button
-                onClick={load}
-                disabled={loading}
-                style={{
-                  padding: '8px 16px', borderRadius: '8px',
-                  background: 'var(--color-surface-0)', color: 'var(--color-text-primary)',
-                  border: '1px solid var(--color-border-strong)', fontSize: '0.75rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '6px',
-                  cursor: 'pointer', transition: 'all 0.2s ease',
-                  boxShadow: '0 2px 8px color-mix(in srgb, var(--color-surface-900) 4%, transparent)'
-                }}
-                className="hover:bg-[var(--color-surface-1)] active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
-                title="Refresh PO Data"
-              >
-                <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-                {loading ? 'REFRESHING...' : 'REFRESH'}
-              </button>
             </div>
           </div>
 

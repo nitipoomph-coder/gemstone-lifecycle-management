@@ -67,7 +67,7 @@ export function usePeriodSetup(config: PeriodSetupConfig) {
     let monthFrom = config.initialValues?.monthFrom || 1;
     let monthTo = config.initialValues?.monthTo || 12;
     let weekFrom = config.initialValues?.weekFrom || 1;
-    let weekTo = config.initialValues?.weekTo || 53;
+    let weekTo = config.initialValues?.weekTo || 12;
       let dateFrom = config.initialValues?.dateFrom;
       let dateTo = config.initialValues?.dateTo;
     let baseYear = config.initialValues?.baseYear || (config.availableYears.length > 0 ? config.availableYears[0] : String(new Date().getFullYear()));
@@ -243,7 +243,6 @@ export function usePeriodSetup(config: PeriodSetupConfig) {
       : undefined;
 
     const newCommitted = {
-      ...draft,
       ...draft,
       selectedYears,
       selectedMonths,

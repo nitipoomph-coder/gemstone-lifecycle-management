@@ -158,6 +158,10 @@ export interface TopGalleryParams {
   limit?: number;
   rankBy?: 'combined' | 'base' | 'growth';
   dateField?: 'ordDate' | 'dueDate';
+  startDate?: string;
+  endDate?: string;
+  wStart?: number;
+  wEnd?: number;
 }
 
 export const fetchTopItemsGallery = async (params: TopGalleryParams): Promise<TopGalleryResponse> => {
@@ -173,6 +177,14 @@ export const fetchTopItemsGallery = async (params: TopGalleryParams): Promise<To
   if (params.limit) qs.set('limit', String(params.limit));
   if (params.rankBy) qs.set('rankBy', params.rankBy);
   if (params.dateField) qs.set('dateField', params.dateField);
+  if (params.startDate && params.endDate) {
+    qs.set('startDate', params.startDate);
+    qs.set('endDate', params.endDate);
+  }
+  if (params.wStart && params.wEnd) {
+    qs.set('wStart', String(params.wStart));
+    qs.set('wEnd', String(params.wEnd));
+  }
 
   const res = await fetchWithAuth(`${BASE_URL}/items/top-gallery?${qs.toString()}`);
   if (!res.ok) throw new Error(`Top gallery API error: ${res.status}`);

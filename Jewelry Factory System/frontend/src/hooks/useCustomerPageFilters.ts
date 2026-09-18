@@ -22,14 +22,13 @@ export function useCustomerPageFilters(availableYears: string[], configOverrides
   const hasGroupsParam = searchParams.has('groups');
   
   const requestedGroups = useMemo(() => {
-    const value = searchParams.get('groups');
-    const normalized = String(value || '').trim().toLowerCase();
-    if (!normalized) return [];
-    if (normalized === 'all') return ALL_GROUP_IDS;
-    if (normalized === 'none') return [];
-    const groupIds = new Set(ALL_GROUP_IDS);
-    return value ? value.split(',').filter(groupId => groupIds.has(groupId)) : [];
+    return parseGroups(searchParams.get('groups'));
   }, [searchParams]);
+
+  const dateFrom = searchParams.get('dateFrom') || undefined;
+  const dateTo = searchParams.get('dateTo') || undefined;
+  const wStart = searchParams.get('wStart') || undefined;
+  const wEnd = searchParams.get('wEnd') || undefined;
   
   const defaultGroups = ACTIVE_GROUP_IDS;
 
@@ -39,9 +38,9 @@ export function useCustomerPageFilters(availableYears: string[], configOverrides
   const periodSetupConfig = useMemo(() => ({
     availableYears,
     syncToUrl: true,
-    presets: ['full-year', 'ytd', 'this-month', 'last-month', 'custom'] as any,
+    presets: ['full-year', 'ytd', 'month', 'week', 'day', 'custom'] as any,
     compareSlots: 2 as const,
-    allowWeekRange: false,
+    allowWeekRange: true,
     onReset: () => {
       setSelGroups(ACTIVE_GROUP_IDS);
     },
@@ -99,6 +98,14 @@ export function useCustomerPageFilters(availableYears: string[], configOverrides
   const toggleGroup = (id: string) => {
     setSelGroups(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   };
+
+  const fetchParams = useMemo(() => ({
+    startDate: periodSetup.committed.dateFrom,
+    endDate: periodSetup.committed.dateTo,
+    wStart: periodSetup.committed.weekFrom,
+    wEnd: periodSetup.committed.weekTo,
+    dateField: periodSetup.committed.dateField,
+  }), [periodSetup.committed]);
 
   const isFiltered = useMemo(() => {
     const isPeriodFiltered = periodSetup.committed.preset !== 'full-year' || periodSetup.committed.monthFrom !== 1 || periodSetup.committed.monthTo !== 12 || periodSetup.committed.compareActive1 || periodSetup.committed.compareActive2;

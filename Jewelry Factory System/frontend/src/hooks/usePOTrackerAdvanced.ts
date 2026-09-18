@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { GROUP_PRESETS } from '../components/dashboard/poTracker/orderTableConfig';
 import { fetchOrders, type OrderSummary } from '../services/orderAPI';
@@ -148,7 +148,7 @@ export function usePOTrackerAdvanced() {
     return () => { cancelled = true; };
   }, [statusFilter, dateType, dateFrom, dateTo, ordersKey]);
 
-  const load = () => setRefreshVersion(version => version + 1);
+  const load = useCallback(() => setRefreshVersion(version => version + 1), []);
 
   useEffect(() => {
     if (groupFilter === 'CUSTOM') {

@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useBreadcrumbs } from '../contexts/BreadcrumbContext';
 import { BREADCRUMBS } from '../config/breadcrumbs';
+import { useTopbarActions } from '../contexts/TopbarActionContext';
 import { fetchDashboardData, fetchAvailableYears, type DashboardData, type CardType } from '../services/dashboardAPI';
 import CardDetailPanel from '../components/dashboard/overview/CardDetailPanel';
 import CustomSelect from '../components/ui/CustomSelect';
@@ -54,7 +55,7 @@ export default function Dashboard() {
   const data = hasCurrentData ? dashboardState.data : null;
   const error = hasCurrentData ? dashboardState.error : null;
   const loading = !hasCurrentData;
-  const load = () => setRefreshVersion(version => version + 1);
+  const load = useCallback(() => setRefreshVersion(version => version + 1), []);
 
   // 1) Load available years once on mount
   useEffect(() => {
@@ -94,6 +95,22 @@ export default function Dashboard() {
       clearInterval(r);
     };
   }, [selectedYear, requestKey]);
+
+  // Mount Refresh Button globally
+  const { setTopbarActions } = useTopbarActions();
+  useEffect(() => {
+    setTopbarActions(
+      <button onClick={load} style={{ width:36, height:36, borderRadius:8, border:'none', background:'transparent', color:'var(--color-text-secondary)', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', transition:'all 0.2s' }}
+        onMouseEnter={e => { e.currentTarget.style.background='var(--color-surface-2)'; e.currentTarget.style.color='var(--color-brand-600)'; }}
+        onMouseLeave={e => { e.currentTarget.style.background='transparent'; e.currentTarget.style.color='var(--color-text-secondary)'; }}
+        title="Refresh Data"
+        aria-label="Refresh Data"
+      >
+        <RefreshCw size={18} strokeWidth={1.75} className={loading ? 'animate-spin text-[var(--color-brand-600)]' : ''} />
+      </button>
+    );
+    return () => setTopbarActions(null);
+  }, [setTopbarActions, load, loading]);
 
   // Loading
   if (loading) return (
@@ -198,13 +215,6 @@ export default function Dashboard() {
                   ]}
                 />
               </div>
-
-              <button onClick={load} style={{ width:40, height:40, borderRadius:12, border:'1px solid var(--color-border-light)', background:'var(--color-surface-0)', color:'var(--color-text-secondary)', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', transition:'all 0.2s' }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor='var(--color-brand-400)'; e.currentTarget.style.color='var(--color-brand-500)'; }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor='var(--color-border-light)'; e.currentTarget.style.color='var(--color-text-secondary)'; }}
-              >
-                <RefreshCw size={16}/>
-              </button>
             </div>
           </div>
 

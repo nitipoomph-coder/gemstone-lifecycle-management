@@ -1,4 +1,4 @@
-import { useMemo, type CSSProperties } from "react";
+import { useMemo, useEffect, type CSSProperties } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { LayoutGrid, BarChart3, RefreshCw } from "lucide-react";
 import PageHeader from '../components/layout/PageHeader';
@@ -10,6 +10,7 @@ import { TopOrdersGalleryGrid } from "../components/dashboard/topOrders/TopOrder
 import { TopOrdersItemPreview } from "../components/dashboard/topOrders/TopOrdersItemPreview";
 import { TopOrdersSkeleton } from "../components/dashboard/topOrders/TopOrdersSkeleton";
 import { comparisonTextStyle, formatSignedPct } from "../components/dashboard/topOrders/galleryComparison";
+import { useTopbarActions } from "../contexts/TopbarActionContext";
 import "./SalesResponsive.css";
 
 export default function TopOrdersGalleryPage() {
@@ -179,6 +180,21 @@ export default function TopOrdersGalleryPage() {
   const debugSkeleton = new URLSearchParams(location.search).get('debugSkeleton') === '1';
   const showInitialLoading = isInitialLoading || debugSkeleton;
 
+  const { setTopbarActions } = useTopbarActions();
+  useEffect(() => {
+    setTopbarActions(
+      <button onClick={refreshData} style={{ width:36, height:36, borderRadius:8, border:'none', background:'transparent', color:'var(--color-text-secondary)', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', transition:'all 0.2s' }}
+        onMouseEnter={e => { e.currentTarget.style.background='var(--color-surface-2)'; e.currentTarget.style.color='var(--color-brand-600)'; }}
+        onMouseLeave={e => { e.currentTarget.style.background='transparent'; e.currentTarget.style.color='var(--color-text-secondary)'; }}
+        title="Refresh"
+        aria-label="Refresh"
+      >
+        <RefreshCw size={18} strokeWidth={1.75} className={isFilterLoading ? 'animate-spin text-[var(--color-brand-600)]' : ''} />
+      </button>
+    );
+    return () => setTopbarActions(null);
+  }, [setTopbarActions, refreshData, isFilterLoading]);
+
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-[var(--color-surface-1)]">
       <PageHeader
@@ -215,28 +231,6 @@ export default function TopOrdersGalleryPage() {
         }
         rightContent={
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={refreshData}
-              style={{
-                background: "none",
-                border: "none",
-                padding: "6px",
-                color: "var(--color-brand-500)",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                borderRadius: 6,
-                transition: "all 0.15s ease",
-              }}
-              className="hover:bg-[var(--color-surface-2)] active:scale-95"
-              title="Refresh"
-              aria-label="Refresh"
-            >
-              <RefreshCw size={14} className={isFilterLoading ? "animate-spin" : ""} />
-            </button>
-            <div style={{ width: 1, height: 16, background: 'var(--color-border-light)', margin: '0 2px' }} />
             <div style={{ display: 'flex', alignItems: 'center', background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)', borderRadius: 8, padding: 4 }}>
               <ErpSegmentedControl
                 ariaLabel="View Mode"

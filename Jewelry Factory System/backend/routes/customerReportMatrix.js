@@ -7,6 +7,7 @@
 const express = require('express');
 const router = express.Router();
 const { getPool, sql } = require('../db');
+const { buildSalesFilters, salesDateBasis } = require('../utils/dateFilters');
 
 /*
  * =============================================================================
@@ -38,36 +39,11 @@ const { getPool, sql } = require('../db');
 router.get('/customer-summary', async (req, res) => {
   try {
     const pool = await getPool();
-    const years = (req.query.years || '').split(',').map(y => parseInt(y)).filter(y => !isNaN(y));
-    if (years.length === 0) years.push(new Date().getFullYear());
-    const months = req.query.months ? req.query.months.split(',').map(m => parseInt(m)).filter(m => !isNaN(m)) : [];
-    
-    // Use OrdDate always
-    let dateColumn = 'OrdDate';
+    const request = pool.request();
     
     const typeParam = req.query.type || 'ALL';
-
-    const request = pool.request();
-    // SARGable date range helper
-    function buildDateRangeCondition(col, yearList, monthList) {
-      if (!yearList || yearList.length === 0) return '1=1';
-      if (!monthList || monthList.length === 0) {
-        return '(' + yearList.map(y => `(${col} >= '${y}-01-01' AND ${col} < '${y + 1}-01-01')`).join(' OR ') + ')';
-      }
-      const conditions = [];
-      for (const y of yearList) {
-        for (const m of monthList) {
-          const sM = m.toString().padStart(2, '0');
-          const eM_val = m + 1;
-          const eY = eM_val > 12 ? y + 1 : y;
-          const eM = (eM_val > 12 ? 1 : eM_val).toString().padStart(2, '0');
-          conditions.push(`(${col} >= '${y}-${sM}-01' AND ${col} < '${eY}-${eM}-01')`);
-        }
-      }
-      return '(' + conditions.join(' OR ') + ')';
-    }
-
-    const sargableDateCondition = buildDateRangeCondition(dateColumn, years, months);
+    const { dateExpr: dateColumn } = salesDateBasis(req, '');
+    const { whereSql: sargableDateCondition } = buildSalesFilters(req, request, '', dateColumn);
     
     let typeCondition = '';
     if (typeParam !== 'ALL') {

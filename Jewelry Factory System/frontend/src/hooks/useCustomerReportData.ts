@@ -147,7 +147,15 @@ export function useCustomerReportData() {
     let cancelled = false;
     const loadTimer = window.setTimeout(() => {
       setLoading(true);
-      fetchCustomerSummary(dataYears, selMonths)
+      fetchCustomerSummary({
+        years: dataYears,
+        months: selMonths.length > 0 ? selMonths.map(String) : undefined,
+        startDate: viewMode === 'daily' ? periodSetup.committed.dateFrom : undefined,
+        endDate: viewMode === 'daily' ? periodSetup.committed.dateTo : undefined,
+        wStart: viewMode === 'weekly' ? periodSetup.committed.weekFrom : undefined,
+        wEnd: viewMode === 'weekly' ? periodSetup.committed.weekTo : undefined,
+        dateField: periodSetup.committed.dateField
+      })
         .then((cData: any) => { if (!cancelled) setCustData(cData as any[]); })
         .catch((err: any) => console.error('Error fetching customer summary data:', err))
         .finally(() => { if (!cancelled) setLoading(false); });
@@ -156,7 +164,7 @@ export function useCustomerReportData() {
       cancelled = true;
       window.clearTimeout(loadTimer);
     };
-  }, [dataYears, selMonths, refreshCounter]);
+  }, [dataYears, selMonths, refreshCounter, viewMode, periodSetup.committed]);
 
   const groupCustomers = useMemo(() => {
     return custData

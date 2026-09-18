@@ -9,6 +9,7 @@ import { fetchWithAuth } from '../../../utils/fetchWithAuth';
 import { ProductionForecastChart } from './ProductionForecastChart.tsx';
 import { ProductionForecastTable } from './ProductionForecastTable.tsx';
 import { getYearOptions, MONTH_FULL } from '../../../config/productionSummaryConfig';
+import { useTopbarActions } from '../../../contexts/TopbarActionContext';
 
 const GROUPS = [
   { value: 'All Customer', label: 'All Customer' },
@@ -142,6 +143,21 @@ export function ProductionForecastDashboard() {
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [viewMode, group, fromDate, toDate, year, month, fromWeek, toWeek]);
+
+  const { setTopbarActions } = useTopbarActions();
+  useEffect(() => {
+    setTopbarActions(
+      <button onClick={fetchData} style={{ width:36, height:36, borderRadius:8, border:'none', background:'transparent', color:'var(--color-text-secondary)', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', transition:'all 0.2s' }}
+        onMouseEnter={e => { e.currentTarget.style.background='var(--color-surface-2)'; e.currentTarget.style.color='var(--color-brand-600)'; }}
+        onMouseLeave={e => { e.currentTarget.style.background='transparent'; e.currentTarget.style.color='var(--color-text-secondary)'; }}
+        title="Refresh Data"
+        aria-label="Refresh Data"
+      >
+        <RefreshCw size={18} strokeWidth={1.75} className={loading ? 'animate-spin text-[var(--color-brand-600)]' : ''} />
+      </button>
+    );
+    return () => setTopbarActions(null);
+  }, [setTopbarActions, fetchData, loading]);
 
   const getFilterSummaryText = () => {
     if (viewMode === 'year') return 'All Years';
@@ -284,13 +300,6 @@ export function ProductionForecastDashboard() {
                 ariaLabel="View Mode"
               />
             </div>
-            
-            <ErpIconButton
-              icon={<RefreshCw size={18} className={loading ? 'animate-spin' : ''} />}
-              label="Refresh"
-              onClick={fetchData}
-              disabled={loading}
-            />
           </div>
         }
       />

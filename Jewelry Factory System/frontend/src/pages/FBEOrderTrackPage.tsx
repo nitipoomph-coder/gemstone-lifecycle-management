@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import PageHeader from '../components/layout/PageHeader';
 import { BREADCRUMBS } from '../config/breadcrumbs';
 import {
@@ -12,6 +12,7 @@ import { getOrderTracking } from '../services/orderTrackingAPI';
 import type { OrderTrackingResponse } from '../services/orderTrackingAPI';
 import { OrderTrackStepper } from '../components/dashboard/orderTracking/OrderTrackStepper';
 import { psPhotoUrl, attachPhotoFallback } from '../utils/photoUrl';
+import { useTopbarActions } from '../contexts/TopbarActionContext';
 
 export default function FBEOrderTrackPage() {
   const [ordNo, setOrdNo] = useState('');
@@ -23,8 +24,13 @@ export default function FBEOrderTrackPage() {
 
   const breadcrumb = BREADCRUMBS.FBE_ORDER_TRACK;
 
+  const ordNoRef = useRef(ordNo);
+  ordNoRef.current = ordNo;
+  const ordLineNoRef = useRef(ordLineNo);
+  ordLineNoRef.current = ordLineNo;
+
   // ฟังก์ชันSearchพร้อมเงื่อนไขNotificationsแบบแยกเคส
-  const executeSearch = async (targetOrd: string, targetLine: string) => {
+  const executeSearch = useCallback(async (targetOrd: string, targetLine: string) => {
     const cleanOrd = targetOrd.trim();
     const cleanLine = targetLine.trim();
 
@@ -54,7 +60,7 @@ export default function FBEOrderTrackPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   const handleSearch = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -78,6 +84,21 @@ export default function FBEOrderTrackPage() {
     ? activeSteps.map(s => `${s.nameEN} (${s.nameTH})`).join(', ')
     : null;
 
+  const { setTopbarActions } = useTopbarActions();
+  React.useEffect(() => {
+    setTopbarActions(
+      <button onClick={() => executeSearch(ordNoRef.current, ordLineNoRef.current)} style={{ width:36, height:36, borderRadius:8, border:'none', background:'transparent', color:'var(--color-text-secondary)', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', transition:'all 0.2s' }}
+        onMouseEnter={e => { e.currentTarget.style.background='var(--color-surface-2)'; e.currentTarget.style.color='var(--color-brand-600)'; }}
+        onMouseLeave={e => { e.currentTarget.style.background='transparent'; e.currentTarget.style.color='var(--color-text-secondary)'; }}
+        title="Reload Data"
+        aria-label="Reload current order"
+      >
+        <RefreshCw size={18} strokeWidth={1.75} className={loading ? 'animate-spin text-[var(--color-brand-600)]' : ''} />
+      </button>
+    );
+    return () => setTopbarActions(null);
+  }, [setTopbarActions, executeSearch, loading]);
+
   return (
     <div className="erp-page-container flex flex-col h-full overflow-hidden" style={{ background: 'var(--color-ui-canvas)', color: 'var(--color-text-primary)' }}>
       {/* Topbar Header */}
@@ -85,27 +106,6 @@ export default function FBEOrderTrackPage() {
         <PageHeader
           breadcrumb={breadcrumb}
           contentLayout="workspace"
-          rightContent={
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <button
-                type="button"
-                onClick={() => executeSearch(ordNo, ordLineNo)}
-                disabled={loading}
-                className="focus-visible:ring-2 focus-visible:ring-[var(--color-brand-500)] focus-visible:outline-none"
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px',
-                  background: 'var(--color-ui-surface)', border: '1px solid var(--color-border-default)',
-                  borderRadius: 6, fontSize: '13px', fontWeight: 700,
-                  color: 'var(--color-text-secondary)', cursor: loading ? 'not-allowed' : 'pointer',
-                }}
-                title="Reload Data"
-                aria-label="Reload current order"
-              >
-                <RefreshCw size={13} className={loading ? 'animate-spin' : undefined} />
-                <span>Refresh</span>
-              </button>
-            </div>
-          }
         />
       </div>
 

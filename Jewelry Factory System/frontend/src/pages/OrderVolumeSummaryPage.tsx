@@ -100,19 +100,6 @@ export default function OrderVolumeSummaryPage() {
         breadcrumb={BREADCRUMBS.CUSTOMER_DASHBOARD_TAB('trends')}
         contentLayout="workspace"
         hideTitle={true}
-        rightContent={
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <button
-              type="button"
-              onClick={triggerRefresh}
-              className="flex items-center justify-center w-8 h-8 rounded-lg border-none bg-transparent hover:bg-[var(--color-surface-2)] transition-colors shrink-0 cursor-pointer p-0"
-              title="Refresh Data"
-              aria-label="Refresh Data"
-            >
-              <RefreshCw size={16} strokeWidth={1.75} className={`text-[var(--color-brand-600)] ${isRefreshing ? 'animate-spin' : ''}`} />
-            </button>
-          </div>
-        }
         bottomContent={
           <div className="sales-global-filters flex items-center flex-wrap gap-2">
             <div className="flex items-center gap-2">

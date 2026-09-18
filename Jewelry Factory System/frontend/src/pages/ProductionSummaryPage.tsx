@@ -14,6 +14,7 @@ import type { ProdCustomerGroup } from '../config/productionSummaryConfig';
 import { fetchWithAuth } from '../utils/fetchWithAuth';
 import PeriodSetupPanel from '../components/period/PeriodSetupPanel';
 import { usePeriodSetup } from '../hooks/usePeriodSetup';
+import { useTopbarActions } from '../contexts/TopbarActionContext';
 
 
 function parseDateLocal(ymd: string) {
@@ -129,6 +130,21 @@ export default function ProductionSummaryPage() {
     }
     initYear();
   }, [activeYear]);
+
+  const { setTopbarActions } = useTopbarActions();
+  useEffect(() => {
+    setTopbarActions(
+      <button onClick={() => void handleShow()} style={{ width:36, height:36, borderRadius:8, border:'none', background:'transparent', color:'var(--color-text-secondary)', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', transition:'all 0.2s' }}
+        onMouseEnter={e => { e.currentTarget.style.background='var(--color-surface-2)'; e.currentTarget.style.color='var(--color-brand-600)'; }}
+        onMouseLeave={e => { e.currentTarget.style.background='transparent'; e.currentTarget.style.color='var(--color-text-secondary)'; }}
+        title="Reload data"
+        aria-label="Reload data"
+      >
+        <RefreshCw size={18} strokeWidth={1.75} className={loading ? 'animate-spin text-[var(--color-brand-600)]' : ''} />
+      </button>
+    );
+    return () => setTopbarActions(null);
+  }, [setTopbarActions, loading, step, mode, committed, isReady]);
 
   const handleShow = async () => {
     setLoading(true);
@@ -321,18 +337,6 @@ export default function ProductionSummaryPage() {
         <PageHeader
           breadcrumb={BREADCRUMBS.PRODUCTION_SUMMARY}
           contentLayout="workspace"
-          rightContent={
-            <div className="sales-gallery-topbar-tools flex min-w-0 flex-1 items-center justify-end gap-3 pr-2">
-              <ErpIconButton
-                label="Reload data"
-                tone="refresh"
-                onClick={() => void handleShow()}
-                icon={<RefreshCw size={14} className={loading ? 'animate-spin' : undefined} />}
-                disabled={loading}
-                size="sm"
-              />
-            </div>
-          }
         />
       </div>
 

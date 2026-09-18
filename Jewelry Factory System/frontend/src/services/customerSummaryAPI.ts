@@ -21,16 +21,33 @@ export interface CustomerSummaryRecord {
 }
 
 // Customer Summary data for Customer Dashboard and Top Orders first load.
-export const fetchCustomerSummary = async (
-  years: string[], 
-  months?: string[]
-): Promise<CustomerSummaryRecord[]> => {
-  const yearsParam = years.join(',');
+interface FetchCustomerSummaryParams {
+  years: string[];
+  months?: string[];
+  startDate?: string;
+  endDate?: string;
+  wStart?: number;
+  wEnd?: number;
+  dateField?: 'ordDate' | 'dueDate';
+}
+
+// Customer Summary data for Customer Dashboard and Top Orders first load.
+export const fetchCustomerSummary = async (params: FetchCustomerSummaryParams): Promise<CustomerSummaryRecord[]> => {
+  const yearsParam = params.years.join(',');
   let url = `${BASE_URL}/dashboard/customer-summary?years=${yearsParam}`;
   // Period/month filter changes the DB summary, so it is sent to the API.
-  if (months && months.length > 0) {
-    const monthsParam = months.map(m => MONTHS.indexOf(m) + 1).join(',');
+  if (params.months && params.months.length > 0) {
+    const monthsParam = params.months.map(m => MONTHS.indexOf(m) + 1).join(',');
     url += `&months=${monthsParam}`;
+  }
+  if (params.startDate && params.endDate) {
+    url += `&startDate=${params.startDate}&endDate=${params.endDate}`;
+  }
+  if (params.wStart && params.wEnd) {
+    url += `&wStart=${params.wStart}&wEnd=${params.wEnd}`;
+  }
+  if (params.dateField) {
+    url += `&dateField=${params.dateField}`;
   }
   const res = await fetchWithAuth(url);
   if (!res.ok) throw new Error(`Customer summary API error: ${res.status}`);

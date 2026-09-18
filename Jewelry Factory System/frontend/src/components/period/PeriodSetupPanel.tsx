@@ -201,7 +201,8 @@ export default function PeriodSetupPanel({ periodSetup, availableYears }: Period
 
               {/* Dynamic Range Form */}
               {periodSetup.draft.preset === 'day' && (
-                <div className="grid grid-cols-2 gap-2.5">
+                <div className="flex flex-col gap-1.5">
+                  <div className="grid grid-cols-2 gap-2.5">
                   <div className="flex flex-col gap-1">
                     <label className="text-[10px] font-bold text-[var(--color-text-secondary)]">From Date</label>
                     <input
@@ -260,6 +261,10 @@ export default function PeriodSetupPanel({ periodSetup, availableYears }: Period
                       }}
                     />
                   </div>
+                  </div>
+                  <div className="text-[10px] text-[var(--color-text-tertiary)] italic">
+                    * Maximum 31 days
+                  </div>
                 </div>
               )}
               {(periodSetup.draft.preset === 'custom' || periodSetup.draft.preset === 'month') && (
@@ -284,7 +289,8 @@ export default function PeriodSetupPanel({ periodSetup, availableYears }: Period
               )}
 
               {periodSetup.draft.preset === 'week' && (
-                <div className="grid grid-cols-2 gap-2.5">
+                <div className="flex flex-col gap-1.5">
+                  <div className="grid grid-cols-2 gap-2.5">
                   <PeriodSelect
                     label="From Wk"
                     value={periodSetup.draft.weekFrom || 1}
@@ -319,6 +325,10 @@ export default function PeriodSetupPanel({ periodSetup, availableYears }: Period
                       periodSetup.actions.setDraftField({ weekTo: newTo, weekFrom: finalFrom });
                     }}
                   />
+                  </div>
+                  <div className="text-[10px] text-[var(--color-text-tertiary)] italic">
+                    * Maximum 12 weeks
+                  </div>
                 </div>
               )}
 

@@ -5,6 +5,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import NotificationDropdown from './NotificationDropdown';
 import UserAvatarDropdown from './UserAvatarDropdown';
 import { useBreadcrumbs } from '../../contexts/BreadcrumbContext';
+import { useTopbarActions } from '../../contexts/TopbarActionContext';
 
 interface GlobalTopbarProps {
   isSidebarOpen?: boolean;
@@ -16,6 +17,7 @@ export default function GlobalTopbar({ isSidebarOpen, onToggleSidebar }: GlobalT
   const location = useLocation();
   const { effectiveBreadcrumbs } = useBreadcrumbs();
   const { theme, setTheme } = useTheme();
+  const { topbarActions } = useTopbarActions();
   const [showThemeMenu, setShowThemeMenu] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const themeMenuRef = useRef<HTMLDivElement>(null);
@@ -201,6 +203,9 @@ export default function GlobalTopbar({ isSidebarOpen, onToggleSidebar }: GlobalT
 
       {/* Right: [Print / Export Dropdown] -> [Notification Bell] -> [Theme Palette] -> [User Avatar Dropdown] */}
       <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+        
+        {topbarActions}
+
         {/* 1. Print / Export Dropdown */}
         <div className="relative z-[100]" ref={exportMenuRef}>
           <button

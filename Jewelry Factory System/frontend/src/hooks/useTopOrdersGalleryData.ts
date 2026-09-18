@@ -121,11 +121,12 @@ export function useTopOrdersGalleryData() {
   const [searchQuery, setSearchQuery] = useState("");
 
   const periodSetup = usePeriodSetup({
-    presets: ['full-year', 'ytd', 'this-month', 'last-month', 'custom'],
+    presets: ['full-year', 'ytd', 'month', 'week', 'day', 'custom'],
     compareSlots: 1,
     syncToUrl: true,
     availableYears: availableYears,
     allowDateFieldToggle: true,
+    allowWeekRange: true,
   });
 
   const [galleryResponse, setGalleryResponse] = useState<TopGalleryResponse | null>(null);
@@ -148,6 +149,10 @@ export function useTopOrdersGalleryData() {
     if (periodSetup.committed.baseYear) params.set("year", periodSetup.committed.baseYear);
     if (periodSetup.committed.compareActive1 && periodSetup.committed.compareYear1) params.set("compareYear", periodSetup.committed.compareYear1);
     if (selectedMonthNumbers.length) params.set("months", selectedMonthNumbers.join(","));
+    if (periodSetup.committed.dateFrom) params.set("dateFrom", periodSetup.committed.dateFrom);
+    if (periodSetup.committed.dateTo) params.set("dateTo", periodSetup.committed.dateTo);
+    if (periodSetup.committed.weekFrom) params.set("wStart", String(periodSetup.committed.weekFrom));
+    if (periodSetup.committed.weekTo) params.set("wEnd", String(periodSetup.committed.weekTo));
     if (periodSetup.committed.dateField !== 'ordDate') params.set("dateField", periodSetup.committed.dateField);
     if (selectedGroupsKey) params.set("groups", selectedGroupsKey);
     if (selTypes.length > 0) params.set("type", selTypes.join(','));
@@ -207,9 +212,7 @@ export function useTopOrdersGalleryData() {
     const baseYr = periodSetup.committed.baseYear;
     const compYr = periodSetup.committed.compareActive1 ? periodSetup.committed.compareYear1 : undefined;
 
-    const yearsToFetch = compYr && compYr !== baseYr
-      ? [compYr, baseYr]
-      : [baseYr];
+    const yearsToFetch = availableYears;
 
     const monthsToFetch = selectedMonthNumbers.map(String);
 
@@ -224,6 +227,10 @@ export function useTopOrdersGalleryData() {
       limit: 50,
       rankBy: (perspectiveMode === 'compare' ? 'base' : 'combined') as 'base' | 'combined',
       dateField: periodSetup.committed.dateField,
+      startDate: periodSetup.committed.dateFrom,
+      endDate: periodSetup.committed.dateTo,
+      wStart: periodSetup.committed.weekFrom,
+      wEnd: periodSetup.committed.weekTo,
     };
 
     const mainFetch = fetchTopItemsGallery({

@@ -325,17 +325,19 @@ export function CustomerSalesChart({
           );
         })}
 
-        <Line
-          type="monotone"
-          dataKey="_totalPlotY"
-          name="Total"
-          stroke="#3b82f6"
-          strokeWidth={3}
-          dot={{ r: 4, fill: "#3b82f6", stroke: 'var(--color-ui-surface)', strokeWidth: 1.5 }}
-          activeDot={{ r: 6 }}
-          connectNulls={true}
-          label={renderTotalLabel}
-        />
+        {(activeYears.length > 1 || mode === 'monthly') && (
+          <Line
+            type="monotone"
+            dataKey="_totalPlotY"
+            name="Total"
+            stroke="#3b82f6"
+            strokeWidth={3}
+            dot={{ r: 4, fill: "#3b82f6", stroke: 'var(--color-ui-surface)', strokeWidth: 1.5 }}
+            activeDot={{ r: 6 }}
+            connectNulls={true}
+            label={renderTotalLabel}
+          />
+        )}
       </ComposedChart>
     </ResponsiveContainer>
   );

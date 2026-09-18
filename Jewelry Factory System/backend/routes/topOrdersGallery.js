@@ -7,6 +7,7 @@
 const express = require('express');
 const router = express.Router();
 const { getPool, sql } = require('../db');
+const { buildDateRangeCondition } = require('../utils/dateFilters');
 
 /*
  * =============================================================================
@@ -174,9 +175,11 @@ router.get('/yearly-summary', async (req, res) => {
         request.input(`pairStyle${index}`, sql.NVarChar, pair.styleNo);
         return `(UPPER(LTRIM(RTRIM(ISNULL(h.CustCode, '')))) = @cust${index} AND UPPER(LTRIM(RTRIM(ISNULL(d.ItemNo, '')))) = @pairStyle${index})`;
       }).join(' OR ');
-      const yearParams = addIntParams(request, 'yr', years);
-      const monthParams = months.length ? addIntParams(request, 'mo', months) : '';
-      const monthWhereClause = months.length ? `AND MONTH(h.OrdDate) IN (${monthParams})` : '';
+      const startDate = req.query.startDate;
+      const endDate = req.query.endDate;
+      const wStart = req.query.wStart ? parseInt(req.query.wStart, 10) : null;
+      const wEnd = req.query.wEnd ? parseInt(req.query.wEnd, 10) : null;
+      const dateClause = buildDateRangeCondition('h.OrdDate', years, months, startDate, endDate, wStart, wEnd);
 
       const result = await request.query(`
         SELECT
@@ -192,8 +195,7 @@ router.get('/yearly-summary', async (req, res) => {
         LEFT JOIN GMCust c ON c.CustCode = h.CustCode
         WHERE (${pairClauses})
           AND h.OrdDate IS NOT NULL
-          AND YEAR(h.OrdDate) IN (${yearParams})
-          ${monthWhereClause}
+          AND ${dateClause}
           AND ${ORDER_BLOCKLIST}
           AND (h.PONo IS NULL OR UPPER(h.PONo) NOT LIKE '%SAMPLE%')
           AND ISNULL(c.CustStatus, 'Y') = 'Y'
@@ -235,9 +237,11 @@ router.get('/yearly-summary', async (req, res) => {
       request.input(`style${index}`, sql.NVarChar, normalizeStyle(styleNo));
       return `@style${index}`;
     }).join(',');
-    const yearParams = addIntParams(request, 'yr', years);
-    const monthParams = months.length ? addIntParams(request, 'mo', months) : '';
-    const monthWhereClause = months.length ? `AND MONTH(h.OrdDate) IN (${monthParams})` : '';
+    const startDate = req.query.startDate;
+    const endDate = req.query.endDate;
+    const wStart = req.query.wStart ? parseInt(req.query.wStart, 10) : null;
+    const wEnd = req.query.wEnd ? parseInt(req.query.wEnd, 10) : null;
+    const dateClause = buildDateRangeCondition('h.OrdDate', years, months, startDate, endDate, wStart, wEnd);
 
     const result = await request.query(`
       SELECT
@@ -252,8 +256,7 @@ router.get('/yearly-summary', async (req, res) => {
       LEFT JOIN GMCust c ON c.CustCode = h.CustCode
       WHERE UPPER(LTRIM(RTRIM(ISNULL(d.ItemNo, '')))) IN (${styleParams})
         AND h.OrdDate IS NOT NULL
-        AND YEAR(h.OrdDate) IN (${yearParams})
-        ${monthWhereClause}
+        AND ${dateClause}
         AND ${ORDER_BLOCKLIST}
         AND (h.PONo IS NULL OR UPPER(h.PONo) NOT LIKE '%SAMPLE%')
         AND ISNULL(c.CustStatus, 'Y') = 'Y'
@@ -298,9 +301,11 @@ router.get('/:styleNo/yearly-summary', async (req, res) => {
     const pool = await getPool();
     const request = pool.request();
     request.input('styleNo', sql.NVarChar, styleNo);
-    const yearParams = addIntParams(request, 'yr', years);
-    const monthParams = months.length ? addIntParams(request, 'mo', months) : '';
-    const monthWhereClause = months.length ? `AND MONTH(h.OrdDate) IN (${monthParams})` : '';
+    const startDate = req.query.startDate;
+    const endDate = req.query.endDate;
+    const wStart = req.query.wStart ? parseInt(req.query.wStart, 10) : null;
+    const wEnd = req.query.wEnd ? parseInt(req.query.wEnd, 10) : null;
+    const dateClause = buildDateRangeCondition('h.OrdDate', years, months, startDate, endDate, wStart, wEnd);
 
     const result = await request.query(`
       SELECT
@@ -314,8 +319,7 @@ router.get('/:styleNo/yearly-summary', async (req, res) => {
       LEFT JOIN GMCust c ON c.CustCode = h.CustCode
       WHERE UPPER(LTRIM(RTRIM(ISNULL(d.ItemNo, '')))) = UPPER(@styleNo)
         AND h.OrdDate IS NOT NULL
-        AND YEAR(h.OrdDate) IN (${yearParams})
-        ${monthWhereClause}
+        AND ${dateClause}
         AND ${ORDER_BLOCKLIST}
         AND (h.PONo IS NULL OR UPPER(h.PONo) NOT LIKE '%SAMPLE%')
         AND ISNULL(c.CustStatus, 'Y') = 'Y'
@@ -416,26 +420,11 @@ router.get('/top-gallery', async (req, res) => {
     const pool = await getPool();
     const request = pool.request();
 
-    // SARGable date range condition
-    function buildDateCondition(yearList, monthList) {
-      if (!yearList || yearList.length === 0) return '1=1';
-      if (!monthList || monthList.length === 0) {
-        return '(' + yearList.map(y => `(${dateField} >= '${y}-01-01' AND ${dateField} < '${y + 1}-01-01')`).join(' OR ') + ')';
-      }
-      const conditions = [];
-      for (const y of yearList) {
-        for (const m of monthList) {
-          const sM = m.toString().padStart(2, '0');
-          const eM_val = m + 1;
-          const eY = eM_val > 12 ? y + 1 : y;
-          const eM = (eM_val > 12 ? 1 : eM_val).toString().padStart(2, '0');
-          conditions.push(`(${dateField} >= '${y}-${sM}-01' AND ${dateField} < '${eY}-${eM}-01')`);
-        }
-      }
-      return '(' + conditions.join(' OR ') + ')';
-    }
-
-    const dateClause = buildDateCondition(years, months);
+    const startDate = req.query.startDate;
+    const endDate = req.query.endDate;
+    const wStart = req.query.wStart ? parseInt(req.query.wStart, 10) : null;
+    const wEnd = req.query.wEnd ? parseInt(req.query.wEnd, 10) : null;
+    const dateClause = buildDateRangeCondition(dateField, years, months, startDate, endDate, wStart, wEnd);
 
     const query = `
       SELECT 

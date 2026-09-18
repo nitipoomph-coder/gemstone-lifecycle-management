@@ -24,7 +24,7 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
   const metric = (searchParams.get('metric') as Metric) || propMetric;
   const { availableYears, refreshCounter, setIsRefreshing, triggerRefresh, isRefreshing } = useOutletContext<any>();
   const [custData, setCustData] = useState<CustomerSummaryRow[]>([]);
-  
+
   const {
     periodSetup,
     selGroups,
@@ -83,7 +83,15 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
     }
     const loadTimer = window.setTimeout(() => {
       setLoading(true);
-      fetchCustomerSummary(availableYears)
+      fetchCustomerSummary({
+        years: availableYears,
+        months: periodSetup.committed.selectedMonths.length > 0 ? periodSetup.committed.selectedMonths.map(String) : undefined,
+        startDate: periodSetup.committed.dateFrom,
+        endDate: periodSetup.committed.dateTo,
+        wStart: periodSetup.committed.weekFrom,
+        wEnd: periodSetup.committed.weekTo,
+        dateField: periodSetup.committed.dateField
+      })
         .then(data => {
           setCustData(data as CustomerSummaryRow[]);
           setLoading(false);
@@ -96,7 +104,7 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
         });
     }, 0);
     return () => window.clearTimeout(loadTimer);
-  }, [availableYears, refreshCounter]);
+  }, [availableYears, refreshCounter, periodSetup.committed]);
 
   // Keep groups in ALL_GROUPS order for consistent colors
   const sortedSel = useMemo(
@@ -208,19 +216,6 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
         breadcrumb={BREADCRUMBS.CUSTOMER_DASHBOARD_TAB('dashboard')}
         contentLayout="workspace"
         hideTitle={true}
-        rightContent={
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <button
-              type="button"
-              onClick={triggerRefresh}
-              className="flex items-center justify-center w-8 h-8 rounded-lg border-none bg-transparent hover:bg-[var(--color-surface-2)] transition-colors shrink-0 cursor-pointer p-0"
-              title="Refresh Data"
-              aria-label="Refresh Data"
-            >
-              <RefreshCw size={16} strokeWidth={1.75} className={`text-[var(--color-brand-600)] ${isRefreshing ? 'animate-spin' : ''}`} />
-            </button>
-          </div>
-        }
         bottomContent={
           <div className="sales-global-filters flex items-center flex-wrap gap-2">
             <div className="flex items-center gap-2">
@@ -258,7 +253,7 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
         display: 'flex',
         flexDirection: 'column'
       }}>
-        <div className="app-content-frame app-content-frame--workspace app-page-content" style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 12, maxWidth: '1440px', margin: '0 auto', width: '100%' }}>
+        <div className="app-content-frame app-content-frame--workspace app-page-content" style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 12, maxWidth: '1440px', margin: '0 auto', width: '100%', flex: 1, minHeight: 0 }}>
           {/* Main Content Grid: Chart on Left, YoY Cards on Right */}
           <div className="sales-summary-main-grid">
 

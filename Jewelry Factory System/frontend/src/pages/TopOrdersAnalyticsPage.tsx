@@ -1,10 +1,12 @@
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";
 import { BarChart3, RefreshCw } from "lucide-react";
 import PageHeader from '../components/layout/PageHeader';
 import { BREADCRUMBS } from '../config/breadcrumbs';
 import { useTopOrdersGalleryData } from "../hooks/useTopOrdersGalleryData";
 import { TopOrdersFilterBar } from "../components/dashboard/topOrders/TopOrdersFilterBar";
 import { TopAnalyticsTable } from "../components/dashboard/topAnalytics/TopAnalyticsTable";
+import { TopOrdersItemPreview } from "../components/dashboard/topOrders/TopOrdersItemPreview";
+import { useTopbarActions } from "../contexts/TopbarActionContext";
 import "../components/sales/SalesDenseTable.css";
 
 export default function TopOrdersAnalyticsPage() {
@@ -16,18 +18,39 @@ export default function TopOrdersAnalyticsPage() {
     selectedPeriodLabel,
     refreshData,
     items,
+    previewItem,
+    setPreviewItem,
     baseYear,
     compareYear,
     compareEnabled,
+    availableYears,
+    metric,
   } = dataProps;
 
+  const fmtQty = (val: number) => val.toLocaleString(undefined, { maximumFractionDigits: 0 });
+  const fmt = (val: number) => {
+    if (metric === "qty") return fmtQty(val);
+    return `$${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
   const displayYears = useMemo(() => {
-    if (compareEnabled && compareYear && compareYear !== baseYear) {
-      // Sort descending so newer year is on the left
-      return [baseYear, compareYear].sort((a, b) => b.localeCompare(a)); 
-    }
-    return [baseYear];
-  }, [baseYear, compareYear, compareEnabled]);
+    return [...availableYears].sort((a, b) => b.localeCompare(a));
+  }, [availableYears]);
+
+  const { setTopbarActions } = useTopbarActions();
+  useEffect(() => {
+    setTopbarActions(
+      <button onClick={refreshData} style={{ width:36, height:36, borderRadius:8, border:'none', background:'transparent', color:'var(--color-text-secondary)', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', transition:'all 0.2s' }}
+        onMouseEnter={e => { e.currentTarget.style.background='var(--color-surface-2)'; e.currentTarget.style.color='var(--color-brand-600)'; }}
+        onMouseLeave={e => { e.currentTarget.style.background='transparent'; e.currentTarget.style.color='var(--color-text-secondary)'; }}
+        title="Refresh"
+        aria-label="Refresh"
+      >
+        <RefreshCw size={18} strokeWidth={1.75} className={isFilterLoading ? 'animate-spin text-[var(--color-brand-600)]' : ''} />
+      </button>
+    );
+    return () => setTopbarActions(null);
+  }, [setTopbarActions, refreshData, isFilterLoading]);
 
   return (
     <div className="flex h-screen min-h-0 flex-col overflow-hidden bg-[var(--color-surface-1)]">
@@ -41,31 +64,6 @@ export default function TopOrdersAnalyticsPage() {
               {...dataProps} 
               onReset={dataProps.resetFilters} 
             />
-          </div>
-        }
-        rightContent={
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={refreshData}
-              style={{
-                background: "none",
-                border: "none",
-                padding: "6px",
-                color: "var(--color-brand-500)",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                borderRadius: 6,
-                transition: "all 0.15s ease",
-              }}
-              className="hover:bg-[var(--color-surface-2)] active:scale-95"
-              title="Refresh"
-              aria-label="Refresh"
-            >
-              <RefreshCw size={14} className={isFilterLoading ? "animate-spin" : ""} />
-            </button>
           </div>
         }
       />
@@ -89,10 +87,25 @@ export default function TopOrdersAnalyticsPage() {
               displayYears={displayYears} 
               perspectiveMode={dataProps.perspectiveMode}
               compareEnabled={dataProps.compareEnabled}
+              onPhotoClick={(item) => setPreviewItem(item)}
             />
           </div>
         </section>
       </main>
+
+      {previewItem && (
+        <TopOrdersItemPreview
+          item={previewItem}
+          onClose={() => setPreviewItem(null)}
+          metric={metric}
+          baseYear={baseYear}
+          compareYear={compareYear || ''}
+          compareEnabled={compareEnabled}
+          perspectiveMode={dataProps.perspectiveMode}
+          fmt={fmt}
+          fmtQty={fmtQty}
+        />
+      )}
     </div>
   );
 }

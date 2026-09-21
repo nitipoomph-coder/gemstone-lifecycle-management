@@ -120,7 +120,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
                     onToggle={() => handleGroupToggle(group.id)}
                     collapsed={false}
                     onNavigate={() => {
-                      if (window.matchMedia('(max-width: 819px)').matches) {
+                      if (isOpen) {
                         onToggle();
                       }
                     }}

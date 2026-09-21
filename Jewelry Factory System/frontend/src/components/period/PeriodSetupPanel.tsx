@@ -8,6 +8,8 @@ import { useToast } from '../../contexts/ToastContext';
 interface PeriodSetupPanelProps {
   periodSetup: ReturnType<typeof usePeriodSetup>;
   availableYears: string[];
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 interface PeriodSelectProps {
@@ -37,10 +39,21 @@ function PeriodSelect({ label, value, options, disabled = false, className = "",
   );
 }
 
-export default function PeriodSetupPanel({ periodSetup, availableYears }: PeriodSetupPanelProps) {
+export default function PeriodSetupPanel({ periodSetup, availableYears, isOpen, onOpenChange }: PeriodSetupPanelProps) {
   const { showToast } = useToast();
-  const [showPeriodPopover, setShowPeriodPopover] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const showPeriodPopover = isOpen !== undefined ? isOpen : internalOpen;
+  const setShowPeriodPopover = (open: boolean) => {
+    if (onOpenChange) onOpenChange(open);
+    setInternalOpen(open);
+  };
   const periodPopoverRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      periodSetup.actions.syncDraft();
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -55,6 +68,36 @@ export default function PeriodSetupPanel({ periodSetup, availableYears }: Period
   }, []);
 
   const selectedYears = periodSetup.committed.selectedYears;
+  const committedPreset = periodSetup.committed.preset;
+
+  const formatDateShort = (ymd?: string) => {
+    if (!ymd) return '';
+    const parts = ymd.split('-');
+    return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : ymd;
+  };
+
+  const getPeriodLabelText = () => {
+    if (committedPreset === 'day') return 'Day';
+    if (committedPreset === 'week') return 'Week';
+    if (committedPreset === 'custom' || committedPreset === 'month') return 'Month';
+    return 'Year';
+  };
+
+  const getPeriodRangeDetailText = () => {
+    if (committedPreset === 'day') {
+      return `${formatDateShort(periodSetup.committed.dateFrom)} - ${formatDateShort(periodSetup.committed.dateTo)}`;
+    }
+    if (committedPreset === 'week') {
+      return `${selectedYears[0] || ''} W${periodSetup.committed.weekFrom}-W${periodSetup.committed.weekTo}`;
+    }
+    if (committedPreset === 'custom' || committedPreset === 'month') {
+      return `${selectedYears[0] || ''} ${MONTHS[periodSetup.committed.monthFrom - 1]}`;
+    }
+    if (periodSetup.committed.monthFrom === 1 && periodSetup.committed.monthTo === 12) {
+      return `${selectedYears[0] || ''} Full Year`;
+    }
+    return `${selectedYears[0] || ''} ${MONTHS[periodSetup.committed.monthFrom - 1]}`;
+  };
 
   return (
     <div style={{ position: 'relative' }} ref={periodPopoverRef}>
@@ -81,14 +124,9 @@ export default function PeriodSetupPanel({ periodSetup, availableYears }: Period
           <span style={{ color: "var(--color-text-secondary)", fontSize: "0.76rem", fontWeight: 700 }}>
             Period:
           </span>
-          <span>{periodSetup.draft.preset === 'ytd' ? 'Year' : periodSetup.draft.preset === 'custom' ? 'Month' : periodSetup.draft.preset === 'week' ? 'Week' : periodSetup.draft.preset === 'day' ? 'Day' : 'Year'}</span>
+          <span>{getPeriodLabelText()}</span>
           <span style={{ color: "var(--color-text-tertiary)", fontSize: "0.72rem", fontWeight: 800 }}>
-            ({selectedYears[0] || ''}
-            {periodSetup.committed.preset === 'week'
-              ? ` W${periodSetup.committed.weekFrom}-W${periodSetup.committed.weekTo}`
-              : (periodSetup.committed.monthFrom === 1 && periodSetup.committed.monthTo === 12
-                ? ' Full Year'
-                : ` ${MONTHS[periodSetup.committed.monthFrom - 1]}-${MONTHS[periodSetup.committed.monthTo - 1]}`)})
+            ({getPeriodRangeDetailText()})
           </span>
         </>
         <ChevronDown size={14} style={{ color: 'var(--color-text-tertiary)' }} />
@@ -122,10 +160,7 @@ export default function PeriodSetupPanel({ periodSetup, availableYears }: Period
               )}
             </div>
             <span className="text-[11px] font-bold text-[var(--color-text-secondary)]">
-              {selectedYears[0]}
-              {periodSetup.committed.preset === 'week'
-                ? ` (W${periodSetup.committed.weekFrom}-W${periodSetup.committed.weekTo})`
-                : (periodSetup.committed.monthFrom === 1 && periodSetup.committed.monthTo === 12 ? ' Full Year' : ` (${MONTHS[periodSetup.committed.monthFrom - 1]}-${MONTHS[periodSetup.committed.monthTo - 1]})`)}
+              {getPeriodRangeDetailText()}
               {periodSetup.committed.compareActive1 && ` vs ${periodSetup.committed.compareYear1}`}
             </span>
           </div>
@@ -141,20 +176,21 @@ export default function PeriodSetupPanel({ periodSetup, availableYears }: Period
                   // MATRIX PAGE MODE
                   [
                     { id: 'ytd', label: 'Year' },
-                    { id: 'custom', label: 'Month' },
+                    { id: 'month', label: 'Month' },
                     { id: 'week', label: 'Week' },
                     { id: 'day', label: 'Day' }
                   ].map((preset) => {
-                    const active = periodSetup.draft.preset === preset.id || (preset.id === 'ytd' && periodSetup.draft.preset === 'full-year');
+                    const active = periodSetup.draft.preset === preset.id || (preset.id === 'month' && periodSetup.draft.preset === 'custom') || (preset.id === 'ytd' && (periodSetup.draft.preset === 'full-year' || periodSetup.draft.preset === 'ytd'));
                     return (
                       <button
                         key={preset.id}
                         type="button"
                         onClick={() => {
                           if (preset.id === 'ytd') {
-                            periodSetup.actions.setDraftField({ preset: 'ytd', monthFrom: 1, monthTo: 12 });
-                          } else if (preset.id === 'custom') {
-                            periodSetup.actions.setDraftField({ preset: 'custom' });
+                            periodSetup.actions.setDraftField({ preset: 'full-year', monthFrom: 1, monthTo: 12 });
+                          } else if (preset.id === 'month') {
+                            const currentM = periodSetup.draft.monthFrom || (new Date().getMonth() + 1);
+                            periodSetup.actions.setDraftField({ preset: 'month', monthFrom: currentM, monthTo: currentM });
                           } else if (preset.id === 'week') {
                             periodSetup.actions.setDraftField({ preset: 'week' });
                           } else if (preset.id === 'day') {
@@ -268,21 +304,14 @@ export default function PeriodSetupPanel({ periodSetup, availableYears }: Period
                 </div>
               )}
               {(periodSetup.draft.preset === 'custom' || periodSetup.draft.preset === 'month') && (
-                <div className="grid grid-cols-2 gap-2.5">
+                <div className="flex flex-col gap-1.5">
                   <PeriodSelect
-                    label="From Month"
+                    label="Month"
                     value={periodSetup.draft.monthFrom}
                     options={MONTHS.map((month: string, index: number) => ({ value: index + 1, label: month }))}
                     onChange={(value) => {
-                      periodSetup.actions.setDraftField({ monthFrom: Number(value) });
-                    }}
-                  />
-                  <PeriodSelect
-                    label="To Month"
-                    value={periodSetup.draft.monthTo}
-                    options={MONTHS.map((month: string, index: number) => ({ value: index + 1, label: month }))}
-                    onChange={(value) => {
-                      periodSetup.actions.setDraftField({ monthTo: Number(value) });
+                      const m = Number(value);
+                      periodSetup.actions.setDraftField({ monthFrom: m, monthTo: m });
                     }}
                   />
                 </div>
@@ -413,10 +442,10 @@ export default function PeriodSetupPanel({ periodSetup, availableYears }: Period
                 </div>
               </div>
 
-              {/* KPI YoY Base (KPI compare year toggle) */}
+              {/* Compare Target (Primary comparison year for YoY calculations) */}
               <div className="flex flex-col gap-1 bg-[var(--color-surface-1)] p-2 rounded-lg border border-[var(--color-border-light)]">
                 <div className="flex items-center gap-1.5 cursor-pointer">
-                  <span className="text-[10px] font-black text-[var(--color-text-secondary)]">KPI YoY Base</span>
+                  <span className="text-[10px] font-black text-[var(--color-text-secondary)]">Compare Target</span>
                 </div>
                 <div className="mt-1">
                   <CustomSelect
@@ -427,14 +456,14 @@ export default function PeriodSetupPanel({ periodSetup, availableYears }: Period
                       ...(periodSetup.draft.compareActive1 && periodSetup.draft.compareYear1 && periodSetup.draft.compareYear1 !== 'none' ? [{ value: periodSetup.draft.compareYear1, label: periodSetup.draft.compareYear1 }] : []),
                       ...(periodSetup.draft.compareActive2 && periodSetup.draft.compareYear2 && periodSetup.draft.compareYear2 !== 'none' ? [{ value: periodSetup.draft.compareYear2, label: periodSetup.draft.compareYear2 }] : [])
                     ].filter((opt, index, self) => self.findIndex(t => t.value === opt.value) === index)}
-                    ariaLabel="KPI YoY Base Year"
+                    ariaLabel="Compare Target Year"
                   />
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="mt-4 pt-3 border-t border-[var(--color-border-light)] flex justify-end gap-2">
+          <div className="mt-4 pt-3 border-t border-[var(--color-border-light)] flex justify-end items-center gap-2">
             <button
               type="button"
               onClick={() => setShowPeriodPopover(false)}

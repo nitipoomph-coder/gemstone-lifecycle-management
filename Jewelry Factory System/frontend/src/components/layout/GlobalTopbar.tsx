@@ -232,16 +232,18 @@ export default function GlobalTopbar({ isSidebarOpen, onToggleSidebar }: GlobalT
               </div>
               <button
                 type="button"
-                onClick={handleExportExcel}
-                className="flex w-full cursor-pointer items-center gap-3 border-none rounded-lg px-3 py-2 text-[length:var(--erp-text-body)] transition-colors bg-transparent text-[var(--color-text-primary)] hover:bg-[var(--color-surface-2)] font-semibold"
+                disabled
+                className="flex w-full cursor-not-allowed items-center gap-3 border-none rounded-lg px-3 py-2 text-[length:var(--erp-text-body)] opacity-40 bg-transparent text-[var(--color-text-primary)] font-semibold select-none"
+                title="Currently unavailable"
               >
                 <FileSpreadsheet size={16} strokeWidth={1.75} className="text-emerald-600 shrink-0" />
                 <span>Export to Excel</span>
               </button>
               <button
                 type="button"
-                onClick={handleExportCSV}
-                className="flex w-full cursor-pointer items-center gap-3 border-none rounded-lg px-3 py-2 text-[length:var(--erp-text-body)] transition-colors bg-transparent text-[var(--color-text-primary)] hover:bg-[var(--color-surface-2)] font-semibold"
+                disabled
+                className="flex w-full cursor-not-allowed items-center gap-3 border-none rounded-lg px-3 py-2 text-[length:var(--erp-text-body)] opacity-40 bg-transparent text-[var(--color-text-primary)] font-semibold select-none"
+                title="Currently unavailable"
               >
                 <FileText size={16} strokeWidth={1.75} className="text-blue-600 shrink-0" />
                 <span>Export to CSV</span>

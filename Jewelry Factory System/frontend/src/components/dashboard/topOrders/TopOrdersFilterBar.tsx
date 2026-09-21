@@ -6,6 +6,7 @@ import { PRODUCT_TYPE_OPTIONS, type PerspectiveMode } from '../../../hooks/useTo
 import { ErpSegmentedControl } from '../../ui/ErpButtons';
 import PeriodSetupPanel from '../../period/PeriodSetupPanel';
 import { usePeriodSetup } from '../../../hooks/usePeriodSetup';
+import { useToast } from '../../../contexts/ToastContext';
 
 
 
@@ -61,10 +62,12 @@ export function TopOrdersFilterBar({
   isFiltered = false,
   onReset,
 }: TopOrdersFilterBarProps) {
+  const { showToast } = useToast();
   const [showGroupMenu, setShowGroupMenu] = useState(false);
   const groupMenuRef = useRef<HTMLDivElement>(null);
   const [showTypeMenu, setShowTypeMenu] = useState(false);
   const typeMenuRef = useRef<HTMLDivElement>(null);
+  const [showPeriodPopover, setShowPeriodPopover] = useState(false);
 
   // Separate active and inactive groups matching CustomerDashboard standard
   const activeCustomerGroups = ALL_GROUPS.filter(g => g.id !== 'N083');
@@ -120,17 +123,39 @@ export function TopOrdersFilterBar({
     if (event.key === "Escape") setSearchDraft(searchQuery.toUpperCase());
   };
 
+  // Active comparison years for display in Compare pill
+  const activeCompareYears = [
+    periodSetup.committed.compareActive1 ? periodSetup.committed.compareYear1 : null,
+    periodSetup.committed.compareActive2 && periodSetup.committed.compareYear2 !== 'none' ? periodSetup.committed.compareYear2 : null,
+  ].filter(Boolean) as string[];
+
+  const displayCompareYearLabel = activeCompareYears.length > 0
+    ? activeCompareYears.join(' & ')
+    : (periodSetup.committed.compareYear1 || availableYears.find(y => y !== baseYear) || '2025');
+
   return (
     <div className="sales-gallery-topbar-tools flex min-w-0 flex-1 items-center gap-2 pr-2">
-      {/* Perspective Toggle: Combined (รวมสะสม) vs Compare (เทียบYear) */}
+      {/* Perspective Toggle: Combined (รวมสะสม) vs Compare (เทียบปี) */}
       <div className="flex items-center gap-1.5 shrink-0">
         <ErpSegmentedControl
           ariaLabel="Perspective Mode"
           value={perspectiveMode}
           onChange={(val) => {
-            if (val !== perspectiveMode) {
+            if (val === 'compare') {
+              const hasCompare = (periodSetup.committed.compareActive1 && periodSetup.committed.compareYear1 && periodSetup.committed.compareYear1 !== 'none') ||
+                                 (periodSetup.committed.compareActive2 && periodSetup.committed.compareYear2 && periodSetup.committed.compareYear2 !== 'none');
+
+              if (!hasCompare) {
+                showToast('Please select a comparison year in Period Setup first.', 'info');
+                setShowPeriodPopover(true);
+                return;
+              }
+
               startFilterTransition();
-              setPerspectiveMode(val);
+              setPerspectiveMode('compare');
+            } else {
+              startFilterTransition();
+              setPerspectiveMode('combined');
             }
           }}
           options={[
@@ -139,22 +164,28 @@ export function TopOrdersFilterBar({
           ]}
         />
         {perspectiveMode === 'compare' && (
-          <span
+          <button
+            type="button"
+            onClick={() => setShowPeriodPopover(true)}
             style={{
-              padding: '2px 8px',
+              padding: '3px 8px',
               borderRadius: 6,
               background: 'var(--color-surface-0)',
-              color: 'var(--color-text-secondary)',
-              fontWeight: 800,
+              color: 'var(--color-brand-600)',
+              fontWeight: 900,
               fontSize: 'var(--erp-text-control)',
               border: '1px solid var(--color-border-light)',
               whiteSpace: 'nowrap',
               display: 'inline-flex',
               alignItems: 'center',
+              gap: 4,
+              cursor: 'pointer',
             }}
+            title="Click to adjust comparison years in Period Setup"
           >
-            {baseYear} vs {compareYear}
-          </span>
+            <span>{baseYear} vs {displayCompareYearLabel}</span>
+            <ChevronDown size={11} style={{ color: 'var(--color-text-tertiary)' }} />
+          </button>
         )}
       </div>
 
@@ -272,7 +303,7 @@ export function TopOrdersFilterBar({
         />
         <input
           type="text"
-          placeholder="Search Item No, Cust, or Desc..."
+          placeholder="Search item, customer..."
           value={searchDraft}
           onChange={(e) => setSearchDraft(e.target.value.toUpperCase())}
           onKeyDown={handleSearchKeyDown}
@@ -305,7 +336,12 @@ export function TopOrdersFilterBar({
       </div>
 
       {/* Standard Period Dropdown Popover */}
-      <PeriodSetupPanel periodSetup={periodSetup} availableYears={availableYears} />
+      <PeriodSetupPanel
+        periodSetup={periodSetup}
+        availableYears={availableYears}
+        isOpen={showPeriodPopover}
+        onOpenChange={setShowPeriodPopover}
+      />
 
       {/* Customer Groups Dropdown Popover */}
       <div className="relative z-[100]" ref={groupMenuRef}>
@@ -432,29 +468,32 @@ export function TopOrdersFilterBar({
         )}
       </div>
 
-      {/* Reset Button (placed at the end of the filter toolbar) */}
+      {/* Single Global Reset Button (FilterX) covering all page filters */}
       {isFiltered && onReset && (
         <button
           type="button"
           onClick={onReset}
           style={{
-            background: "none",
-            border: "none",
-            padding: "6px",
+            background: "var(--color-surface-0)",
+            border: "1px solid var(--color-border-light)",
+            padding: "5px 10px",
             color: "var(--color-text-secondary)",
             cursor: "pointer",
             display: "inline-flex",
             alignItems: "center",
-            justifyContent: "center",
+            gap: 5,
             borderRadius: 6,
             transition: "all 0.15s ease",
             flexShrink: 0,
+            fontSize: 'var(--erp-text-meta)',
+            fontWeight: 800,
           }}
-          className="hover:bg-[var(--color-surface-2)] active:scale-95"
-          title="Reset filters"
-          aria-label="Reset filters"
+          className="hover:bg-[var(--color-surface-2)] hover:text-[var(--color-danger-600)] hover:border-[var(--color-danger-300)] active:scale-95"
+          title="Reset all filters to default"
+          aria-label="Reset all filters"
         >
-          <FilterX size={14} />
+          <FilterX size={13} style={{ color: 'var(--color-danger-500)' }} />
+          <span>Reset</span>
         </button>
       )}
     </div>

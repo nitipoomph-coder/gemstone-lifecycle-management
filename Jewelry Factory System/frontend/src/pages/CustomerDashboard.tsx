@@ -83,13 +83,17 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
     }
     const loadTimer = window.setTimeout(() => {
       setLoading(true);
+      const isWeekMode = periodSetup.committed.preset === 'week';
+      const isDayMode = periodSetup.committed.preset === 'day';
+      const isFilteredMonths = periodSetup.committed.selectedMonths.length > 0 && periodSetup.committed.selectedMonths.length < 12;
+
       fetchCustomerSummary({
         years: availableYears,
-        months: periodSetup.committed.selectedMonths.length > 0 ? periodSetup.committed.selectedMonths.map(String) : undefined,
-        startDate: periodSetup.committed.dateFrom,
-        endDate: periodSetup.committed.dateTo,
-        wStart: periodSetup.committed.weekFrom,
-        wEnd: periodSetup.committed.weekTo,
+        months: isFilteredMonths ? periodSetup.committed.selectedMonths.map(String) : undefined,
+        startDate: isDayMode ? periodSetup.committed.dateFrom : undefined,
+        endDate: isDayMode ? periodSetup.committed.dateTo : undefined,
+        wStart: isWeekMode ? periodSetup.committed.weekFrom : undefined,
+        wEnd: isWeekMode ? periodSetup.committed.weekTo : undefined,
         dateField: periodSetup.committed.dateField
       })
         .then(data => {
@@ -253,7 +257,7 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
         display: 'flex',
         flexDirection: 'column'
       }}>
-        <div className="app-content-frame app-content-frame--workspace app-page-content" style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 12, maxWidth: '1440px', margin: '0 auto', width: '100%', flex: 1, minHeight: 0 }}>
+        <div className="app-content-frame app-content-frame--workspace app-page-content" style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 14, width: '100%', flex: 1, minHeight: 0 }}>
           {/* Main Content Grid: Chart on Left, YoY Cards on Right */}
           <div className="sales-summary-main-grid">
 

@@ -63,6 +63,8 @@ export function ProductionForecastChart({ data }: ProductionForecastChartProps) 
     return { processedData: pData, yAxisMax: calculatedYMax, yAxisTicks: calculatedTicks };
   }, [data]);
 
+  const isCrowded = processedData.length > 14;
+
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       const finish = payload.find((p: any) => p.dataKey === 'totalDone')?.value || 0;
@@ -98,14 +100,14 @@ export function ProductionForecastChart({ data }: ProductionForecastChartProps) 
   const renderBalanceLabel = (props: any) => {
     const { x, y, value, width } = props;
     if (!value || value === 0) return <g />;
-
+    
     return (
       <text
         x={x + width / 2}
-        y={y - 8}
-        textAnchor="middle"
+        y={y - 6}
         fill="var(--color-danger-600)"
-        fontSize={10}
+        textAnchor="middle"
+        fontSize={isCrowded ? 8.5 : 10}
         fontWeight={800}
       >
         {Number(value).toLocaleString()}
@@ -115,14 +117,18 @@ export function ProductionForecastChart({ data }: ProductionForecastChartProps) 
 
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <ComposedChart data={processedData} margin={{ top: 20, right: 24, left: 0, bottom: 5 }}>
+      <ComposedChart data={processedData} margin={{ top: 20, right: 24, left: 0, bottom: isCrowded ? 24 : 5 }}>
         <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--color-border-light)" />
         <XAxis 
           dataKey="periodLabel" 
-          tick={{ fontSize: 11, fill: 'var(--color-text-secondary)', fontWeight: 600 }} 
+          tick={{ fontSize: isCrowded ? 9.5 : 11, fill: 'var(--color-text-secondary)', fontWeight: 600 }} 
           axisLine={{ stroke: 'var(--color-border-strong)', strokeWidth: 1.5 }}
           tickLine={false} 
-          tickMargin={8} 
+          tickMargin={isCrowded ? 4 : 8}
+          interval={0}
+          angle={isCrowded ? -45 : 0}
+          textAnchor={isCrowded ? 'end' : 'middle'}
+          height={isCrowded ? 45 : 30}
         />
         <YAxis 
           domain={[0, yAxisMax]}

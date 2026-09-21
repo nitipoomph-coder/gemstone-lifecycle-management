@@ -311,29 +311,42 @@ export default function POTrackerAdvanced() {
           >
             {/* Left Side: Priority Metrics (ACTIVE, LATE, PENDING) */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '24px', flexWrap: 'wrap' }}>
-              {[
-                { id: 'total', label: 'ACTIVE ORDERS', value: filtered.length.toLocaleString(), color: 'var(--color-brand-600)' },
-                { id: 'late', label: 'LATE', value: delayedCount.toLocaleString(), color: 'var(--color-danger-600)' },
-                { id: 'pending', label: 'PENDING', value: pendingCount.toLocaleString(), color: 'var(--color-warning-700)' },
-              ].map((stat) => (
-                <div key={stat.id} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--color-text-tertiary)', textTransform: 'capitalize', letterSpacing: '0.05em' }}>{stat.label}</span>
-                  <span style={{ fontSize: '1.2rem', fontWeight: 800, color: stat.color, fontFamily: 'var(--font-display)', lineHeight: 1 }}>{stat.value}</span>
-                </div>
-              ))}
-              
-              <div style={{ width: 1, height: 24, background: 'var(--color-border-strong)', margin: '0 8px' }} />
+              {loading && filtered.length === 0 ? (
+                <>
+                  {[80, 60, 70, 90, 110].map((w, idx) => (
+                    <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <div className="app-skeleton" style={{ width: w * 0.7, height: 10, borderRadius: 2 }} />
+                      <div className="app-skeleton" style={{ width: w, height: 20, borderRadius: 4 }} />
+                    </div>
+                  ))}
+                </>
+              ) : (
+                <>
+                  {[
+                    { id: 'total', label: 'ACTIVE ORDERS', value: filtered.length.toLocaleString(), color: 'var(--color-brand-600)' },
+                    { id: 'late', label: 'LATE', value: delayedCount.toLocaleString(), color: 'var(--color-danger-600)' },
+                    { id: 'pending', label: 'PENDING', value: pendingCount.toLocaleString(), color: 'var(--color-warning-700)' },
+                  ].map((stat) => (
+                    <div key={stat.id} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--color-text-tertiary)', textTransform: 'capitalize', letterSpacing: '0.05em' }}>{stat.label}</span>
+                      <span style={{ fontSize: '1.2rem', fontWeight: 800, color: stat.color, fontFamily: 'var(--font-display)', lineHeight: 1 }}>{stat.value}</span>
+                    </div>
+                  ))}
+                  
+                  <div style={{ width: 1, height: 24, background: 'var(--color-border-strong)', margin: '0 8px' }} />
 
-              {/* Secondary Metrics (QTY, AMOUNT) */}
-              {[
-                { id: 'qty', label: 'TOTAL QTY', value: totalQty.toLocaleString(), color: 'var(--color-text-primary)' },
-                { id: 'amount', label: 'TOTAL AMOUNT', value: `$${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, color: 'var(--color-text-primary)' },
-              ].map((stat) => (
-                <div key={stat.id} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  <span style={{ fontSize: '0.6rem', fontWeight: 700, color: 'var(--color-text-quaternary)', textTransform: 'capitalize' }}>{stat.label}</span>
-                  <span style={{ fontSize: '0.95rem', fontWeight: 700, color: stat.color, fontFamily: 'var(--font-display)', lineHeight: 1 }}>{stat.value}</span>
-                </div>
-              ))}
+                  {/* Secondary Metrics (QTY, AMOUNT) */}
+                  {[
+                    { id: 'qty', label: 'TOTAL QTY', value: totalQty.toLocaleString(), color: 'var(--color-text-primary)' },
+                    { id: 'amount', label: 'TOTAL AMOUNT', value: `$${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, color: 'var(--color-text-primary)' },
+                  ].map((stat) => (
+                    <div key={stat.id} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      <span style={{ fontSize: '0.6rem', fontWeight: 700, color: 'var(--color-text-quaternary)', textTransform: 'capitalize' }}>{stat.label}</span>
+                      <span style={{ fontSize: '0.95rem', fontWeight: 700, color: stat.color, fontFamily: 'var(--font-display)', lineHeight: 1 }}>{stat.value}</span>
+                    </div>
+                  ))}
+                </>
+              )}
             </div>
 
             {/* Right Side: Refresh Button integrated with summary context */}

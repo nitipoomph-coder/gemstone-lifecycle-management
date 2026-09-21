@@ -93,6 +93,7 @@ export function ProductionSummaryTable({ data, tab }: TableProps) {
               return (
                 <th
                   key={d.period}
+                  title={d.periodLabel}
                   style={{
                     padding: '2px 1px',
                     textAlign: 'center',

@@ -321,6 +321,77 @@ export function usePeriodSetup(config: PeriodSetupConfig) {
       config.onReset();
     }
   }, [config.syncToUrl, setSearchParams, config.onReset, initializeState]);
+    
+  const applyChanges = useCallback((patch: Partial<PeriodState>) => {
+    setDraft(prevDraft => {
+      const updatedDraft = { ...prevDraft, ...patch };
+
+      const selectedYears = [updatedDraft.baseYear];
+      if (updatedDraft.compareActive1 && updatedDraft.compareYear1 && updatedDraft.compareYear1 !== 'none') selectedYears.push(updatedDraft.compareYear1);
+      if (config.compareSlots === 2 && updatedDraft.compareActive2 && updatedDraft.compareYear2 && updatedDraft.compareYear2 !== 'none') selectedYears.push(updatedDraft.compareYear2);
+
+      const selectedMonths = monthRange(updatedDraft.monthFrom, updatedDraft.monthTo).map(String);
+      const selectedWeeks = config.allowWeekRange && updatedDraft.weekFrom && updatedDraft.weekTo 
+        ? Array.from({ length: updatedDraft.weekTo - updatedDraft.weekFrom + 1 }, (_, i) => String(updatedDraft.weekFrom! + i)) 
+        : undefined;
+
+      const newCommitted: PeriodState = {
+        ...updatedDraft,
+        selectedYears,
+        selectedMonths,
+        selectedWeeks,
+        dateField: updatedDraft.dateField
+      };
+
+      setCommitted(newCommitted);
+
+      if (config.syncToUrl) {
+        setSearchParams(prev => {
+          const next = new URLSearchParams(prev);
+          next.set('years', selectedYears.join(','));
+          next.set('preset', newCommitted.preset);
+
+          if (selectedMonths.length === 12) {
+            next.delete('months');
+          } else {
+            next.set('months', selectedMonths.join(','));
+          }
+
+          if (newCommitted.preset === 'week' && newCommitted.weekFrom && newCommitted.weekTo) {
+            next.set('wStart', String(newCommitted.weekFrom));
+            next.set('wEnd', String(newCommitted.weekTo));
+          } else {
+            next.delete('wStart');
+            next.delete('wEnd');
+          }
+
+          if (newCommitted.preset === 'day' && newCommitted.dateFrom && newCommitted.dateTo) {
+            next.set('dateFrom', newCommitted.dateFrom);
+            next.set('dateTo', newCommitted.dateTo);
+          } else {
+            next.delete('dateFrom');
+            next.delete('dateTo');
+          }
+
+          if (updatedDraft.kpiCompareYear && updatedDraft.kpiCompareYear !== 'none') {
+            next.set('kpiCompare', updatedDraft.kpiCompareYear);
+          } else {
+            next.delete('kpiCompare');
+          }
+
+          if (updatedDraft.dateField === 'dueDate') {
+            next.set('dateField', 'dueDate');
+          } else {
+            next.delete('dateField');
+          }
+
+          return next;
+        }, { replace: true });
+      }
+
+      return updatedDraft;
+    });
+  }, [config.compareSlots, config.allowWeekRange, config.syncToUrl, setSearchParams]);
 
   return {
     committed,
@@ -330,7 +401,8 @@ export function usePeriodSetup(config: PeriodSetupConfig) {
       applyPreset,
       syncDraft,
       apply,
-      reset
+      reset,
+      applyChanges
     },
     config
   };

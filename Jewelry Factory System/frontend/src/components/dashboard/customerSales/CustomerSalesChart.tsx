@@ -182,17 +182,17 @@ export function CustomerSalesChart({
 
     if (minTot === Number.MAX_VALUE) minTot = 0;
 
-    const BAR_ZONE = 0.58; // กดแท่งลงมาเหลือ 58% เพื่อให้มีที่ว่างด้านบนสำหรับเส้น Total
-    const TOT_LO = 0.65;   // เส้น Total ลอยระหว่าง 65% ถึง 85%
-    const TOT_HI = 0.85;
+    const hasTotalLine = (activeYears.length > 1 || mode === 'monthly');
+    const BAR_ZONE = hasTotalLine ? 0.65 : 0.88; // เมื่อไม่มีเส้น Total ให้แท่งใช้พื้นที่ได้ถึง 88%
+    const TOT_LO = 0.70;   // เส้น Total ลอยระหว่าง 70% ถึง 88%
+    const TOT_HI = 0.88;
 
     let calculatedYMax = 100;
     let calculatedTicks: number[] = [0, 50, 100];
 
     if (maxBar > 0) {
       const pTarget = maxBar / BAR_ZONE;
-      // เพิ่มขั้น (Ticks) เป็นประมาณ 10-12 ขั้นตาม ProductionSummary
-      const pInt = niceNum(pTarget / 12.0, false); 
+      const pInt = niceNum(pTarget / 10.0, false); 
       calculatedYMax = Math.ceil(pTarget / pInt) * pInt;
 
       calculatedTicks = [];
@@ -258,6 +258,9 @@ export function CustomerSalesChart({
     );
   };
 
+  const totalBarCount = chartData.length * (monthlySeries === 'group' ? sortedSel.length : activeYears.length);
+  const calculatedMaxBar = totalBarCount <= 5 ? 68 : totalBarCount <= 10 ? 52 : totalBarCount <= 16 ? 42 : 36;
+
   return (
     <ResponsiveContainer width="100%" height="100%">
       <ComposedChart data={processedData} margin={{ top: 20, right: 24, left: 0, bottom: 5 }}>
@@ -290,7 +293,7 @@ export function CustomerSalesChart({
               name={g.label}
               fill={g.color}
               radius={[4, 4, 0, 0]}
-              maxBarSize={40}
+              maxBarSize={calculatedMaxBar}
               isAnimationActive={true}
               animationDuration={600}
               animationEasing="ease-in-out"
@@ -311,7 +314,7 @@ export function CustomerSalesChart({
               name={`Year ${y}`}
               fill={color}
               radius={[4, 4, 0, 0]}
-              maxBarSize={40}
+              maxBarSize={calculatedMaxBar}
               isAnimationActive={true}
               animationDuration={600}
               animationEasing="ease-in-out"

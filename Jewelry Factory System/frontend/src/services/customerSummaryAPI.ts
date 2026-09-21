@@ -37,8 +37,17 @@ export const fetchCustomerSummary = async (params: FetchCustomerSummaryParams): 
   let url = `${BASE_URL}/dashboard/customer-summary?years=${yearsParam}`;
   // Period/month filter changes the DB summary, so it is sent to the API.
   if (params.months && params.months.length > 0) {
-    const monthsParam = params.months.map(m => MONTHS.indexOf(m) + 1).join(',');
-    url += `&months=${monthsParam}`;
+    const monthsParam = params.months
+      .map(m => {
+        const n = Number(m);
+        if (!isNaN(n) && n >= 1 && n <= 12) return n;
+        return MONTHS.indexOf(m) + 1;
+      })
+      .filter(n => n >= 1 && n <= 12)
+      .join(',');
+    if (monthsParam) {
+      url += `&months=${monthsParam}`;
+    }
   }
   if (params.startDate && params.endDate) {
     url += `&startDate=${params.startDate}&endDate=${params.endDate}`;

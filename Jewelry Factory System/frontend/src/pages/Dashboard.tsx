@@ -119,28 +119,28 @@ export default function Dashboard() {
         <div className="app-content-frame app-content-frame--dashboard app-page-content dashboard-page flex flex-col gap-4">
           {/* Header Skeleton */}
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-end', paddingBottom:8 }}>
-            <div style={{ width: 220, height: 32, ...shimmerStyle }}/>
+            <div className="app-skeleton" style={{ width: 220, height: 32, ...shimmerStyle }}/>
             <div style={{ display:'flex', gap:12 }}>
-              <div style={{ width: 180, height: 38, ...shimmerStyle }}/>
-              <div style={{ width: 140, height: 38, ...shimmerStyle }}/>
-              <div style={{ width: 40, height: 40, ...shimmerStyle }}/>
+              <div className="app-skeleton" style={{ width: 180, height: 38, ...shimmerStyle }}/>
+              <div className="app-skeleton" style={{ width: 140, height: 38, ...shimmerStyle }}/>
+              <div className="app-skeleton" style={{ width: 40, height: 40, ...shimmerStyle }}/>
             </div>
           </div>
           
           {/* Row 1: Stat Cards */}
-          <div className="dashboard-stat-grid">{Array.from({length:5}).map((_,i) => <div key={i} style={{height:120,...shimmerStyle}}/>)}</div>
+          <div className="dashboard-stat-grid">{Array.from({length:5}).map((_,i) => <div key={i} className="app-skeleton" style={{height:120,...shimmerStyle}}/>)}</div>
           
           {/* Row 2: Stone & Finding */}
-          <div className="dashboard-duo-grid">{Array.from({length:2}).map((_,i) => <div key={i} style={{height:180,...shimmerStyle}}/>)}</div>
+          <div className="dashboard-duo-grid">{Array.from({length:2}).map((_,i) => <div key={i} className="app-skeleton" style={{height:180,...shimmerStyle}}/>)}</div>
           
           {/* Row 3: Trend, Donut, Material */}
-          <div className="dashboard-triple-grid">{Array.from({length:3}).map((_,i) => <div key={i} style={{height:280,...shimmerStyle}}/>)}</div>
+          <div className="dashboard-triple-grid">{Array.from({length:3}).map((_,i) => <div key={i} className="app-skeleton" style={{height:280,...shimmerStyle}}/>)}</div>
           
           {/* Row 4: Overdue & Customers */}
-          <div className="dashboard-bottom-grid">{Array.from({length:2}).map((_,i) => <div key={i} style={{height:320,...shimmerStyle}}/>)}</div>
+          <div className="dashboard-bottom-grid">{Array.from({length:2}).map((_,i) => <div key={i} className="app-skeleton" style={{height:320,...shimmerStyle}}/>)}</div>
           
           {/* Row 5: Recent Orders */}
-          <div style={{height:140,...shimmerStyle}}/>
+          <div className="app-skeleton" style={{height:140,...shimmerStyle}}/>
         </div>
       </div>
   );

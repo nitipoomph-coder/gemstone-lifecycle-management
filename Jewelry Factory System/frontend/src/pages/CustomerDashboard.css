@@ -27,13 +27,13 @@
 
 @media (min-width: 1100px) {
   .sales-summary-main-grid {
-    grid-template-columns: minmax(0, 1.8fr) minmax(320px, 1fr);
+    grid-template-columns: minmax(0, 1fr) 340px;
   }
 }
 
-@media (min-width: 1600px) {
+@media (min-width: 1500px) {
   .sales-summary-main-grid {
-    grid-template-columns: minmax(0, 2.2fr) minmax(380px, 1fr);
+    grid-template-columns: minmax(0, 1fr) 380px;
   }
 }
 
@@ -42,12 +42,12 @@
   flex-direction: column;
   min-width: 0;
   height: 100%;
-  min-height: 400px;
+  min-height: 520px;
 }
 
 .sales-summary-chart-body {
   flex: 1;
-  min-height: 0;
+  min-height: 440px;
   height: 100%;
 }
 

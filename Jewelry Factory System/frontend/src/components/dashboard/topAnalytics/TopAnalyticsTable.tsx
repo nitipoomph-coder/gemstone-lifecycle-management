@@ -1,16 +1,9 @@
 import { useState } from "react";
-import { ArrowDownRight, ArrowUpRight, ImageOff, Minus } from "lucide-react";
+import { ImageOff } from "lucide-react";
 import type { TopGalleryItem } from "../../../services/itemYearlySummaryAPI";
 import type { PerspectiveMode } from "../../../hooks/useTopOrdersGalleryData";
 
 const fmtQty = (val: number) => val.toLocaleString(undefined, { maximumFractionDigits: 0 });
-const fmtSignedQty = (val: number) => (val > 0 ? `+${fmtQty(val)}` : fmtQty(val));
-const fmtPct = (val: number | null, isNew: boolean = false) => {
-  if (isNew) return "New";
-  if (val === null) return "-";
-  const sign = val > 0 ? "+" : "";
-  return `${sign}${val.toFixed(1)}%`;
-};
 
 export function TopAnalyticsTable({ 
   rows, 
@@ -27,36 +20,60 @@ export function TopAnalyticsTable({
   compareEnabled: boolean;
   onPhotoClick?: (item: TopGalleryItem) => void;
 }) {
-  const isCompare = perspectiveMode === 'compare' && compareEnabled;
-  const showAvg = displayYears.length > 1;
+  const showAvg = displayYears.length > 0;
+  const colSpanCount = 4 + displayYears.length + (showAvg ? 2 : 0);
 
   return (
-    <table className="sales-dense-table sales-dense-table--sticky-first" style={{ width: '100%', minWidth: 1040 }}>
+    <table className="sales-dense-table sales-dense-table--sticky-first" style={{ width: '100%', minWidth: 1020, '--sales-table-row-height': '88px' } as React.CSSProperties}>
       <thead>
         <tr>
-          <Th style={{ width: 56 }}>No</Th>
-          <Th>Item</Th>
-          <Th style={{ width: 120 }}>Photo</Th>
-          <Th>Customer</Th>
+          <Th style={{ width: 50, textAlign: 'center' }}>No</Th>
+          <Th style={{ width: 140 }}>Item</Th>
+          <Th style={{ width: 140, textAlign: 'center' }}>Photo</Th>
+          <Th style={{ width: 110 }}>Customer</Th>
           
-          {/* Dynamic Year Columns (Matrix Style) */}
+          {/* Dynamic Year Columns in chronological order */}
           {displayYears.map(yr => (
-            <Th key={yr} align="right">{yr}</Th>
+            <Th key={yr} align="right" style={{ minWidth: 90 }}>{yr}</Th>
           ))}
 
-          <Th align="right">Total All Years</Th>
-          {showAvg && <Th align="right">Avg per Year</Th>}
-          
-          {/* Keep Up/Down only if we are specifically comparing 2 periods */}
-          {isCompare && <Th align="right">Up / Down</Th>}
+          {/* Summary Headers: Total & Avg */}
+          {showAvg && (
+            <Th
+              align="right"
+              style={{
+                background: 'var(--color-surface-2)',
+                color: 'var(--color-text-primary)',
+                fontWeight: 950,
+                fontSize: '14px',
+                minWidth: 105,
+              }}
+            >
+              Total
+            </Th>
+          )}
+          {showAvg && (
+            <Th
+              align="right"
+              style={{
+                background: 'var(--color-surface-2)',
+                color: 'var(--color-text-primary)',
+                fontWeight: 950,
+                fontSize: '14px',
+                minWidth: 105,
+              }}
+            >
+              Avg
+            </Th>
+          )}
         </tr>
       </thead>
       <tbody>
         {loading ? (
-          Array.from({ length: 15 }).map((_, index) => <SkeletonRow key={index} numCols={5 + displayYears.length + (showAvg ? 1 : 0) + (isCompare ? 1 : 0)} />)
+          Array.from({ length: 15 }).map((_, index) => <SkeletonRow key={index} numCols={colSpanCount} />)
         ) : rows.length === 0 ? (
           <tr>
-            <td colSpan={5 + displayYears.length + (showAvg ? 1 : 0) + (isCompare ? 1 : 0)} className="sales-dense-empty">
+            <td colSpan={colSpanCount} className="sales-dense-empty">
               No items match the current filters.
             </td>
           </tr>
@@ -67,13 +84,40 @@ export function TopAnalyticsTable({
               row={row}
               index={index}
               displayYears={displayYears}
-              isCompare={isCompare}
               showAvg={showAvg}
               onPhotoClick={() => onPhotoClick?.(row)}
             />
           ))
         )}
       </tbody>
+      {rows.length > 0 && !loading && (
+        <tfoot>
+          <tr style={{ background: 'var(--color-surface-2)', borderTop: '2px solid var(--color-border-strong)', borderBottom: '2px solid var(--color-border-strong)' }}>
+            <Td style={{ textAlign: 'center', fontWeight: 900 }}>Σ</Td>
+            <Td style={{ fontWeight: 900, color: 'var(--color-text-primary)' }}>Grand Total</Td>
+            <Td></Td>
+            <Td style={{ color: 'var(--color-text-tertiary)', fontSize: '12px', fontWeight: 800 }}>{rows.length} Items</Td>
+            {displayYears.map(yr => {
+              const yrTotal = rows.reduce((s, r) => s + (r.yearlyTotals?.[yr]?.qty || 0), 0);
+              return (
+                <Td key={yr} align="right" style={{ fontWeight: 900, color: 'var(--color-text-primary)' }}>
+                  {fmtQty(yrTotal)}
+                </Td>
+              );
+            })}
+            {showAvg && (
+              <Td align="right" style={{ background: 'color-mix(in srgb, var(--color-surface-2) 50%, transparent)', fontWeight: 950, color: 'var(--color-text-primary)' }}>
+                {fmtQty(rows.reduce((s, r) => s + displayYears.reduce((ys, yr) => ys + (r.yearlyTotals?.[yr]?.qty || 0), 0), 0))}
+              </Td>
+            )}
+            {showAvg && (
+              <Td align="right" style={{ background: 'color-mix(in srgb, var(--color-surface-2) 50%, transparent)', fontWeight: 950, color: 'var(--color-text-primary)' }}>
+                {fmtQty(Math.round(rows.reduce((s, r) => s + displayYears.reduce((ys, yr) => ys + (r.yearlyTotals?.[yr]?.qty || 0), 0), 0) / (displayYears.length || 1)))}
+              </Td>
+            )}
+          </tr>
+        </tfoot>
+      )}
     </table>
   );
 }
@@ -82,46 +126,51 @@ function AnalyticsTableRow({
   row, 
   index, 
   displayYears,
-  isCompare,
   showAvg,
   onPhotoClick
 }: { 
   row: TopGalleryItem; 
   index: number;
   displayYears: string[];
-  isCompare: boolean;
   showAvg: boolean;
   onPhotoClick?: () => void;
 }) {
-  // Compare values logic
-  const diff = row.qtyDiff;
-  const direction = diff > 0 ? "up" : diff < 0 ? "down" : "flat";
-  const DirectionIcon = direction === "up" ? ArrowUpRight : direction === "down" ? ArrowDownRight : Minus;
-  const toneClass = direction === "up" ? "sales-dense-table__tone-up" : direction === "down" ? "sales-dense-table__tone-down" : "sales-dense-table__tone-muted";
+  // Compute exact displayed sum and average for the active years
+  const rowDisplayedTotal = displayYears.reduce((sum, yr) => sum + (row.yearlyTotals?.[yr]?.qty || 0), 0);
+  const rowDisplayedAvg = displayYears.length > 0 ? Math.round(rowDisplayedTotal / displayYears.length) : 0;
 
-  // Compute average based on total divided by number of available years
-  const avgQty = displayYears.length > 0 ? Math.round(row.totalCombinedQty / displayYears.length) : 0;
+  // Compute trend indicator comparing latest year to previous year
+  let trend: 'up' | 'down' | 'flat' = 'flat';
+  if (displayYears.length >= 2) {
+    const latestYr = displayYears[displayYears.length - 1];
+    const prevYr = displayYears[displayYears.length - 2];
+    const latestQty = row.yearlyTotals?.[latestYr]?.qty || 0;
+    const prevQty = row.yearlyTotals?.[prevYr]?.qty || 0;
+    if (latestQty > prevQty) trend = 'up';
+    else if (latestQty < prevQty) trend = 'down';
+    else trend = 'flat';
+  }
 
   return (
     <tr style={{ animationDelay: `${Math.min(index * 10, 150)}ms` }}>
-      <Td style={{ textAlign: "center", fontWeight: 900 }}>{row.rank}</Td>
+      <Td style={{ textAlign: "center", fontWeight: 900, color: "var(--color-text-tertiary)" }}>{row.rank}</Td>
       <Td>
-        <div style={{ color: "var(--color-text-primary)", fontSize: "15px", fontWeight: 800 }}>
+        <div style={{ color: "var(--color-text-primary)", fontSize: "14.5px", fontWeight: 950, letterSpacing: '0.01em' }}>
           {row.itemNo}
         </div>
       </Td>
-      <Td>
+      <Td style={{ textAlign: "center" }}>
         <div style={{ cursor: onPhotoClick ? "pointer" : "default" }} onClick={onPhotoClick}>
           <PhotoThumb itemNo={row.itemNo} />
         </div>
       </Td>
       <Td>
-        <div style={{ color: "var(--color-text-primary)", fontSize: "15px", fontWeight: 800 }}>
+        <div style={{ color: "var(--color-text-primary)", fontSize: "14px", fontWeight: 800 }}>
           {row.primaryCustCode || '-'}
         </div>
       </Td>
 
-      {/* Dynamic Year Values mapped from yearlyTotals */}
+      {/* Dynamic Year Values */}
       {displayYears.map(yr => {
         const qtyForYear = row.yearlyTotals?.[yr]?.qty || 0;
         return (
@@ -131,25 +180,19 @@ function AnalyticsTableRow({
         );
       })}
 
-      <Td align="right" style={{ color: "var(--color-text-secondary)" }}>
-        {fmtQty(row.totalCombinedQty || 0)}
-      </Td>
+      {/* Harmonious Total and Average Columns */}
       {showAvg && (
-        <Td align="right" style={{ color: "var(--color-text-secondary)" }}>
-          {fmtQty(avgQty)}
+        <Td align="right" style={{ background: "color-mix(in srgb, var(--color-surface-2) 30%, transparent)", color: "var(--color-text-primary)", fontWeight: 950, fontSize: "14.5px" }}>
+          {fmtQty(rowDisplayedTotal)}
         </Td>
       )}
-
-      {isCompare && (
-        <Td align="right">
-          <div className={toneClass} style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2 }}>
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 4, fontWeight: 900 }}>
-              <DirectionIcon size={12} strokeWidth={3} />
-              <span>{fmtSignedQty(diff)}</span>
-            </div>
-            <div style={{ fontSize: "10px", fontWeight: 850, opacity: 0.85 }}>
-              {fmtPct(row.yoyGrowthPct, row.compareYearQty === 0 && row.baseYearQty > 0)}
-            </div>
+      {showAvg && (
+        <Td align="right" style={{ background: "color-mix(in srgb, var(--color-surface-2) 30%, transparent)", color: "var(--color-text-primary)", fontWeight: 900, fontSize: "14.5px" }}>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 6, justifyContent: "flex-end", width: "100%" }}>
+            <span>{fmtQty(rowDisplayedAvg)}</span>
+            {trend === 'up' && <span style={{ color: 'var(--color-success-600)', fontSize: '11px', fontWeight: 950 }}>▲</span>}
+            {trend === 'down' && <span style={{ color: 'var(--color-danger-600)', fontSize: '11px', fontWeight: 950 }}>▼</span>}
+            {trend === 'flat' && <span style={{ color: 'var(--color-text-tertiary)', fontSize: '12px' }}>–</span>}
           </div>
         </Td>
       )}
@@ -168,7 +211,7 @@ function PhotoThumb({ itemNo }: { itemNo: string }) {
           src={`/api/photos/ps/${itemNo}`}
           alt={itemNo}
           loading="lazy"
-          style={{ width: "100%", height: "100%", objectFit: "contain", padding: 2 }}
+          style={{ width: "100%", height: "100%", objectFit: "contain" }}
           onError={(event: React.SyntheticEvent<HTMLImageElement>) => {
             const image = event.currentTarget;
             if (!image.dataset.triedCad) {
@@ -205,14 +248,18 @@ function SkeletonRow({ numCols }: { numCols: number }) {
 }
 
 const photoShellStyle: React.CSSProperties = {
-  width: 80,
-  height: 70,
+  width: 112,
+  height: 76,
+  borderRadius: 8,
   border: "1px solid var(--color-border-light)",
-  borderRadius: 4,
-  background: "var(--color-product-canvas)",
+  background: "#ffffff",
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
   overflow: "hidden",
   margin: "0 auto",
+  padding: 4,
+  boxShadow: "0 1px 4px rgba(0, 0, 0, 0.12)",
+  transition: "transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease",
 };
+

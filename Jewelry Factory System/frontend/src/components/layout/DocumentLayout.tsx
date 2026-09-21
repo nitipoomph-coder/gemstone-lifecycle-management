@@ -357,7 +357,29 @@ export default function DocumentLayout({
         <div className="document-workspace flex flex-1 overflow-hidden bg-[var(--color-ui-canvas)]">
           {/* Left Dark Sidebar (Active Doc Summary) */}
           <div className="document-summary w-[280px] shrink-0 bg-[var(--color-surface-900)] text-[var(--color-overlay-text)] flex flex-col overflow-y-auto z-10 relative border-r border-[var(--color-surface-900)]">
-            {!docDetail && !isEditingRef ? (
+            {detailLoading ? (
+              <div className="p-6 flex flex-col gap-6" aria-busy="true" aria-label="Loading document summary">
+                <div className="flex flex-col gap-2 pb-6 border-b border-[var(--color-overlay-border)]">
+                  <div className="app-skeleton" style={{ width: 90, height: 12, borderRadius: 2 }} />
+                  <div className="app-skeleton" style={{ width: 160, height: 24, borderRadius: 4 }} />
+                  <div className="app-skeleton" style={{ width: 110, height: 14, borderRadius: 2 }} />
+                </div>
+                <div className="flex flex-col gap-5">
+                  <div className="flex flex-col gap-2">
+                    <div className="app-skeleton" style={{ width: 80, height: 10, borderRadius: 2 }} />
+                    <div className="app-skeleton" style={{ width: 140, height: 22, borderRadius: 4 }} />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <div className="app-skeleton" style={{ width: 80, height: 10, borderRadius: 2 }} />
+                    <div className="app-skeleton" style={{ width: 120, height: 22, borderRadius: 4 }} />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <div className="app-skeleton" style={{ width: 80, height: 10, borderRadius: 2 }} />
+                    <div className="app-skeleton" style={{ width: 130, height: 22, borderRadius: 4 }} />
+                  </div>
+                </div>
+              </div>
+            ) : !docDetail && !isEditingRef ? (
               <div className="p-8 flex flex-col items-center justify-center h-full text-[var(--color-overlay-text-muted)] opacity-60 text-center">
                 <Package size={48} className="mb-4 opacity-50" />
                 <p className="text-sm font-medium">Please select a document from the list above</p>

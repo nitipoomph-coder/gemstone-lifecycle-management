@@ -224,10 +224,21 @@ export default function SalesCustomerGroupDetail() {
           </div>
 
           <div style={kpiGrid}>
-            <Kpi label="Rows" value={fmtQty(filteredRows.length)} />
-            <Kpi label="Ordered Qty" value={fmtQty(totals.qty)} />
-            <Kpi label="Shipped Qty" value={fmtQty(totals.shipped)} />
-            <Kpi label="Sales Amount" value={fmtAmount(totals.amount)} />
+            {loading ? (
+              Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} style={kpiTile}>
+                  <div className="app-skeleton" style={{ width: 80, height: 14, borderRadius: 4, marginBottom: 8 }} />
+                  <div className="app-skeleton" style={{ width: 120, height: 28, borderRadius: 6 }} />
+                </div>
+              ))
+            ) : (
+              <>
+                <Kpi label="Rows" value={fmtQty(filteredRows.length)} />
+                <Kpi label="Ordered Qty" value={fmtQty(totals.qty)} />
+                <Kpi label="Shipped Qty" value={fmtQty(totals.shipped)} />
+                <Kpi label="Sales Amount" value={fmtAmount(totals.amount)} />
+              </>
+            )}
           </div>
 
           <section style={filterPanel}>

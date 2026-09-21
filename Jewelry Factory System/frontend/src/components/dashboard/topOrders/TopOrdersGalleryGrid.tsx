@@ -79,6 +79,11 @@ export function TopOrdersGalleryGrid({
         const isCompare = perspectiveMode === 'compare';
         const imgScale = getCategoryImageScale(item.productType, item.productTypeLabel);
 
+        const itemQty = isCompare ? item.baseYearQty : item.totalCombinedQty;
+        const itemAmnt = isCompare ? item.baseYearAmnt : item.totalCombinedAmnt;
+        const avgUnitPrice = itemQty > 0 ? itemAmnt / itemQty : 0;
+        const fmtCurrency = (val: number) => '$' + val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
         return (
           <div
             key={item.itemNo}
@@ -193,7 +198,7 @@ export function TopOrdersGalleryGrid({
                   flexDirection: 'column',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: 6,
+                  gap: 5,
                   zIndex: 10,
                   opacity: 0,
                   transition: 'opacity 0.2s ease',
@@ -206,23 +211,29 @@ export function TopOrdersGalleryGrid({
                   {isCompare ? `${baseYear} vs ${compareYear}` : `Combined (${baseYear}${compareEnabled && compareYear ? ` & ${compareYear}` : ''})`}
                 </span>
                 <span style={{ fontSize: '1.25rem', color: 'var(--color-overlay-text)', fontWeight: 950, fontFamily: 'var(--font-display)' }}>
-                  {fmtQty(isCompare ? item.baseYearQty : item.totalCombinedQty)} pcs
+                  {fmtQty(itemQty)} pcs
                 </span>
                 <span style={{ fontSize: '0.85rem', color: 'var(--color-brand-400)', fontWeight: 800 }}>
-                  {fmt(isCompare ? item.baseYearAmnt : item.totalCombinedAmnt)}
+                  {fmtCurrency(itemAmnt)}
                 </span>
+                {avgUnitPrice > 0 && (
+                  <span style={{ fontSize: '0.72rem', color: 'var(--color-overlay-text-muted)', fontWeight: 700, background: 'rgba(255, 255, 255, 0.12)', padding: '2px 8px', borderRadius: 4, marginTop: 2 }}>
+                    Avg ${avgUnitPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} / pc
+                  </span>
+                )}
               </div>
             </div>
 
-            {/* Footer Summary: Item No + Customer + Metric */}
+            {/* Footer Summary: Item No + Primary Value + Secondary Volume + Avg Price/pc + YoY */}
             <div
               style={{
-                padding: '6px 12px 10px',
+                padding: '8px 12px 10px',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: 2,
+                gap: 4,
               }}
             >
+              {/* Row 1: Item No (Left) & Main Metric Value (Right) */}
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 6 }}>
                 <span
                   style={{
@@ -241,24 +252,50 @@ export function TopOrdersGalleryGrid({
 
                 <span
                   style={{
-                    fontSize: '0.85rem',
+                    fontSize: '0.88rem',
                     fontWeight: 900,
                     color: 'var(--color-brand-600)',
                     fontFamily: 'var(--font-display)',
                     whiteSpace: 'nowrap',
                   }}
                 >
-                  {isCompare
-                    ? (metric === 'amount' ? fmt(item.baseYearAmnt) : `${fmtQty(item.baseYearQty)} pcs`)
-                    : (metric === 'amount' ? fmt(item.totalCombinedAmnt) : `${fmtQty(item.totalCombinedQty)} pcs`)}
+                  {metric === 'amount' ? fmtCurrency(itemAmnt) : `${fmtQty(itemQty)} pcs`}
                 </span>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.72rem', color: 'var(--color-text-tertiary)', fontWeight: 700 }}>
-                <span>{item.primaryGroupLabel}</span>
+              {/* Row 2: Customer Group (Left) & Secondary Metric Value (Right) */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, fontSize: '0.74rem' }}>
+                <span style={{ color: 'var(--color-text-secondary)', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {item.primaryGroupLabel}
+                </span>
+                <span style={{ color: 'var(--color-text-tertiary)', fontWeight: 800, whiteSpace: 'nowrap' }}>
+                  {metric === 'amount' ? `${fmtQty(itemQty)} pcs` : fmtCurrency(itemAmnt)}
+                </span>
+              </div>
+
+              {/* Row 3: Unit Economics Avg Price/pc (Left) & Comparison / YoY (Right) */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, fontSize: '0.7rem', marginTop: 2 }}>
+                <span
+                  style={{
+                    background: 'var(--color-surface-2)',
+                    padding: '2px 7px',
+                    borderRadius: 4,
+                    fontWeight: 800,
+                    color: 'var(--color-text-secondary)',
+                    border: '1px solid var(--color-border-light)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 3,
+                  }}
+                  title={`Average Price: Total Value ÷ Total Volume = $${avgUnitPrice.toFixed(2)} per piece`}
+                >
+                  <span style={{ color: 'var(--color-text-tertiary)', fontWeight: 700 }}>Avg:</span>
+                  <span>${avgUnitPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/pc</span>
+                </span>
+
                 {compareEnabled && compareYear && (
                   isCompare ? (
-                    <span style={{ fontSize: '0.7rem', color: 'var(--color-text-tertiary)' }}>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--color-text-tertiary)', fontWeight: 700 }}>
                       vs {compareYear}: <strong style={{ color: 'var(--color-text-secondary)' }}>{fmtQty(item.compareYearQty)}</strong>
                     </span>
                   ) : (

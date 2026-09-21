@@ -12,7 +12,7 @@ export function CustomerDashboardSkeleton({ sortedSel, activeYears }: CustomerDa
 
   return (
     <div className="content-scrollbar flex-1 overflow-y-auto" style={{ background: 'var(--color-surface-1)' }}>
-      <div className="app-content-frame app-content-frame--workspace app-page-content sales-summary-page" style={{ paddingTop: 16 }}>
+      <div className="app-content-frame app-content-frame--workspace app-page-content sales-summary-page" style={{ padding: '16px 20px', width: '100%' }}>
 
         {/* Main Content Grid: Chart on Left, YoY Cards on Right */}
         <div className="sales-summary-main-grid">

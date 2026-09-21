@@ -13,6 +13,7 @@ import type { OrderTrackingResponse } from '../services/orderTrackingAPI';
 import { OrderTrackStepper } from '../components/dashboard/orderTracking/OrderTrackStepper';
 import { psPhotoUrl, attachPhotoFallback } from '../utils/photoUrl';
 import { useTopbarActions } from '../contexts/TopbarActionContext';
+import { FBEOrderTrackSkeleton } from '../components/dashboard/fbeOrderTrack/FBEOrderTrackSkeleton';
 
 export default function FBEOrderTrackPage() {
   const [ordNo, setOrdNo] = useState('');
@@ -215,8 +216,11 @@ export default function FBEOrderTrackPage() {
           </form>
         </div>
 
-        {/* พื้นที่หลักแบ่ง 2 คอลัมน์ (ซ้าย ~74% / ขวา ~26%) */}
-        <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-2 min-h-0 overflow-hidden">
+        {/* พื้นที่หลักแบ่ง 2 คอลัมน์ หรือ Skeleton ขณะโหลด */}
+        {loading ? (
+          <FBEOrderTrackSkeleton />
+        ) : (
+          <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-2 min-h-0 overflow-hidden">
 
           {/* ================================================================= */}
           {/* ฝั่งซ้าย: Order Info + แถบStatus + ไทม์ไลน์ 17 Step + ตารางประวัติ */}
@@ -688,6 +692,7 @@ export default function FBEOrderTrackPage() {
           </div>
 
         </div>
+        )}
 
       </main>
     </div>

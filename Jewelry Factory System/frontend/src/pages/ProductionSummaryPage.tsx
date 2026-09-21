@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import PageHeader from '../components/layout/PageHeader';
 import { BREADCRUMBS } from '../config/breadcrumbs';
 
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, FilterX } from 'lucide-react';
 import CustomSelect from '../components/ui/CustomSelect';
 import { ProductionSummaryChart } from '../components/dashboard/productionSummary/ProductionSummaryChart';
 import { ProductionSummaryTable } from '../components/dashboard/productionSummary/ProductionSummaryTable';
@@ -94,6 +94,18 @@ export default function ProductionSummaryPage() {
   const activeYearStr = committed.baseYear || committed.selectedYears[0] || String(new Date().getFullYear());
   const activeYear = Number(activeYearStr);
 
+  const isFiltered = step !== 'GR' || 
+    mode !== 'good' || 
+    committed.preset !== 'full-year' || 
+    committed.baseYear !== String(new Date().getFullYear()) ||
+    Boolean(committed.compareActive1);
+
+  const handleResetFilters = () => {
+    setStep('GR');
+    setMode('good');
+    periodSetup.actions.reset();
+  };
+
   useEffect(() => {
     if (isReady) {
       handleShow();
@@ -125,9 +137,11 @@ export default function ProductionSummaryPage() {
   }, [activeYear]);
 
   const { setTopbarActions } = useTopbarActions();
+  const handleShowRef = useRef<() => void>(() => {});
+
   useEffect(() => {
     setTopbarActions(
-      <button onClick={() => void handleShow()} style={{ width:36, height:36, borderRadius:8, border:'none', background:'transparent', color:'var(--color-text-secondary)', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', transition:'all 0.2s' }}
+      <button onClick={() => void handleShowRef.current()} style={{ width:36, height:36, borderRadius:8, border:'none', background:'transparent', color:'var(--color-text-secondary)', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', transition:'all 0.2s' }}
         onMouseEnter={e => { e.currentTarget.style.background='var(--color-surface-2)'; e.currentTarget.style.color='var(--color-brand-600)'; }}
         onMouseLeave={e => { e.currentTarget.style.background='transparent'; e.currentTarget.style.color='var(--color-text-secondary)'; }}
         title="Reload data"
@@ -137,7 +151,7 @@ export default function ProductionSummaryPage() {
       </button>
     );
     return () => setTopbarActions(null);
-  }, [setTopbarActions, loading, step, mode, committed, isReady]);
+  }, [setTopbarActions, loading]);
 
   const handleShow = async () => {
     setLoading(true);
@@ -150,7 +164,7 @@ export default function ProductionSummaryPage() {
 
       const preset = committed.preset;
 
-      if (preset === 'full-year' || preset === 'ytd' || preset === 'custom') {
+      if (preset === 'full-year' || preset === 'ytd') {
         const res = await fetchWithAuth(`/api/production-summary/year?step=${step}&mode=${mode}&year=${activeYear}`);
         const dataJson = await res.json();
         rawData = dataJson.data || [];
@@ -159,9 +173,6 @@ export default function ProductionSummaryPage() {
         if (preset === 'ytd' && activeYear === new Date().getFullYear()) {
           const curMonth = new Date().getMonth() + 1;
           filteredRawData = rawData.filter(d => d.month <= curMonth);
-        } else if (preset === 'custom' && committed.selectedMonths && committed.selectedMonths.length > 0) {
-          const selMonthsNum = committed.selectedMonths.map(Number);
-          filteredRawData = rawData.filter(d => selMonthsNum.includes(d.month));
         }
 
         const chartData = filteredRawData.map(item => {
@@ -229,7 +240,7 @@ export default function ProductionSummaryPage() {
         setData(chartData);
         setChartTitle(`${stepName} Weekly ${modeName} [ W${wStart} - W${wEnd} ${activeYear} ]`);
 
-      } else if (preset === 'month') {
+      } else if (preset === 'month' || preset === 'custom') {
         const monthNum = committed.monthFrom || new Date().getMonth() + 1;
         const res = await fetchWithAuth(`/api/production-summary/month?step=${step}&mode=${mode}&year=${activeYear}&month=${monthNum}`);
         const dataJson = await res.json();
@@ -256,7 +267,7 @@ export default function ProductionSummaryPage() {
 
           return {
             period: dStr,
-            periodLabel: `${String(d).padStart(2, '0')}/${String(monthNum).padStart(2, '0')}`,
+            periodLabel: `${String(d).padStart(2, '0')}/${String(monthNum).padStart(2, '0')}/${activeYear}`,
             ...groupData,
             total, workDays
           };
@@ -305,7 +316,7 @@ export default function ProductionSummaryPage() {
           }
 
           const parts = dStr.split('-');
-          const label = `${parts[2]}/${parts[1]}`;
+          const label = `${parts[2]}/${parts[1]}/${parts[0]}`;
 
           return {
             period: dStr,
@@ -323,6 +334,7 @@ export default function ProductionSummaryPage() {
       setLoading(false);
     }
   };
+  handleShowRef.current = handleShow;
 
   return (
     <div className="erp-page-container print-layout-production flex flex-col h-full bg-[var(--color-ui-canvas)]">
@@ -355,11 +367,28 @@ export default function ProductionSummaryPage() {
                 </div>
               </div>
               <div className="w-[1px] h-8 bg-[var(--color-border-light)] shrink-0 self-center" />
-              <div className="flex-1 min-w-[300px]">
+              <div className="flex-1 min-w-[300px] flex items-center gap-2">
                 <PeriodSetupPanel 
                   periodSetup={periodSetup}
                   availableYears={yearsStr}
                 />
+                {isFiltered && (
+                  <button
+                    type="button"
+                    onClick={handleResetFilters}
+                    style={{
+                      background: "none", border: "none", padding: "6px",
+                      color: "var(--color-text-secondary)", cursor: "pointer",
+                      display: "inline-flex", alignItems: "center", justifyContent: "center",
+                      borderRadius: 6, transition: "all 0.15s ease", flexShrink: 0,
+                    }}
+                    className="hover:bg-[var(--color-surface-2)] active:scale-95"
+                    title="Reset filters"
+                    aria-label="Reset filters"
+                  >
+                    <FilterX size={14} />
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -370,12 +399,12 @@ export default function ProductionSummaryPage() {
             <>
               {/* กล่องกราฟ (ปรับความHeightเป็น 500px) */}
               <div className="print-chart-box" style={{ height: '500px', width: '100%' }}>
-                <ProductionSummaryChart data={data} title={chartTitle} showAvgLine={committed.preset === 'full-year' || committed.preset === 'ytd' || committed.preset === 'custom' || committed.preset === 'week'} />
+                <ProductionSummaryChart data={data} title={chartTitle} showAvgLine={committed.preset === 'full-year' || committed.preset === 'ytd' || committed.preset === 'week'} />
               </div>
 
               {/* กล่องตาราง (ใส่ class print-table-box) */}
               <div className="print-table-box shrink-0">
-                <ProductionSummaryTable data={data} tab={committed.preset === 'week' ? 'week' : committed.preset === 'month' ? 'month' : committed.preset === 'day' ? 'day' : 'year'} />
+                <ProductionSummaryTable data={data} tab={committed.preset === 'week' ? 'week' : (committed.preset === 'month' || committed.preset === 'custom') ? 'month' : committed.preset === 'day' ? 'day' : 'year'} />
               </div>
             </>
           )}

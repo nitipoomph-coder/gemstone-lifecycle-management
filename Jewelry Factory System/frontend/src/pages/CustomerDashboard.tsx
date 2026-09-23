@@ -22,7 +22,7 @@ const YEAR_COLORS = ['var(--color-chart-1)', 'var(--color-chart-2)', 'var(--colo
 export default function CustomerDashboard({ metric: propMetric = 'amount' }: { metric?: Metric }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const metric = (searchParams.get('metric') as Metric) || propMetric;
-  const { availableYears, refreshCounter, setIsRefreshing } = useOutletContext<any>();
+  const { availableYears, refreshCounter, setIsRefreshing, setIsChildLoading } = useOutletContext<any>();
   const [custData, setCustData] = useState<CustomerSummaryRow[]>([]);
 
   const {
@@ -81,33 +81,37 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
     if (!availableYears || availableYears.length === 0) {
       return;
     }
-    const loadTimer = window.setTimeout(() => {
-      setLoading(true);
-      const isWeekMode = periodSetup.committed.preset === 'week';
-      const isDayMode = periodSetup.committed.preset === 'day';
-      const isFilteredMonths = periodSetup.committed.selectedMonths.length > 0 && periodSetup.committed.selectedMonths.length < 12;
+    setLoading(true);
+    setCustData([]);
+    if (setIsChildLoading) setIsChildLoading(true);
 
-      fetchCustomerSummary({
-        years: availableYears,
-        months: isFilteredMonths ? periodSetup.committed.selectedMonths.map(String) : undefined,
-        startDate: isDayMode ? periodSetup.committed.dateFrom : undefined,
-        endDate: isDayMode ? periodSetup.committed.dateTo : undefined,
-        wStart: isWeekMode ? periodSetup.committed.weekFrom : undefined,
-        wEnd: isWeekMode ? periodSetup.committed.weekTo : undefined,
-        dateField: periodSetup.committed.dateField
+    const minDelay = new Promise((resolve) => setTimeout(resolve, 500));
+    const isWeekMode = periodSetup.committed.preset === 'week';
+    const isDayMode = periodSetup.committed.preset === 'day';
+    const isFilteredMonths = periodSetup.committed.selectedMonths.length > 0 && periodSetup.committed.selectedMonths.length < 12;
+
+    const fetchWork = fetchCustomerSummary({
+      years: availableYears,
+      months: isFilteredMonths ? periodSetup.committed.selectedMonths.map(String) : undefined,
+      startDate: isDayMode ? periodSetup.committed.dateFrom : undefined,
+      endDate: isDayMode ? periodSetup.committed.dateTo : undefined,
+      wStart: isWeekMode ? periodSetup.committed.weekFrom : undefined,
+      wEnd: isWeekMode ? periodSetup.committed.weekTo : undefined,
+      dateField: periodSetup.committed.dateField
+    });
+
+    Promise.all([fetchWork, minDelay])
+      .then(([data]) => {
+        setCustData(data as CustomerSummaryRow[]);
       })
-        .then(data => {
-          setCustData(data as CustomerSummaryRow[]);
-          setLoading(false);
-          if (setIsRefreshing) setIsRefreshing(false);
-        })
-        .catch(err => {
-          console.error('Error fetching customer summary:', err);
-          setLoading(false);
-          if (setIsRefreshing) setIsRefreshing(false);
-        });
-    }, 0);
-    return () => window.clearTimeout(loadTimer);
+      .catch((err) => {
+        console.error('Error fetching customer summary:', err);
+      })
+      .finally(() => {
+        setLoading(false);
+        if (setIsRefreshing) setIsRefreshing(false);
+        if (setIsChildLoading) setIsChildLoading(false);
+      });
   }, [availableYears, refreshCounter, periodSetup.committed]);
 
   // Keep groups in ALL_GROUPS order for consistent colors
@@ -235,10 +239,17 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
                   type="button"
                   onClick={resetFilters}
                   style={{
-                    background: "none", border: "none", padding: "6px",
-                    color: "var(--color-text-secondary)", cursor: "pointer",
-                    display: "inline-flex", alignItems: "center", justifyContent: "center",
-                    borderRadius: 6, transition: "all 0.15s ease", flexShrink: 0,
+                    background: "none",
+                    border: "none",
+                    padding: "6px",
+                    color: "var(--color-text-secondary)",
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: 6,
+                    transition: "all 0.15s ease",
+                    flexShrink: 0,
                   }}
                   className="hover:bg-[var(--color-surface-2)] active:scale-95"
                   title="Reset filters"

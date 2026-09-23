@@ -368,10 +368,217 @@ router.get('/', async (req, res) => {
       finding: { pending: sf.findingPendingItems, done: sf.findingDoneItems, pendingQty: sf.findingPendingQty },
     };
 
+    // ── 10. EXECUTIVE COCKPIT DATA (Zero-Scroll Factory Overview) ──
+    const facilityParam = (req.query.facility || 'ALL').toUpperCase();
+    const activeFacility = ['FBE', 'CLL'].includes(facilityParam) ? facilityParam : 'ALL';
+
+    // Active WIP from OrdHD
+    const wipResult = await pool.request()
+      .input('year', sql.Int, selectedYear)
+      .query(`
+        SELECT 
+          COUNT(*) AS wipOrders,
+          SUM(ISNULL(SumOrdQty, 0)) AS wipPcs
+        FROM OrdHD
+        WHERE OrdStatus IN ('P','N') AND CloseStatus <> 'Y'
+          AND ((PONo IS NULL OR UPPER(PONo) NOT LIKE '%SAMPLE%') AND LEFT(OrdNo, 3) IN ('BBC','BBQ','BBD','BBI','BBF','BBP','BBT','BBX','BBK','BBR','BBL','BBS','BBE'))
+          AND (@year IS NULL OR YEAR(OrdDate) = @year)
+      `);
+    const wipData = wipResult.recordset[0] || { wipOrders: 0, wipPcs: 0 };
+
+    // Overdue Orders from OrdHD
+    const overdueResult = await pool.request()
+      .input('year', sql.Int, selectedYear)
+      .query(`
+        SELECT 
+          COUNT(*) AS overdueCount,
+          SUM(ISNULL(SumOrdQty, 0)) AS overduePcs
+        FROM OrdHD
+        WHERE DueDate < CAST(GETDATE() AS DATE) 
+          AND OrdStatus IN ('P','N') AND CloseStatus <> 'Y'
+          AND ((PONo IS NULL OR UPPER(PONo) NOT LIKE '%SAMPLE%') AND LEFT(OrdNo, 3) IN ('BBC','BBQ','BBD','BBI','BBF','BBP','BBT','BBX','BBK','BBR','BBL','BBS','BBE'))
+          AND (@year IS NULL OR YEAR(OrdDate) = @year)
+      `);
+    const overdueData = overdueResult.recordset[0] || { overdueCount: 0, overduePcs: 0 };
+
+    // 11 Departments Combined Output FBE vs CLL
+    const deptUnion = `
+      SELECT 'FL' AS Dept, 'Filing' AS DeptName, 1 AS Seq, ISNULL(ProFac, 'FBE') AS Facility, MONTH(DocuDate) AS Mo, ISNULL(SumSenQty, 0) AS Qty FROM FLSenHD WHERE (@year IS NULL OR YEAR(DocuDate) = @year)
+      UNION ALL SELECT 'GR', 'Grinding & Setting', 2, ISNULL(ProFac, 'FBE'), MONTH(DocuDate), ISNULL(SumSenQty, 0) FROM GRSenHD WHERE (@year IS NULL OR YEAR(DocuDate) = @year)
+      UNION ALL SELECT 'TB', 'Tumbling', 3, ISNULL(ProFac, 'FBE'), MONTH(DocuDate), ISNULL(SumSenQty, 0) FROM TBSenHD WHERE (@year IS NULL OR YEAR(DocuDate) = @year)
+      UNION ALL SELECT 'AS', 'Assembly', 4, ISNULL(ProFac, 'FBE'), MONTH(DocuDate), ISNULL(SumSenQty, 0) FROM ASSenHD WHERE (@year IS NULL OR YEAR(DocuDate) = @year)
+      UNION ALL SELECT 'LS', 'Laser', 5, ISNULL(ProFac, 'FBE'), MONTH(DocuDate), ISNULL(SumSenQty, 0) FROM LSSenHD WHERE (@year IS NULL OR YEAR(DocuDate) = @year)
+      UNION ALL SELECT 'LP', 'Lapping', 6, ISNULL(ProFac, 'FBE'), MONTH(DocuDate), ISNULL(SumSenQty, 0) FROM LPSenHD WHERE (@year IS NULL OR YEAR(DocuDate) = @year)
+      UNION ALL SELECT 'PL', 'Polishing', 7, ISNULL(ProFac, 'FBE'), MONTH(DocuDate), ISNULL(SumSenQty, 0) FROM PLSenHD WHERE (@year IS NULL OR YEAR(DocuDate) = @year)
+      UNION ALL SELECT 'EP', 'Epoxy', 8, ISNULL(ProFac, 'FBE'), MONTH(DocuDate), ISNULL(SumSenQty, 0) FROM EPSenHD WHERE (@year IS NULL OR YEAR(DocuDate) = @year)
+      UNION ALL SELECT 'CP', 'Copper Plating', 9, ISNULL(ProFac, 'FBE'), MONTH(DocuDate), ISNULL(SumSenQty, 0) FROM CPSenHD WHERE (@year IS NULL OR YEAR(DocuDate) = @year)
+      UNION ALL SELECT 'PT', 'Plating Finishing', 10, ISNULL(ProFac, 'FBE'), MONTH(DocuDate), ISNULL(SumSenQty, 0) FROM PTSenHD WHERE (@year IS NULL OR YEAR(DocuDate) = @year)
+      UNION ALL SELECT 'IQ', 'In-process QC', 11, ISNULL(ProFac, 'FBE'), MONTH(DocuDate), ISNULL(SumSenQty, 0) FROM IQSenHD WHERE (@year IS NULL OR YEAR(DocuDate) = @year)
+    `;
+
+    const deptResult = await pool.request()
+      .input('year', sql.Int, selectedYear)
+      .query(`
+        WITH RawData AS (${deptUnion})
+        SELECT 
+          Dept, DeptName, Seq,
+          SUM(CASE WHEN Facility = 'FBE' THEN Qty ELSE 0 END) AS FbePcs,
+          SUM(CASE WHEN Facility = 'CLL' THEN Qty ELSE 0 END) AS CllPcs,
+          SUM(Qty) AS TotalPcs
+        FROM RawData
+        GROUP BY Dept, DeptName, Seq
+        ORDER BY Seq
+      `);
+
+    const timelineResult = await pool.request()
+      .input('year', sql.Int, selectedYear)
+      .query(`
+        WITH RawData AS (${deptUnion})
+        SELECT 
+          Mo AS MonthNum,
+          SUM(CASE WHEN Facility = 'FBE' THEN Qty ELSE 0 END) AS FbePcs,
+          SUM(CASE WHEN Facility = 'CLL' THEN Qty ELSE 0 END) AS CllPcs,
+          SUM(Qty) AS TotalPcs
+        FROM RawData
+        GROUP BY Mo
+        ORDER BY Mo
+      `);
+
+    // Working days for average run rate
+    const holidayRes = await pool.request()
+      .input('year', sql.Int, selectedYear || activeYear)
+      .query(`
+        SELECT COUNT(DISTINCT CAST(HolDate AS DATE)) AS HolidayCount 
+        FROM GMHoliday 
+        WHERE YEAR(HolDate) = @year AND DATENAME(dw, HolDate) <> 'Sunday'
+      `);
+    const holidays = holidayRes.recordset[0]?.HolidayCount || 0;
+    const workdays = Math.max(1, 313 - holidays); // ~313 non-Sunday days per year
+
+    // Pipeline Stage WIP
+    const pipelineWipResult = await pool.request()
+      .input('year', sql.Int, selectedYear)
+      .query(`
+        SELECT 
+          SUM(CASE WHEN ISNULL(d.CastQty,0) = 0 THEN ISNULL(d.ItemQty,0) ELSE 0 END) AS WaxPcs,
+          SUM(CASE WHEN d.CastQty > 0 AND ISNULL(d.GrindQty,0) = 0 THEN ISNULL(d.ItemQty,0) ELSE 0 END) AS CastPcs,
+          SUM(CASE WHEN d.GrindQty > 0 AND ISNULL(d.PolishQty,0) = 0 THEN ISNULL(d.ItemQty,0) ELSE 0 END) AS GrindPcs,
+          SUM(CASE WHEN d.PolishQty > 0 AND ISNULL(d.PlateQty,0) = 0 THEN ISNULL(d.ItemQty,0) ELSE 0 END) AS PolishPcs,
+          SUM(CASE WHEN d.PlateQty > 0 AND ISNULL(d.QCQty,0) = 0 THEN ISNULL(d.ItemQty,0) ELSE 0 END) AS PlatePcs,
+          SUM(CASE WHEN d.QCQty > 0 AND ISNULL(d.PackQty,0) = 0 THEN ISNULL(d.ItemQty,0) ELSE 0 END) AS QCPcs,
+          SUM(CASE WHEN d.PackQty > 0 THEN ISNULL(d.ItemQty,0) ELSE 0 END) AS PackPcs
+        FROM OrdDT d
+        JOIN OrdHD h ON d.OrdNo = h.OrdNo
+        WHERE h.OrdStatus IN ('P','N') AND h.CloseStatus <> 'Y'
+          AND ((h.PONo IS NULL OR UPPER(h.PONo) NOT LIKE '%SAMPLE%') AND LEFT(h.OrdNo, 3) IN ('BBC','BBQ','BBD','BBI','BBF','BBP','BBT','BBX','BBK','BBR','BBL','BBS','BBE'))
+          AND (@year IS NULL OR YEAR(h.OrdDate) = @year)
+      `);
+    const pw = pipelineWipResult.recordset[0] || {};
+
+    // Aggregates for KPI Strip
+    const fbeTotalPcs = deptResult.recordset.reduce((acc, r) => acc + (r.FbePcs || 0), 0);
+    const cllTotalPcs = deptResult.recordset.reduce((acc, r) => acc + (r.CllPcs || 0), 0);
+    const grandFactoryPcs = fbeTotalPcs + cllTotalPcs;
+    const fbeSharePct = grandFactoryPcs > 0 ? Math.round((fbeTotalPcs / grandFactoryPcs) * 100) : 0;
+    const cllSharePct = grandFactoryPcs > 0 ? (100 - fbeSharePct) : 0;
+    const dailyAvgOutput = Math.round(grandFactoryPcs / workdays);
+    const onTimeRate = s.wip > 0 ? Math.max(0, Math.round(((s.wip - overdueData.overdueCount) / s.wip) * 100)) : 100;
+
+    // Monthly Timeline Array (1..12)
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const timeline = monthNames.map((mName, idx) => {
+      const mNum = idx + 1;
+      const found = timelineResult.recordset.find(r => r.MonthNum === mNum);
+      const fbe = found?.FbePcs || 0;
+      const cll = found?.CllPcs || 0;
+      const total = fbe + cll;
+      return {
+        month: mNum,
+        label: mName,
+        fbe,
+        cll,
+        total,
+        dailyAvg: Math.round(total / 26),
+      };
+    });
+
+    // Pipeline Stages with bottleneck detection
+    const pipelineStages = [
+      { id: 'wax', name: 'Wax & Prep', pcs: pw.WaxPcs || 0 },
+      { id: 'cast', name: 'Casting', pcs: pw.CastPcs || 0 },
+      { id: 'grind', name: 'Filing & Grind', pcs: pw.GrindPcs || 0 },
+      { id: 'polish', name: 'Pre-Polishing', pcs: pw.PolishPcs || 0 },
+      { id: 'plate', name: 'Plating Process', pcs: pw.PlatePcs || 0 },
+      { id: 'qc', name: 'In-line QC', pcs: pw.QCPcs || 0 },
+      { id: 'pack', name: 'Final Packing', pcs: pw.PackPcs || 0 },
+    ];
+    const maxStagePcs = Math.max(...pipelineStages.map(s => s.pcs), 1);
+    const pipeline = pipelineStages.map(stg => ({
+      ...stg,
+      isBottleneck: stg.pcs === maxStagePcs && stg.pcs > 0,
+      sharePct: Math.round((stg.pcs / (wipData.wipPcs || 1)) * 100),
+    }));
+
+    // Department matrix with calculated daily averages and share
+    const departments = deptResult.recordset.map(d => ({
+      code: d.Dept,
+      name: d.DeptName,
+      seq: d.Seq,
+      fbePcs: d.FbePcs || 0,
+      cllPcs: d.CllPcs || 0,
+      totalPcs: d.TotalPcs || 0,
+      sharePct: grandFactoryPcs > 0 ? Math.round((d.TotalPcs / grandFactoryPcs) * 100) : 0,
+      dailyAvg: Math.round((d.TotalPcs || 0) / workdays),
+    }));
+
+    // Customer volume share (Top 5)
+    const customerShare = (topCustomers || []).slice(0, 5).map(c => ({
+      code: c.code,
+      name: c.name,
+      orders: c.orders,
+      qty: c.qty,
+      sharePct: wipData.wipPcs > 0 ? Math.min(100, Math.round((c.qty / wipData.wipPcs) * 100)) : 0,
+    }));
+
+    // Top 5 critical overdue orders
+    const topOverdueOrders = (delayOrders || []).slice(0, 5).map(o => ({
+      ordNo: o.ordNo,
+      poNo: o.poNo,
+      custCode: o.custCode,
+      dueDate: o.dueDate,
+      delayDays: o.delayDays,
+      qty: o.qty,
+      facility: o.ordNo.startsWith('L') ? 'CLL' : 'FBE',
+    }));
+
+    // Executive Cockpit Bundle
+    const cockpit = {
+      facility: activeFacility,
+      kpi: {
+        totalWipPcs: wipData.wipPcs || 0,
+        totalWipOrders: wipData.wipOrders || 0,
+        fbeOutputPcs: fbeTotalPcs,
+        fbeShare: fbeSharePct,
+        cllOutputPcs: cllTotalPcs,
+        cllShare: cllSharePct,
+        dailyRunRate: dailyAvgOutput,
+        activeWorkdays: workdays,
+        overdueCount: overdueData.overdueCount || 0,
+        overduePcs: overdueData.overduePcs || 0,
+        onTimeRate,
+      },
+      timeline,
+      pipeline,
+      departments,
+      customerShare,
+      overdueOrders: topOverdueOrders,
+    };
+
     // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     // RESPONSE
     // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     res.json({
+      cockpit,
       statCards,
       orderTrend,
       processDistribution,

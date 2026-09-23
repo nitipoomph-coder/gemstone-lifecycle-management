@@ -73,7 +73,78 @@ export interface StoneFindingSummary {
   finding: { pending: number; done: number; pendingQty: number };
 }
 
+export interface CockpitKpi {
+  totalWipPcs: number;
+  totalWipOrders: number;
+  fbeOutputPcs: number;
+  fbeShare: number;
+  cllOutputPcs: number;
+  cllShare: number;
+  dailyRunRate: number;
+  activeWorkdays: number;
+  overdueCount: number;
+  overduePcs: number;
+  onTimeRate: number;
+}
+
+export interface CockpitTimelinePoint {
+  month: number;
+  label: string;
+  fbe: number;
+  cll: number;
+  total: number;
+  dailyAvg: number;
+}
+
+export interface CockpitPipelineStage {
+  id: string;
+  name: string;
+  pcs: number;
+  isBottleneck: boolean;
+  sharePct: number;
+}
+
+export interface CockpitDepartment {
+  code: string;
+  name: string;
+  seq: number;
+  fbePcs: number;
+  cllPcs: number;
+  totalPcs: number;
+  sharePct: number;
+  dailyAvg: number;
+}
+
+export interface CockpitCustomerShare {
+  code: string;
+  name: string;
+  orders: number;
+  qty: number;
+  sharePct: number;
+}
+
+export interface CockpitOverdueOrder {
+  ordNo: string;
+  poNo: string;
+  custCode: string;
+  dueDate: string;
+  delayDays: number;
+  qty: number;
+  facility: 'FBE' | 'CLL';
+}
+
+export interface CockpitBundle {
+  facility: 'ALL' | 'FBE' | 'CLL';
+  kpi: CockpitKpi;
+  timeline: CockpitTimelinePoint[];
+  pipeline: CockpitPipelineStage[];
+  departments: CockpitDepartment[];
+  customerShare: CockpitCustomerShare[];
+  overdueOrders: CockpitOverdueOrder[];
+}
+
 export interface DashboardData {
+  cockpit?: CockpitBundle;
   statCards: StatCard[];
   orderTrend: TrendPoint[];
   processDistribution: ProcessDistribution;
@@ -87,8 +158,15 @@ export interface DashboardData {
 
 import { BASE_URL } from './poTrackerAPI';
 
-export const fetchDashboardData = async (year?: number | string): Promise<DashboardData> => {
-  const url = year ? `${BASE_URL}/dashboard?year=${year}` : `${BASE_URL}/dashboard`;
+export const fetchDashboardData = async (
+  year?: number | string,
+  facility?: 'ALL' | 'FBE' | 'CLL'
+): Promise<DashboardData> => {
+  const params = new URLSearchParams();
+  if (year && year !== 'all') params.set('year', String(year));
+  if (facility) params.set('facility', facility);
+  const qStr = params.toString() ? `?${params.toString()}` : '';
+  const url = `${BASE_URL}/dashboard${qStr}`;
   const res = await fetchWithAuth(url);
   if (!res.ok) throw new Error(`Dashboard API error: ${res.status}`);
   return await res.json();

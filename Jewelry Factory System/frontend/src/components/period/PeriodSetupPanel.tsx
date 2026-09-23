@@ -194,7 +194,15 @@ export default function PeriodSetupPanel({ periodSetup, availableYears, isOpen, 
                           } else if (preset.id === 'week') {
                             periodSetup.actions.setDraftField({ preset: 'week' });
                           } else if (preset.id === 'day') {
-                            periodSetup.actions.setDraftField({ preset: 'day' });
+                            const today = new Date().toISOString().split('T')[0];
+                            const dTo = new Date();
+                            dTo.setDate(dTo.getDate() + 14);
+                            const defaultTo = dTo.toISOString().split('T')[0];
+                            periodSetup.actions.setDraftField({
+                              preset: 'day',
+                              dateFrom: periodSetup.draft.dateFrom || today,
+                              dateTo: periodSetup.draft.dateTo || defaultTo
+                            });
                           }
                         }}
                         className={`rounded-lg border px-3 py-2 text-left text-xs font-black transition-colors ${active ? "border-[var(--color-brand-300)] bg-[color-mix(in_srgb,var(--color-brand-500)_9%,var(--color-surface-0))] text-[var(--color-brand-600)]" : "border-[var(--color-border-light)] bg-[var(--color-surface-0)] text-[var(--color-text-primary)] hover:border-[var(--color-brand-400)] hover:text-[var(--color-brand-600)]"}`}

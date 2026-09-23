@@ -6,7 +6,7 @@ import CustomSelect from '../components/ui/CustomSelect';
 import { RefreshCw, AlertTriangle, Filter, X, Layers } from 'lucide-react';
 import { usePOTrackerAdvanced } from '../hooks/usePOTrackerAdvanced';
 import { useTopbarActions } from '../contexts/TopbarActionContext';
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function POTrackerAdvanced() {
   const {
@@ -57,19 +57,62 @@ export default function POTrackerAdvanced() {
   } = usePOTrackerAdvanced();
 
   const { setTopbarActions } = useTopbarActions();
+  const [isSpinning, setIsSpinning] = useState(false);
+
+  const handleReload = async () => {
+    setIsSpinning(true);
+    const minDelay = new Promise((resolve) => setTimeout(resolve, 600));
+    try {
+      load();
+      await minDelay;
+    } finally {
+      setIsSpinning(false);
+    }
+  };
+
+  const isRefreshing = isSpinning || loading;
+
   useEffect(() => {
     setTopbarActions(
-      <button onClick={load} style={{ width:36, height:36, borderRadius:8, border:'none', background:'transparent', color:'var(--color-text-secondary)', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', transition:'all 0.2s' }}
-        onMouseEnter={e => { e.currentTarget.style.background='var(--color-surface-2)'; e.currentTarget.style.color='var(--color-brand-600)'; }}
-        onMouseLeave={e => { e.currentTarget.style.background='transparent'; e.currentTarget.style.color='var(--color-text-secondary)'; }}
+      <button
+        onClick={handleReload}
+        disabled={isRefreshing}
+        style={{
+          width: 36,
+          height: 36,
+          borderRadius: 8,
+          border: 'none',
+          background: 'transparent',
+          color: 'var(--color-text-secondary)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: isRefreshing ? 'wait' : 'pointer',
+          transition: 'all 0.2s',
+          opacity: isRefreshing ? 0.8 : 1,
+        }}
+        onMouseEnter={(e) => {
+          if (!isRefreshing) {
+            e.currentTarget.style.background = 'var(--color-surface-2)';
+            e.currentTarget.style.color = 'var(--color-brand-600)';
+          }
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = 'transparent';
+          e.currentTarget.style.color = 'var(--color-text-secondary)';
+        }}
         title="Refresh Data"
         aria-label="Refresh Data"
       >
-        <RefreshCw size={18} strokeWidth={1.75} className={loading ? 'animate-spin text-[var(--color-brand-600)]' : ''} />
+        <RefreshCw
+          size={18}
+          strokeWidth={1.75}
+          className={isRefreshing ? 'animate-spin text-[var(--color-brand-600)]' : ''}
+        />
       </button>
     );
     return () => setTopbarActions(null);
-  }, [setTopbarActions, load, loading]);
+  }, [setTopbarActions, isRefreshing]);
 
   return (
     <div className="app-page font-body">

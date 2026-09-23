@@ -138,20 +138,62 @@ export default function ProductionSummaryPage() {
 
   const { setTopbarActions } = useTopbarActions();
   const handleShowRef = useRef<() => void>(() => {});
+  const [isSpinning, setIsSpinning] = useState(false);
+
+  const handleReload = async () => {
+    setIsSpinning(true);
+    const minDelay = new Promise((resolve) => setTimeout(resolve, 600));
+    try {
+      handleShowRef.current();
+      await minDelay;
+    } finally {
+      setIsSpinning(false);
+    }
+  };
+
+  const isRefreshing = isSpinning || loading;
 
   useEffect(() => {
     setTopbarActions(
-      <button onClick={() => void handleShowRef.current()} style={{ width:36, height:36, borderRadius:8, border:'none', background:'transparent', color:'var(--color-text-secondary)', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', transition:'all 0.2s' }}
-        onMouseEnter={e => { e.currentTarget.style.background='var(--color-surface-2)'; e.currentTarget.style.color='var(--color-brand-600)'; }}
-        onMouseLeave={e => { e.currentTarget.style.background='transparent'; e.currentTarget.style.color='var(--color-text-secondary)'; }}
+      <button
+        onClick={handleReload}
+        disabled={isRefreshing}
+        style={{
+          width: 36,
+          height: 36,
+          borderRadius: 8,
+          border: 'none',
+          background: 'transparent',
+          color: 'var(--color-text-secondary)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: isRefreshing ? 'wait' : 'pointer',
+          transition: 'all 0.2s',
+          opacity: isRefreshing ? 0.8 : 1,
+        }}
+        onMouseEnter={(e) => {
+          if (!isRefreshing) {
+            e.currentTarget.style.background = 'var(--color-surface-2)';
+            e.currentTarget.style.color = 'var(--color-brand-600)';
+          }
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = 'transparent';
+          e.currentTarget.style.color = 'var(--color-text-secondary)';
+        }}
         title="Reload data"
         aria-label="Reload data"
       >
-        <RefreshCw size={18} strokeWidth={1.75} className={loading ? 'animate-spin text-[var(--color-brand-600)]' : ''} />
+        <RefreshCw
+          size={18}
+          strokeWidth={1.75}
+          className={isRefreshing ? 'animate-spin text-[var(--color-brand-600)]' : ''}
+        />
       </button>
     );
     return () => setTopbarActions(null);
-  }, [setTopbarActions, loading]);
+  }, [setTopbarActions, isRefreshing]);
 
   const handleShow = async () => {
     setLoading(true);
@@ -377,10 +419,17 @@ export default function ProductionSummaryPage() {
                     type="button"
                     onClick={handleResetFilters}
                     style={{
-                      background: "none", border: "none", padding: "6px",
-                      color: "var(--color-text-secondary)", cursor: "pointer",
-                      display: "inline-flex", alignItems: "center", justifyContent: "center",
-                      borderRadius: 6, transition: "all 0.15s ease", flexShrink: 0,
+                      background: "none",
+                      border: "none",
+                      padding: "6px",
+                      color: "var(--color-text-secondary)",
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      borderRadius: 6,
+                      transition: "all 0.15s ease",
+                      flexShrink: 0,
                     }}
                     className="hover:bg-[var(--color-surface-2)] active:scale-95"
                     title="Reset filters"

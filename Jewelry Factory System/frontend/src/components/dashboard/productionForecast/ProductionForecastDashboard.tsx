@@ -39,15 +39,15 @@ export function ProductionForecastDashboard() {
   }, []);
 
   const periodSetup = usePeriodSetup({
-    presets: ['ytd', 'custom', 'week', 'day'],
+    presets: ['ytd', 'full-year', 'month', 'custom', 'week', 'day'],
     allowWeekRange: true,
     compareSlots: 1,
-    syncToUrl: false,
+    syncToUrl: true,
     availableYears: yearsStr,
     initialValues: {
-      preset: 'day',
-      dateFrom: todayStr,
-      dateTo: defaultToDateStr,
+      preset: 'full-year',
+      monthFrom: 1,
+      monthTo: 12,
       baseYear: String(new Date().getFullYear()),
     }
   });
@@ -57,8 +57,8 @@ export function ProductionForecastDashboard() {
   const MONTH_NAMES = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
 
   // Derive viewMode and date range from committed period
-  let viewModeType: 'day' | 'week' | 'month' | 'year' = 'day';
-  let apiViewMode: 'day' | 'week' | 'month' = 'day';
+  let viewModeType: 'day' | 'week' | 'month' | 'year' = 'year';
+  let apiViewMode: 'day' | 'week' | 'month' = 'month';
   let startStr = todayStr;
   let endStr = defaultToDateStr;
   const targetYear = Number(committed.baseYear || new Date().getFullYear());
@@ -92,10 +92,9 @@ export function ProductionForecastDashboard() {
   }
 
   const isFiltered = group !== 'All Customer' || 
-    committed.preset !== 'day' || 
-    committed.dateFrom !== todayStr || 
-    committed.dateTo !== defaultToDateStr ||
-    committed.baseYear !== String(new Date().getFullYear());
+    committed.preset !== 'full-year' || 
+    committed.baseYear !== String(new Date().getFullYear()) ||
+    Boolean(committed.compareActive1);
 
   const handleResetFilters = () => {
     setGroup('All Customer');
@@ -221,19 +220,64 @@ export function ProductionForecastDashboard() {
   }, [group, committed]);
 
   const { setTopbarActions } = useTopbarActions();
+  const [isSpinning, setIsSpinning] = useState(false);
+
+  const handleReload = async () => {
+    setIsSpinning(true);
+    setData([]);
+    setLoading(true);
+    const minDelay = new Promise((resolve) => setTimeout(resolve, 600));
+    try {
+      fetchDataRef.current();
+      await minDelay;
+    } finally {
+      setIsSpinning(false);
+    }
+  };
+
+  const isRefreshing = isSpinning || loading;
+
   useEffect(() => {
     setTopbarActions(
-      <button onClick={() => void fetchDataRef.current()} style={{ width:36, height:36, borderRadius:8, border:'none', background:'transparent', color:'var(--color-text-secondary)', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', transition:'all 0.2s' }}
-        onMouseEnter={e => { e.currentTarget.style.background='var(--color-surface-2)'; e.currentTarget.style.color='var(--color-brand-600)'; }}
-        onMouseLeave={e => { e.currentTarget.style.background='transparent'; e.currentTarget.style.color='var(--color-text-secondary)'; }}
+      <button
+        onClick={handleReload}
+        disabled={isRefreshing}
+        style={{
+          width: 36,
+          height: 36,
+          borderRadius: 8,
+          border: 'none',
+          background: 'transparent',
+          color: 'var(--color-text-secondary)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: isRefreshing ? 'wait' : 'pointer',
+          transition: 'all 0.2s',
+          opacity: isRefreshing ? 0.8 : 1,
+        }}
+        onMouseEnter={(e) => {
+          if (!isRefreshing) {
+            e.currentTarget.style.background = 'var(--color-surface-2)';
+            e.currentTarget.style.color = 'var(--color-brand-600)';
+          }
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = 'transparent';
+          e.currentTarget.style.color = 'var(--color-text-secondary)';
+        }}
         title="Refresh Data"
         aria-label="Refresh Data"
       >
-        <RefreshCw size={18} strokeWidth={1.75} className={loading ? 'animate-spin text-[var(--color-brand-600)]' : ''} />
+        <RefreshCw
+          size={18}
+          strokeWidth={1.75}
+          className={isRefreshing ? 'animate-spin text-[var(--color-brand-600)]' : ''}
+        />
       </button>
     );
     return () => setTopbarActions(null);
-  }, [setTopbarActions, loading]);
+  }, [setTopbarActions, isRefreshing]);
 
   return (
     <div className="erp-page-container flex flex-col h-full bg-[var(--color-ui-canvas)]">
@@ -270,10 +314,17 @@ export function ProductionForecastDashboard() {
                     type="button"
                     onClick={handleResetFilters}
                     style={{
-                      background: "none", border: "none", padding: "6px",
-                      color: "var(--color-text-secondary)", cursor: "pointer",
-                      display: "inline-flex", alignItems: "center", justifyContent: "center",
-                      borderRadius: 6, transition: "all 0.15s ease", flexShrink: 0,
+                      background: "none",
+                      border: "none",
+                      padding: "6px",
+                      color: "var(--color-text-secondary)",
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      borderRadius: 6,
+                      transition: "all 0.15s ease",
+                      flexShrink: 0,
                     }}
                     className="hover:bg-[var(--color-surface-2)] active:scale-95"
                     title="Reset filters"

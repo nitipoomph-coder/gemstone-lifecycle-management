@@ -22,17 +22,16 @@ export const PERIOD_PRESETS: Array<{ id: PeriodPreset; label: string }> = [
 export interface ProductTypeOption {
   value: string;
   label: string;
-  fullLabel: string;
   description: string;
 }
 
 export const PRODUCT_TYPE_OPTIONS: ProductTypeOption[] = [
-  { value: 'ALL', label: 'All', fullLabel: 'All Product Types', description: 'All products' },
-  { value: 'BBS', label: 'BBS', fullLabel: 'Bracelet & Bangle', description: 'Bracelet & Bangle' },
-  { value: 'BES', label: 'BES', fullLabel: 'Earring', description: 'Earring' },
-  { value: 'BNS', label: 'BNS', fullLabel: 'Necklace', description: 'Necklace' },
-  { value: 'BRS', label: 'BRS', fullLabel: 'Ring', description: 'Ring' },
-  { value: 'OTH', label: 'Others', fullLabel: 'Others', description: 'Other jewelry' },
+  { value: 'ALL', label: 'All', description: 'All products' },
+  { value: 'BBS', label: 'BBS', description: 'Bracelet & Bangle' },
+  { value: 'BES', label: 'BES', description: 'Earring' },
+  { value: 'BNS', label: 'BNS', description: 'Necklace' },
+  { value: 'BRS', label: 'BRS', description: 'Ring' },
+  { value: 'OTH', label: 'Others', description: 'Other jewelry' },
 ];
 
 export type PerspectiveMode = 'combined' | 'compare';
@@ -137,7 +136,7 @@ export function useTopOrdersGalleryData() {
   const selectedMonthNumbers = useMemo(() => {
     return monthRange(periodSetup.committed.monthFrom, periodSetup.committed.monthTo);
   }, [periodSetup.committed.monthFrom, periodSetup.committed.monthTo]);
-  
+
   const selectedPeriodLabel = monthRangeLabel(periodSetup.committed.monthFrom, periodSetup.committed.monthTo);
   const selectedGroupsKey = selGroups.join(",");
 
@@ -206,7 +205,7 @@ export function useTopOrdersGalleryData() {
       setFilterLoading(true);
     }
     setLoading(true);
-    
+
     const baseYr = periodSetup.committed.baseYear;
     const compYr1 = periodSetup.committed.compareActive1 ? periodSetup.committed.compareYear1 : undefined;
     const compYr2 = periodSetup.committed.compareActive2 && periodSetup.committed.compareYear2 !== 'none' ? periodSetup.committed.compareYear2 : undefined;
@@ -246,9 +245,9 @@ export function useTopOrdersGalleryData() {
 
     const portfolioFetch = productType !== 'ALL'
       ? fetchTopItemsGallery({
-          ...commonParams,
-          productType: 'ALL',
-        })
+        ...commonParams,
+        productType: 'ALL',
+      })
       : null;
 
     Promise.all([mainFetch, portfolioFetch])
@@ -301,7 +300,7 @@ export function useTopOrdersGalleryData() {
   const swapYears = () => {
     if (!periodSetup.committed.compareActive1 || !periodSetup.committed.compareYear1 || periodSetup.committed.compareYear1 === periodSetup.committed.baseYear) return;
     startFilterTransition();
-    
+
     periodSetup.actions.setDraftField({
       baseYear: periodSetup.committed.compareYear1,
       compareYear1: periodSetup.committed.baseYear,
@@ -318,7 +317,7 @@ export function useTopOrdersGalleryData() {
     setProductType('ALL');
     setSearchDraft('');
     setSearchQuery('');
-    
+
     periodSetup.actions.reset();
     periodSetup.actions.applyChanges({
       preset: 'full-year',
@@ -331,7 +330,7 @@ export function useTopOrdersGalleryData() {
       compareYear2: 'none',
       dateField: 'ordDate',
     });
-    
+
     setSelGroups(ACTIVE_GROUP_IDS);
     setRefreshVersion((v) => v + 1);
 

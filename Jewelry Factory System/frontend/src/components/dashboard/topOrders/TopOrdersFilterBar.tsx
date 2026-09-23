@@ -280,12 +280,7 @@ export function TopOrdersFilterBar({
                         onChange={() => {}}
                         style={{ accentColor: 'var(--color-brand-600)', cursor: 'pointer', margin: 0 }}
                       />
-                      <span>
-                        {opt.label}{' '}
-                        <span style={{ fontSize: '0.72rem', color: on ? 'var(--color-brand-700)' : 'var(--color-text-tertiary)', fontWeight: 600 }}>
-                          ({opt.fullLabel})
-                        </span>
-                      </span>
+                      <span>{opt.label}</span>
                     </div>
                   </button>
                 );
@@ -474,26 +469,23 @@ export function TopOrdersFilterBar({
           type="button"
           onClick={onReset}
           style={{
-            background: "var(--color-surface-0)",
-            border: "1px solid var(--color-border-light)",
-            padding: "5px 10px",
+            background: "none",
+            border: "none",
+            padding: "6px",
             color: "var(--color-text-secondary)",
             cursor: "pointer",
             display: "inline-flex",
             alignItems: "center",
-            gap: 5,
+            justifyContent: "center",
             borderRadius: 6,
             transition: "all 0.15s ease",
             flexShrink: 0,
-            fontSize: 'var(--erp-text-meta)',
-            fontWeight: 800,
           }}
-          className="hover:bg-[var(--color-surface-2)] hover:text-[var(--color-danger-600)] hover:border-[var(--color-danger-300)] active:scale-95"
-          title="Reset all filters to default"
-          aria-label="Reset all filters"
+          className="hover:bg-[var(--color-surface-2)] active:scale-95"
+          title="Reset filters"
+          aria-label="Reset filters"
         >
-          <FilterX size={13} style={{ color: 'var(--color-danger-500)' }} />
-          <span>Reset</span>
+          <FilterX size={14} />
         </button>
       )}
     </div>

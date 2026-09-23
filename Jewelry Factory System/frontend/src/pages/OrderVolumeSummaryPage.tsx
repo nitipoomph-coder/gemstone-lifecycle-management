@@ -113,10 +113,17 @@ export default function OrderVolumeSummaryPage() {
                   type="button"
                   onClick={resetFilters}
                   style={{
-                    background: "none", border: "none", padding: "6px",
-                    color: "var(--color-text-secondary)", cursor: "pointer",
-                    display: "inline-flex", alignItems: "center", justifyContent: "center",
-                    borderRadius: 6, transition: "all 0.15s ease", flexShrink: 0,
+                    background: "none",
+                    border: "none",
+                    padding: "6px",
+                    color: "var(--color-text-secondary)",
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: 6,
+                    transition: "all 0.15s ease",
+                    flexShrink: 0,
                   }}
                   className="hover:bg-[var(--color-surface-2)] active:scale-95"
                   title="Reset filters"

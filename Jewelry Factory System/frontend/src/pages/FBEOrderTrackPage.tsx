@@ -86,19 +86,64 @@ export default function FBEOrderTrackPage() {
     : null;
 
   const { setTopbarActions } = useTopbarActions();
+  const [isSpinning, setIsSpinning] = React.useState(false);
+
+  const handleReload = async () => {
+    setIsSpinning(true);
+    const minDelay = new Promise((resolve) => setTimeout(resolve, 600));
+    try {
+      if (ordNoRef.current) {
+        await executeSearch(ordNoRef.current, ordLineNoRef.current);
+      }
+      await minDelay;
+    } finally {
+      setIsSpinning(false);
+    }
+  };
+
+  const isRefreshing = isSpinning || loading;
+
   React.useEffect(() => {
     setTopbarActions(
-      <button onClick={() => executeSearch(ordNoRef.current, ordLineNoRef.current)} style={{ width:36, height:36, borderRadius:8, border:'none', background:'transparent', color:'var(--color-text-secondary)', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', transition:'all 0.2s' }}
-        onMouseEnter={e => { e.currentTarget.style.background='var(--color-surface-2)'; e.currentTarget.style.color='var(--color-brand-600)'; }}
-        onMouseLeave={e => { e.currentTarget.style.background='transparent'; e.currentTarget.style.color='var(--color-text-secondary)'; }}
+      <button
+        onClick={handleReload}
+        disabled={isRefreshing}
+        style={{
+          width: 36,
+          height: 36,
+          borderRadius: 8,
+          border: 'none',
+          background: 'transparent',
+          color: 'var(--color-text-secondary)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: isRefreshing ? 'wait' : 'pointer',
+          transition: 'all 0.2s',
+          opacity: isRefreshing ? 0.8 : 1,
+        }}
+        onMouseEnter={(e) => {
+          if (!isRefreshing) {
+            e.currentTarget.style.background = 'var(--color-surface-2)';
+            e.currentTarget.style.color = 'var(--color-brand-600)';
+          }
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = 'transparent';
+          e.currentTarget.style.color = 'var(--color-text-secondary)';
+        }}
         title="Reload Data"
         aria-label="Reload current order"
       >
-        <RefreshCw size={18} strokeWidth={1.75} className={loading ? 'animate-spin text-[var(--color-brand-600)]' : ''} />
+        <RefreshCw
+          size={18}
+          strokeWidth={1.75}
+          className={isRefreshing ? 'animate-spin text-[var(--color-brand-600)]' : ''}
+        />
       </button>
     );
     return () => setTopbarActions(null);
-  }, [setTopbarActions, executeSearch, loading]);
+  }, [setTopbarActions, executeSearch, isRefreshing]);
 
   return (
     <div className="erp-page-container flex flex-col h-full overflow-hidden" style={{ background: 'var(--color-ui-canvas)', color: 'var(--color-text-primary)' }}>

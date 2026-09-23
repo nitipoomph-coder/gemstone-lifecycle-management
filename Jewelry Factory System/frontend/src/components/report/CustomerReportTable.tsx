@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowDown, ArrowUp, DollarSign, Hash, RefreshCw, RotateCcw, Search } from 'lucide-react';
+import { ArrowDown, ArrowUp, DollarSign, Hash, RefreshCw, Search, X } from 'lucide-react';
 import { ErpButton, ErpSegmentedControl } from '../ui/ErpButtons';
 import './CustomerReportTable.css';
 
@@ -74,7 +74,6 @@ export default function CustomerReportTable({
   renderGrowthPct,
   searchQuery = '',
   setSearchQuery,
-  onResetMatrix,
   onRefresh,
   isRefreshing,
 }: CustomerReportTableProps) {
@@ -82,49 +81,41 @@ export default function CustomerReportTable({
   const [searchParams] = useSearchParams();
   const activeGrowthCount = displayYears.length > 1 ? growthComparisons.length : 0;
   const [searchDraft, setSearchDraft] = React.useState(searchQuery);
-  const [resetPending, setResetPending] = React.useState(false);
-  const resetPendingTimerRef = React.useRef<number | null>(null);
+  const [appliedSearch, setAppliedSearch] = React.useState(searchQuery);
   const lastAppliedSearchRef = React.useRef(searchQuery);
-
-
-  React.useEffect(() => () => {
-    if (resetPendingTimerRef.current) window.clearTimeout(resetPendingTimerRef.current);
-  }, []);
 
   React.useEffect(() => {
     if (searchQuery !== lastAppliedSearchRef.current) {
       lastAppliedSearchRef.current = searchQuery;
       setSearchDraft(searchQuery);
+      setAppliedSearch(searchQuery);
     }
   }, [searchQuery]);
 
   const applySearch = () => {
-    if (!setSearchQuery) return;
-    const nextSearch = searchDraft.toUpperCase();
+    const nextSearch = searchDraft.toUpperCase().trim();
     setSearchDraft(nextSearch);
     lastAppliedSearchRef.current = nextSearch;
-    setSearchQuery(nextSearch);
+    setAppliedSearch(nextSearch);
+    setSearchQuery?.(nextSearch);
+  };
+
+  const clearSearch = () => {
+    setSearchDraft('');
+    lastAppliedSearchRef.current = '';
+    setAppliedSearch('');
+    setSearchQuery?.('');
   };
 
   const handleSearchKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Enter') applySearch();
-    if (event.key === 'Escape') setSearchDraft(searchQuery.toUpperCase());
-  };
-
-  const isSearchActive = searchDraft.trim().length > 0;
-
-  const resetMatrix = () => {
-    if (resetPendingTimerRef.current) window.clearTimeout(resetPendingTimerRef.current);
-    setResetPending(true);
-    resetPendingTimerRef.current = window.setTimeout(() => setResetPending(false), 450);
-    setSearchDraft('');
-    if (onResetMatrix) {
-      onResetMatrix();
-      return;
+    if (event.key === 'Escape') {
+      const prev = lastAppliedSearchRef.current.toUpperCase();
+      setSearchDraft(prev);
     }
-    setSearchQuery?.('');
-    setSortOrder('desc');
   };
+
+  const isSearchActive = appliedSearch.trim().length > 0;
 
   const handleCustomerClick = (custId: string) => {
     const params = new URLSearchParams(searchParams);
@@ -141,17 +132,41 @@ export default function CustomerReportTable({
     navigate(`/dashboard/sales-customer-detail?${params.toString()}`);
   };
 
-  const skeletonYearCount = Math.max(displayYears.length, 2);
-  const skeletonMonthCount = MONTHS.length;
-  const skeletonColumnCount = Math.min(32, Math.max(14, viewMode === 'ytd'
-    ? skeletonYearCount * (skeletonMonthCount + 1) + activeGrowthCount * 2
-    : (skeletonMonthCount + 1) * (skeletonYearCount + activeGrowthCount * 2)));
-  const skeletonColumns = Array.from({ length: skeletonColumnCount }, (_, index) => index);
-  const skeletonRows = Array.from({ length: 17 }, (_, index) => index);
+  const visibleRows = useMemo(() => {
+    if (!appliedSearch.trim()) return tableData.rows;
+    const q = appliedSearch.trim().toUpperCase();
+    return tableData.rows.filter(r =>
+      String(r.id || '').toUpperCase().includes(q) ||
+      String(r.label || '').toUpperCase().includes(q)
+    );
+  }, [tableData.rows, appliedSearch]);
+
+  const skeletonYearCount = Math.max(displayYears.length, 1);
+  const skeletonMonthCount = displayMonths.length > 0 ? displayMonths.length : 1;
+  const skeletonColumnCount = useMemo(() => {
+    if (viewMode === 'quarterly') {
+      return skeletonYearCount === 1 ? 5 : skeletonYearCount * 5;
+    }
+    if (viewMode === 'weekly') {
+      return (displayWeeks && displayWeeks.length > 0 ? displayWeeks.length : 4) + 1;
+    }
+    if (viewMode === 'daily') {
+      return (displayDays && displayDays.length > 0 ? displayDays.length : 7) + 1;
+    }
+    if (viewMode === 'monthly') {
+      return skeletonMonthCount * (skeletonYearCount + activeGrowthCount * 2) + (skeletonYearCount + activeGrowthCount * 2);
+    }
+    // 'ytd'
+    return skeletonYearCount * (skeletonMonthCount + 1) + activeGrowthCount * 2;
+  }, [viewMode, skeletonYearCount, skeletonMonthCount, activeGrowthCount, displayWeeks, displayDays]);
+
+  const skeletonRowCount = aggregationMode === 'group' ? Math.max(displayYears.length > 0 ? 4 : 3, 3) : 8;
+  const skeletonColumns = useMemo(() => Array.from({ length: Math.max(skeletonColumnCount, 1) }, (_, index) => index), [skeletonColumnCount]);
+  const skeletonRows = useMemo(() => Array.from({ length: skeletonRowCount }, (_, index) => index), [skeletonRowCount]);
   const skeletonWidths = [54, 72, 60, 84, 66, 78, 58, 70, 88, 62, 76, 56];
   const activeCurrentMonthIndex = currentMonthIdx;
   const skeletonPeriod = Math.max(skeletonMonthCount + 1, 1);
-  const skeletonGridStyle: MatrixSkeletonStyle = { '--matrix-skeleton-columns': skeletonColumnCount };
+  const skeletonGridStyle: MatrixSkeletonStyle = { '--matrix-skeleton-columns': skeletonColumns.length };
   const skeletonCellStyle = (index: number): MatrixSkeletonStyle => ({
     '--matrix-skeleton-width': `${skeletonWidths[index % skeletonWidths.length]}%`,
   });
@@ -161,38 +176,37 @@ export default function CustomerReportTable({
   const skeletonCellClassName = (index: number) => `customer-matrix-loading-cell ${activeCurrentMonthIndex >= 0 && index % skeletonPeriod === activeCurrentMonthIndex ? 'customer-matrix-loading-cell--current' : ''}`.trim();
 
   const totalsRow = useMemo(() => {
-    if (!tableData?.rows || tableData.rows.length === 0) return null;
+    if (!visibleRows || visibleRows.length === 0) return null;
     const tot: Record<string, number> = {};
     displayYears.forEach(yr => {
       displayMonths.forEach(m => {
         const key = `${yr}_${m}`;
-        tot[key] = tableData.rows.reduce((sum, r) => sum + Number(r[key] || 0), 0);
+        tot[key] = visibleRows.reduce((sum, r) => sum + Number(r[key] || 0), 0);
       });
       ['Q1', 'Q2', 'Q3', 'Q4'].forEach(q => {
         const key = `${yr}_${q}`;
-        tot[key] = tableData.rows.reduce((sum, r) => sum + Number(r[key] || 0), 0);
+        tot[key] = visibleRows.reduce((sum, r) => sum + Number(r[key] || 0), 0);
       });
       for (let w = 1; w <= 53; w++) {
         const key = `${yr}_W${w}`;
-        tot[key] = tableData.rows.reduce((sum, r) => sum + Number(r[key] || 0), 0);
+        tot[key] = visibleRows.reduce((sum, r) => sum + Number(r[key] || 0), 0);
       }
       const totKey = `${yr}_total`;
-      tot[totKey] = tableData.rows.reduce((sum, r) => sum + Number(r[totKey] || 0), 0);
+      tot[totKey] = visibleRows.reduce((sum, r) => sum + Number(r[totKey] || 0), 0);
     });
     return tot;
-  }, [tableData?.rows, displayYears, displayMonths]);
+  }, [visibleRows, displayYears, displayMonths]);
 
   if (loading) {
     return (
       <section className="customer-matrix-shell customer-matrix-shell--loading" aria-busy="true" aria-label="Loading customer report matrix">
         <div className="customer-matrix-control-bar customer-matrix-control-bar--loading">
-          <span className="customer-matrix-skeleton customer-matrix-skeleton--segment" />
-          <span className="customer-matrix-skeleton customer-matrix-skeleton--search" />
-          <span className="customer-matrix-loading-status">Loading matrix...</span>
+          <span className="customer-matrix-skeleton customer-matrix-skeleton--segment" style={{ width: 112, height: 28 }} />
+          <span className="customer-matrix-skeleton customer-matrix-skeleton--segment" style={{ width: 140, height: 28 }} />
+          <span className="customer-matrix-skeleton customer-matrix-skeleton--search" style={{ width: 220, height: 28 }} />
+          <span className="customer-matrix-skeleton" style={{ width: 68, height: 14 }} />
           <span className="customer-matrix-control-spacer" />
-          <span className="customer-matrix-skeleton customer-matrix-skeleton--icon" />
-          <span className="customer-matrix-loading-reload" title="Reloading matrix"><RefreshCw size={14} className="erp-btn__spinner" /></span>
-          <span className="customer-matrix-skeleton customer-matrix-skeleton--button" />
+          <span className="customer-matrix-skeleton customer-matrix-skeleton--icon" style={{ width: 28, height: 28 }} />
         </div>
 
         <div className="customer-matrix-scroll content-scrollbar">
@@ -231,6 +245,17 @@ export default function CustomerReportTable({
                 ))}
               </div>
             ))}
+
+            <div className="customer-matrix-loading-row-grid customer-matrix-loading-row-grid--footer">
+              <div className="customer-matrix-loading-cell customer-matrix-loading-cell--customer customer-matrix-loading-cell--footer">
+                <span className="customer-matrix-skeleton" style={{ width: 68, height: 12 }} />
+              </div>
+              {skeletonColumns.map((columnIndex) => (
+                <div key={`foot_${columnIndex}`} className="customer-matrix-loading-cell customer-matrix-loading-cell--footer">
+                  <span className="customer-matrix-skeleton customer-matrix-skeleton--value" style={skeletonCellStyle(columnIndex + 8)} />
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
@@ -320,22 +345,22 @@ export default function CustomerReportTable({
               onKeyDown={handleSearchKeyDown}
               placeholder="Search customer"
             />
+            {searchDraft.length > 0 && (
+              <button
+                type="button"
+                onClick={clearSearch}
+                className="customer-matrix-search-clear"
+                title="Clear search"
+                aria-label="Clear search"
+              >
+                <X size={12} />
+              </button>
+            )}
           </label>
         )}
 
-        <span className="customer-matrix-count">{tableData.rows.length} customers</span>
+        <span className="customer-matrix-count">{visibleRows.length} customers</span>
         <span className="customer-matrix-control-spacer" />
-
-        <ErpButton
-          size="sm"
-          variant="ghost"
-          icon={<RotateCcw size={13} />}
-          onClick={resetMatrix}
-          disabled={resetPending}
-          style={{ color: 'var(--color-text-tertiary)' }}
-        >
-          Reset View
-        </ErpButton>
 
         {onRefresh && (
           <ErpButton
@@ -384,9 +409,9 @@ export default function CustomerReportTable({
                     </tr>
                   </thead>
                   <tbody>
-                    {tableData.rows.length === 0 ? (
+                    {visibleRows.length === 0 ? (
                       <tr><td colSpan={6} className="customer-matrix-empty">No customers match the current filter.</td></tr>
-                    ) : tableData.rows.map((row) => (
+                    ) : visibleRows.map((row) => (
                       <tr key={row.id} className="customer-matrix-row">
                         <td className="customer-matrix-td customer-matrix-td--customer">
                           <button 
@@ -457,13 +482,13 @@ export default function CustomerReportTable({
                     </tr>
                   </thead>
                   <tbody>
-                    {tableData.rows.length === 0 ? (
+                    {visibleRows.length === 0 ? (
                       <tr>
                         <td colSpan={1 + 4 * (displayYears.length + growthComparisons.length * 2) + displayYears.length} className="customer-matrix-empty">
                           No customers match the current filter.
                         </td>
                       </tr>
-                    ) : tableData.rows.map((row) => (
+                    ) : visibleRows.map((row) => (
                       <tr key={row.id} className="customer-matrix-row">
                         <td className="customer-matrix-td customer-matrix-td--customer">{row.label}</td>
                         {['Q1', 'Q2', 'Q3', 'Q4'].map((q) => (
@@ -563,9 +588,9 @@ export default function CustomerReportTable({
               </thead>
 
               <tbody>
-                {tableData.rows.length === 0 ? (
+                {visibleRows.length === 0 ? (
                   <tr><td colSpan={1 + displayYears.length * (displayMonths.length + 1) + activeGrowthCount * 2} className="customer-matrix-empty">No customers match the current filter.</td></tr>
-                ) : tableData.rows.map((row) => (
+                ) : visibleRows.map((row) => (
                   <tr key={row.id} className="customer-matrix-row">
                     <td className="customer-matrix-td customer-matrix-td--customer">
                       <button 
@@ -669,9 +694,9 @@ export default function CustomerReportTable({
               </thead>
 
               <tbody>
-                {tableData.rows.length === 0 ? (
+                {visibleRows.length === 0 ? (
                   <tr><td colSpan={1 + displayMonths.length * (displayYears.length + activeGrowthCount * 2) + displayYears.length} className="customer-matrix-empty">No customers match the current filter.</td></tr>
-                ) : tableData.rows.map((row) => (
+                ) : visibleRows.map((row) => (
                   <tr key={row.id} className="customer-matrix-row">
                     <td className="customer-matrix-td customer-matrix-td--customer">
                       <button 
@@ -779,9 +804,9 @@ export default function CustomerReportTable({
                 </tr>
               </thead>
               <tbody>
-                {tableData.rows.length === 0 ? (
+                {visibleRows.length === 0 ? (
                   <tr><td colSpan={1 + displayDays.length * (displayYears.length + activeGrowthCount * 2) + displayYears.length} className="customer-matrix-empty">No customers match the current filter.</td></tr>
-                ) : tableData.rows.map((row) => (
+                ) : visibleRows.map((row) => (
                   <tr key={row.id} className="customer-matrix-row">
                     <td className="customer-matrix-td customer-matrix-td--customer">
                       <button 
@@ -885,9 +910,9 @@ export default function CustomerReportTable({
               </thead>
 
               <tbody>
-                {tableData.rows.length === 0 ? (
+                {visibleRows.length === 0 ? (
                   <tr><td colSpan={1 + (displayWeeks ? displayWeeks.length : 53) * displayYears.length + displayYears.length} className="customer-matrix-empty">No customers match the current filter.</td></tr>
-                ) : tableData.rows.map((row) => (
+                ) : visibleRows.map((row) => (
                   <tr key={row.id} className="customer-matrix-row">
                     <td className="customer-matrix-td customer-matrix-td--customer">
                       <button 

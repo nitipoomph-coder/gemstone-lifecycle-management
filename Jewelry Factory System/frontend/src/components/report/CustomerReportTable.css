@@ -82,6 +82,27 @@
   color: var(--color-text-tertiary);
 }
 
+.customer-matrix-search-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  transition: background-color 140ms ease-out, color 140ms ease-out;
+  flex-shrink: 0;
+}
+
+.customer-matrix-search-clear:hover {
+  background: var(--color-surface-2);
+  color: var(--color-text-primary);
+}
+
 .customer-matrix-count {
   color: var(--color-text-tertiary);
   font-size: var(--erp-text-dense);
@@ -296,7 +317,7 @@
 .customer-matrix-loading-row-grid {
   display: grid;
   min-height: var(--matrix-row-min-height);
-  grid-template-columns: 160px repeat(var(--matrix-skeleton-columns), 92px);
+  grid-template-columns: minmax(160px, 1.2fr) repeat(var(--matrix-skeleton-columns), minmax(92px, 1fr));
   width: max-content;
   min-width: 100%;
 }
@@ -315,6 +336,12 @@
 .customer-matrix-loading-row-grid--subheader {
   top: var(--matrix-header-height);
   min-height: var(--matrix-subheader-height);
+}
+
+.customer-matrix-loading-row-grid--footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 18;
 }
 
 .customer-matrix-loading-row-grid--data {
@@ -339,6 +366,11 @@
 
 .customer-matrix-loading-cell--subheader {
   background: var(--matrix-subheader-bg);
+}
+
+.customer-matrix-loading-cell--footer {
+  background: var(--matrix-header-bg);
+  border-top: 1px solid var(--matrix-border-strong);
 }
 
 .customer-matrix-loading-cell--current {

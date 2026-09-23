@@ -37,7 +37,6 @@ export default function CustomerReportPage() {
     sortOrder,
     setSortOrder,
     growthComparisons,
-    resetMatrixView,
     currentYearStr,
     currentMonthIdx,
     tableData,
@@ -132,43 +131,45 @@ export default function CustomerReportPage() {
               </div>
 
               {/* Group KPI Skeletons */}
-              <div className="sales-report-kpis flex-wrap" style={{ display: 'flex', gap: 12 }}>
-                {selGroups.map((gId: string) => {
-                  const group = ALL_GROUPS.find(x => x.id === gId);
-                  const color = group?.color || 'var(--color-border-light)';
-                  const label = group?.label || gId;
-                  return (
-                    <div
-                      key={`kpi-skeleton-grp-${gId}`}
-                      style={{
-                        background: 'var(--color-surface-0)',
-                        border: '1px solid var(--color-border-light)',
-                        borderLeft: `4px solid ${color}`,
-                        borderRadius: 8,
-                        padding: '12px 16px',
-                        flex: '1 1 200px',
-                        minWidth: 180,
-                        boxShadow: '0 8px 20px -16px color-mix(in srgb, var(--color-surface-900) 25%, transparent)',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 12
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: 'var(--erp-text-dense)', fontWeight: 900, color: 'var(--color-text-secondary)', opacity: 0.7 }}>{label}</span>
-                        <div className="app-skeleton" style={{ width: 35, height: 14, borderRadius: 4 }} />
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        <div className="app-skeleton" style={{ width: '75%', height: 24, borderRadius: 6 }} />
+              {selGroups.length > 1 && (
+                <div className="sales-report-kpis flex-wrap" style={{ display: 'flex', gap: 12 }}>
+                  {selGroups.map((gId: string) => {
+                    const group = ALL_GROUPS.find(x => x.id === gId);
+                    const color = group?.color || 'var(--color-border-light)';
+                    const label = group?.label || gId;
+                    return (
+                      <div
+                        key={`kpi-skeleton-grp-${gId}`}
+                        style={{
+                          background: 'var(--color-surface-0)',
+                          border: '1px solid var(--color-border-light)',
+                          borderLeft: `4px solid ${color}`,
+                          borderRadius: 8,
+                          padding: '12px 16px',
+                          flex: '1 1 200px',
+                          minWidth: 180,
+                          boxShadow: '0 8px 20px -16px color-mix(in srgb, var(--color-surface-900) 25%, transparent)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: 12
+                        }}
+                      >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <div className="app-skeleton" style={{ width: 90, height: 14, borderRadius: 4 }} />
-                          <div className="app-skeleton" style={{ width: 45, height: 12, borderRadius: 4 }} />
+                          <span style={{ fontSize: 'var(--erp-text-dense)', fontWeight: 900, color: 'var(--color-text-secondary)', opacity: 0.7 }}>{label}</span>
+                          <div className="app-skeleton" style={{ width: 35, height: 14, borderRadius: 4 }} />
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          <div className="app-skeleton" style={{ width: '75%', height: 24, borderRadius: 6 }} />
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div className="app-skeleton" style={{ width: 90, height: 14, borderRadius: 4 }} />
+                            <div className="app-skeleton" style={{ width: 45, height: 12, borderRadius: 4 }} />
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
 
@@ -288,7 +289,7 @@ export default function CustomerReportPage() {
             </div>
           )}
 
-          <div className={`sales-report-table-region transition-opacity duration-300 ${loading ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
+          <div className={`sales-report-table-region transition-opacity duration-300 ${(loading && tableData.rows.length > 0) ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
             <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
               <CustomerReportTable
                 loading={loading && tableData.rows.length === 0}
@@ -314,7 +315,6 @@ export default function CustomerReportPage() {
                 renderGrowthPct={handleRenderGrowthPct}
                 searchQuery={searchQuery}
                 setSearchQuery={setSearchQuery}
-                onResetMatrix={resetMatrixView}
                 onRefresh={triggerRefresh}
                 isRefreshing={isRefreshing}
               />

@@ -294,18 +294,24 @@ export default function OrderTable({
   loading,
   pageOffset = 0,
   visibleKeys,
+  colWidths: externalColWidths,
+  onColWidthsChange,
 }: {
   data: OrderSummary[];
   loading: boolean;
   pageOffset?: number;
   visibleKeys: string[];
+  colWidths?: Record<string, number>;
+  onColWidthsChange?: React.Dispatch<React.SetStateAction<Record<string, number>>>;
 }) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [pickerOrder, setPickerOrder] = useState<OrderSummary | null>(null);
 
-  // Column Resizing State
-  const [colWidths, setColWidths] = useState<Record<string, number>>({});
+  // Column Resizing State (controlled if parent provides, otherwise internal)
+  const [internalColWidths, setInternalColWidths] = useState<Record<string, number>>({});
+  const colWidths = externalColWidths !== undefined ? externalColWidths : internalColWidths;
+  const setColWidths = onColWidthsChange || setInternalColWidths;
   const resizingColRef = useRef<string | null>(null);
   const startXRef = useRef<number>(0);
   const startWidthRef = useRef<number>(0);
@@ -439,6 +445,15 @@ export default function OrderTable({
                         startWidthRef.current = colWidths[c.key] || c.w;
                         document.body.style.cursor = 'col-resize';
                       }}
+                      onDoubleClick={(e) => {
+                        e.preventDefault(); e.stopPropagation();
+                        setColWidths(prev => {
+                          const next = { ...prev };
+                          delete next[c.key];
+                          return next;
+                        });
+                      }}
+                      title="Drag to resize, double-click to reset width"
                     />
                   </th>
                 );

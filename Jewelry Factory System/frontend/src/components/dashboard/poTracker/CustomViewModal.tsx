@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Search, Check, Layers, Filter } from 'lucide-react';
+import { X, Search, Layers, RotateCcw } from 'lucide-react';
 import { MASTER_COLS, COLUMN_GROUPS, GROUP_PRESETS } from './orderTableConfig';
 
 interface CustomViewModalProps {
@@ -27,14 +27,12 @@ export default function CustomViewModal({ isOpen, onClose, initialVisibleKeys, i
 }
 
 function CustomViewModalContent({ onClose, initialVisibleKeys, initialGroup, onApply }: CustomViewModalProps) {
-  const [activeTab, setActiveTab] = useState<'data' | 'columns'>('columns');
-
-  // Data State
-  const [selectedGroup, setSelectedGroup] = useState(initialGroup);
-
   // Columns State
   const [selectedKeys, setSelectedKeys] = useState<string[]>(initialVisibleKeys);
   const [searchCol, setSearchCol] = useState('');
+
+  const defaultCols = GROUP_PRESETS[initialGroup] || GROUP_PRESETS.ALL;
+  const isDefault = selectedKeys.length === defaultCols.length && selectedKeys.every(k => defaultCols.includes(k));
 
   const sortKeys = (keys: string[], presetGrp: string) => {
     // Ensure mandatory keys are always present
@@ -67,13 +65,19 @@ function CustomViewModalContent({ onClose, initialVisibleKeys, initialGroup, onA
   const handleToggleKey = (key: string) => {
     setSelectedKeys(prev => {
       const next = prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key];
-      return sortKeys(next, selectedGroup);
+      return sortKeys(next, initialGroup);
     });
+  };
 
+  const handleResetDefault = () => {
+    setSelectedKeys(defaultCols);
+    try {
+      localStorage.removeItem('poTrackerCustomCols');
+    } catch {}
   };
 
   const handleApply = () => {
-    onApply(selectedGroup, selectedKeys);
+    onApply(initialGroup, selectedKeys);
     onClose();
   };
 
@@ -93,7 +97,7 @@ function CustomViewModalContent({ onClose, initialVisibleKeys, initialGroup, onA
         style={{
           background: 'var(--color-surface-0)',
           borderRadius: '8px',
-          width: '100%', maxWidth: '800px',
+          width: '100%', maxWidth: '820px',
           maxHeight: '90vh',
           display: 'flex', flexDirection: 'column',
           boxShadow: 'var(--shadow-modal)'
@@ -107,7 +111,7 @@ function CustomViewModalContent({ onClose, initialVisibleKeys, initialGroup, onA
             </div>
             <div>
               <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: 'var(--color-text-primary)' }}>Custom View Builder</h2>
-              <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--color-text-tertiary)' }}>Select data and columns to build your custom ERP report.</p>
+              <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--color-text-tertiary)' }}>Select and customize columns to display in your order table.</p>
             </div>
           </div>
           <button onClick={onClose} style={{ border: 'none', background: 'var(--color-surface-1)', width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--color-text-tertiary)' }} className="hover:bg-surface-2 hover:text-text-primary">
@@ -115,160 +119,126 @@ function CustomViewModalContent({ onClose, initialVisibleKeys, initialGroup, onA
           </button>
         </div>
 
-        {/* Body */}
-        <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
-
-          {/* Sidebar */}
-          <div style={{ width: '220px', borderRight: '1px solid var(--color-border-light)', background: 'var(--color-surface-1)', padding: '20px 12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <button
-              onClick={() => setActiveTab('data')}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px', borderRadius: '8px', border: 'none',
-                background: activeTab === 'data' ? 'var(--color-brand-50)' : 'transparent',
-                color: activeTab === 'data' ? 'var(--color-brand-600)' : 'var(--color-text-secondary)',
-                fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer', textAlign: 'left',
-                boxShadow: 'none'
-              }}
-            >
-              <Filter size={18} />
-              Data Filters
-            </button>
-            <button
-              onClick={() => setActiveTab('columns')}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px', borderRadius: '8px', border: 'none',
-                background: activeTab === 'columns' ? 'var(--color-brand-50)' : 'transparent',
-                color: activeTab === 'columns' ? 'var(--color-brand-600)' : 'var(--color-text-secondary)',
-                fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer', textAlign: 'left',
-                boxShadow: 'none'
-              }}
-            >
-              <Layers size={18} />
-              Columns
-            </button>
+        {/* Body — Full width Columns view */}
+        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, padding: '20px 24px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', gap: '16px', flexWrap: 'wrap' }}>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: 'var(--color-text-primary)' }}>Choose Columns</h3>
+              <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--color-text-tertiary)' }}>Preset: <strong style={{ color: 'var(--color-brand-600)' }}>{initialGroup}</strong></p>
+            </div>
+            <div style={{ position: 'relative', width: '280px' }}>
+              <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-quaternary)' }} />
+              <input
+                placeholder="Search columns..."
+                value={searchCol}
+                onChange={e => setSearchCol(e.target.value)}
+                style={{
+                  width: '100%', padding: '9px 12px 9px 36px', borderRadius: '8px',
+                  border: '1px solid var(--color-border-strong)', background: 'var(--color-surface-0)',
+                  fontSize: '0.82rem', outline: 'none'
+                }}
+                className="focus:border-brand-500"
+              />
+            </div>
           </div>
 
-          {/* Content */}
-          <div style={{ flex: 1, padding: '24px', overflowY: 'auto' }} className="custom-scrollbar">
-
-            {activeTab === 'data' && (
-              <div className="animate-fade-in-up">
-                <h3 style={{ margin: '0 0 20px 0', fontSize: '1rem', fontWeight: 800 }}>Select Data Group</h3>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px' }}>
-                  {['N008', 'N044', 'N098', 'N051', 'N083', 'MLT', 'ALL'].map(grp => (
-                    <button
-                      key={grp}
-                      onClick={() => setSelectedGroup(grp)}
-                      style={{
-                        padding: '16px', borderRadius: '8px', border: `1px solid ${selectedGroup === grp ? 'var(--color-brand-500)' : 'var(--color-border-light)'}`,
-                        background: selectedGroup === grp ? 'var(--color-brand-50)' : 'var(--color-surface-0)',
-                        color: selectedGroup === grp ? 'var(--color-brand-700)' : 'var(--color-text-primary)',
-                        fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer', textAlign: 'center',
-                        transition: 'all 0.2s', position: 'relative'
-                      }}
-                    >
-                      {grp === 'ALL' ? 'General' : grp}
-                      {selectedGroup === grp && (
-                        <div style={{ position: 'absolute', top: -8, right: -8, background: 'var(--color-brand-500)', color: 'var(--color-ui-on-interactive)', borderRadius: '50%', width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <Check size={12} />
-                        </div>
-                      )}
-                    </button>
-                  ))}
-                </div>
-                <div style={{ marginTop: '24px', padding: '16px', background: 'var(--color-surface-1)', borderRadius: '8px', fontSize: '0.85rem', color: 'var(--color-text-secondary)' }}>
-                  <strong>Tip:</strong> Selecting a specific group (like N008) will filter rows to only show that customer. Selecting <strong>ALL</strong> or <strong>CUSTOM</strong> shows all rows, letting you use other filters freely.
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'columns' && (
-              <div className="animate-fade-in-up" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-                  <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800 }}>Choose Columns</h3>
-                  <div style={{ position: 'relative', width: '260px' }}>
-                    <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-quaternary)' }} />
-                    <input
-                      placeholder="Search columns..."
-                      value={searchCol}
-                      onChange={e => setSearchCol(e.target.value)}
-                      style={{
-                        width: '100%', padding: '10px 12px 10px 36px', borderRadius: '10px',
-                        border: '1px solid var(--color-border-strong)', background: 'var(--color-surface-0)',
-                        fontSize: '0.85rem', outline: 'none'
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <div style={{ flex: 1, overflowY: 'auto', paddingRight: '12px' }} className="custom-scrollbar">
-                  {filteredGroups.length === 0 ? (
-                    <div style={{ padding: '40px', textAlign: 'center', color: 'var(--color-text-tertiary)', fontSize: '0.9rem' }}>No columns found.</div>
-                  ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                      {filteredGroups.map(g => {
-                        const allSelected = g.keys.every(k => selectedKeys.includes(k));
-                        return (
-                          <div key={g.label}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', borderBottom: '1px solid var(--color-border-light)', paddingBottom: '8px' }}>
-                              <h4 style={{ margin: 0, fontSize: '0.85rem', fontWeight: 800, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{g.label}</h4>
-                              <button
-                                onClick={() => {
-                                  if (allSelected) {
-                                    setSelectedKeys(prev => sortKeys(prev.filter(k => !g.keys.includes(k)), selectedGroup));
-                                  } else {
-                                    setSelectedKeys(prev => sortKeys(Array.from(new Set([...prev, ...g.keys])), selectedGroup));
-                                  }
-                                }}
-                                style={{ border: 'none', background: 'transparent', color: 'var(--color-brand-600)', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer' }}
-                              >
-                                {allSelected ? 'Unselect All' : 'Select All'}
-                              </button>
-                            </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '8px' }}>
-                              {g.keys.map(key => {
-                                const isSelected = selectedKeys.includes(key);
-                                return (
-                                  <label key={key} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', borderRadius: '8px', cursor: 'pointer', background: isSelected ? 'var(--color-brand-50)' : 'transparent', transition: 'all 0.2s' }} className="hover:bg-surface-1">
-                                    <input
-                                      type="checkbox"
-                                      checked={isSelected}
-                                      onChange={() => handleToggleKey(key)}
-                                      style={{ accentColor: 'var(--color-brand-500)', width: '16px', height: '16px', cursor: 'pointer' }}
-                                    />
-                                    <span style={{ fontSize: '0.85rem', fontWeight: isSelected ? 800 : 600, color: isSelected ? 'var(--color-brand-700)' : 'var(--color-text-primary)' }}>
-                                      {MASTER_COLS[key]?.label || key}
-                                    </span>
-                                  </label>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        );
-                      })}
+          <div style={{ flex: 1, overflowY: 'auto', paddingRight: '8px' }} className="custom-scrollbar">
+            {filteredGroups.length === 0 ? (
+              <div style={{ padding: '40px', textAlign: 'center', color: 'var(--color-text-tertiary)', fontSize: '0.9rem' }}>No columns found.</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                {filteredGroups.map(g => {
+                  const allSelected = g.keys.every(k => selectedKeys.includes(k));
+                  return (
+                    <div key={g.label} style={{ background: 'var(--color-surface-1)', padding: '14px 16px', borderRadius: '8px', border: '1px solid var(--color-border-light)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', borderBottom: '1px solid var(--color-border-light)', paddingBottom: '6px' }}>
+                        <h4 style={{ margin: 0, fontSize: '0.82rem', fontWeight: 800, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{g.label}</h4>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (allSelected) {
+                              setSelectedKeys(prev => sortKeys(prev.filter(k => !g.keys.includes(k)), initialGroup));
+                            } else {
+                              setSelectedKeys(prev => sortKeys(Array.from(new Set([...prev, ...g.keys])), initialGroup));
+                            }
+                          }}
+                          style={{ border: 'none', background: 'transparent', color: 'var(--color-brand-600)', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer' }}
+                          className="hover:underline"
+                        >
+                          {allSelected ? 'Unselect All' : 'Select All'}
+                        </button>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '8px' }}>
+                        {g.keys.map(key => {
+                          const isSelected = selectedKeys.includes(key);
+                          return (
+                            <label key={key} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', background: isSelected ? 'var(--color-brand-50)' : 'var(--color-surface-0)', border: `1px solid ${isSelected ? 'var(--color-brand-200)' : 'transparent'}`, transition: 'all 0.15s ease' }} className="hover:bg-surface-2">
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => handleToggleKey(key)}
+                                style={{ accentColor: 'var(--color-brand-500)', width: '15px', height: '15px', cursor: 'pointer' }}
+                              />
+                              <span style={{ fontSize: '0.82rem', fontWeight: isSelected ? 800 : 600, color: isSelected ? 'var(--color-brand-700)' : 'var(--color-text-primary)' }}>
+                                {MASTER_COLS[key]?.label || key}
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </div>
                     </div>
-                  )}
-                </div>
+                  );
+                })}
               </div>
             )}
           </div>
         </div>
 
         {/* Footer */}
-        <div style={{ padding: '20px 24px', borderTop: '1px solid var(--color-border-light)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--color-surface-1)', borderBottomLeftRadius: '8px', borderBottomRightRadius: '8px' }}>
-          <div style={{ fontSize: '0.8rem', color: 'var(--color-text-tertiary)', fontWeight: 600 }}>
-            <strong style={{ color: 'var(--color-brand-600)' }}>{selectedKeys.length}</strong> columns selected
-          </div>
-          <div style={{ display: 'flex', gap: '12px' }}>
+        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--color-border-light)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--color-surface-1)', borderBottomLeftRadius: '8px', borderBottomRightRadius: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <span style={{ fontSize: '0.8rem', color: 'var(--color-text-tertiary)', fontWeight: 600 }}>
+              <strong style={{ color: 'var(--color-brand-600)' }}>{selectedKeys.length}</strong> columns selected
+            </span>
             <button
+              type="button"
+              onClick={handleResetDefault}
+              disabled={isDefault}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '6px 12px',
+                borderRadius: '6px',
+                border: '1px solid var(--color-border-strong)',
+                background: 'var(--color-surface-0)',
+                color: isDefault ? 'var(--color-text-tertiary)' : 'var(--color-text-secondary)',
+                fontSize: '0.78rem',
+                fontWeight: 800,
+                cursor: isDefault ? 'not-allowed' : 'pointer',
+                opacity: isDefault ? 0.5 : 1,
+                transition: 'all 0.15s ease'
+              }}
+              className={!isDefault ? "hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text-primary)] active:scale-95" : ""}
+              title="Restore default columns for this preset"
+            >
+              <RotateCcw size={13} />
+              Reset to Default
+            </button>
+          </div>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button
+              type="button"
               onClick={onClose}
-              style={{ padding: '10px 20px', borderRadius: '8px', border: '1px solid var(--color-border-strong)', background: 'var(--color-surface-0)', color: 'var(--color-text-secondary)', fontWeight: 800, cursor: 'pointer' }}
+              style={{ padding: '8px 18px', borderRadius: '8px', border: '1px solid var(--color-border-strong)', background: 'var(--color-surface-0)', color: 'var(--color-text-secondary)', fontWeight: 800, fontSize: '0.82rem', cursor: 'pointer' }}
+              className="hover:bg-surface-2 hover:text-text-primary"
             >
               Cancel
             </button>
             <button
+              type="button"
               onClick={handleApply}
-              style={{ padding: '10px 24px', borderRadius: '8px', border: 'none', background: 'var(--color-brand-500)', color: 'var(--color-ui-on-interactive)', fontWeight: 800, cursor: 'pointer' }}
+              style={{ padding: '8px 22px', borderRadius: '8px', border: 'none', background: 'var(--color-brand-500)', color: 'var(--color-ui-on-interactive)', fontWeight: 800, fontSize: '0.82rem', cursor: 'pointer' }}
               className="hover:bg-brand-600"
             >
               Apply View

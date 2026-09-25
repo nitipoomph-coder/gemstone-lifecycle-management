@@ -3,13 +3,18 @@ import { BREADCRUMBS } from '../config/breadcrumbs';
 import OrderTable from '../components/dashboard/poTracker/OrderTable';
 import CustomViewModal from '../components/dashboard/poTracker/CustomViewModal';
 import CustomSelect from '../components/ui/CustomSelect';
-import { RefreshCw, AlertTriangle, Filter, X, Layers } from 'lucide-react';
+import { RefreshCw, AlertTriangle, Filter, Layers, FilterX, RotateCcw } from 'lucide-react';
 import { usePOTrackerAdvanced } from '../hooks/usePOTrackerAdvanced';
 import { useTopbarActions } from '../contexts/TopbarActionContext';
 import { useState, useEffect } from 'react';
 
 export default function POTrackerAdvanced() {
+  const [colWidths, setColWidths] = useState<Record<string, number>>({});
+  const hasCustomWidths = Object.keys(colWidths).length > 0;
+
   const {
+    isFiltered,
+    resetFilters,
     statusFilter,
     setStatusFilter,
     groupFilter,
@@ -18,7 +23,6 @@ export default function POTrackerAdvanced() {
     setDateType,
     setPage,
     pageSize,
-    setPageSize,
     filterType,
     setFilterType,
     filterWeek,
@@ -171,37 +175,29 @@ export default function POTrackerAdvanced() {
                 </div>
               </div>
 
-              {/* Reset button at end of chip row */}
-              {(groupFilter !== 'ALL' || statusFilter !== 'pending' || activeFilterCount > 0) && (
+              {/* Single Global Reset Button (FilterX) covering all page filters */}
+              {isFiltered && (
                 <button
                   type="button"
-                  onClick={() => {
-                    setGroupFilter('ALL');
-                    setStatusFilter('pending');
-                    setFilterWeek('');
-                    setFilterCust('');
-                    setFilterPO('');
-                    setFilterType('');
-                    setFilterShipTo('');
-                    setDateType('Order Date');
-                  }}
+                  onClick={resetFilters}
                   style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    padding: '6px 10px',
-                    borderRadius: 8,
-                    border: '1px solid var(--color-border-light)',
-                    background: 'transparent',
-                    color: 'var(--color-text-secondary)',
-                    fontSize: '0.78rem',
-                    fontWeight: 850,
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
+                    background: "none",
+                    border: "none",
+                    padding: "6px",
+                    color: "var(--color-text-secondary)",
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: 6,
+                    transition: "all 0.15s ease",
+                    flexShrink: 0,
                   }}
-                  className="hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text-primary)]"
+                  className="hover:bg-[var(--color-surface-2)] active:scale-95"
+                  title="Reset filters"
+                  aria-label="Reset filters"
                 >
-                  Reset
+                  <FilterX size={14} />
                 </button>
               )}
             </div>
@@ -306,26 +302,6 @@ export default function POTrackerAdvanced() {
                           </div>
                         </div>
                       </div>
-
-                      {activeFilterCount > 0 && (
-                        <button
-                          onClick={() => {
-                            setFilterWeek(''); setFilterCust(''); setFilterPO(''); setFilterType(''); setFilterShipTo('');
-                            setDateType('Order Date');
-                          }}
-                          style={{
-                            display: 'flex', alignItems: 'center', gap: '6px',
-                            padding: '10px 16px', borderRadius: '10px',
-                            background: 'var(--color-surface-2)', color: 'var(--color-text-secondary)',
-                            border: '1px solid var(--color-border-strong)',
-                            fontSize: '0.8rem', fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s'
-                          }}
-                          className="hover:bg-danger-50 hover:text-danger-600 hover:border-danger-200"
-                        >
-                          <X size={16} />
-                          Clear Filters
-                        </button>
-                      )}
                     </div>
                   </>
                 )}
@@ -392,11 +368,34 @@ export default function POTrackerAdvanced() {
               )}
             </div>
 
-            {/* Right Side: Refresh Button integrated with summary context */}
+            {/* Right Side: Reset Columns Widths Button */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-               <span style={{ fontSize: '0.7rem', color: 'var(--color-text-tertiary)', fontWeight: 700 }}>
-                 Last updated: Just now
-               </span>
+              <button
+                type="button"
+                onClick={() => setColWidths({})}
+                disabled={!hasCustomWidths}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  border: '1px solid var(--color-border-strong)',
+                  background: 'var(--color-surface-0)',
+                  color: hasCustomWidths ? 'var(--color-text-secondary)' : 'var(--color-text-tertiary)',
+                  fontSize: '0.75rem',
+                  fontWeight: 800,
+                  cursor: hasCustomWidths ? 'pointer' : 'default',
+                  opacity: hasCustomWidths ? 1 : 0.45,
+                  transition: 'all 0.15s ease',
+                  boxShadow: hasCustomWidths ? 'var(--shadow-control)' : 'none',
+                }}
+                className={hasCustomWidths ? "hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text-primary)] active:scale-95" : ""}
+                title={hasCustomWidths ? "Reset column widths back to original default" : "Column widths are at default"}
+              >
+                <RotateCcw size={12} />
+                Reset Columns
+              </button>
             </div>
           </div>
 
@@ -412,6 +411,8 @@ export default function POTrackerAdvanced() {
                 loading={loading}
                 pageOffset={pageStart}
                 visibleKeys={visibleKeys}
+                colWidths={colWidths}
+                onColWidthsChange={setColWidths}
               />
 
               {/* Single Pagination Bar — record count, page size, and page nav together */}
@@ -421,31 +422,12 @@ export default function POTrackerAdvanced() {
                     Showing <strong style={{ color: 'var(--color-text-primary)' }}>{pageStart + 1}</strong>–<strong style={{ color: 'var(--color-text-primary)' }}>{Math.min(pageStart + pageSize, filtered.length)}</strong> of <strong style={{ color: 'var(--color-brand-600)' }}>{filtered.length.toLocaleString()}</strong>
                   </span>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <button onClick={() => setPage((p: number) => Math.max(1, p - 1))} disabled={page === 1} style={{ padding: '6px 16px', borderRadius: '10px', border: '1px solid var(--color-border-light)', background: page === 1 ? 'transparent' : 'var(--color-surface-1)', color: page === 1 ? 'var(--color-text-quaternary)' : 'var(--color-text-secondary)', cursor: page === 1 ? 'default' : 'pointer', fontSize: '0.8rem', fontWeight: 700, transition: 'all 0.2s' }} className="hover:bg-surface-2 active:scale-95">Prev</button>
-                      {pageNumbers.map((p, i) => p === '...' ? <span key={i} style={{ color: 'var(--color-text-quaternary)', padding: '0 8px' }}>...</span> : (
-                        <button key={i} onClick={() => setPage(p as number)} style={{ padding: '6px 14px', borderRadius: '8px', border: `1px solid ${page === p ? 'var(--color-brand-500)' : 'var(--color-border-light)'}`, background: page === p ? 'var(--color-brand-500)' : 'transparent', color: page === p ? 'var(--color-ui-on-interactive)' : 'var(--color-text-secondary)', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 900, minWidth: '38px', transition: 'all 0.2s' }} className="hover:bg-surface-1 active:scale-95">{p}</button>
-                      ))}
-                      <button onClick={() => setPage((p: number) => Math.min(totalPages, p + 1))} disabled={page === totalPages} style={{ padding: '6px 16px', borderRadius: '10px', border: '1px solid var(--color-border-light)', background: page === totalPages ? 'transparent' : 'var(--color-surface-1)', color: page === totalPages ? 'var(--color-text-quaternary)' : 'var(--color-text-secondary)', cursor: page === totalPages ? 'default' : 'pointer', fontSize: '0.8rem', fontWeight: 700, transition: 'all 0.2s' }} className="hover:bg-surface-2 active:scale-95">Next</button>
-                    </div>
-
-                    <div style={{ width: '1px', height: '16px', background: 'var(--color-border-strong)' }} />
-
-                    <select
-                      value={String(pageSize)}
-                      onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
-                      style={{
-                        padding: '6px 10px', borderRadius: '8px', border: '1px solid var(--color-border-strong)',
-                        background: 'var(--color-surface-1)', color: 'var(--color-text-secondary)',
-                        fontSize: '0.75rem', fontWeight: 700, outline: 'none', cursor: 'pointer'
-                      }}
-                      className="hover:border-brand-400"
-                    >
-                      <option value="20">20 / page</option>
-                      <option value="50">50 / page</option>
-                      <option value="100">100 / page</option>
-                    </select>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <button onClick={() => setPage((p: number) => Math.max(1, p - 1))} disabled={page === 1} style={{ padding: '6px 16px', borderRadius: '10px', border: '1px solid var(--color-border-light)', background: page === 1 ? 'transparent' : 'var(--color-surface-1)', color: page === 1 ? 'var(--color-text-quaternary)' : 'var(--color-text-secondary)', cursor: page === 1 ? 'default' : 'pointer', fontSize: '0.8rem', fontWeight: 700, transition: 'all 0.2s' }} className="hover:bg-surface-2 active:scale-95">Prev</button>
+                    {pageNumbers.map((p, i) => p === '...' ? <span key={i} style={{ color: 'var(--color-text-quaternary)', padding: '0 8px' }}>...</span> : (
+                      <button key={i} onClick={() => setPage(p as number)} style={{ padding: '6px 14px', borderRadius: '8px', border: `1px solid ${page === p ? 'var(--color-brand-500)' : 'var(--color-border-light)'}`, background: page === p ? 'var(--color-brand-500)' : 'transparent', color: page === p ? 'var(--color-ui-on-interactive)' : 'var(--color-text-secondary)', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 900, minWidth: '38px', transition: 'all 0.2s' }} className="hover:bg-surface-1 active:scale-95">{p}</button>
+                    ))}
+                    <button onClick={() => setPage((p: number) => Math.min(totalPages, p + 1))} disabled={page === totalPages} style={{ padding: '6px 16px', borderRadius: '10px', border: '1px solid var(--color-border-light)', background: page === totalPages ? 'transparent' : 'var(--color-surface-1)', color: page === totalPages ? 'var(--color-text-quaternary)' : 'var(--color-text-secondary)', cursor: page === totalPages ? 'default' : 'pointer', fontSize: '0.8rem', fontWeight: 700, transition: 'all 0.2s' }} className="hover:bg-surface-2 active:scale-95">Next</button>
                   </div>
                 </div>
               )}

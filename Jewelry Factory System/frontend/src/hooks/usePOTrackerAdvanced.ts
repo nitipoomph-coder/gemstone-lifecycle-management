@@ -38,7 +38,7 @@ export function usePOTrackerAdvanced() {
   const [selectedGroupFilter, setGroupFilter] = useState<string>(() => searchParams.get('group') || 'N008');
   const [dateType, setDateType] = useState(() => searchParams.get('dateType') || 'Order Date');
   const [requestedPage, setPage] = useState(() => parseInt(searchParams.get('page') || '1'));
-  const [pageSize, setPageSize] = useState(() => parseInt(searchParams.get('pageSize') || '20'));
+  const [pageSize, setPageSize] = useState(() => parseInt(searchParams.get('pageSize') || '50'));
 
   const [filterType, setFilterType] = useState(() => searchParams.get('fType') || '');
   const [filterWeek, setFilterWeek] = useState(() => searchParams.get('fWeek') || '');
@@ -110,7 +110,7 @@ export function usePOTrackerAdvanced() {
     if (groupFilter !== 'N008') params.set('group', groupFilter);
     if (dateType !== 'Order Date') params.set('dateType', dateType);
     if (requestedPage !== 1) params.set('page', requestedPage.toString());
-    if (pageSize !== 20) params.set('pageSize', pageSize.toString());
+    if (pageSize !== 50) params.set('pageSize', pageSize.toString());
     if (filterType) params.set('fType', filterType);
     if (filterWeek) params.set('fWeek', filterWeek);
     if (filterCust) params.set('fCust', filterCust);
@@ -282,7 +282,42 @@ export function usePOTrackerAdvanced() {
 
   const activeFilterCount = activeChips.length;
 
+  const isFiltered = useMemo(() => {
+    const defaultRange = getDefaultDateRange();
+    return (
+      groupFilter !== 'N008' ||
+      statusFilter !== 'pending' ||
+      Boolean(filterWeek) ||
+      Boolean(filterCust) ||
+      Boolean(filterPO) ||
+      Boolean(filterType) ||
+      Boolean(filterShipTo) ||
+      dateType !== 'Order Date' ||
+      dateFrom !== defaultRange.from ||
+      dateTo !== defaultRange.to ||
+      Boolean(search)
+    );
+  }, [groupFilter, statusFilter, filterWeek, filterCust, filterPO, filterType, filterShipTo, dateType, dateFrom, dateTo, search]);
+
+  const resetFilters = useCallback(() => {
+    const defaultRange = getDefaultDateRange();
+    setGroupFilter('N008');
+    setStatusFilter('pending');
+    setDateType('Order Date');
+    setDateFrom(defaultRange.from);
+    setDateTo(defaultRange.to);
+    setFilterType('');
+    setFilterWeek('');
+    setFilterCust('');
+    setFilterPO('');
+    setFilterShipTo('');
+    setPage(1);
+    navigate({ pathname: location.pathname, search: pageSize !== 50 ? `pageSize=${pageSize}` : '' }, { replace: true });
+  }, [location.pathname, navigate, pageSize]);
+
   return {
+    isFiltered,
+    resetFilters,
     statusFilter,
     setStatusFilter,
     groupFilter,

@@ -96,14 +96,12 @@ const inFlight = new Map();
 
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
+// ปิดการล็อค Cache เพื่อให้ข้อมูลสดใหม่ (Real-time) เสมอจาก Database
 function getCached(key) {
-  const entry = cache.get(key);
-  if (!entry) return null;
-  if (Date.now() > entry.expiresAt) { cache.delete(key); return null; }
-  return entry.data;
+  return null;
 }
 function setCached(key, data) {
-  cache.set(key, { data, expiresAt: Date.now() + CACHE_TTL_MS });
+  // ไม่ล็อคข้อมูลค้างในหน่วยความจำ
 }
 
 // === GET /api/orders =========================================================
@@ -136,7 +134,7 @@ router.get('/', async (req, res) => {
       spName = 'dbo.PC_Show_OrdTrack_Sum_OrdDate';
     }
 
-    const cacheKey = `${spName}|${statusFilter}|${startDate.toISOString().slice(0, 10)}|${endDate.toISOString().slice(0, 10)}`;
+    const cacheKey = `${spName}|${startDate.toISOString().slice(0, 10)}|${endDate.toISOString().slice(0, 10)}`;
 
     // 1) Cache hit - return immediately
     if (!noCache) {
@@ -156,18 +154,14 @@ router.get('/', async (req, res) => {
 
     // 3) Execute Stored Procedure
     const fetchPromise = (async () => {
-      console.log(`[EXEC SP] ${spName} | status: ${statusFilter} (${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()})`);
+      console.log(`[EXEC SP] ${spName} (${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()})`);
       const request = pool.request();
 
-      // === [พารามิเตอร์ที่ใช้เรียกใช้งาน Stored Procedure (SP) ในฐานข้อมูล] ===
+      // === [พารามิเตอร์ที่ใช้เรียกใช้งาน Stored Procedure (SP) ในฐานข้อมูล (Baseline 2 ตัว)] ===
       // 1) FromDate -> ตรงกับตัวแปร @FromDate ใน SP (กำหนดขอบเขตวันที่เริ่มต้น)
       request.input('FromDate', sql.DateTime, startDate);
       // 2) ToDate -> ตรงกับตัวแปร @ToDate ใน SP (กำหนดขอบเขตวันที่สิ้นสุด)
       request.input('ToDate', sql.DateTime, endDate);
-      // 3) Status -> SP ทั้ง 5 ตัว (_OrdDate/_DueDate/_CustDueDate/_FinDate/_All) รับพารามิเตอร์ @Status แล้ว
-      //    เงื่อนไขใน SP: (@Status = 'All' OR (@Status = 'pending' AND CloseStatus <> 'Y') OR (@Status = 'finish' AND CloseStatus = 'Y'))
-      //    ⚠️ ต้อง apply สคริปต์ SP รุ่นใหม่ใน backend/sql/stored-procedures/ ลง DB ก่อน มิฉะนั้นตัวที่ยังไม่มี @Status จะ error "too many arguments"
-      // request.input('Status', sql.VarChar, statusFilter); // TEMPORARILY DISABLED to prevent 8144 error
 
       const result = await request.execute(spName);
 
@@ -238,7 +232,7 @@ router.get('/', async (req, res) => {
 
       // 3. แปลงร่างกลับเป็น Array ปกติส่งให้ React (SampleItemNo ไหลผ่าน ...rest ไปให้ frontend ประกอบ URL รูปเอง)
       const data = Array.from(groupedMap.values()).map(r => {
-        const { OrdNos, ...rest } = r;
+        const { OrdNos, ItemPhoto, ...rest } = r;
         return {
           ...rest,
           OrdNo: Array.from(OrdNos).filter(Boolean).join('/ '),

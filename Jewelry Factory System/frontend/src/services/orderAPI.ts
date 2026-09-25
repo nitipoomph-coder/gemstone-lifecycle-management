@@ -93,7 +93,7 @@ const num = (v: number | string | null | undefined): number | null => {
 
 type RawOrderSummary = Record<string, string | null | undefined>;
 
-export const fetchOrders = async (params: { status?: 'pending' | 'finish' | 'all', dateType?: string, dateFrom?: string, dateTo?: string }): Promise<{ ok: boolean; data: OrderSummary[]; error?: string }> => {
+export const fetchOrders = async (params: { status?: 'pending' | 'finish' | 'all', dateType?: string, dateFrom?: string, dateTo?: string, noCache?: boolean }): Promise<{ ok: boolean; data: OrderSummary[]; error?: string }> => {
   try {
     const baseUrl = `${API_BASE_URL}/orders`;
     const queryParams = new URLSearchParams();
@@ -101,6 +101,8 @@ export const fetchOrders = async (params: { status?: 'pending' | 'finish' | 'all
     if (params.dateFrom) queryParams.append('dateFrom', params.dateFrom);
     if (params.dateTo) queryParams.append('dateTo', params.dateTo);
     if (params.dateType) queryParams.append('dateType', params.dateType);
+    if (params.noCache) queryParams.append('noCache', '1');
+    queryParams.append('_t', Date.now().toString());
 
     const url = queryParams.toString() ? `${baseUrl}?${queryParams.toString()}` : baseUrl;
 

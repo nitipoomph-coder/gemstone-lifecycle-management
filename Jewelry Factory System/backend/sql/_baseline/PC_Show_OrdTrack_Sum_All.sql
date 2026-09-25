@@ -1,3 +1,10 @@
+USE [dbGeneration]
+GO
+/****** Object:  StoredProcedure [dbo].[PC_Show_OrdTrack_Sum_All]    Script Date: 25/09/2026 16:40 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 
 -- ========================================================================
 -- Author : <PRAWAT>
@@ -6,7 +13,7 @@
 -- Description : <Show Order Tracker Summary All>
 -- ========================================================================
 
-CREATE PROCEDURE [dbo].[PC_Show_OrdTrack_Sum_All]
+ALTER PROCEDURE [dbo].[PC_Show_OrdTrack_Sum_All]
 	
 	@FromDate DateTime,
 	@ToDate DateTime

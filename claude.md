@@ -1,12 +1,19 @@
 # Gemstone Lifecycle Management — Project Context
 
-## Database Environment Guardrail
+## 🛑 STRICT DATABASE GUARDRAIL (READ-ONLY 100% — ห้ามแตะต้องหรือแก้ไขฐานข้อมูลเด็ดขาด)
 
-- Current `VW_SalesOrderLineAnalytics` work, validation counts, and audit findings are from the **TEST DATABASE ONLY**.
-- This view has not been approved or applied to the production database.
-- Do not treat the configured host or database name as proof that an operation is approved for production.
-- Keep database checks read-only unless the user explicitly approves a test-database change.
-- Any production SQL change requires a separate schema check, review, and explicit user approval.
+> ### ⚠️ กฎเหล็กความปลอดภัยสูงสุด (CRITICAL POLICY - NEVER VIOLATE)
+> 1. **ห้ามแตะต้อง ดัดแปลง หรือแก้ไขโครงสร้างและข้อมูลใน Database ใดๆ ทั้งสิ้น (READ-ONLY 100%)**:
+>    - ห้ามรันคำสั่ง DDL หรือ DML เด็ดขาด: `ALTER`, `CREATE`, `DROP`, `UPDATE`, `INSERT`, `DELETE`, `TRUNCATE`, `EXEC sp_rename`, ฯลฯ
+>    - ห้ามแก้ไข Stored Procedures, Views, Tables, Functions, Triggers หรือ Indexes บน Database โดยเด็ดขาด ทั้งใน Production DB (`192.168.5.40`) และ Test DB
+> 2. **ต้องรักษา Backward Compatibility กับระบบเดิม (Legacy VB.NET / PCC Management System) 100%**:
+>    - ฐานข้อมูลนี้ถูกใช้งานร่วมกับระบบเดิม (VB.NET) อยู่ตลอดเวลา
+>    - การแก้ไข Stored Procedure ใดๆ (เช่น การเพิ่ม Parameter `@Status`) จะทำให้ระบบเก่าของโรงงานพังทันที (เกิด Parameter count mismatch / OLE DB error)
+>    - Stored Procedures ทุกตัวต้องคงสถานะตาม **Baseline เดิมของระบบ (รับ 2 Parameters: `@FromDate`, `@ToDate`)**
+> 3. **การประมวลผลและการกรองข้อมูล (Filtering, Grouping, Calculation) ให้ทำที่ Application Layer เท่านั้น**:
+>    - หากต้องการกรองสถานะ (Pending/Finish), จัดกลุ่มลูกค้า, หรือคำนวณสถิติใหม่ ให้ทำในหน่วยความจำ (In-Memory) ฝั่ง Backend (Node.js/Express) หรือ Frontend (React) เท่านั้น ห้ามแก้ที่ Database!
+> 4. **อ่านข้อมูลอย่างเดียว (READ-ONLY ACCESS)**:
+>    - อนุญาตเฉพาะคำสั่ง `SELECT` หรือการ `EXECUTE` Stored Procedures ที่มีอยู่เดิมตาม Baseline เท่านั้น
 
 ## Project Overview
 
@@ -37,11 +44,22 @@
 ### Key Feature: PO tracker
 
 ระบบ PO tracker เป็นฟีเจอร์หลักที่ใช้งานจริงแล้ว ทำหน้าที่:
-- ดึงข้อมูล Order Stored Procedures (`PC_Show_OrdTrack_Sum_*`)
+- ดึงข้อมูล Order Stored Procedures (`PC_Show_OrdTrack_Sum_*`) ตาม **Baseline 2-parameter signature: `@FromDate`, `@ToDate`** (ห้ามส่ง `@Status` เด็ดขาด เพื่อคงความเข้ากันได้กับระบบ legacy VB.net 100%)
 - Aggregate ข้อมูลฝั่ง Node.js (กรุ๊ปด้วย 5 แกน: Cust, PO, Type, ShipTo, Material)
-- กรอง Pending/Finish ผ่าน `@Status` — **SP ทั้ง 5 ตัวรองรับแล้ว** (4 ก.ค. 2026) backend จึงส่ง `@Status` ให้ทุกตัว; ⚠️ ต้อง apply สคริปต์ SP รุ่นใหม่ใน `backend/sql/` ลง DB ก่อน deploy backend มิฉะนั้นตัวที่ยังไม่มี `@Status` จะ error "too many arguments"
+- **การกรองสถานะ (Status Filter)** ทำใน Memory (Node.js/React):
+  - `Pending`: กรองแถวที่ `UnFinishQty !== 0` (งานที่ยังค้างผลิต)
+  - `Finish`: กรองแถวที่ `FinishQty !== 0` (งานที่เสร็จแล้ว)
+  - `ALL`: ไม่กรอง แสดงทุกรายการ
+- **การจัดกลุ่มลูกค้า (Customer Grouping)** ตรงตามตรรกะระบบเดิม 100%:
+  - `N008`: N008, N048, N066-N075
+  - `N044`: N044, N064, N065
+  - `N051`: N051
+  - `N098`: N098
+  - `MLT`: U411-U426, MLT
+  - `General`: ลูกค้าอื่นๆ ทั้งหมดที่ไม่ใช่กลุ่มข้างต้น
+- **Dropdown วันที่เป็นอิสระ**: สลับเลือกเงื่อนไขวันที่ (Order Date, Factory Due Date, Cust Due Date, Finish Date) เพื่อเรียก SP ที่ต้องการได้โดยอิสระ โดยไม่ผูกมัดหรือบังคับเปลี่ยนค่าสถานะ
+- **Real-Time Live Data (No Caching)**: ปิด In-Memory Cache เพื่อให้ข้อมูลสดใหม่ทันทีตรงกับ Database เสมอ และตัด `ItemPhoto` buffer ออกจาก payload เพื่อลดขนาด network bandwidth
 - แสดงรูปสินค้าจาก **network path** (`/api/photos/ps|cad/:itemNo` — Photo Bridge) โดย SP list ส่ง `SampleItemNo` (ItemNo ตัวแทน/กลุ่ม) มาให้ frontend ประกอบ URL เอง — **เลิกใช้ base64/VARBINARY (GMItemPhoto) แล้วทั้งระบบ**
-- In-Memory Cache 5 นาที + Request Coalescing ป้องกัน concurrent queries
 
 **Design Notes (POTrackerAdvanced.tsx / OrderTable.tsx):**
 - **Filters — Toolbar + Popover + Chips (modern table-filter pattern, ไม่ใช่ sidebar)**: Group toggle และ Status toggle แสดงตลอดเวลาในแถบเดียวบรรทัดเดียว ส่วนฟิลเตอร์รอง (Week/Customer/PO/Type/ShipTo/Date Range) ซ่อนอยู่หลังปุ่ม "Filters" (มี badge บอกจำนวนที่เลือกไว้) กดแล้วเปิดเป็น popover ลอย (ใช้ pattern เดียวกับ View Columns popover ใน `OrderTable.tsx`) — เมื่อมีฟิลเตอร์ที่เลือกไว้ จะโชว์เป็น chip ที่ลบทีละตัวได้ใต้แถบ toolbar เพื่อให้เห็นว่าเลือกอะไรไว้โดยไม่ต้องเปิด popover ซ้ำ — เมื่อไม่มีฟิลเตอร์ใดเลือกไว้ พื้นที่ด้านบนจะเหลือแค่แถบ toolbar บรรทัดเดียว (โล่ง ไม่กระจุก) อ้างอิงจาก pattern ของ Linear/Notion/GitHub Issues (ไม่ใช่ sidebar แบบ BI dashboard เพราะ PO Tracker เป็นตารางข้อมูลเป็นหลัก ไม่ใช่ multi-chart report)
@@ -103,7 +121,7 @@
 | Connection      | TCP/IP, Port 1433, No Encryption     |
 | Database        | `dbGeneration` (Order/Production), `dbInventory` (Procurement/Stock) |
 | Key Tables      | `OrdHD`, `OrdDT`, `GMCust`, `GMItemPhoto`, `OrdTrackDT`, `OrdWeekPlanHD` |
-| Stored Procedures | `PC_Show_OrdTrack_Sum_*` (OrdDate, DueDate, CustDueDate, FinDate, All) — รับ 3 params: `@FromDate`, `@ToDate`, `@Status` |
+| Stored Procedures | `PC_Show_OrdTrack_Sum_*` (OrdDate, DueDate, CustDueDate, FinDate, All) — รับ 2 params ตาม Baseline: `@FromDate`, `@ToDate` (การกรองสถานะกรองใน Memory) |
 
 ### Design System
 
@@ -340,17 +358,18 @@ interface DocumentLayoutProps {
 4. **Error Handling**: ทุก route ต้อง `try/catch` และ return `{ ok: false, error: message }`
 5. **Response Format**: ทุก API ต้อง return format `{ ok: boolean, data?: any, error?: string }`
 6. **Logging**: ใช้ `console.log` + emoji prefix สำหรับ debug (`[EXEC SP]`, `[CACHE HIT]`, `❌`)
-7. **Caching**: ใช้ In-Memory Cache ที่มีอยู่ (`cache` Map + `inFlight` Map) สำหรับ heavy queries
+7. **Caching**: ใช้ In-Memory Cache ที่มีอยู่ (`cache` Map + `inFlight` Map) สำหรับ heavy queries ทั่วไป แต่สำหรับ PO Tracker ให้ดึงข้อมูลสดจาก DB ตลอดเวลา (ไม่ cache) เพื่อความถูกต้องแบบ Real-Time
 8. **Photo Handling**: เสิร์ฟรูปจาก network file share ผ่าน Photo Bridge (`/api/photos/ps|cad/:itemNo` ใน `server.js` → `res.sendFile`) — **เลิกใช้ `toBase64Photo()`/VARBINARY แล้วทั้งระบบ**, ไม่ join `GMItemPhoto` ใน query ใด ๆ
-9. **Stored Procedures**: เรียกผ่าน `request.execute(spName)` — SP ทั้ง 5 ตัวรับ 3 params เท่ากัน (`@FromDate`/`@ToDate`/`@Status`) และคืน 63 คอลัมน์เท่ากัน (4 ก.ค. 2026); ต้อง apply SP รุ่นใหม่ลง DB ก่อน deploy backend
+9. **Stored Procedures**: เรียกผ่าน `request.execute(spName)` — ส่งเฉพาะ **2 Parameters Baseline (`@FromDate`, `@ToDate`)** เท่านั้น ห้ามส่ง `@Status` หรือ parameter เพิ่มเติมเด็ดขาด และห้ามแก้ไข/ALTER SP บน DB (การกรองสถานะทำใน Memory)
 
 ### Database Rules
 
-1. **Connection Pool**: ใช้ pool size max=20, min=2, idle timeout 1 นาที
-2. **Request Timeout**: 300 วินาที (5 นาที) — dataset ขนาดใหญ่
-3. **Date Handling**: ใช้ `sql.DateTime` สำหรับ date parameters ที่ส่งไป SP
-4. **VARBINARY**: Cast photo columns เป็น `VARBINARY(MAX)` ใน SELECT
-5. **NULL Handling**: ใช้ `ISNULL()` ใน WHERE clause สำหรับ nullable columns
+1. **STRICT READ-ONLY (ห้ามแก้ไข DB เด็ดขาด)**: ห้ามรันคำสั่ง DDL/DML, ห้ามแก้ไข Table, View, Stored Procedure หรือ Index บน Database ใดๆ ทั้งสิ้น เพื่อรักษาความเข้ากันได้กับระบบเดิม (Legacy VB.NET) 100%
+2. **Connection Pool**: ใช้ pool size max=20, min=2, idle timeout 1 นาที
+3. **Request Timeout**: 300 วินาที (5 นาที) — dataset ขนาดใหญ่
+4. **Date Handling**: ใช้ `sql.DateTime` สำหรับ date parameters ที่ส่งไป SP
+5. **VARBINARY**: Cast photo columns เป็น `VARBINARY(MAX)` ใน SELECT
+6. **NULL Handling**: ใช้ `ISNULL()` ใน WHERE clause สำหรับ nullable columns
 
 ---
 
@@ -514,44 +533,39 @@ Dashboard/report endpoint details moved to dashboard.md. Sales menu/navigation d
 
 ### Database Considerations
 
-- **SP Parameter Compatibility**: SP ทั้ง 5 ตัวรองรับ 3 parameters: `@FromDate` (DateTime), `@ToDate` (DateTime), `@Status` (VarChar — 'pending'/'finish'/'All') — ห้ามเพิ่ม parameter เองโดยไม่ตรวจสอบ SP definition บน SQL Server ก่อน
+- **Strict Read-Only & Zero-Modification**: ห้ามแตะต้องหรือรันคำสั่งแก้ไข DB ใดๆ เด็ดขาด (100% Read-Only) เพื่อรักษาความเข้ากันได้กับระบบ legacy VB.net
+- **SP Parameter Compatibility (Baseline 2 Params)**: SP ทั้ง 5 ตัวรองรับเฉพาะ 2 parameters ตาม Baseline: `@FromDate` (DateTime) และ `@ToDate` (DateTime) — ห้ามส่ง `@Status` หรือ parameter ใดๆ เพิ่มเติมเด็ดขาด เพราะจะทำให้ระบบ VB.NET เดิมที่เชื่อมต่อกับ DB ตัวนี้พังทันที (Parameter count mismatch)
+- **Application-Layer Filtering**: การกรองสถานะ 'pending' / 'finish' / 'all' ทำที่ Memory ฝั่ง Backend และ Frontend เท่านั้น
 - **Aggregation**: Backend Node.js ทำ grouping เพิ่มเติม (5 แกน: Cust, PO, Kind, ShipTo, Material + CustDueDate) หลังจาก SP ส่งผลลัพธ์กลับมาแล้ว
 - **Connection Pool**: Pool จะ auto-reconnect เมื่อเกิด error — ไม่ต้อง restart server
-- **Index Dependency**: SP ทั้ง 5 ตัวต้องมี Index ครบถ้วนจึงจะทำงานได้เร็ว — ดูรายละเอียดใน section "Database: Stored Procedures & Indexes" ด้านล่าง
 
 ---
 
-## Database: Stored Procedures & Indexes (Server 192.168.5.40)
+## Database: Stored Procedures & Baseline Architecture (Server 192.168.5.40)
 
-> **⭐ SSOT (2 ก.ค. 2026 — รอบล่าสุด)**: SP + Index definition จริงย้ายมาเก็บใน repo แล้วที่ **`backend/sql/`**
-> (`stored-procedures/*.sql`, `indexes.sql`, `_baseline/` สำหรับ rollback) — ให้ยึดไฟล์เหล่านั้นเป็นหลัก
-> การเปลี่ยนแปลงรอบนี้: (1) **ตัดรูป base64 ออกจาก SP ทั้ง 5** → ส่ง `SampleItemNo` แทน (join `GMItemPhoto` หายหมด),
-> (2) พบว่า index หายเกลี้ยงเหลือแค่ `PK_GMCust` (ตารางเป็น HEAP) จึงสร้าง **9 covering index ใหม่ (NONCLUSTERED, ONLINE)**,
-> (3) ซ่อม `_All` ที่ ALTER ไม่ได้เพราะ dead `LEFT JOIN VPC_OrdSum_Detail` (view พัง) → ลบ join ทิ้ง
-> ตารางด้านล่างเป็นบริบทเชิงโครงสร้าง (บาง index ในตารางเป็นชุดที่ "เคย" ออกแบบไว้ ไม่ตรงกับ `indexes.sql` ปัจจุบัน 100%)
+> ⚠️ **STRICT GUARDRAIL**: Database อยู่ในสถานะ **Baseline ดั้งเดิม 100% ห้ามรันสคริปต์แก้ไข/ALTER เด็ดขาด** 
+> ทุก Stored Procedure ต้องรองรับการทำงานร่วมกับระบบเดิม (PCC Management System บน VB.NET) อย่างสมบูรณ์ ห้ามแตะต้อง DB โดยเด็ดขาด
 
-> **บันทึกเดิม**: หลัง Restore database `dbGeneration` จาก backup — SP และ Index หายไปทั้งหมด ต้องสร้างใหม่
-
-### Stored Procedures — ครบ 5 ตัว ✅
+### Stored Procedures — Baseline 5 ตัว ✅
 
 SP ทั้ง 5 ตัวใช้โครงสร้าง CTE เดียวกัน ต่างกันแค่ **WHERE clause วันที่** ที่ใช้กรอง:
 
 | SP Name | WHERE Date Column | สถานะ |
 |---------|-------------------|--------|
-| `dbo.PC_Show_OrdTrack_Sum_OrdDate` | `OrdHD.OrdDate BETWEEN @FromDate AND @ToDate` | ✅ ALTER แล้ว (2 ก.ค. 2026) |
-| `dbo.PC_Show_OrdTrack_Sum_DueDate` | `OrdHD.DueDate BETWEEN ...` | ✅ มีจาก backup |
-| `dbo.PC_Show_OrdTrack_Sum_CustDueDate` | `OrdHD.CustDueDate BETWEEN ...` | ✅ มีจาก backup |
-| `dbo.PC_Show_OrdTrack_Sum_FinDate` | `OrdHD.FinDate BETWEEN ...` | ✅ มีจาก backup |
-| `dbo.PC_Show_OrdTrack_Sum_All` | ไม่กรองวันที่ (ดึงทั้งหมด) | ✅ มีจาก backup |
+| `dbo.PC_Show_OrdTrack_Sum_OrdDate` | `OrdHD.OrdDate BETWEEN @FromDate AND @ToDate` | ✅ Baseline (2 params) |
+| `dbo.PC_Show_OrdTrack_Sum_DueDate` | `OrdHD.DueDate BETWEEN ...` | ✅ Baseline (2 params) |
+| `dbo.PC_Show_OrdTrack_Sum_CustDueDate` | `OrdHD.CustDueDate BETWEEN ...` | ✅ Baseline (2 params) |
+| `dbo.PC_Show_OrdTrack_Sum_FinDate` | `OrdHD.FinDate BETWEEN ...` | ✅ Baseline (2 params) |
+| `dbo.PC_Show_OrdTrack_Sum_All` | ไม่กรองวันที่ (ดึงทั้งหมด) | ✅ Baseline (2 params) |
 
-**Parameters ที่รับ (ทุกตัวเหมือนกัน):**
+**Parameters ที่รับ (Baseline ทุกตัวรับ 2 parameters เท่านั้น):**
 ```sql
 @FromDate DateTime,
-@ToDate DateTime,
-@Status Varchar(20) = 'pending'  -- 'pending' / 'finish' / 'All'
+@ToDate DateTime
 ```
+*(ห้ามเพิ่ม `@Status` หรือ parameter อื่นลงใน Stored Procedure เด็ดขาด)*
 
-**Backend เรียกใช้ที่:** `routes/orders.js` → `request.execute(spName)` (line ~172)
+**Backend เรียกใช้ที่:** `routes/poTracker.js` (และ `routes/orders.js`) → `request.execute(spName)` โดยส่งเฉพาะ `@FromDate` และ `@ToDate`
 
 **โครงสร้าง CTE ภายใน SP (ทุกตัวเหมือนกัน):**
 1. `DupOnePONo` — หา PO ที่มี OrdHD 1 record (ลูกค้า N008 group)
@@ -562,9 +576,9 @@ SP ทั้ง 5 ตัวใช้โครงสร้าง CTE เดีย
 6. `CTM_OrdDT_Aggregate` — SUM qty (ลูกค้า N008 group, หลาย PO)
 7. **Final SELECT**: 3 UNION ALL (ลูกค้าทั่วไป + N008 PO เดียว + N008 หลาย PO)
 
-### Indexes — ที่จำเป็นสำหรับ SP ⚠️
+### Database Indexes (Reference Only — 🛑 ห้ามรันสคริปต์สร้าง/แก้ไข Index บน DB เด็ดขาด)
 
-หลัง Restore เหลือแค่ `PK_GMCust` ตัวเดียว — ต้องสร้าง index ใหม่ทั้งหมด:
+> ⚠️ **STRICT POLICY**: ข้อมูล Index ด้านล่างเป็นเพียงการบันทึกโครงสร้างทางเทคนิคเพื่อการอ้างอิงเท่านั้น **ห้ามนำสคริปต์ไปรันสร้างหรือดัดแปลง Index บน Database เด็ดขาด** (ฐานข้อมูลถูกควบคุมโดยผู้ดูแลระบบและใช้งานร่วมกับระบบเดิม)
 
 #### OrdHD (ตาราง Header ออเดอร์ — ใช้หนักสุด)
 | Index Name | Key Columns | INCLUDE | ใช้เพื่อ |
@@ -575,7 +589,7 @@ SP ทั้ง 5 ตัวใช้โครงสร้าง CTE เดีย
 | `IX_OrdHD_CustDueDate` | `CustDueDate` | OrdNo, CustCode, PONo, OrdKind, OrdMat, CustMultiAddr, CloseStatus, OrdDate, DueDate, CustQCDate | SP: CustDueDate |
 | `IX_OrdHD_CustCode_PONo` | `CustCode, PONo` | OrdNo, OrdKind, OrdMat, CustMultiAddr, OrdDate, DueDate, CustDueDate, CloseStatus | GROUP BY, JOIN, subquery |
 | `IX_OrdHD_PONo` | `PONo` | OrdNo, CustCode, OrdKind, OrdMat, CustMultiAddr, OrdDate, DueDate, CustDueDate, CloseStatus | DupOnePONo/DupMorPONo CTE |
-| `IX_OrdHD_CloseStatus` | `CloseStatus` | OrdNo, CustCode, PONo | @Status filter |
+| `IX_OrdHD_CloseStatus` | `CloseStatus` | OrdNo, CustCode, PONo | CloseStatus lookup |
 
 #### OrdDT (ตาราง Detail ออเดอร์)
 | Index Name | Key Columns | INCLUDE | ใช้เพื่อ |
@@ -604,7 +618,7 @@ SP ทั้ง 5 ตัวใช้โครงสร้าง CTE เดีย
 |-----------|-------------|---------|--------|
 | `IX_OrdWeekPlanHD_PlanDate` | `PlanDate` | PlanYear, PlanWeek | JOIN DueDate |
 
-**SQL Script สำหรับสร้าง Index:** ใช้ไฟล์จริงใน repo **`backend/sql/indexes.sql`** (9 covering index, `IF NOT EXISTS` + `ONLINE=ON`) — ไม่ใช่ artifact `create_indexes.sql` เดิมอีกต่อไป
+**SQL Script สำหรับ Index:** เก็บไว้เป็น Reference ใน `backend/sql/indexes.sql` เท่านั้น — **🛑 ห้ามนำไปรันบน Database เด็ดขาด** ทุกการดำเนินการบน DB ต้องเป็นไปตามที่ผู้ดูแลระบบและระบบเดิมกำหนดไว้เท่านั้น
 
 ---
 
@@ -963,3 +977,35 @@ Inside route handlers, add only short section labels for important boxes/queries
   - Fixes bugs in older positional-based comparison year selections, moving to a smarter numeric proximity logic.
   - Standardizes URL syncing and State syncing correctly avoiding duplicate URL states (`groups` vs `period`).
 - **Status**: Currently at Step 3 (Migrating Dashboard/Trends to use the new hook).
+
+---
+
+## 2026-09-25 PO Tracker Modernization & Strict DB Baseline Compatibility
+
+### 1. นโยบายความปลอดภัยฐานข้อมูลขั้นเด็ดขาด (Strict Zero-DB-Modification Policy)
+- **🛑 ห้ามแก้ไขฐานข้อมูลเด็ดขาด (READ-ONLY 100%)**: ไม่ว่ากรณีใดๆ ห้ามรันคำสั่ง DDL/DML, ห้าม ALTER/CREATE/DROP Stored Procedure, Table, View หรือ Index บนเซิร์ฟเวอร์ฐานข้อมูลทั้งสิ้น
+- **การเข้ากันได้กับระบบเดิม (Legacy VB.NET / PCC Management System)**:
+  - Stored Procedures ทั้ง 5 ตัว (`PC_Show_OrdTrack_Sum_OrdDate`, `_DueDate`, `_CustDueDate`, `_FinDate`, `_All`) ต้องคงโครงสร้างตาม **Baseline ดั้งเดิมที่รับ 2 Parameters (`@FromDate`, `@ToDate`)**
+  - หากมีการแก้ไขหรือเพิ่ม parameter (เช่น `@Status`) ใน DB จะทำให้ระบบ VB.NET เดิมที่เชื่อมต่อผ่าน OLE DB ไม่สามารถดึงข้อมูลได้ (Parameter count mismatch)
+  - ความต้องการในการกรองหรือคำนวณใหม่ ต้องดำเนินการที่ระดับ Application Layer (Node.js backend / React frontend) เท่านั้น
+
+### 2. สถาปัตยกรรมและ Logic ล่าสุดของระบบ PO Tracker
+1. **Backend Signature Compatibility (`routes/poTracker.js`)**:
+   - Backend เรียก Stored Procedure โดยส่งเฉพาะ 2 parameters ตาม Baseline: `@FromDate` และ `@ToDate` เท่านั้น
+   - ตัดการส่ง parameter `@Status` ออก 100%
+   - ปิด In-Memory Cache เพื่อให้หน้าจอแสดงผลข้อมูลสดใหม่ทันทีเสมอ (Real-Time Fresh Data)
+   - ตัด binary buffer ของ `ItemPhoto` ออกจาก JSON response เพื่อประหยัด bandwidth และความรวดเร็วในการส่งข้อมูล
+2. **การกรองสถานะในหน่วยความจำ (In-Memory Status Filter)**:
+   - `Pending`: กรองแถวที่ `UnFinishQty !== 0` (งานที่ยังค้างผลิต/ยังไม่เสร็จ)
+   - `Finish`: กรองแถวที่ `FinishQty !== 0` (งานที่เสร็จแล้ว)
+   - `ALL`: ไม่กรองข้อมูล แสดงรายการทั้งหมด
+3. **การจัดกลุ่มลูกค้า (Customer Group Mapping)**:
+   - `N008`: ลูกค้า `N008`, `N048`, `N066-N075`
+   - `N044`: ลูกค้า `N044`, `N064`, `N065`
+   - `N051`: ลูกค้า `N051`
+   - `N098`: ลูกค้า `N098`
+   - `MLT`: ลูกค้า `U411-U426`, `MLT`
+   - `General`: ลูกค้าอื่นๆ ทั้งหมดที่ไม่ตรงกับเงื่อนไขข้างต้น
+4. **Dropdown วันที่เป็นอิสระ (Decoupled Date Filter)**:
+   - Dropdown วันที่ทำหน้าที่เลือก SP ตามเดิม (Order Date, Factory Due Date, Cust Due Date, Finish Date)
+   - การสลับปุ่มสถานะ (Pending / Finish / ALL) จะไม่ไปบังคับสลับเงื่อนไขวันที่อีกต่อไป

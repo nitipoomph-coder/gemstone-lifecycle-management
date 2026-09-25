@@ -28,6 +28,47 @@ export const getDefaultDateRange = () => {
   return { from: from.toISOString().split('T')[0], to: new Date().toISOString().split('T')[0] };
 };
 
+// ─── Customer Group Matchers (อิงตามระบบเดิม PC_Face_OrdTrack_Sum.vb) ───
+export const isN008 = (c?: string | null) => {
+  if (!c) return false;
+  const upper = c.trim().toUpperCase();
+  const list = ['N008', 'N048', 'N066', 'N067', 'N068', 'N069', 'N070', 'N071', 'N072', 'N073', 'N074', 'N075'];
+  return list.some(prefix => upper.startsWith(prefix));
+};
+
+export const isN044 = (c?: string | null) => {
+  if (!c) return false;
+  const upper = c.trim().toUpperCase();
+  const list = ['N044', 'N064', 'N065'];
+  return list.some(prefix => upper.startsWith(prefix));
+};
+
+export const isN051 = (c?: string | null) => {
+  if (!c) return false;
+  return c.trim().toUpperCase().startsWith('N051');
+};
+
+export const isN098 = (c?: string | null) => {
+  if (!c) return false;
+  return c.trim().toUpperCase().startsWith('N098');
+};
+
+export const isMLT = (c?: string | null) => {
+  if (!c) return false;
+  const upper = c.trim().toUpperCase();
+  if (upper.includes('MLT')) return true;
+  const match = upper.match(/^U(\d{3})/);
+  if (match) {
+    const num = parseInt(match[1], 10);
+    if (num >= 411 && num <= 426) return true;
+  }
+  return false;
+};
+
+export const isGeneral = (c?: string | null) => {
+  return !isN008(c) && !isN044(c) && !isN051(c) && !isN098(c) && !isMLT(c);
+};
+
 export function usePOTrackerAdvanced() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -64,7 +105,7 @@ export function usePOTrackerAdvanced() {
     else if (keywords.some(k => k.includes('n083'))) group = 'N083';
     else if (keywords.some(k => k.includes('n051'))) group = 'N051';
     else if (keywords.some(k => k.includes('n044'))) group = 'N044';
-    else if (keywords.some(k => k.includes('mlt') || k.startsWith('u'))) group = 'MLT';
+    else if (keywords.some(k => k.includes('mlt') || /^u\d{3}/.test(k))) group = 'MLT';
     else {
       const n008List = ['n008', 'n048', 'n066', 'n067', 'n068', 'n069', 'n070', 'n071', 'n072', 'n073', 'n074', 'n075'];
       if (keywords.some(k => n008List.some(code => k.includes(code)))) group = 'N008';
@@ -81,7 +122,8 @@ export function usePOTrackerAdvanced() {
   const setVisibleKeys = (keys: string[]) => setColumnState({ group: groupFilter, keys });
 
   const [refreshVersion, setRefreshVersion] = useState(0);
-  const ordersKey = `${statusFilter}:${dateType}:${dateFrom}:${dateTo}:${refreshVersion}`;
+  // ordersKey ไม่ขึ้นกับ statusFilter เพื่อให้การกดปุ่ม Pending / Finish / ALL กรองแบบ in-memory ทันทีเหมือนระบบเดิม
+  const ordersKey = `${dateType}:${dateFrom}:${dateTo}:${refreshVersion}`;
   const [ordersState, setOrdersState] = useState<{
     key: string;
     orders: OrderSummary[];
@@ -127,10 +169,10 @@ export function usePOTrackerAdvanced() {
   useEffect(() => {
     let cancelled = false;
     fetchOrders({
-        status: statusFilter as 'pending' | 'all' | 'finish',
         dateType: dateType,
         dateFrom: dateFrom,
-        dateTo: dateTo
+        dateTo: dateTo,
+        noCache: true
       })
       .then(result => {
         if (cancelled) return;
@@ -146,7 +188,7 @@ export function usePOTrackerAdvanced() {
         }
       });
     return () => { cancelled = true; };
-  }, [statusFilter, dateType, dateFrom, dateTo, ordersKey]);
+  }, [dateType, dateFrom, dateTo, ordersKey]);
 
   const load = useCallback(() => setRefreshVersion(version => version + 1), []);
 
@@ -161,16 +203,33 @@ export function usePOTrackerAdvanced() {
   const filtered = useMemo(() => {
     let filteredList = orders;
 
-    if (groupFilter !== 'ALL' && groupFilter !== 'CUSTOM') {
-      if (groupFilter === 'N008') {
-        const n008List = ['N008', 'N048', 'N066', 'N067', 'N068', 'N069', 'N070', 'N071', 'N072', 'N073', 'N074', 'N075'];
-        filteredList = filteredList.filter(o => o.CustCode && n008List.some(code => o.CustCode!.includes(code)));
-      }
-      else if (groupFilter === 'MLT') filteredList = filteredList.filter(o => o.CustCode?.includes('MLT') || o.CustCode?.startsWith('U'));
-      else if (groupFilter === 'N083') filteredList = filteredList.filter(o => o.CustCode?.includes('N083'));
-      else if (groupFilter === 'N044') filteredList = filteredList.filter(o => o.CustCode?.includes('N044'));
-      else if (groupFilter === 'N098') filteredList = filteredList.filter(o => o.CustCode?.includes('N098'));
-      else if (groupFilter === 'N051') filteredList = filteredList.filter(o => o.CustCode?.includes('N051'));
+    // 1. Group Filter (อิงเป๊ะตามระบบเดิม PC_Face_OrdTrack_Sum.vb)
+    if (groupFilter === 'N008') {
+      filteredList = filteredList.filter(o => isN008(o.CustCode));
+    } else if (groupFilter === 'N044') {
+      filteredList = filteredList.filter(o => isN044(o.CustCode));
+    } else if (groupFilter === 'N051') {
+      filteredList = filteredList.filter(o => isN051(o.CustCode));
+    } else if (groupFilter === 'N098') {
+      filteredList = filteredList.filter(o => isN098(o.CustCode));
+    } else if (groupFilter === 'MLT') {
+      filteredList = filteredList.filter(o => isMLT(o.CustCode));
+    } else if (groupFilter === 'N083') {
+      filteredList = filteredList.filter(o => o.CustCode?.trim().toUpperCase().startsWith('N083'));
+    } else if (groupFilter === 'ALL' || groupFilter === 'General') {
+      // General: กรองลูกค้าอื่นๆ ทั้งหมดที่ไม่ใช่ N008, N044, N051, N098, U411-U426
+      filteredList = filteredList.filter(o => isGeneral(o.CustCode));
+    }
+    // CUSTOM -> แสดงทั้งหมดไม่กรอง Group
+
+    // 2. Status Filter (Pending / Finish / ALL)
+    // Pending -> กรองแถวที่ UnFinishQty !== 0
+    // Finish -> กรองแถวที่ FinishQty !== 0
+    // ALL -> ไม่กรอง แสดงทั้งหมด
+    if (statusFilter === 'pending') {
+      filteredList = filteredList.filter(o => o.UnFinishQty != null && Number(o.UnFinishQty) !== 0);
+    } else if (statusFilter === 'finish') {
+      filteredList = filteredList.filter(o => o.FinishQty != null && Number(o.FinishQty) !== 0);
     }
 
     if (search.trim()) {
@@ -196,7 +255,10 @@ export function usePOTrackerAdvanced() {
       }
 
       if (keywords.some(k => ['late', 'delay'].includes(k))) {
-        filteredList = filteredList.filter(o => o.DueDate && new Date(o.DueDate) < new Date() && (o.CloseStatus !== 'Y'));
+        filteredList = filteredList.filter(o => {
+          const targetDue = o.CustDueDate || o.DueDate;
+          return targetDue && new Date(targetDue) < new Date() && (o.CloseStatus !== 'Y');
+        });
       }
     }
 
@@ -242,12 +304,22 @@ export function usePOTrackerAdvanced() {
     }
 
     return filteredList;
-  }, [search, orders, groupFilter, filterType, filterWeek, filterCust, filterPO, filterShipTo]);
+  }, [search, orders, groupFilter, statusFilter, filterType, filterWeek, filterCust, filterPO, filterShipTo]);
 
   const totalQty = filtered.reduce((s, o) => s + (o.TotalQty || 0), 0);
   const totalAmount = filtered.reduce((s, o) => s + (o.Amount || 0), 0);
-  const pendingCount = statusFilter === 'finish' ? 0 : filtered.length;
-  const delayedCount = statusFilter === 'finish' ? 0 : filtered.filter(o => o.DueDate && new Date(o.DueDate) < new Date()).length;
+  const totalPOs = useMemo(() => {
+    const pos = new Set<string>();
+    filtered.forEach(o => {
+      if (o.PONo && o.PONo !== '-') pos.add(o.PONo.trim());
+    });
+    return pos.size || filtered.length;
+  }, [filtered]);
+  const pendingCount = filtered.filter(o => o.UnFinishQty != null && Number(o.UnFinishQty) !== 0).length;
+  const delayedCount = filtered.filter(o => {
+    const targetDue = o.CustDueDate || o.DueDate;
+    return targetDue && new Date(targetDue) < new Date() && (o.UnFinishQty != null && Number(o.UnFinishQty) !== 0);
+  }).length;
 
   const uniqueTypes = useMemo(() => {
     const types = new Set<string>();
@@ -352,6 +424,7 @@ export function usePOTrackerAdvanced() {
     showCustomViewModal,
     setShowCustomViewModal,
     filtered,
+    totalPOs,
     totalQty,
     totalAmount,
     pendingCount,

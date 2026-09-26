@@ -359,6 +359,15 @@ export function ProductionSummaryChart({ data, title, showAvgLine = false }: Cha
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border-light)" />
             <XAxis
               dataKey="periodLabel"
+              tickFormatter={(val: string) => {
+                if (typeof val === 'string' && val.includes('/')) {
+                  const parts = val.split('/');
+                  if (parts.length >= 2) {
+                    return `${parts[0]}/${parts[1]}`;
+                  }
+                }
+                return val;
+              }}
               tick={{ fontSize: 11, fill: 'var(--color-text-secondary)', fontWeight: 600 }}
               axisLine={{ stroke: 'var(--color-border-strong)', strokeWidth: 1.5 }}
               tickLine={false}

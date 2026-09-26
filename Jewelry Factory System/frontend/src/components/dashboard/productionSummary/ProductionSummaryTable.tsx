@@ -58,7 +58,7 @@ export function ProductionSummaryTable({ data, tab }: TableProps) {
           borderCollapse: 'collapse',
           fontSize: cellFontSize,
           fontVariantNumeric: 'tabular-nums', // 👈 ตัวเลขหน้ากว้างเท่ากัน อ่านง่าย
-          textAlign: 'right',
+          textAlign: 'center',
         }}
       >
         <thead>
@@ -85,9 +85,12 @@ export function ProductionSummaryTable({ data, tab }: TableProps) {
 
             {/* คอลัมน์ข้อมูล (เฉลี่ยความกว้างเท่ากันAll) */}
             {data.map((d) => {
-              // ในโหมด Month ย่อหัวตารางเหลือแค่เลขวัน e.g. "01", "02" .. "31"
+              // ในโหมด Month/Day แสดงหัวตารางเป็น dd/MM e.g. "01/09", "02/09" .. "31/09"
               const headerLabel = isDaily && d.periodLabel?.includes('/')
-                ? d.periodLabel.split('/')[0]
+                ? (() => {
+                    const parts = d.periodLabel.split('/');
+                    return parts.length >= 2 ? `${parts[0]}/${parts[1]}` : parts[0];
+                  })()
                 : d.periodLabel || d.period;
 
               return (
@@ -99,6 +102,8 @@ export function ProductionSummaryTable({ data, tab }: TableProps) {
                     textAlign: 'center',
                     borderRight: '1px solid var(--color-border-light)',
                     fontWeight: 600,
+                    fontSize: totalCols > 25 ? '9px' : undefined,
+                    whiteSpace: 'nowrap',
                   }}
                 >
                   {headerLabel}

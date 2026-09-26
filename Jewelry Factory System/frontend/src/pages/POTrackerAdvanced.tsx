@@ -6,7 +6,23 @@ import CustomSelect from '../components/ui/CustomSelect';
 import { RefreshCw, AlertTriangle, Filter, Layers, FilterX, RotateCcw } from 'lucide-react';
 import { usePOTrackerAdvanced } from '../hooks/usePOTrackerAdvanced';
 import { useTopbarActions } from '../contexts/TopbarActionContext';
+import { ErpSegmentedControl } from '../components/ui/ErpButtons';
 import { useState, useEffect } from 'react';
+
+const GROUP_OPTIONS = [
+  { value: 'N008', label: 'N008' },
+  { value: 'N044', label: 'N044' },
+  { value: 'N098', label: 'N098' },
+  { value: 'N051', label: 'N051' },
+  { value: 'MLT', label: 'MLT' },
+  { value: 'ALL', label: 'General' },
+];
+
+const STATUS_OPTIONS = [
+  { value: 'pending', label: 'Pending' },
+  { value: 'finish', label: 'Finish' },
+  { value: 'all', label: 'All' },
+];
 
 export default function POTrackerAdvanced() {
   const [colWidths, setColWidths] = useState<Record<string, number>>({});
@@ -136,44 +152,23 @@ export default function POTrackerAdvanced() {
             {/* Group Toggle */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--color-text-tertiary)', textTransform: 'capitalize', letterSpacing: '0.05em' }}>Group</span>
-              <div className="po-segmented" style={{ display: 'flex', background: 'var(--color-surface-1)', padding: '4px', borderRadius: '8px', border: '1px solid var(--color-border-light)' }}>
-                {['N008', 'N044', 'N098', 'N051',/*'N083', */'MLT', 'ALL'].map(grp => (
-                  <button
-                    key={grp}
-                    onClick={() => setGroupFilter(grp)}
-                    style={{
-                      padding: '6px 14px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 800, border: 'none',
-                      background: groupFilter === grp ? 'var(--color-surface-0)' : 'transparent',
-                      color: groupFilter === grp ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
-                      boxShadow: groupFilter === grp ? '0 2px 8px color-mix(in srgb, var(--color-surface-900) 6%, transparent), 0 0 0 1px var(--color-border-light)' : 'none',
-                      cursor: 'pointer', transition: 'all 0.2s'
-                    }}
-                  >{grp === 'ALL' ? 'General' : grp}</button>
-                ))}
-              </div>
+              <ErpSegmentedControl
+                ariaLabel="Group Filter"
+                value={groupFilter}
+                onChange={(grp) => setGroupFilter(grp)}
+                options={GROUP_OPTIONS}
+              />
             </div>
 
             {/* Status Toggle — SP ทั้ง 5 dateType รับ @Status แล้ว */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--color-text-tertiary)', textTransform: 'capitalize', letterSpacing: '0.05em' }}>Status</span>
-              <div className="po-segmented" style={{ display: 'flex', background: 'var(--color-surface-1)', padding: '4px', borderRadius: '8px', border: '1px solid var(--color-border-light)' }}>
-                {['pending', 'finish', 'all'].map(st => {
-                  const isActive = statusFilter === st;
-                  return (
-                    <button
-                      key={st}
-                      onClick={() => setStatusFilter(st as 'pending' | 'finish' | 'all')}
-                      style={{
-                        padding: '6px 14px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 800, border: 'none', textTransform: 'capitalize',
-                        background: isActive ? 'var(--color-surface-0)' : 'transparent',
-                        color: isActive ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
-                        boxShadow: isActive ? '0 2px 8px color-mix(in srgb, var(--color-surface-900) 6%, transparent), 0 0 0 1px var(--color-border-light)' : 'none',
-                        cursor: 'pointer', transition: 'all 0.2s'
-                      }}
-                    >{st}</button>
-                  );
-                })}
-              </div>
+              <ErpSegmentedControl
+                ariaLabel="Status Filter"
+                value={statusFilter}
+                onChange={(st) => setStatusFilter(st as 'pending' | 'finish' | 'all')}
+                options={STATUS_OPTIONS}
+              />
             </div>
 
             {/* Single Global Reset Button (FilterX) covering all page filters */}

@@ -165,22 +165,48 @@ router.get('/', async (req, res) => {
 
       const result = await request.execute(spName);
 
-      let rawData = result.recordset;
+      let rawData = result.recordset || [];
+
+      // ดึง SampleItemNo สำหรับรูปภาพสินค้า (Read-Only SELECT จาก OrdDT ผ่าน OrdHD โดยไม่แตะต้องหรือแก้ SP)
+      const uniquePos = Array.from(new Set(rawData.map(r => r.PONo).filter(p => p && p !== 'Group PO By ShipTo')));
+      const poItemMap = new Map();
+      if (uniquePos.length > 0) {
+        try {
+          for (let i = 0; i < uniquePos.length; i += 400) {
+            const batch = uniquePos.slice(i, i + 400);
+            const q = pool.request();
+            const inClause = batch.map((p, idx) => {
+              const param = `po_${idx}`;
+              q.input(param, sql.NVarChar, p);
+              return `@${param}`;
+            }).join(',');
+            const itemRes = await q.query(`
+              SELECT h.PONo, MIN(d.ItemNo) AS SampleItemNo
+              FROM OrdHD h WITH (NOLOCK)
+              JOIN OrdDT d WITH (NOLOCK) ON d.OrdNo = h.OrdNo
+              WHERE h.PONo IN (${inClause})
+              GROUP BY h.PONo
+            `);
+            itemRes.recordset.forEach(row => {
+              if (row.PONo && row.SampleItemNo) {
+                poItemMap.set(row.PONo, row.SampleItemNo);
+              }
+            });
+          }
+        } catch (err) {
+          console.error('[POTracker] Could not load SampleItemNo mapping:', err.message);
+        }
+      }
 
       // === [ADDED: มัดรวม 5 แกนหลักด้วย Node.js] ===
-      // (การคัดกรอง Pending/Finish ย้ายไปคัดกรองโดยสมบูรณ์ผ่าน @Status ในตัว Database SP แล้ว)
-
       // 2. มัดรวมออเดอร์ที่กระจัดกระจาย โดยยึด 5 แกนหลัก + 1 วันกำหนดส่ง
-      //    ซึ่งฟิลด์เหล่านี้ดึงมาจากคอลัมน์ผลลัพธ์ของ Stored Procedure (SP) ในระบบโดยตรง:
-      //    - r.CustCode      : รหัสลูกค้า (ตรงกับ SELECT h.CustCode ใน SP)
-      //    - r.PONo          : หมายเลขใบสั่งซื้อ (ตรงกับ SELECT h.PONo หรือ 'Group PO By ShipTo' ใน SP)
-      //    - r.OrdKind       : ชนิดออเดอร์ (ตรงกับ CASE WHEN h.OrdKind = 'NEW' THEN 'New' ELSE 'Replen' END ใน SP)
-      //    - r.CustMultiAddr : ที่อยู่ปลายทางการจัดส่ง (ตรงกับ SELECT h.CustMultiAddr ใน SP)
-      //    - r.OrdMat        : ชนิดวัสดุหลัก (ตรงกับ SELECT h.OrdMat ใน SP)
-      //    - r.CustDueDate   : วันกำหนดส่งมอบของลูกค้า (ตรงกับ SELECT h.CustDueDate ใน SP)
       const groupedMap = new Map();
 
       rawData.forEach(r => {
+        if (!r.SampleItemNo && poItemMap.has(r.PONo)) {
+          r.SampleItemNo = poItemMap.get(r.PONo);
+        }
+
         // สร้างกุญแจ 6 เงื่อนไข (รวม CustDueDate เพื่อป้องกันไม่ให้ข้อมูลต่างกำหนดส่งถูกรวมทับกัน)
         const key = `${r.CustCode}|${r.PONo}|${r.OrdKind}|${r.CustMultiAddr}|${r.OrdMat}|${r.CustDueDate || ''}`;
 

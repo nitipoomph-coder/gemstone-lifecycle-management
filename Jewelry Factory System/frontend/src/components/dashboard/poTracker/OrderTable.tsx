@@ -276,7 +276,7 @@ function SkeletonRows({ activeCols, colWidths = {} }: { activeCols: { key: strin
                 minWidth: colWidths[c.key] || c.w, width: colWidths[c.key] || c.w, maxWidth: colWidths[c.key] || c.w, boxSizing: 'border-box'
               }}>
                 {c.key === 'photo'
-                  ? <div className="skeleton-cell" style={{ width: 100, height: 60, borderRadius: 6, margin: '0 auto' }} />
+                  ? <div className="skeleton-cell" style={{ width: 38, height: 38, borderRadius: 4, margin: '0 auto' }} />
                   : <div className="skeleton-cell" style={{ height: '14px', borderRadius: '4px' }} />}
               </td>
             );

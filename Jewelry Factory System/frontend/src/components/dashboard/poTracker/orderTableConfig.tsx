@@ -1,5 +1,146 @@
-import { ChevronRight } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { ChevronRight, X, Image as ImageIcon } from 'lucide-react';
 import type { OrderSummary } from '../../../services/orderAPI';
+
+// ─── Photo Thumbnail & Lightbox Preview Component ─────────────────────────────
+export function PhotoCell({ itemNo, title }: { itemNo?: string | null; title: string }) {
+  const [showModal, setShowModal] = useState(false);
+  const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    if (!showModal) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setShowModal(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [showModal]);
+
+  const cleanItem = itemNo?.trim();
+
+  if (!cleanItem || hasError) {
+    return (
+      <span style={{ color: 'var(--color-text-quaternary)', fontSize: '0.75rem', userSelect: 'none' }}>
+        -
+      </span>
+    );
+  }
+
+  return (
+    <>
+      <img
+        src={`/api/photos/ps/${encodeURIComponent(cleanItem)}`}
+        alt={cleanItem}
+        loading="lazy"
+        onClick={(e) => {
+          e.stopPropagation();
+          setShowModal(true);
+        }}
+        title={`Click to view photo: ${cleanItem}`}
+        style={{
+          width: '40px',
+          height: '40px',
+          objectFit: 'contain',
+          display: 'block',
+          margin: '0 auto',
+          cursor: 'pointer',
+          background: 'transparent',
+          border: 'none',
+          outline: 'none',
+          transition: 'transform 0.15s ease',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = 'scale(1.15)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = 'scale(1)';
+        }}
+        onError={(e) => {
+          const img = e.currentTarget;
+          if (!img.dataset.triedCad) {
+            img.dataset.triedCad = 'true';
+            img.src = `/api/photos/cad/${encodeURIComponent(cleanItem)}`;
+          } else {
+            setHasError(true);
+          }
+        }}
+      />
+
+      {showModal &&
+        createPortal(
+          <div
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowModal(false);
+            }}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 99999,
+              background: 'rgba(0, 0, 0, 0.85)',
+              backdropFilter: 'blur(5px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'zoom-out',
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setShowModal(false)}
+              style={{
+                position: 'absolute',
+                top: 24,
+                right: 24,
+                background: 'rgba(255, 255, 255, 0.2)',
+                border: 'none',
+                borderRadius: '50%',
+                width: 38,
+                height: 38,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                color: '#fff',
+                transition: 'all 0.15s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.35)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
+              }}
+            >
+              <X size={20} />
+            </button>
+
+            <img
+              src={`/api/photos/ps/${encodeURIComponent(cleanItem)}`}
+              alt={cleanItem}
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                maxWidth: '85vw',
+                maxHeight: '85vh',
+                objectFit: 'contain',
+                cursor: 'default',
+                filter: 'drop-shadow(0 12px 28px rgba(0,0,0,0.6))',
+              }}
+              onError={(e) => {
+                const img = e.currentTarget;
+                if (!img.dataset.triedCad) {
+                  img.dataset.triedCad = 'true';
+                  img.src = `/api/photos/cad/${encodeURIComponent(cleanItem)}`;
+                }
+              }}
+            />
+          </div>,
+          document.body
+        )}
+    </>
+  );
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 // ช่องที่ไม่มีข้อมูล = เว้นว่าง (ตามที่ผู้ใช้ระบุ ไม่ใส่ placeholder '-')
 const formatDate = (d: string | null) =>
@@ -97,6 +238,11 @@ export const MASTER_COLS: Record<string, ColDef> = {
     label: 'Ship To', w: 160, align: 'left',
     render: (o) => o.ShipTo,
     cellStyle: () => ({ fontWeight: 500, color: 'var(--color-text-secondary)' }),
+  },
+  photo: {
+    label: 'Photo', w: 72, align: 'center',
+    render: (o) => <PhotoCell itemNo={o.SampleItemNo} title={`${o.CustCode || ''} | PO: ${o.PONo || ''}`} />,
+    cellStyle: () => ({ padding: '3px 4px', verticalAlign: 'middle', textAlign: 'center' }),
   },
   orddate: {
     label: 'Order Date', w: 95, align: 'center',
@@ -273,7 +419,7 @@ export const GROUP_PRESETS: Record<string, string[]> = {
     'prodRisk', 'pqc', 'remark', 'amount', 'arrow'
   ],
   N051: [
-    'no', 'week', 'cust', 'po', 'newReplen', 'metal', 'orddate', 'custdue', 'sku', 'qty',
+    'no', 'week', 'cust', 'po', 'newReplen', 'metal', 'shipto', 'photo', 'orddate', 'custdue', 'sku', 'qty',
     'controlPen', 'polishPen', 'platePen', 'exportQty', 'balQty', 'expPct',
     'prodRisk', 'pqc', 'remark', 'amount', 'arrow'
   ],
@@ -293,7 +439,7 @@ export const GROUP_PRESETS: Record<string, string[]> = {
 
 // หมวดหมู่คอลัมน์สำหรับ View Columns picker (ให้หาง่าย) — ไม่รวม always-on (no/week/cust/po/arrow)
 export const COLUMN_GROUPS: { label: string; keys: string[] }[] = [
-  { label: 'Customer Data', keys: ['po2', 'ordno', 'newReplen', 'metal', 'shipto', 'orddate', 'due', 'qa', 'sgs', 'qcdate', 'custdue', 'oor', 'sku', 'qty', 'amount', 'remark'] },
+  { label: 'Customer Data', keys: ['po2', 'ordno', 'newReplen', 'metal', 'shipto', 'photo', 'orddate', 'due', 'qa', 'sgs', 'qcdate', 'custdue', 'oor', 'sku', 'qty', 'amount', 'remark'] },
   { label: 'Production — Stage', keys: ['stonePen', 'fitPen', 'wijPen', 'castPen', 'controlPen', 'grindPen', 'polishPen', 'platePen', 'exportQty', 'balQty', 'expPct'] },
   { label: 'Production — Book / QC', keys: ['bookInspect', 'bookShip', 'qc1qty', 'qc1date', 'qc1fail', 'qc2qty', 'qc2date', 'qc2fail', 'qc3qty', 'qc3date'] },
   { label: 'Production — Pack / Tag', keys: ['cardBox', 'orderTicket', 'receiveTicket', 'sample', 'custCT', 'mf', 'packScanDo', 'packScanSen', 'packScan', 'packScanMF', 'polyOrd', 'polyRec', 'tagRcyRec'] },

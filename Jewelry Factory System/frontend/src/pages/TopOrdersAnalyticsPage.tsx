@@ -23,7 +23,6 @@ export default function TopOrdersAnalyticsPage() {
     baseYear,
     compareYear,
     compareEnabled,
-    availableYears,
     metric,
     rowLimit,
     setRowLimit,
@@ -272,8 +271,6 @@ export default function TopOrdersAnalyticsPage() {
               rows={items} 
               loading={isInitialLoading} 
               displayYears={displayYears} 
-              perspectiveMode={dataProps.perspectiveMode}
-              compareEnabled={dataProps.compareEnabled}
               onPhotoClick={(item) => setPreviewItem(item)}
             />
           </div>
@@ -284,12 +281,9 @@ export default function TopOrdersAnalyticsPage() {
         <TopOrdersItemPreview
           item={previewItem}
           onClose={() => setPreviewItem(null)}
-          metric={metric}
           baseYear={baseYear}
           compareYear={compareYear || ''}
           compareEnabled={compareEnabled}
-          perspectiveMode={dataProps.perspectiveMode}
-          fmt={fmt}
           fmtQty={fmtQty}
         />
       )}

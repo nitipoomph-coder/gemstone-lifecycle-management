@@ -217,7 +217,6 @@ export default function TopOrdersGalleryPage() {
               periodSetup={periodSetup}
               availableYears={availableYears}
               baseYear={baseYear}
-              compareYear={compareYear}
               selectedPeriodLabel={selectedPeriodLabel}
               selGroups={selGroups}
               setSelGroups={setSelGroups}
@@ -449,7 +448,6 @@ export default function TopOrdersGalleryPage() {
               compareYear={compareYear}
               perspectiveMode={perspectiveMode}
               openPreview={(item) => setPreviewItem(item)}
-              fmt={fmt}
               fmtQty={fmtQty}
             />
           </div>
@@ -460,12 +458,9 @@ export default function TopOrdersGalleryPage() {
       <TopOrdersItemPreview
         item={previewItem}
         onClose={() => setPreviewItem(null)}
-        metric={metric}
         baseYear={baseYear}
         compareYear={compareYear}
         compareEnabled={compareEnabled}
-        perspectiveMode={perspectiveMode}
-        fmt={fmt}
         fmtQty={fmtQty}
       />
     </div>

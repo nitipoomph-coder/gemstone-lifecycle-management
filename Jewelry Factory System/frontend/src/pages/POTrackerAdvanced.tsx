@@ -66,7 +66,6 @@ export default function POTrackerAdvanced() {
     totalPOs,
     totalQty,
     totalAmount,
-    pendingCount,
     delayedCount,
     uniqueTypes,
     totalPages,

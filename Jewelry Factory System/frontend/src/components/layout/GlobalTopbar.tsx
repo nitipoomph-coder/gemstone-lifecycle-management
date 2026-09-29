@@ -45,54 +45,6 @@ export default function GlobalTopbar({ isSidebarOpen, onToggleSidebar }: GlobalT
     });
   };
 
-  const handleExportExcel = () => {
-    setShowExportMenu(false);
-    const event = new CustomEvent('app-export', {
-      detail: { type: 'excel' },
-      cancelable: true,
-    });
-    const handled = !window.dispatchEvent(event);
-    if (!handled) {
-      // Generic table fallback
-      const table = document.querySelector('table');
-      if (table) {
-        const rows = Array.from(table.querySelectorAll('tr')).map(tr =>
-          Array.from(tr.querySelectorAll('th, td')).map(td => `"${td.textContent?.trim().replace(/"/g, '""') || ''}"`).join(',')
-        );
-        const blob = new Blob(['\uFEFF' + rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Export_${document.title || 'Data'}.csv`;
-        a.click();
-        URL.revokeObjectURL(url);
-      }
-    }
-  };
-
-  const handleExportCSV = () => {
-    setShowExportMenu(false);
-    const event = new CustomEvent('app-export', {
-      detail: { type: 'csv' },
-      cancelable: true,
-    });
-    const handled = !window.dispatchEvent(event);
-    if (!handled) {
-      const table = document.querySelector('table');
-      if (table) {
-        const rows = Array.from(table.querySelectorAll('tr')).map(tr =>
-          Array.from(tr.querySelectorAll('th, td')).map(td => `"${td.textContent?.trim().replace(/"/g, '""') || ''}"`).join(',')
-        );
-        const blob = new Blob(['\uFEFF' + rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Export_${document.title || 'Data'}.csv`;
-        a.click();
-        URL.revokeObjectURL(url);
-      }
-    }
-  };
 
   return (
     <header

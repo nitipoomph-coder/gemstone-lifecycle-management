@@ -1,7 +1,7 @@
 import { useEffect, type SyntheticEvent } from 'react';
 import { X, Sparkles } from 'lucide-react';
 import type { TopGalleryItem } from '../../../services/itemYearlySummaryAPI';
-import type { PerspectiveMode } from '../../../hooks/useTopOrdersGalleryData';
+
 import { formatSignedPct } from './galleryComparison';
 
 interface TopOrdersItemPreviewProps {
@@ -10,9 +10,6 @@ interface TopOrdersItemPreviewProps {
   baseYear: string;
   compareYear: string;
   compareEnabled: boolean;
-  metric: 'qty' | 'amount';
-  perspectiveMode?: PerspectiveMode;
-  fmt: (value: number) => string;
   fmtQty: (value: number) => string;
 }
 
@@ -22,9 +19,6 @@ export function TopOrdersItemPreview({
   baseYear,
   compareYear,
   compareEnabled,
-  metric,
-  perspectiveMode = 'combined',
-  fmt,
   fmtQty,
 }: TopOrdersItemPreviewProps) {
   useEffect(() => {

@@ -25,7 +25,6 @@ interface TopOrdersFilterBarProps {
   periodSetup: ReturnType<typeof usePeriodSetup>;
   availableYears: string[];
   baseYear?: string;
-  compareYear?: string;
   periodButtonLabel: string;
   selectedPeriodLabel: string;
   selGroups: string[];
@@ -52,7 +51,6 @@ export function TopOrdersFilterBar({
   periodSetup,
   availableYears,
   baseYear = '',
-  compareYear = '',
 
   selGroups,
   setSelGroups,

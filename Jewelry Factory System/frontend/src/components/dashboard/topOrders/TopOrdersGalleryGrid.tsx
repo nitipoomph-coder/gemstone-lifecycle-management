@@ -44,7 +44,6 @@ interface TopOrdersGalleryGridProps {
   compareYear: string;
   perspectiveMode?: PerspectiveMode;
   openPreview: (item: TopGalleryItem) => void;
-  fmt: (value: number) => string;
   fmtQty: (value: number) => string;
 }
 
@@ -56,7 +55,6 @@ export function TopOrdersGalleryGrid({
   compareYear,
   perspectiveMode = 'combined',
   openPreview,
-  fmt,
   fmtQty,
 }: TopOrdersGalleryGridProps) {
   if (items.length === 0) {

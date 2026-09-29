@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronRight, X, Image as ImageIcon } from 'lucide-react';
+import { ChevronRight, X } from 'lucide-react';
 import type { OrderSummary } from '../../../services/orderAPI';
 
 // ─── Photo Thumbnail & Lightbox Preview Component ─────────────────────────────
-export function PhotoCell({ itemNo, title }: { itemNo?: string | null; title: string }) {
+export function PhotoCell({ itemNo }: { itemNo?: string | null; title: string }) {
   const [showModal, setShowModal] = useState(false);
   const [hasError, setHasError] = useState(false);
 

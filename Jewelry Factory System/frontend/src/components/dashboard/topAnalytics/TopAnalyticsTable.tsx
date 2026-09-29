@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ImageOff } from "lucide-react";
 import type { TopGalleryItem } from "../../../services/itemYearlySummaryAPI";
-import type { PerspectiveMode } from "../../../hooks/useTopOrdersGalleryData";
+
 
 const fmtQty = (val: number) => val.toLocaleString(undefined, { maximumFractionDigits: 0 });
 
@@ -9,15 +9,11 @@ export function TopAnalyticsTable({
   rows, 
   loading, 
   displayYears,
-  perspectiveMode,
-  compareEnabled,
   onPhotoClick
 }: { 
   rows: TopGalleryItem[]; 
   loading: boolean;
   displayYears: string[];
-  perspectiveMode: PerspectiveMode;
-  compareEnabled: boolean;
   onPhotoClick?: (item: TopGalleryItem) => void;
 }) {
   const showAvg = displayYears.length > 0;
@@ -231,7 +227,7 @@ function Th({ children, align = "left", style = {} }: { children: React.ReactNod
   return <th className={align === "right" ? "sales-dense-table__number" : undefined} style={{ textAlign: align, fontSize: '14px', ...style }}>{children}</th>;
 }
 
-function Td({ children, align = "left", strong = false, style = {} }: { children: React.ReactNode; align?: "left" | "right"; strong?: boolean; style?: React.CSSProperties }) {
+function Td({ children, align = "left", strong = false, style = {} }: { children?: React.ReactNode; align?: "left" | "right"; strong?: boolean; style?: React.CSSProperties }) {
   return <td className={align === "right" ? "sales-dense-table__number" : undefined} style={{ textAlign: align, fontWeight: strong ? 900 : 800, fontSize: '14px', ...style }}>{children}</td>;
 }
 

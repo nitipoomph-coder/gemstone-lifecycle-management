@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell } from 'recharts';
 import type { SalesRiskPoint, SalesMetric } from '../../../services/orderVolumeSummaryAPI';
 import { CUSTOMER_GROUPS } from '../../../config/customerGroups';
 import { fmtCurrency, fmtQty } from '../../../hooks/useOrderVolumeSummaryData';
@@ -110,7 +110,14 @@ export const RiskCustomerChart: React.FC<Props> = ({ riskData, metric, selectedG
                 </span>
               )}
             />
-            <Bar dataKey="safe" stackId="a" name="On Schedule" fill="#3b82f6" radius={[0, 0, 4, 4]} />
+            <Bar dataKey="safe" stackId="a" name="On Schedule" fill="#3b82f6">
+              {chartData.map((entry: any, index: number) => (
+                <Cell 
+                  key={`cell-${index}`} 
+                  radius={((!entry.overdue || entry.overdue === 0) ? [4, 4, 0, 0] : [0, 0, 0, 0]) as any} 
+                />
+              ))}
+            </Bar>
             <Bar dataKey="overdue" stackId="a" name="Overdue / At Risk" fill="#ef4444" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>

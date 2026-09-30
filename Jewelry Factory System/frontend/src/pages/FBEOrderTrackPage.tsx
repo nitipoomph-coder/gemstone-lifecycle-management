@@ -158,7 +158,7 @@ export default function FBEOrderTrackPage() {
       {/* Workspace Body: Semantic <main> พร้อม Single-Screen Fit (ไม่เลื่อนจอหลัก) */}
       <main
         aria-label="FBE Order Tracker Workspace"
-        className="app-content-frame app-content-frame--workspace app-page-content flex-1 overflow-hidden p-2 flex flex-col min-h-0 gap-2"
+        className="app-content-frame app-content-frame--workspace app-page-content flex-1 overflow-y-auto overflow-x-hidden lg:overflow-hidden p-2 flex flex-col min-h-0 gap-2"
       >
         {/* Error Alert: WCAG 4.1.3 (Status Message) */}
         {error && (
@@ -179,7 +179,7 @@ export default function FBEOrderTrackPage() {
 
         {/* แถบSearch: WCAG 1.3.1 & 4.1.2 ผูก htmlFor/id ชัดเจน + WCAG 2.4.7 Focus Visible */}
         <div style={{ background: 'var(--color-ui-surface)', border: '1px solid var(--color-border-default)', borderRadius: 8, padding: '6px 12px', flexShrink: 0 }}>
-          <form onSubmit={handleSearch} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <form onSubmit={handleSearch} style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <label
                 htmlFor="fbe-order-no-input"
@@ -265,12 +265,12 @@ export default function FBEOrderTrackPage() {
         {loading ? (
           <FBEOrderTrackSkeleton />
         ) : (
-          <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-2 min-h-0 overflow-hidden">
+          <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-2 min-h-[auto] lg:min-h-0">
 
           {/* ================================================================= */}
           {/* ฝั่งซ้าย: Order Info + แถบStatus + ไทม์ไลน์ 17 Step + ตารางประวัติ */}
           {/* ================================================================= */}
-          <div className="lg:col-span-9 flex flex-col gap-2 min-h-0 overflow-hidden">
+          <div className="lg:col-span-9 flex flex-col gap-2 min-h-[auto] lg:min-h-0 lg:overflow-hidden">
 
             {/* 1. Order Info (Order Information) */}
             <section
@@ -293,10 +293,10 @@ export default function FBEOrderTrackPage() {
               </div>
 
               {/* Grid 3 คอลัมน์ตามเลย์เอาต์ต้นแบบ */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 12, fontSize: '12px' }}>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-[12px]">
 
                 {/* Column 1: Customer / Order Date / Due Date / PO No */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, paddingRight: 12, borderRight: '1px solid var(--color-border-default)' }}>
+                <div className="flex flex-col gap-1 lg:pr-3 border-b lg:border-b-0 lg:border-r border-[var(--color-border-default)] pb-2 lg:pb-0">
                   <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
                     <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)', fontWeight: 600 }}>Customer ( Customer ) :</span>
                     <span style={{ fontWeight: 800, color: 'var(--color-text-primary)', fontSize: '13px' }}>{info?.CustCode || '-'}</span>
@@ -320,7 +320,7 @@ export default function FBEOrderTrackPage() {
                 </div>
 
                 {/* Column 2: Item No / Material / Cust Item / Description */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, paddingRight: 12, borderRight: '1px solid var(--color-border-default)' }}>
+                <div className="flex flex-col gap-1 lg:pr-3 border-b lg:border-b-0 lg:border-r border-[var(--color-border-default)] pt-2 lg:pt-0 pb-2 lg:pb-0">
                   <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
                     <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)', fontWeight: 600 }}>Item No. ( Item No ) :</span>
                     <span style={{ fontWeight: 800, fontFamily: 'monospace', color: 'var(--color-text-primary)', fontSize: '13px' }}>{info?.ItemNo || '-'}</span>
@@ -342,7 +342,7 @@ export default function FBEOrderTrackPage() {
                 </div>
 
                 {/* Column 3: Stone / Plate / Size / Qty */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <div className="flex flex-col gap-1 pt-2 lg:pt-0">
                   <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
                     <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)', fontWeight: 600 }}>Stone ( Stone ) :</span>
                     <span style={{ fontWeight: 600, color: 'var(--color-text-primary)', fontSize: '12.5px' }}>{info?.ItemStone || '-'}</span>
@@ -431,7 +431,7 @@ export default function FBEOrderTrackPage() {
             {/* 4. Step History (Step History Table) */}
             <section
               aria-label="Step History"
-              className="flex-1 flex flex-col min-h-0"
+              className="flex-1 flex flex-col min-h-[400px] lg:min-h-0"
               style={{
                 background: 'var(--color-ui-surface)',
                 border: '1px solid var(--color-border-default)',
@@ -449,7 +449,7 @@ export default function FBEOrderTrackPage() {
                 </span>
               </div>
 
-              <div className="flex-1 overflow-y-auto" style={{ borderRadius: 6, border: '1px solid var(--color-border-default)', background: 'var(--color-ui-surface)' }}>
+              <div className="flex-1 overflow-y-auto overflow-x-auto" style={{ borderRadius: 6, border: '1px solid var(--color-border-default)', background: 'var(--color-ui-surface)' }}>
                 <table aria-label="Step History" style={{ width: '100%', textAlign: 'left', fontSize: '12px', borderCollapse: 'collapse', background: 'transparent' }}>
                   <thead style={{ position: 'sticky', top: 0, zIndex: 5 }}>
                     <tr style={{ background: 'var(--color-ui-surface)', borderBottom: '1px solid var(--color-border-default)', fontWeight: 800, color: 'var(--color-text-secondary)', fontSize: '11.5px' }}>
@@ -512,18 +512,17 @@ export default function FBEOrderTrackPage() {
           {/* ================================================================= */}
           {/* ฝั่งขวา: Item Photo (Item Photo) + Status Summary (Summary)                 */}
           {/* ================================================================= */}
-          <div className="lg:col-span-3 flex flex-col gap-2 min-h-0 overflow-hidden">
+          <div className="lg:col-span-3 flex flex-col gap-2 min-h-[auto] lg:min-h-0 lg:overflow-hidden">
 
             {/* 1. Item Photo (Item Photo) - Sizeกระชับ สมส่วน ไม่มีกWaitบซ้อน andตัดแคปชันท้ายรูปออก */}
             <section
               aria-label="Item Photo (Item Photo)"
-              className="flex-shrink-0 flex flex-col"
+              className="flex-shrink-0 flex flex-col h-[300px] lg:h-[375px]"
               style={{
                 background: 'var(--color-ui-surface)',
                 border: '1px solid var(--color-border-default)',
                 borderRadius: 8,
                 padding: '10px',
-                height: '375px',
                 overflow: 'hidden',
               }}
             >
@@ -577,7 +576,7 @@ export default function FBEOrderTrackPage() {
             {/* 2. Status Summary (Summary) - ขยายให้เต็มพื้นที่: Donut Gauge เด่นตรงกลาง + สถิติ 4 ช่องแนวนอนตัวเลขใหญ่ด้านล่าง */}
             <section
               aria-label="Status Summary (Summary)"
-              className="flex-1 flex flex-col justify-between min-h-0"
+              className="flex-1 flex flex-col justify-between min-h-[400px] lg:min-h-0"
               style={{
                 background: 'var(--color-ui-surface)',
                 border: '1px solid var(--color-border-default)',

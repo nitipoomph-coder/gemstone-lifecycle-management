@@ -57,12 +57,8 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
 
   return (
     <aside
-      className="flex h-full flex-col relative z-20 overflow-hidden"
+      className={`flex h-full flex-col relative z-20 overflow-hidden app-sidebar ${isOpen ? 'is-open' : 'is-closed'}`}
       style={{
-        width: isOpen ? 260 : 60,
-        minWidth: isOpen ? 260 : 60,
-        maxWidth: isOpen ? 260 : 60,
-        transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.3s cubic-bezier(0.4, 0, 0.2, 1), max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         background: 'var(--color-sidebar)',
         borderRight: '1px solid var(--color-border-light)',
       }}

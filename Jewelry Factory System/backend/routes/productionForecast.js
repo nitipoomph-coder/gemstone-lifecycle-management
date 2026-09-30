@@ -45,6 +45,13 @@ router.get('/', async (req, res) => {
             ELSE ISNULL(dt.FinishQty, 0) 
           END
         ) AS DoneQty,
+        SUM(
+          CASE 
+            WHEN RTRIM(ISNULL(hd.CloseStatus,'')) = 'Y' THEN 0 
+            WHEN ISNULL(dt.ItemQty, 0) > ISNULL(dt.FinishQty, 0) THEN ISNULL(dt.ItemQty, 0) - ISNULL(dt.FinishQty, 0) 
+            ELSE 0 
+          END
+        ) AS RemainQty,
     `;
 
     // Grouping logic based on viewMode
@@ -66,6 +73,7 @@ router.get('/', async (req, res) => {
       INNER JOIN OrdHD hd ON hd.OrdNo = dt.OrdNo
       WHERE hd.CustDueDate >= @startDate AND hd.CustDueDate <= @endDate
         AND LEFT(hd.OrdNo, 3) NOT IN ('BBL', 'BBD', 'BBI', 'BBP')
+        AND hd.ProFac = 'CLL'
         ${getCustFilter(group)}
     `;
 
@@ -134,20 +142,17 @@ router.get('/', async (req, res) => {
       const cat = getCat(row.IT3);
       const ord = row.OrderQty || 0;
       const done = row.DoneQty || 0;
+      const remain = row.RemainQty || 0;
 
       periodMap[pl].orderMap[cat] += ord;
       periodMap[pl].doneMap[cat] += done;
       
       periodMap[pl].totalOrder += ord;
       periodMap[pl].totalDone += done;
+      periodMap[pl].totalRemain += remain;
     });
 
-    // Calculate Remain (cannot be negative)
-    const formattedData = Object.values(periodMap).map(p => {
-      p.totalRemain = p.totalOrder - p.totalDone;
-      if (p.totalRemain < 0) p.totalRemain = 0;
-      return p;
-    });
+    const formattedData = Object.values(periodMap);
 
     res.json({ ok: true, data: formattedData });
   } catch (err) {

@@ -49,7 +49,7 @@ export default function AppLayout() {
   return (
     <TopbarActionProvider>
       <BreadcrumbProvider>
-        <div className="app-shell flex flex-col w-full h-screen overflow-hidden">
+        <div className="app-shell flex flex-col w-full h-[100dvh] overflow-hidden">
           <GlobalTopbar
             isSidebarOpen={sidebarOpen}
             onToggleSidebar={() => setSidebar(!sidebarOpen)}

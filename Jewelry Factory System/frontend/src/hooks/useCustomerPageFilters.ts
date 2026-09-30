@@ -95,7 +95,11 @@ export function useCustomerPageFilters(availableYears: string[], configOverrides
   };
 
   const isFiltered = useMemo(() => {
-    const isPeriodFiltered = periodSetup.committed.preset !== 'full-year' || periodSetup.committed.monthFrom !== 1 || periodSetup.committed.monthTo !== 12 || periodSetup.committed.compareActive1 || periodSetup.committed.compareActive2;
+    const currentMonth = String(new Date().getMonth() + 1);
+    const isDefaultMonth = periodSetup.committed.preset === 'month' && periodSetup.committed.selectedMonths?.length === 1 && periodSetup.committed.selectedMonths[0] === currentMonth;
+    const isFullYear = periodSetup.committed.preset === 'full-year' || (periodSetup.committed.monthFrom === 1 && periodSetup.committed.monthTo === 12);
+    const isPeriodFiltered = !(isDefaultMonth || isFullYear) || periodSetup.committed.compareActive1 || periodSetup.committed.compareActive2;
+    
     const isGroupsFiltered = selGroups.length !== ACTIVE_GROUP_IDS.length || !ACTIVE_GROUP_IDS.every((id: any) => selGroups.includes(id));
     return isPeriodFiltered || isGroupsFiltered;
   }, [periodSetup.committed, selGroups]);

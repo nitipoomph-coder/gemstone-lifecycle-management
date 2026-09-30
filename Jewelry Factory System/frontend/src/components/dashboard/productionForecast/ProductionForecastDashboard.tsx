@@ -344,8 +344,8 @@ export function ProductionForecastDashboard() {
             <>
               {/* Chart */}
               <div className="bg-[var(--color-ui-surface)] p-4 rounded-md border border-[var(--color-border-default)] shadow-[var(--shadow-panel)] shrink-0" style={{ height: 420 }}>
-                <h3 className="text-base font-extrabold text-[var(--color-text-primary)] mb-2">
-                  Production Forecast ({group})
+                <h3 className="text-base font-extrabold text-[var(--color-text-primary)] mb-2 text-center">
+                  Production Forecast: {group} ( {viewModeType === 'year' ? targetYear : viewModeType === 'week' ? `W${fromWk}-W${toWk} ${targetYear}` : `${new Date(targetYear, targetMonth - 1, 1).toLocaleString('en-US', { month: 'long' })} ${targetYear}`} )
                 </h3>
                 <div className="h-[calc(100%-32px)]">
                   <ProductionForecastChart data={data} />

@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { ComposedChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList } from 'recharts';
+import { ComposedChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList, Cell } from 'recharts';
 
 function niceNum(range: number, round = false) {
   const exponent = Math.floor(Math.log10(range));
@@ -123,11 +123,18 @@ export function ProductionForecastChart({ data }: ProductionForecastChartProps) 
           dataKey="periodLabel" 
           tick={{ fontSize: isCrowded ? 9.5 : 11, fill: 'var(--color-text-secondary)', fontWeight: 600 }} 
           axisLine={{ stroke: 'var(--color-border-strong)', strokeWidth: 1.5 }}
-          tickLine={false} 
+          tickLine={{ stroke: 'var(--color-border-strong)', strokeWidth: 1 }} 
           tickMargin={isCrowded ? 4 : 8}
           interval={0}
           angle={isCrowded ? -45 : 0}
           textAnchor={isCrowded ? 'end' : 'middle'}
+          tickFormatter={(val) => {
+            if (typeof val === 'string' && val.length === 10 && val.includes('/')) {
+              const parts = val.split('/');
+              if (parts.length === 3) return `${parts[0]}/${parts[1]}`;
+            }
+            return val;
+          }}
           height={isCrowded ? 45 : 30}
         />
         <YAxis 
@@ -151,7 +158,14 @@ export function ProductionForecastChart({ data }: ProductionForecastChartProps) 
           maxBarSize={40}
           isAnimationActive={true}
           animationDuration={600}
-        />
+        >
+          {data.map((entry: any, index: number) => (
+            <Cell 
+              key={`cell-${index}`} 
+              radius={((!entry.totalRemain || entry.totalRemain === 0) ? [4, 4, 0, 0] : [0, 0, 0, 0]) as any} 
+            />
+          ))}
+        </Bar>
         
         {/* Balance Qty (Red) */}
         <Bar 

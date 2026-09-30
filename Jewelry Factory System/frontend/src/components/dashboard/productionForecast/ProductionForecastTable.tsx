@@ -26,7 +26,7 @@ export function ProductionForecastTable({ data }: ProductionForecastTableProps) 
   });
 
   const totalCols = data.length;
-  const cellFontSize = totalCols > 25 ? '10px' : totalCols > 15 ? '10.5px' : '11px';
+  const cellFontSize = totalCols > 25 ? '11.5px' : totalCols > 15 ? '12.5px' : '13.5px';
 
   return (
     <div
@@ -54,13 +54,13 @@ export function ProductionForecastTable({ data }: ProductionForecastTableProps) 
               background: 'var(--color-table-header)',
               borderBottom: '1.5px solid var(--color-border-strong)',
               color: 'var(--color-text-primary)',
-              height: '26px',
+              height: '32px',
             }}
           >
             <th
               style={{
-                width: totalCols > 25 ? '78px' : '90px',
-                padding: '4px 6px',
+                width: totalCols > 25 ? '85px' : '105px',
+                padding: '6px 8px',
                 textAlign: 'center',
                 borderRight: '1px solid var(--color-border-light)',
                 fontWeight: 700,
@@ -73,7 +73,7 @@ export function ProductionForecastTable({ data }: ProductionForecastTableProps) 
                 key={i}
                 title={d.periodLabel}
                 style={{
-                  padding: '2px 1px',
+                  padding: '4px 2px',
                   textAlign: 'center',
                   borderRight: '1px solid var(--color-border-light)',
                   fontWeight: 600,
@@ -81,9 +81,9 @@ export function ProductionForecastTable({ data }: ProductionForecastTableProps) 
                 }}
               >
                 {typeof d.periodLabel === 'string' && d.periodLabel.length === 10 && d.periodLabel.includes('/') ? (
-                  <div style={{ fontSize: totalCols > 20 ? '9px' : '9.5px' }}>
+                  <div style={{ fontSize: totalCols > 20 ? '10.5px' : '11.5px' }}>
                     <div>{d.periodLabel.slice(0, 5)}</div>
-                    <div style={{ fontSize: '8px', opacity: 0.65 }}>{d.periodLabel.slice(6)}</div>
+                    <div style={{ fontSize: '9px', opacity: 0.7 }}>{d.periodLabel.slice(6)}</div>
                   </div>
                 ) : (
                   d.periodLabel
@@ -92,8 +92,8 @@ export function ProductionForecastTable({ data }: ProductionForecastTableProps) 
             ))}
             <th
               style={{
-                width: '75px',
-                padding: '4px 6px',
+                width: '90px',
+                padding: '6px 8px',
                 textAlign: 'center',
                 fontWeight: 700,
                 color: 'var(--color-danger-600)',
@@ -110,12 +110,12 @@ export function ProductionForecastTable({ data }: ProductionForecastTableProps) 
               key={cat}
               style={{
                 borderBottom: '1px solid var(--color-border-light)',
-                height: '22px',
+                height: '28px',
               }}
             >
               <td
                 style={{
-                  padding: '2px 6px',
+                  padding: '4px 8px',
                   textAlign: 'left',
                   fontWeight: 700,
                   color: 'var(--color-text-primary)',
@@ -128,7 +128,7 @@ export function ProductionForecastTable({ data }: ProductionForecastTableProps) 
                 <td
                   key={i}
                   style={{
-                    padding: '2px 2px',
+                    padding: '4px 2px',
                     borderRight: '1px solid var(--color-border-light)',
                     color: d.orderMap[cat] > 0 ? 'var(--color-text-primary)' : 'var(--color-text-tertiary)'
                   }}
@@ -138,7 +138,7 @@ export function ProductionForecastTable({ data }: ProductionForecastTableProps) 
               ))}
               <td
                 style={{
-                  padding: '2px 6px',
+                  padding: '4px 8px',
                   fontWeight: 700,
                   textAlign: 'center',
                   color: 'var(--color-text-primary)',
@@ -154,12 +154,12 @@ export function ProductionForecastTable({ data }: ProductionForecastTableProps) 
             style={{
               background: 'var(--color-surface-2)',
               borderBottom: '1px solid var(--color-border-light)',
-              height: '24px',
+              height: '30px',
             }}
           >
             <td
               style={{
-                padding: '2px 6px',
+                padding: '4px 8px',
                 textAlign: 'left',
                 fontWeight: 800,
                 color: 'var(--color-brand-600)',
@@ -172,7 +172,7 @@ export function ProductionForecastTable({ data }: ProductionForecastTableProps) 
               <td
                 key={i}
                 style={{
-                  padding: '2px 2px',
+                  padding: '4px 2px',
                   fontWeight: 700,
                   borderRight: '1px solid var(--color-border-light)',
                   color: d.totalOrder > 0 ? 'var(--color-brand-600)' : 'var(--color-text-tertiary)'
@@ -183,7 +183,7 @@ export function ProductionForecastTable({ data }: ProductionForecastTableProps) 
             ))}
             <td
               style={{
-                padding: '2px 6px',
+                padding: '4px 8px',
                 fontWeight: 800,
                 textAlign: 'center',
                 color: 'var(--color-brand-600)',
@@ -198,12 +198,12 @@ export function ProductionForecastTable({ data }: ProductionForecastTableProps) 
             style={{
               background: 'var(--color-status-success-soft)',
               borderBottom: '1px solid var(--color-border-light)',
-              height: '24px',
+              height: '30px',
             }}
           >
             <td
               style={{
-                padding: '2px 6px',
+                padding: '4px 8px',
                 textAlign: 'left',
                 fontWeight: 800,
                 color: 'var(--color-success-600)',
@@ -216,7 +216,7 @@ export function ProductionForecastTable({ data }: ProductionForecastTableProps) 
               <td
                 key={i}
                 style={{
-                  padding: '2px 2px',
+                  padding: '4px 2px',
                   fontWeight: 700,
                   borderRight: '1px solid var(--color-border-light)',
                   color: d.totalDone > 0 ? 'var(--color-success-600)' : 'var(--color-text-tertiary)'
@@ -227,7 +227,7 @@ export function ProductionForecastTable({ data }: ProductionForecastTableProps) 
             ))}
             <td
               style={{
-                padding: '2px 6px',
+                padding: '4px 8px',
                 fontWeight: 800,
                 textAlign: 'center',
                 color: 'var(--color-success-600)',
@@ -241,12 +241,12 @@ export function ProductionForecastTable({ data }: ProductionForecastTableProps) 
           <tr
             style={{
               background: 'var(--color-prod-total-row-bg)',
-              height: '24px',
+              height: '30px',
             }}
           >
             <td
               style={{
-                padding: '2px 6px',
+                padding: '4px 8px',
                 textAlign: 'left',
                 fontWeight: 800,
                 color: 'var(--color-danger-600)',

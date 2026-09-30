@@ -240,20 +240,16 @@ export default function Dashboard() {
 
   return (
     <div
-      className="h-full w-full overflow-hidden flex flex-col justify-between p-3 gap-2.5 bg-[var(--color-surface-1)]"
+      className="h-full w-full overflow-y-auto lg:overflow-hidden flex flex-col justify-start lg:justify-between p-3 gap-2.5 bg-[var(--color-surface-1)]"
       style={{
         boxSizing: 'border-box',
-        maxHeight: '100%',
       }}
     >
-      {/* ── Top Bar Controls (~40px) ── */}
+      {/* ── Top Bar Controls ── */}
       <div
+        className="flex items-center justify-between shrink-0 gap-2 flex-wrap"
         style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexShrink: 0,
-          height: '38px',
+          minHeight: '38px',
         }}
       >
         {/* Facility Segmented Switcher */}
@@ -320,15 +316,9 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* ── Row 2: Visual Comparison & Pipeline (~315px) ── */}
+      {/* ── Row 2: Visual Comparison & Pipeline ── */}
       <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: '10px',
-          height: '315px',
-          flexShrink: 0,
-        }}
+        className="grid grid-cols-1 lg:grid-cols-2 gap-[10px] shrink-0 min-h-[auto] lg:min-h-[315px]"
       >
         <FactoryOutputTrendChart
           timeline={cockpit?.timeline}
@@ -340,16 +330,11 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* ── Row 3: Operational Breakdown & Risk Matrix (~320px flex-1) ── */}
+      {/* ── Row 3: Operational Breakdown & Risk Matrix ── */}
       <div
+        className="flex flex-col lg:grid gap-[10px] lg:flex-1 min-h-[auto] lg:min-h-[280px]"
         style={{
-          display: 'grid',
           gridTemplateColumns: '7fr 5fr',
-          gap: '10px',
-          flex: 1,
-          minHeight: '280px',
-          maxHeight: '345px',
-          overflow: 'hidden',
         }}
       >
         <FactoryDepartmentMatrix

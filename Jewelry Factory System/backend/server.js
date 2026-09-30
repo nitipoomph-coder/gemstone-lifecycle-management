@@ -11,6 +11,7 @@ const rateLimit = require('express-rate-limit');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 const app = express();
+app.set('trust proxy', 1); // Trust first proxy (Vite) to prevent ERR_ERL_PERMISSIVE_TRUST_PROXY
 const PORT = process.env.API_PORT || process.env.PORT || 3001;
 
 // ─── Security Middleware ───────────────────────────────────────────────────────
@@ -191,7 +192,13 @@ app.use((err, req, res, next) => {
   res.status(500).json({ ok: false, error: 'Internal Server Error' });
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`API Server running at http://localhost:${PORT}`);
-});
+// Start server (Express 5 returns a Promise from app.listen)
+(async () => {
+  try {
+    await app.listen(PORT);
+    console.log(`API Server running at http://localhost:${PORT}`);
+  } catch (err) {
+    console.error('Failed to start server:', err);
+    process.exit(1);
+  }
+})();

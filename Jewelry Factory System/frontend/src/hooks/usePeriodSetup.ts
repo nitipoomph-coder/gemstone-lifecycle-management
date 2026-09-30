@@ -25,6 +25,7 @@ export interface PeriodSetupConfig {
     compareActive2?: boolean;
     compareYear2?: string;
     kpiCompareYear?: string;
+    selectedMonths?: string[];
     dateField?: 'ordDate' | 'dueDate';
   };
   onReset?: () => void;
@@ -63,13 +64,15 @@ export function usePeriodSetup(config: PeriodSetupConfig) {
 
   // Initialization: read from URL if syncToUrl is true (and not ignored), otherwise use initialValues
   const initializeState = useCallback((ignoreUrl = false): PeriodState => {
-    let preset: PeriodPreset = config.initialValues?.preset || 'full-year';
-    let monthFrom = config.initialValues?.monthFrom || 1;
-    let monthTo = config.initialValues?.monthTo || 12;
+    const currentMonth = new Date().getMonth() + 1;
+    let preset: PeriodPreset = config.initialValues?.preset || 'month';
+    let monthFrom = config.initialValues?.monthFrom || currentMonth;
+    let monthTo = config.initialValues?.monthTo || currentMonth;
     let weekFrom = config.initialValues?.weekFrom || 1;
     let weekTo = config.initialValues?.weekTo || 12;
       let dateFrom = config.initialValues?.dateFrom;
       let dateTo = config.initialValues?.dateTo;
+    let selectedMonths: string[] = config.initialValues?.selectedMonths || monthRange(monthFrom, monthTo).map(String);
     let baseYear = config.initialValues?.baseYear || (config.availableYears.length > 0 ? config.availableYears[0] : String(new Date().getFullYear()));
     let compareActive1 = config.initialValues?.compareActive1 || false;
     let compareYear1 = config.initialValues?.compareYear1 || getDefaultCompareYear(baseYear, config.availableYears);
@@ -103,12 +106,17 @@ export function usePeriodSetup(config: PeriodSetupConfig) {
       if (urlDateField) dateField = urlDateField;
 
       if (urlMonths.length > 0) {
+        selectedMonths = urlMonths.map(String);
         const numMonths = urlMonths.map(Number).sort((a, b) => a - b);
         monthFrom = numMonths[0];
         monthTo = numMonths[numMonths.length - 1];
-        if (!urlPreset) preset = urlMonths.length === 12 ? 'full-year' : 'custom';
+        if (!urlPreset) preset = urlMonths.length === 12 ? 'full-year' : 'month';
       } else {
-        if (!urlPreset) preset = 'full-year';
+        const currentM = new Date().getMonth() + 1;
+        selectedMonths = [String(currentM)];
+        monthFrom = currentM;
+        monthTo = currentM;
+        if (!urlPreset) preset = 'month';
       }
 
       if (urlYears.length > 0) {
@@ -133,7 +141,6 @@ export function usePeriodSetup(config: PeriodSetupConfig) {
     if (compareActive1 && compareYear1 && compareYear1 !== 'none') selectedYears.push(compareYear1);
     if (config.compareSlots === 2 && compareActive2 && compareYear2 && compareYear2 !== 'none') selectedYears.push(compareYear2);
     
-    const selectedMonths = monthRange(monthFrom, monthTo).map(String);
     const selectedWeeks = config.allowWeekRange ? Array.from({ length: weekTo - weekFrom + 1 }, (_, i) => String(weekFrom + i)) : undefined;
 
     return {
@@ -223,7 +230,8 @@ export function usePeriodSetup(config: PeriodSetupConfig) {
       ...prev,
       preset,
       monthFrom: newStart,
-      monthTo: newEnd
+      monthTo: newEnd,
+      selectedMonths: monthRange(newStart, newEnd).map(String)
     }));
   }, [draft.monthFrom, draft.monthTo]);
 
@@ -237,7 +245,11 @@ export function usePeriodSetup(config: PeriodSetupConfig) {
     if (draft.compareActive1 && draft.compareYear1 && draft.compareYear1 !== 'none') selectedYears.push(draft.compareYear1);
     if (config.compareSlots === 2 && draft.compareActive2 && draft.compareYear2 && draft.compareYear2 !== 'none') selectedYears.push(draft.compareYear2);
     
-    const selectedMonths = monthRange(draft.monthFrom, draft.monthTo).map(String);
+    // If not month mode, override selectedMonths with contiguous range, else use exactly what was drafted
+    const finalSelectedMonths = (draft.preset === 'month') 
+      ? (draft.selectedMonths?.length > 0 ? draft.selectedMonths : ['1']) 
+      : monthRange(draft.monthFrom, draft.monthTo).map(String);
+
     const selectedWeeks = config.allowWeekRange && draft.weekFrom && draft.weekTo 
       ? Array.from({ length: draft.weekTo - draft.weekFrom + 1 }, (_, i) => String(draft.weekFrom! + i)) 
       : undefined;
@@ -245,7 +257,7 @@ export function usePeriodSetup(config: PeriodSetupConfig) {
     const newCommitted = {
       ...draft,
       selectedYears,
-      selectedMonths,
+      selectedMonths: finalSelectedMonths,
       selectedWeeks,
       dateField: draft.dateField
     };
@@ -258,10 +270,10 @@ export function usePeriodSetup(config: PeriodSetupConfig) {
         next.set('years', selectedYears.join(','));
         next.set('preset', newCommitted.preset);
         
-        if (selectedMonths.length === 12) {
+        if (finalSelectedMonths.length === 12) {
           next.delete('months');
         } else {
-          next.set('months', selectedMonths.join(','));
+          next.set('months', finalSelectedMonths.join(','));
         }
 
         if (newCommitted.preset === 'week' && newCommitted.weekFrom && newCommitted.weekTo) {
@@ -330,7 +342,10 @@ export function usePeriodSetup(config: PeriodSetupConfig) {
       if (updatedDraft.compareActive1 && updatedDraft.compareYear1 && updatedDraft.compareYear1 !== 'none') selectedYears.push(updatedDraft.compareYear1);
       if (config.compareSlots === 2 && updatedDraft.compareActive2 && updatedDraft.compareYear2 && updatedDraft.compareYear2 !== 'none') selectedYears.push(updatedDraft.compareYear2);
 
-      const selectedMonths = monthRange(updatedDraft.monthFrom, updatedDraft.monthTo).map(String);
+      const finalSelectedMonths = (updatedDraft.preset === 'month') 
+        ? (updatedDraft.selectedMonths?.length > 0 ? updatedDraft.selectedMonths : ['1']) 
+        : monthRange(updatedDraft.monthFrom, updatedDraft.monthTo).map(String);
+
       const selectedWeeks = config.allowWeekRange && updatedDraft.weekFrom && updatedDraft.weekTo 
         ? Array.from({ length: updatedDraft.weekTo - updatedDraft.weekFrom + 1 }, (_, i) => String(updatedDraft.weekFrom! + i)) 
         : undefined;
@@ -338,7 +353,7 @@ export function usePeriodSetup(config: PeriodSetupConfig) {
       const newCommitted: PeriodState = {
         ...updatedDraft,
         selectedYears,
-        selectedMonths,
+        selectedMonths: finalSelectedMonths,
         selectedWeeks,
         dateField: updatedDraft.dateField
       };
@@ -351,10 +366,10 @@ export function usePeriodSetup(config: PeriodSetupConfig) {
           next.set('years', selectedYears.join(','));
           next.set('preset', newCommitted.preset);
 
-          if (selectedMonths.length === 12) {
+          if (finalSelectedMonths.length === 12) {
             next.delete('months');
           } else {
-            next.set('months', selectedMonths.join(','));
+            next.set('months', finalSelectedMonths.join(','));
           }
 
           if (newCommitted.preset === 'week' && newCommitted.weekFrom && newCommitted.weekTo) {

@@ -1,7 +1,7 @@
 import { type KeyboardEvent, type ReactNode, type CSSProperties, useState } from 'react';
   // @ts-ignore
 import { ArrowRight, CalendarDays, Search, RefreshCw, ChevronDown, X } from 'lucide-react';
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis, Rectangle } from 'recharts';
 import { fmtMetric, fmtQty, fmtSignedMetric, ORDER_DETAIL_COLUMNS, fmtAxis } from '../../hooks/useOrderVolumeSummaryData';
 import type {
   Metric,
@@ -174,19 +174,19 @@ export function InteractiveTrendBar({
   const activate = () => onActivate(year, payload.periodNumber);
 
   return (
-    <rect
+    <Rectangle
       className="customer-trends-chart-segment"
       x={x}
       y={y}
       width={width}
       height={height}
-      rx={2}
+      radius={[4, 4, 0, 0]}
       fill={fillColor}
       role="button"
       tabIndex={0}
       aria-label={`${label}. Open order details.`}
       onClick={activate}
-      onKeyDown={(event) => {
+      onKeyDown={(event: any) => {
         if (event.key === 'Enter' || event.key === ' ') {
           event.preventDefault();
           activate();
@@ -194,7 +194,7 @@ export function InteractiveTrendBar({
       }}
     >
       <title>{label}</title>
-    </rect>
+    </Rectangle>
   );
 }
 

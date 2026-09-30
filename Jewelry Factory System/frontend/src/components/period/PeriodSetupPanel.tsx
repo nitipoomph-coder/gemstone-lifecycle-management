@@ -169,12 +169,10 @@ export default function PeriodSetupPanel({ periodSetup, availableYears, isOpen, 
             {/* Left: Quick Presets (Modes) */}
             <div className="flex flex-col gap-2 border-r border-[var(--color-border-light)] pr-3">
               <div className="text-[10px] font-black capitalize tracking-wider text-[var(--color-text-tertiary)]">
-                {periodSetup.config.allowWeekRange ? 'Mode' : 'Quick Presets'}
+                Mode
               </div>
               <div className="flex flex-col gap-1.5">
-                {periodSetup.config.allowWeekRange ? (
-                  // MATRIX PAGE MODE
-                  [
+                  {[
                     { id: 'ytd', label: 'Year' },
                     { id: 'month', label: 'Month' },
                     { id: 'week', label: 'Week' },
@@ -190,17 +188,21 @@ export default function PeriodSetupPanel({ periodSetup, availableYears, isOpen, 
                             periodSetup.actions.setDraftField({ preset: 'full-year', monthFrom: 1, monthTo: 12 });
                           } else if (preset.id === 'month') {
                             const currentM = periodSetup.draft.monthFrom || (new Date().getMonth() + 1);
-                            periodSetup.actions.setDraftField({ preset: 'month', monthFrom: currentM, monthTo: currentM });
+                            periodSetup.actions.setDraftField({ preset: 'month', monthFrom: currentM, monthTo: currentM, selectedMonths: [String(currentM)] });
                           } else if (preset.id === 'week') {
                             periodSetup.actions.setDraftField({ preset: 'week' });
                           } else if (preset.id === 'day') {
-                            const today = new Date().toISOString().split('T')[0];
-                            const dTo = new Date();
-                            dTo.setDate(dTo.getDate() + 14);
-                            const defaultTo = dTo.toISOString().split('T')[0];
+                            const now = new Date();
+                            const y = now.getFullYear();
+                            const m = String(now.getMonth() + 1).padStart(2, '0');
+                            const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+                            
+                            const defaultFrom = `${y}-${m}-01`;
+                            const defaultTo = `${y}-${m}-${String(lastDay).padStart(2, '0')}`;
+                            
                             periodSetup.actions.setDraftField({
                               preset: 'day',
-                              dateFrom: periodSetup.draft.dateFrom || today,
+                              dateFrom: periodSetup.draft.dateFrom || defaultFrom,
                               dateTo: periodSetup.draft.dateTo || defaultTo
                             });
                           }
@@ -210,30 +212,7 @@ export default function PeriodSetupPanel({ periodSetup, availableYears, isOpen, 
                         {preset.label}
                       </button>
                     );
-                  })
-                ) : (
-                  // DASHBOARD & TRENDS PRESETS (Matching Top Item Gallery)
-                  [
-                    { id: 'full-year', label: 'Full Year' },
-                    { id: 'ytd', label: 'YTD' },
-                    { id: 'this-month', label: 'This Month' },
-                    { id: 'last-month', label: 'Last Month' }
-                  ].map((preset) => {
-                    const active = periodSetup.draft.preset === preset.id;
-                    return (
-                      <button
-                        key={preset.id}
-                        type="button"
-                        onClick={() => {
-                          periodSetup.actions.applyPreset(preset.id as any);
-                        }}
-                        className={`rounded-lg border px-3 py-2 text-left text-xs font-black transition-colors ${active ? "border-[var(--color-brand-300)] bg-[color-mix(in_srgb,var(--color-brand-500)_9%,var(--color-surface-0))] text-[var(--color-brand-600)]" : "border-[var(--color-border-light)] bg-[var(--color-surface-0)] text-[var(--color-text-primary)] hover:border-[var(--color-brand-400)] hover:text-[var(--color-brand-600)]"}`}
-                      >
-                        {preset.label}
-                      </button>
-                    );
-                  })
-                )}
+                  })}
               </div>
             </div>
 
@@ -313,15 +292,41 @@ export default function PeriodSetupPanel({ periodSetup, availableYears, isOpen, 
               )}
               {(periodSetup.draft.preset === 'custom' || periodSetup.draft.preset === 'month') && (
                 <div className="flex flex-col gap-1.5">
-                  <PeriodSelect
-                    label="Month"
-                    value={periodSetup.draft.monthFrom}
-                    options={MONTHS.map((month: string, index: number) => ({ value: index + 1, label: month }))}
-                    onChange={(value) => {
-                      const m = Number(value);
-                      periodSetup.actions.setDraftField({ monthFrom: m, monthTo: m });
-                    }}
-                  />
+                  <label className="text-[10px] font-bold text-[var(--color-text-secondary)]">Select Months</label>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {MONTHS.map((month: string, index: number) => {
+                      const monthVal = String(index + 1);
+                      const isSelected = periodSetup.draft.selectedMonths?.includes(monthVal) || (!periodSetup.draft.selectedMonths && periodSetup.draft.monthFrom <= index + 1 && periodSetup.draft.monthTo >= index + 1);
+                      return (
+                        <button
+                          key={monthVal}
+                          type="button"
+                          onClick={() => {
+                            let currentSelected = periodSetup.draft.selectedMonths || [];
+                            if (currentSelected.length === 0) currentSelected = [String(periodSetup.draft.monthFrom)];
+                            
+                            let newSelected;
+                            if (isSelected) {
+                              newSelected = currentSelected.filter(m => m !== monthVal);
+                              if (newSelected.length === 0) newSelected = [monthVal]; // prevent completely empty selection
+                            } else {
+                              newSelected = [...currentSelected, monthVal];
+                            }
+                            
+                            newSelected.sort((a, b) => Number(a) - Number(b));
+                            periodSetup.actions.setDraftField({ 
+                              selectedMonths: newSelected,
+                              monthFrom: Number(newSelected[0]),
+                              monthTo: Number(newSelected[newSelected.length - 1])
+                            });
+                          }}
+                          className={`rounded border px-1 py-1 text-center text-[10px] font-black transition-colors ${isSelected ? "border-[var(--color-brand-400)] bg-[color-mix(in_srgb,var(--color-brand-500)_15%,var(--color-surface-0))] text-[var(--color-brand-700)]" : "border-[var(--color-border-light)] bg-[var(--color-surface-0)] text-[var(--color-text-secondary)] hover:border-[var(--color-brand-300)]"}`}
+                        >
+                          {month}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
 
@@ -369,16 +374,18 @@ export default function PeriodSetupPanel({ periodSetup, availableYears, isOpen, 
                 </div>
               )}
 
-              <PeriodSelect
-                label="Year (Base Year)"
-                value={periodSetup.draft.baseYear}
-                options={availableYears.filter(yr => {
-                  if (periodSetup.draft.compareActive1 && yr === periodSetup.draft.compareYear1) return false;
-                  if (periodSetup.draft.compareActive2 && yr === periodSetup.draft.compareYear2 && yr !== 'none') return false;
-                  return true;
-                }).map(yr => ({ value: yr, label: yr }))}
-                onChange={(value) => periodSetup.actions.setDraftField({ baseYear: String(value) })}
-              />
+              {periodSetup.draft.preset !== 'day' && (
+                <PeriodSelect
+                  label="Year (Base Year)"
+                  value={periodSetup.draft.baseYear}
+                  options={availableYears.filter(yr => {
+                    if (periodSetup.draft.compareActive1 && yr === periodSetup.draft.compareYear1) return false;
+                    if (periodSetup.draft.compareActive2 && yr === periodSetup.draft.compareYear2 && yr !== 'none') return false;
+                    return true;
+                  }).map(yr => ({ value: yr, label: yr }))}
+                  onChange={(value) => periodSetup.actions.setDraftField({ baseYear: String(value) })}
+                />
+              )}
             </div>
           </div>
 

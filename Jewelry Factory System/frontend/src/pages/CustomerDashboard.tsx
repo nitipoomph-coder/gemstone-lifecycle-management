@@ -276,7 +276,7 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
             <div className="sales-summary-chart" style={{ background: 'var(--color-surface-0)', borderRadius: 8, border: '1px solid var(--color-border-light)', boxShadow: 'none' }}>
               {/* Chart Controls — integrated into chart card header */}
               <div className="no-print" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '8px 16px', borderBottom: '1px solid var(--color-border-light)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                   <ErpSegmentedControl ariaLabel="Metric" value={metric} onChange={(v) => switchMetric(v as Metric)} options={[{ value: 'amount', label: 'Sales', icon: <DollarSign size={13} /> }, { value: 'qty', label: 'Qty', icon: <Hash size={13} /> }]} />
                   <div style={{ width: 1, height: 16, background: 'var(--color-border-light)' }} />
                   <ErpSegmentedControl ariaLabel="View" value={mode} onChange={(v) => setMode(v as 'yearly' | 'monthly')} options={[{ value: 'yearly', label: 'Year', icon: <CalendarDays size={13} /> }, { value: 'monthly', label: 'Month', icon: <Calendar size={13} /> }]} />

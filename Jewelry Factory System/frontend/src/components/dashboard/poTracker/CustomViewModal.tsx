@@ -73,7 +73,9 @@ function CustomViewModalContent({ onClose, initialVisibleKeys, initialGroup, onA
     setSelectedKeys(defaultCols);
     try {
       localStorage.removeItem('poTrackerCustomCols');
-    } catch {}
+    } catch {
+      // Ignore storage errors in restricted contexts
+    }
   };
 
   const handleApply = () => {

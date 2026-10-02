@@ -29,17 +29,17 @@ export interface CustomerReportMatrixRow extends Record<string, unknown> {
   topItemQty?: number;
 }
 
-function csv(value: string | null) {
-  return String(value || '')
-    .split(',')
-    .map(item => item.trim())
-    .filter(Boolean);
+interface CustomerOutletContext {
+  availableYears: string[];
+  refreshCounter?: number;
+  triggerRefresh?: () => void;
+  isRefreshing?: boolean;
 }
 
 export function useCustomerReportData() {
   const { theme } = useTheme();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { availableYears, refreshCounter, triggerRefresh, isRefreshing } = useOutletContext<any>();
+  const { availableYears, refreshCounter, triggerRefresh, isRefreshing } = useOutletContext<CustomerOutletContext>();
 
   const { periodSetup, selGroups, setSelGroups, toggleGroup, dynamicActiveGroups, isFiltered, resetFilters } = useCustomerPageFilters(
     availableYears, 
@@ -65,8 +65,6 @@ export function useCustomerReportData() {
     setSearchParams(newParams, { replace: true });
   }, [searchParams, setSearchParams]);
 
-  const requestedCustomers = useMemo(() => csv(searchParams.get('customers')).map(customer => customer.toUpperCase()), [searchParams]);
-
   const fmt = useCallback((val: number) => {
     if (metric === 'qty') return val.toLocaleString(undefined, { maximumFractionDigits: 0 });
     return `$${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -87,16 +85,18 @@ export function useCustomerReportData() {
   const viewMode: 'ytd' | 'monthly' | 'weekly' | 'daily' = periodSetupPreset === 'day' ? 'daily' : periodSetupPreset === 'week' ? 'weekly' : (periodSetupPreset === 'custom' || periodSetupPreset === 'month' ? 'monthly' : 'ytd');
   const setViewMode = () => {}; // mock to satisfy props for now
 
-  const [aggregationMode, setAggregationMode] = useState<'group' | 'customer'>('group');
-
-  useEffect(() => {
-    setAggregationMode(selGroups.length === 1 ? 'customer' : 'group');
-  }, [selGroups.length]);
+  const [userAggregationMode, setUserAggregationMode] = useState<'group' | 'customer' | null>(null);
+  const [prevSelGroupsLen, setPrevSelGroupsLen] = useState(selGroups.length);
+  if (prevSelGroupsLen !== selGroups.length) {
+    setPrevSelGroupsLen(selGroups.length);
+    setUserAggregationMode(null);
+  }
+  const aggregationMode = userAggregationMode ?? (selGroups.length === 1 ? 'customer' : 'group');
+  const setAggregationMode = (mode: 'group' | 'customer') => setUserAggregationMode(mode);
 
   const searchQuery = searchParams.get('search') || '';
   const setSearchQuery = () => { }; // Mock to satisfy table props
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
-  const [growthComparisons, setGrowthComparisons] = useState<{ a: string; b: string }[]>([]);
   const resetMatrixView = useCallback(() => {
     setSortOrder('desc');
   }, []);
@@ -136,10 +136,10 @@ export function useCustomerReportData() {
 
   useEffect(() => {
     fetchAvailableYearsMeta()
-      .then(({ firstDataYear }: any) => {
+      .then(({ firstDataYear }) => {
         setFirstDataYear(firstDataYear);
       })
-      .catch((err: any) => console.error('Error fetching available years:', err));
+      .catch((err: unknown) => console.error('Error fetching available years:', err));
   }, []);
 
   useEffect(() => {
@@ -156,8 +156,8 @@ export function useCustomerReportData() {
         wEnd: viewMode === 'weekly' ? periodSetup.committed.weekTo : undefined,
         dateField: periodSetup.committed.dateField
       })
-        .then((cData: any) => { if (!cancelled) setCustData(cData as any[]); })
-        .catch((err: any) => console.error('Error fetching customer summary data:', err))
+        .then((cData) => { if (!cancelled) setCustData(cData); })
+        .catch((err: unknown) => console.error('Error fetching customer summary data:', err))
         .finally(() => { if (!cancelled) setLoading(false); });
     }, 0);
     return () => {
@@ -166,20 +166,8 @@ export function useCustomerReportData() {
     };
   }, [dataYears, selMonths, refreshCounter, viewMode, periodSetup.committed]);
 
-  const groupCustomers = useMemo(() => {
-    return custData
-      .filter(c => selGroups.includes(getCustomerGroupId(c.id || '')))
-      .map(c => c.id as string)
-      .sort();
-  }, [custData, selGroups]);
-
-  const activeCustomers = requestedCustomers.length > 0 ? requestedCustomers.filter((id: string) => id !== '__NONE__') : groupCustomers;
-
-  useEffect(() => {
-    if (activeYears.length < 2) {
-      setGrowthComparisons(prev => (prev.length === 0 ? prev : []));
-      return;
-    }
+  const growthComparisons = useMemo<{ a: string; b: string }[]>(() => {
+    if (activeYears.length < 2) return [];
     const sortedDesc = [...activeYears].map(String).sort((y1, y2) => Number(y2) - Number(y1));
     const newestYear = sortedDesc[0];
     const pairs: { a: string; b: string }[] = [];
@@ -188,10 +176,7 @@ export function useCustomerReportData() {
         pairs.push({ a: newestYear, b: sortedDesc[i] });
       }
     }
-    setGrowthComparisons(prev => {
-      const isSame = prev.length === pairs.length && prev.every((p, idx) => p.a === pairs[idx].a && p.b === pairs[idx].b);
-      return isSame ? prev : pairs;
-    });
+    return pairs;
   }, [activeYears]);
 
   const tableData = useMemo(() => {
@@ -210,7 +195,7 @@ export function useCustomerReportData() {
     if (aggregationMode === 'group') {
       const groupRows: Record<string, CustomerReportMatrixRow> = {};
       selGroups.forEach((gId: string) => {
-        const group = ALL_GROUPS.find((g: any) => g.id === gId);
+        const group = ALL_GROUPS.find((g) => g.id === gId);
         if (!group) return;
         groupRows[gId] = { id: gId, label: group.label, topItem: '', topItemQty: 0 };
         activeYears.forEach((yr: string) => {
@@ -254,7 +239,7 @@ export function useCustomerReportData() {
         });
       });
 
-      rows = Object.values(groupRows).filter((r: any) => activeYears.some((yr: string) => Number(r[`${yr}_total`]) > 0));
+      rows = Object.values(groupRows).filter((r) => activeYears.some((yr: string) => Number(r[`${yr}_total`]) > 0));
     } else {
       const custRows: Record<string, CustomerReportMatrixRow> = {};
 
@@ -301,7 +286,7 @@ export function useCustomerReportData() {
         });
       });
 
-      rows = Object.values(custRows).filter((r: any) => activeYears.some((yr: string) => Number(r[`${yr}_total`]) > 0));
+      rows = Object.values(custRows).filter((r) => activeYears.some((yr: string) => Number(r[`${yr}_total`]) > 0));
     }
 
     rows.sort((a, b) => {
@@ -329,7 +314,7 @@ export function useCustomerReportData() {
     });
 
     return { rows, colTotals, activeYears };
-  }, [custData, baseYear, activeYears, activeCustomers, searchQuery, displayMonths, displayDays, metric, sortOrder, aggregationMode, selGroups]);
+  }, [custData, baseYear, activeYears, displayMonths, displayDays, metric, sortOrder, aggregationMode, selGroups]);
 
   const groupKpis = useMemo(() => {
     if (tableData.rows.length <= 1 && activeYears.length <= 1) return [];
@@ -349,8 +334,8 @@ export function useCustomerReportData() {
     });
 
     return ALL_GROUPS
-      .filter((g: any) => selGroups.includes(g.id) && groupTotals[g.id])
-      .map((g: any) => ({ ...g, totals: groupTotals[g.id] }));
+      .filter((g) => selGroups.includes(g.id) && groupTotals[g.id])
+      .map((g) => ({ ...g, totals: groupTotals[g.id] }));
   }, [tableData, selGroups, activeYears]);
 
   return {

@@ -8,7 +8,8 @@ const LOCK_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes auto-release
 
 // ─── Acquire Lock ─────────────────────────────────────────────────────────────
 router.post('/acquire', (req, res) => {
-  const { docNo, user = 'Anonymous' } = req.body;
+  const { docNo, user: bodyUser } = req.body;
+  const user = req.user?.username || bodyUser || 'Anonymous';
   if (!docNo) return res.status(400).json({ ok: false, error: 'docNo is required' });
 
   const now = Date.now();
@@ -41,7 +42,8 @@ router.post('/acquire', (req, res) => {
 
 // ─── Release Lock ─────────────────────────────────────────────────────────────
 router.post('/release', (req, res) => {
-  const { docNo, user = 'Anonymous' } = req.body;
+  const { docNo, user: bodyUser } = req.body;
+  const user = req.user?.username || bodyUser || 'Anonymous';
   if (!docNo) return res.status(400).json({ ok: false, error: 'docNo is required' });
 
   const existingLock = locks.get(docNo);

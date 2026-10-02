@@ -85,7 +85,7 @@ export default function ProductionSummaryPage() {
   const [holidays, setHolidays] = useState<string[]>([]);
   const [isReady, setIsReady] = useState(false);
 
-  const [data, setData] = useState<any[]>([]);
+  const [data, setData] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(false);
   const [chartTitle, setChartTitle] = useState('');
   const { showToast } = useToast();
@@ -106,10 +106,205 @@ export default function ProductionSummaryPage() {
     periodSetup.actions.reset();
   };
 
-  useEffect(() => {
-    if (isReady) {
-      handleShow();
+  const handleShowRef = useRef<() => void>(() => {});
+
+  const handleShow = async () => {
+    setLoading(true);
+    try {
+      let rawData: Record<string, unknown>[] = [];
+      let weekDatesMap: Record<string, { min: string; max: string }> = {};
+
+      const stepName = PRODUCTION_STEPS.find((s) => s.code === step)?.nameEN || step;
+      const modeName = PRODUCTION_MODES.find((m) => m.key === mode)?.label || mode;
+
+      const preset = committed.preset;
+
+      if (preset === 'full-year' || preset === 'ytd') {
+        const res = await fetchWithAuth(`/api/production-summary/year?step=${step}&mode=${mode}&year=${activeYear}`);
+        const dataJson = await res.json();
+        rawData = dataJson.data || [];
+
+        let filteredRawData = rawData;
+        if (preset === 'ytd' && activeYear === new Date().getFullYear()) {
+          const curMonth = new Date().getMonth() + 1;
+          filteredRawData = rawData.filter(d => Number(d.month) <= curMonth);
+        }
+
+        const chartData = filteredRawData.map(item => {
+          const m = Number(item.month);
+          let total = 0;
+          const groupData: Record<string, number> = {};
+
+          PROD_CUSTOMER_GROUPS.forEach((g: ProdCustomerGroup) => {
+            const val = Number(item[g.id]) || 0;
+            groupData[g.id] = val;
+            total += val;
+          });
+
+          const workDays = getWorkDaysInMonth(activeYear, m, holidays);
+          const avg = workDays > 0 ? total / workDays : 0;
+
+          return {
+            period: m,
+            periodLabel: MONTH_FULL[m - 1].substring(0, 3).toUpperCase(),
+            ...groupData,
+            total, avg, workDays
+          };
+        });
+        setData(chartData);
+        setChartTitle(`${stepName} Yearly ${modeName} [ ${activeYear} ]`);
+
+      } else if (preset === 'week') {
+        const selWeeks = committed.selectedWeeks || [];
+        if (selWeeks.length === 0) { setLoading(false); return; }
+        const wStart = Math.min(...selWeeks.map(Number));
+        const wEnd = Math.max(...selWeeks.map(Number));
+
+        const res = await fetchWithAuth(`/api/production-summary/week?step=${step}&mode=${mode}&year=${activeYear}&fromWeek=${wStart}&toWeek=${wEnd}`);
+        const dataJson = await res.json();
+        rawData = dataJson.data || [];
+        weekDatesMap = dataJson.weekDates || {};
+
+        const chartData = rawData.map(item => {
+          const w = Number(item.week);
+          let total = 0;
+          const groupData: Record<string, number> = {};
+
+          PROD_CUSTOMER_GROUPS.forEach((g: ProdCustomerGroup) => {
+            const val = Number(item[g.id]) || 0;
+            groupData[g.id] = val;
+            total += val;
+          });
+
+          let workDays = 0;
+          if (weekDatesMap[w]) {
+            workDays = getWorkDaysInDateRange(weekDatesMap[w].min, weekDatesMap[w].max, holidays);
+          } else {
+            workDays = 6;
+          }
+
+          const avg = workDays > 0 ? total / workDays : 0;
+
+          return {
+            period: w,
+            periodLabel: `W${w}`,
+            ...groupData,
+            total, avg, workDays
+          };
+        });
+        setData(chartData);
+        setChartTitle(`${stepName} Weekly ${modeName} [ W${wStart} - W${wEnd} ${activeYear} ]`);
+
+      } else if (preset === 'month' || preset === 'custom') {
+        const monthNum = committed.monthFrom || new Date().getMonth() + 1;
+        const res = await fetchWithAuth(`/api/production-summary/month?step=${step}&mode=${mode}&year=${activeYear}&month=${monthNum}`);
+        const dataJson = await res.json();
+        rawData = dataJson.data || [];
+
+        const chartData = rawData.map(item => {
+          const d = Number(item.day);
+          let total = 0;
+          const groupData: Record<string, number> = {};
+
+          PROD_CUSTOMER_GROUPS.forEach((g: ProdCustomerGroup) => {
+            const val = Number(item[g.id]) || 0;
+            groupData[g.id] = val;
+            total += val;
+          });
+
+          const date = new Date(activeYear, monthNum - 1, d);
+          const dStr = toLocalYMD(date);
+
+          let workDays = 0;
+          if (date.getDay() !== 0 && !holidays.includes(dStr)) {
+            workDays = 1;
+          }
+
+          return {
+            period: dStr,
+            periodLabel: `${String(d).padStart(2, '0')}/${String(monthNum).padStart(2, '0')}/${activeYear}`,
+            ...groupData,
+            total, workDays
+          };
+        });
+        setData(chartData);
+        setChartTitle(`${stepName} Monthly ${modeName} [ ${MONTH_FULL[monthNum - 1]} ${activeYear} ]`);
+
+      } else if (preset === 'day') {
+        const fDate = committed.dateFrom || toLocalYMD(new Date());
+        let tDate = committed.dateTo || toLocalYMD(new Date());
+
+        const d1 = new Date(fDate);
+        const d2 = new Date(tDate);
+        if (d1 > d2) {
+          showToast("Date From cannot be greater than Date To", "error");
+          setLoading(false);
+          return;
+        }
+
+        const diffDays = Math.ceil(Math.abs(d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24));
+        if (diffDays > 30) {
+          const maxD = new Date(d1);
+          maxD.setDate(maxD.getDate() + 30);
+          tDate = toLocalYMD(maxD);
+        }
+
+        const res = await fetchWithAuth(`/api/production-summary/daily?step=${step}&mode=${mode}&startDate=${fDate}&endDate=${tDate}`);
+        const dataJson = await res.json();
+        rawData = dataJson.data || [];
+
+        const chartData = rawData.map(item => {
+          let total = 0;
+          const groupData: Record<string, number> = {};
+
+          PROD_CUSTOMER_GROUPS.forEach((g: ProdCustomerGroup) => {
+            const val = Number(item[g.id]) || 0;
+            groupData[g.id] = val;
+            total += val;
+          });
+
+          let workDays = 0;
+          const dStr = String(item.dateStr);
+          const dateObj = parseDateLocal(dStr);
+          if (dateObj.getDay() !== 0 && !holidays.includes(dStr)) {
+            workDays = 1;
+          }
+
+          const parts = dStr.split('-');
+          const label = `${parts[2]}/${parts[1]}/${parts[0]}`;
+
+          return {
+            period: dStr,
+            periodLabel: label,
+            ...groupData,
+            total, workDays
+          };
+        });
+        setData(chartData);
+        setChartTitle(`${stepName} Daily ${modeName} [ ${formatDateStr(fDate)} - ${formatDateStr(tDate)} ]`);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
+  };
+
+  useEffect(() => {
+    handleShowRef.current = handleShow;
+  });
+
+  useEffect(() => {
+    if (!isReady) return;
+    let isCancelled = false;
+    const run = async () => {
+      await Promise.resolve();
+      if (!isCancelled) {
+        handleShow();
+      }
+    };
+    run();
+    return () => { isCancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, mode, committed, isReady]);
 
@@ -122,7 +317,7 @@ export default function ProductionSummaryPage() {
           getHolidays(activeYear)
         ]);
 
-        const cleanHols = hols.map((h: any) => {
+        const cleanHols = hols.map((h: string) => {
           if (h.includes('T')) return h.split('T')[0];
           return h;
         });
@@ -137,7 +332,6 @@ export default function ProductionSummaryPage() {
   }, [activeYear]);
 
   const { setTopbarActions } = useTopbarActions();
-  const handleShowRef = useRef<() => void>(() => {});
   const [isSpinning, setIsSpinning] = useState(false);
 
   const handleReload = async () => {
@@ -194,189 +388,6 @@ export default function ProductionSummaryPage() {
     );
     return () => setTopbarActions(null);
   }, [setTopbarActions, isRefreshing]);
-
-  const handleShow = async () => {
-    setLoading(true);
-    try {
-      let rawData: any[] = [];
-      let weekDatesMap: any = {};
-
-      const stepName = PRODUCTION_STEPS.find((s: any) => s.code === step)?.nameEN || step;
-      const modeName = PRODUCTION_MODES.find((m: any) => m.key === mode)?.label || mode;
-
-      const preset = committed.preset;
-
-      if (preset === 'full-year' || preset === 'ytd') {
-        const res = await fetchWithAuth(`/api/production-summary/year?step=${step}&mode=${mode}&year=${activeYear}`);
-        const dataJson = await res.json();
-        rawData = dataJson.data || [];
-
-        let filteredRawData = rawData;
-        if (preset === 'ytd' && activeYear === new Date().getFullYear()) {
-          const curMonth = new Date().getMonth() + 1;
-          filteredRawData = rawData.filter(d => d.month <= curMonth);
-        }
-
-        const chartData = filteredRawData.map(item => {
-          const m = item.month;
-          let total = 0;
-          const groupData: Record<string, number> = {};
-
-          PROD_CUSTOMER_GROUPS.forEach((g: ProdCustomerGroup) => {
-            const val = item[g.id] || 0;
-            groupData[g.id] = val;
-            total += val;
-          });
-
-          const workDays = getWorkDaysInMonth(activeYear, m, holidays);
-          const avg = workDays > 0 ? total / workDays : 0;
-
-          return {
-            period: m,
-            periodLabel: MONTH_FULL[m - 1].substring(0, 3).toUpperCase(),
-            ...groupData,
-            total, avg, workDays
-          };
-        });
-        setData(chartData);
-        setChartTitle(`${stepName} Yearly ${modeName} [ ${activeYear} ]`);
-
-      } else if (preset === 'week') {
-        const selWeeks = committed.selectedWeeks || [];
-        if (selWeeks.length === 0) { setLoading(false); return; }
-        const wStart = Math.min(...selWeeks.map(Number));
-        const wEnd = Math.max(...selWeeks.map(Number));
-
-        const res = await fetchWithAuth(`/api/production-summary/week?step=${step}&mode=${mode}&year=${activeYear}&fromWeek=${wStart}&toWeek=${wEnd}`);
-        const dataJson = await res.json();
-        rawData = dataJson.data || [];
-        weekDatesMap = dataJson.weekDates || {};
-
-        const chartData = rawData.map(item => {
-          const w = item.week;
-          let total = 0;
-          const groupData: Record<string, number> = {};
-
-          PROD_CUSTOMER_GROUPS.forEach((g: ProdCustomerGroup) => {
-            const val = item[g.id] || 0;
-            groupData[g.id] = val;
-            total += val;
-          });
-
-          let workDays = 0;
-          if (weekDatesMap[w]) {
-            workDays = getWorkDaysInDateRange(weekDatesMap[w].min, weekDatesMap[w].max, holidays);
-          } else {
-            workDays = 6;
-          }
-
-          const avg = workDays > 0 ? total / workDays : 0;
-
-          return {
-            period: w,
-            periodLabel: `W${w}`,
-            ...groupData,
-            total, avg, workDays
-          };
-        });
-        setData(chartData);
-        setChartTitle(`${stepName} Weekly ${modeName} [ W${wStart} - W${wEnd} ${activeYear} ]`);
-
-      } else if (preset === 'month' || preset === 'custom') {
-        const monthNum = committed.monthFrom || new Date().getMonth() + 1;
-        const res = await fetchWithAuth(`/api/production-summary/month?step=${step}&mode=${mode}&year=${activeYear}&month=${monthNum}`);
-        const dataJson = await res.json();
-        rawData = dataJson.data || [];
-
-        const chartData = rawData.map(item => {
-          const d = item.day;
-          let total = 0;
-          const groupData: Record<string, number> = {};
-
-          PROD_CUSTOMER_GROUPS.forEach((g: ProdCustomerGroup) => {
-            const val = item[g.id] || 0;
-            groupData[g.id] = val;
-            total += val;
-          });
-
-          const date = new Date(activeYear, monthNum - 1, d);
-          const dStr = toLocalYMD(date);
-
-          let workDays = 0;
-          if (date.getDay() !== 0 && !holidays.includes(dStr)) {
-            workDays = 1;
-          }
-
-          return {
-            period: dStr,
-            periodLabel: `${String(d).padStart(2, '0')}/${String(monthNum).padStart(2, '0')}/${activeYear}`,
-            ...groupData,
-            total, workDays
-          };
-        });
-        setData(chartData);
-        setChartTitle(`${stepName} Monthly ${modeName} [ ${MONTH_FULL[monthNum - 1]} ${activeYear} ]`);
-
-      } else if (preset === 'day') {
-        const fDate = committed.dateFrom || toLocalYMD(new Date());
-        let tDate = committed.dateTo || toLocalYMD(new Date());
-
-        const d1 = new Date(fDate);
-        const d2 = new Date(tDate);
-        if (d1 > d2) {
-          showToast("Date From cannot be greater than Date To", "error");
-          setLoading(false);
-          return;
-        }
-
-        const diffDays = Math.ceil(Math.abs(d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24));
-        if (diffDays > 30) {
-          const maxD = new Date(d1);
-          maxD.setDate(maxD.getDate() + 30);
-          tDate = toLocalYMD(maxD);
-        }
-
-        const res = await fetchWithAuth(`/api/production-summary/daily?step=${step}&mode=${mode}&startDate=${fDate}&endDate=${tDate}`);
-        const dataJson = await res.json();
-        rawData = dataJson.data || [];
-
-        const chartData = rawData.map(item => {
-          let total = 0;
-          const groupData: Record<string, number> = {};
-
-          PROD_CUSTOMER_GROUPS.forEach((g: ProdCustomerGroup) => {
-            const val = item[g.id] || 0;
-            groupData[g.id] = val;
-            total += val;
-          });
-
-          let workDays = 0;
-          const dStr = item.dateStr;
-          const dateObj = parseDateLocal(dStr);
-          if (dateObj.getDay() !== 0 && !holidays.includes(dStr)) {
-            workDays = 1;
-          }
-
-          const parts = dStr.split('-');
-          const label = `${parts[2]}/${parts[1]}/${parts[0]}`;
-
-          return {
-            period: dStr,
-            periodLabel: label,
-            ...groupData,
-            total, workDays
-          };
-        });
-        setData(chartData);
-        setChartTitle(`${stepName} Daily ${modeName} [ ${formatDateStr(fDate)} - ${formatDateStr(tDate)} ]`);
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-  handleShowRef.current = handleShow;
 
   return (
     <div className="erp-page-container print-layout-production flex flex-col h-full bg-[var(--color-ui-canvas)]">

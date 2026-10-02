@@ -1,6 +1,6 @@
 import { DollarSign, Hash, BarChart3, Table2, RefreshCw } from 'lucide-react';
 import { ErpSegmentedControl } from '../../ui/ErpButtons';
-import type { Metric, ViewMode } from '../../../hooks/useOrderVolumeSummaryData';
+import type { Metric, ViewMode, SalesOrderRow } from '../../../hooks/useOrderVolumeSummaryData';
 
 interface VolumeFilterBarProps {
   metric: Metric;
@@ -8,7 +8,7 @@ interface VolumeFilterBarProps {
   activeView: ViewMode;
   setActiveView: (v: ViewMode) => void;
   resetDrilldown: () => void;
-  setDrilldownOrders: (orders: any[]) => void;
+  setDrilldownOrders: (orders: SalesOrderRow[]) => void;
   loading: boolean;
   loadOverviewData: () => void;
 }

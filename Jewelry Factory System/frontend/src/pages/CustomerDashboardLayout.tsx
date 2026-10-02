@@ -5,6 +5,16 @@ import { useTopbarActions } from '../contexts/TopbarActionContext';
 import { RefreshCw } from 'lucide-react';
 import './CustomerDashboard.css';
 
+export interface CustomerDashboardOutletContext {
+  availableYears: string[];
+  refreshCounter: number;
+  isRefreshing: boolean;
+  triggerRefresh: () => void;
+  setIsRefreshing: (val: boolean) => void;
+  isChildLoading: boolean;
+  setIsChildLoading: (val: boolean) => void;
+}
+
 export default function CustomerDashboardLayout() {
   const [availableYears, setAvailableYears] = useState<string[]>([]);
   const [refreshCounter, setRefreshCounter] = useState(0);
@@ -13,8 +23,8 @@ export default function CustomerDashboardLayout() {
   const { setTopbarActions } = useTopbarActions();
 
   useEffect(() => {
-    fetchAvailableYears().then((years: any) => {
-      const stringYears = years.map(String).sort((a: any, b: any) => b.localeCompare(a));
+    fetchAvailableYears().then((years: number[]) => {
+      const stringYears = years.map(String).sort((a: string, b: string) => b.localeCompare(a));
       setAvailableYears(stringYears);
     }).catch(console.error);
   }, []);

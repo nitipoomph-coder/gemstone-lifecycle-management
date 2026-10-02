@@ -51,8 +51,8 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       >
         {toasts.map(toast => {
           let icon;
-          let color = 'var(--color-text-primary)';
-          let bgColor = 'var(--color-ui-surface)';
+          const color = 'var(--color-text-primary)';
+          const bgColor = 'var(--color-ui-surface)';
           let borderColor = 'var(--color-border-light)';
           
           if (toast.type === 'success') {

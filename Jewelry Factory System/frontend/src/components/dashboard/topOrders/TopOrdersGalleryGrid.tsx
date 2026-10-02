@@ -8,7 +8,7 @@ import { comparisonTextStyle, formatSignedPct } from './galleryComparison';
  * Adjust scale factor here for each product type.
  * Default is 1.0 (100%)
  */
-export const CATEGORY_IMAGE_SCALES: Record<string, number> = {
+const CATEGORY_IMAGE_SCALES: Record<string, number> = {
   BNS: 1.0, // Necklace = 100%
   NECKLACE: 1.0,
   BBS: 1.0,  // Bracelet & Bangle = 100%
@@ -20,7 +20,7 @@ export const CATEGORY_IMAGE_SCALES: Record<string, number> = {
   OTHER: 1.0,
 };
 
-export const getCategoryImageScale = (productType?: string, productTypeLabel?: string): number => {
+const getCategoryImageScale = (productType?: string, productTypeLabel?: string): number => {
   const typeKey = String(productType || '').trim().toUpperCase();
   if (typeKey && CATEGORY_IMAGE_SCALES[typeKey] !== undefined) {
     return CATEGORY_IMAGE_SCALES[typeKey];
@@ -141,7 +141,7 @@ export function TopOrdersGalleryGrid({
                 alignItems: 'center',
                 justifyContent: 'center',
                 position: 'relative',
-                background: '#ffffff',
+                background: 'var(--color-product-canvas)',
                 overflow: 'hidden',
               }}
             >
@@ -200,7 +200,7 @@ export function TopOrdersGalleryGrid({
                   zIndex: 10,
                   opacity: 0,
                   transition: 'opacity 0.2s ease',
-                  background: 'color-mix(in srgb, var(--color-surface-950, #090d16) 94%, transparent)',
+                  background: 'color-mix(in srgb, var(--color-surface-950) 94%, transparent)',
                   backdropFilter: 'blur(6px)',
                   pointerEvents: 'none',
                 }}
@@ -215,7 +215,7 @@ export function TopOrdersGalleryGrid({
                   {fmtCurrency(itemAmnt)}
                 </span>
                 {avgUnitPrice > 0 && (
-                  <span style={{ fontSize: '0.72rem', color: 'var(--color-overlay-text-muted)', fontWeight: 700, background: 'rgba(255, 255, 255, 0.12)', padding: '2px 8px', borderRadius: 4, marginTop: 2 }}>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--color-overlay-text-muted)', fontWeight: 700, background: 'color-mix(in srgb, var(--color-text-inverse) 12%, transparent)', padding: '2px 8px', borderRadius: 4, marginTop: 2 }}>
                     Avg ${avgUnitPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} / pc
                   </span>
                 )}

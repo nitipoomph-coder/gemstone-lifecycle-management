@@ -234,11 +234,14 @@ function Td({ children, align = "left", strong = false, style = {} }: { children
 function SkeletonRow({ numCols }: { numCols: number }) {
   return (
     <tr>
-      {Array.from({ length: numCols }).map((_, index) => (
-        <td key={index}>
-          <span className="sales-dense-skeleton" style={index === 1 ? { width: 44, height: 36 } : { width: `${Math.random() * 40 + 30}%` }} />
-        </td>
-      ))}
+      {Array.from({ length: numCols }).map((_, index) => {
+        const widthPct = 35 + ((index * 19) % 40);
+        return (
+          <td key={index}>
+            <span className="sales-dense-skeleton" style={index === 1 ? { width: 44, height: 36 } : { width: `${widthPct}%` }} />
+          </td>
+        );
+      })}
     </tr>
   );
 }
@@ -248,14 +251,14 @@ const photoShellStyle: React.CSSProperties = {
   height: 76,
   borderRadius: 8,
   border: "1px solid var(--color-border-light)",
-  background: "#ffffff",
+  background: "var(--color-product-canvas)",
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
   overflow: "hidden",
   margin: "0 auto",
   padding: 4,
-  boxShadow: "0 1px 4px rgba(0, 0, 0, 0.12)",
+  boxShadow: "var(--shadow-panel)",
   transition: "transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease",
 };
 

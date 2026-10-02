@@ -1,6 +1,5 @@
 import { type KeyboardEvent, type ReactNode, type CSSProperties, useState } from 'react';
-  // @ts-ignore
-import { ArrowRight, CalendarDays, Search, RefreshCw, ChevronDown, X } from 'lucide-react';
+import { ArrowRight, Search, RefreshCw, ChevronDown, X } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis, Rectangle } from 'recharts';
 import { fmtMetric, fmtQty, fmtSignedMetric, ORDER_DETAIL_COLUMNS, fmtAxis } from '../../hooks/useOrderVolumeSummaryData';
 import type {
@@ -13,31 +12,17 @@ import type {
   ViewMode
 } from '../../hooks/useOrderVolumeSummaryData';
 
-
-// Constants from original file
-
-
-
-
-
-
-
-
-
-
-
-
-export const summaryHeader: CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 };
-export const summaryLabel: CSSProperties = { fontSize: 'var(--erp-text-meta)', fontWeight: 800, color: 'var(--color-text-secondary)' };
-export const summaryValue: CSSProperties = { fontSize: 'var(--erp-text-kpi)', fontWeight: 900, display: 'block', lineHeight: 1 };
-export const summaryHint: CSSProperties = { fontSize: 'var(--erp-text-micro)', fontWeight: 700, color: 'var(--color-text-tertiary)', display: 'block', marginTop: 8 };
-export const summaryHintUp: CSSProperties = { color: 'var(--color-success-600)' };
-export const summaryHintDown: CSSProperties = { color: 'var(--color-danger-600)' };
-export const searchBox: CSSProperties = { display: 'flex', alignItems: 'center', gap: 8, background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)', borderRadius: 6, padding: '4px 10px' };
-export const searchIcon: CSSProperties = { color: 'var(--color-text-quaternary)' };
-export const searchInput: CSSProperties = { border: 'none', background: 'transparent', outline: 'none', fontSize: 'var(--erp-text-control)', width: 140, fontWeight: 800 };
-export const chipButton: CSSProperties = { background: 'var(--color-surface-1)', border: '1px solid var(--color-border-light)', borderRadius: 20, padding: '4px 12px', fontSize: 'var(--erp-text-meta)', fontWeight: 800, color: 'var(--color-text-secondary)', cursor: 'pointer', whiteSpace: 'nowrap' };
-export const chipActive: CSSProperties = { background: 'var(--color-ui-selected)', border: '1px solid var(--color-ui-interactive)', color: 'var(--color-ui-interactive)' };
+const summaryHeader: CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 };
+const summaryLabel: CSSProperties = { fontSize: 'var(--erp-text-meta)', fontWeight: 800, color: 'var(--color-text-secondary)' };
+const summaryValue: CSSProperties = { fontSize: 'var(--erp-text-kpi)', fontWeight: 900, display: 'block', lineHeight: 1 };
+const summaryHint: CSSProperties = { fontSize: 'var(--erp-text-micro)', fontWeight: 700, color: 'var(--color-text-tertiary)', display: 'block', marginTop: 8 };
+const summaryHintUp: CSSProperties = { color: 'var(--color-success-600)' };
+const summaryHintDown: CSSProperties = { color: 'var(--color-danger-600)' };
+const searchBox: CSSProperties = { display: 'flex', alignItems: 'center', gap: 8, background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)', borderRadius: 6, padding: '4px 10px' };
+const searchIcon: CSSProperties = { color: 'var(--color-text-quaternary)' };
+const searchInput: CSSProperties = { border: 'none', background: 'transparent', outline: 'none', fontSize: 'var(--erp-text-control)', width: 140, fontWeight: 800 };
+const chipButton: CSSProperties = { background: 'var(--color-surface-1)', border: '1px solid var(--color-border-light)', borderRadius: 20, padding: '4px 12px', fontSize: 'var(--erp-text-meta)', fontWeight: 800, color: 'var(--color-text-secondary)', cursor: 'pointer', whiteSpace: 'nowrap' };
+const chipActive: CSSProperties = { background: 'var(--color-ui-selected)', border: '1px solid var(--color-ui-interactive)', color: 'var(--color-ui-interactive)' };
 export function CustomerTrendsLoadingState({
   activeView,
   granularity,
@@ -125,7 +110,7 @@ export function CustomerTrendsLoadingState({
             <table className="sales-dense-table" style={{ width: '100%', minWidth: 1536 }}>
               <thead>
                 <tr>
-                  {ORDER_DETAIL_COLUMNS.map(([head, width]: any, index: any) => (
+                  {ORDER_DETAIL_COLUMNS.map(([head, width], index) => (
                     <th
                       key={head}
                       className={index >= 21 ? 'sales-dense-table__number' : undefined}
@@ -180,13 +165,13 @@ export function InteractiveTrendBar({
       y={y}
       width={width}
       height={height}
-      radius={[4, 4, 0, 0]}
+      radius={[0, 0, 0, 0]}
       fill={fillColor}
       role="button"
       tabIndex={0}
       aria-label={`${label}. Open order details.`}
       onClick={activate}
-      onKeyDown={(event: any) => {
+      onKeyDown={(event: KeyboardEvent<SVGElement>) => {
         if (event.key === 'Enter' || event.key === ' ') {
           event.preventDefault();
           activate();
@@ -246,8 +231,8 @@ export function WeeklyComparisonList({ groups, reportYear, compareYear, metric, 
       <div className="customer-trends-weekly__months">
         {groups.map(group => {
           const isExpanded = expandedMonth === group.monthNumber;
-            const primaryTotal = group.weeks.reduce((sum: any, week: any) => sum + week.report, 0);
-            const compareTotal = hasCompare ? group.weeks.reduce((sum: any, week: any) => sum + week.compare, 0) : 0;
+          const primaryTotal = group.weeks.reduce((sum, week) => sum + week.report, 0);
+          const compareTotal = hasCompare ? group.weeks.reduce((sum, week) => sum + week.compare, 0) : 0;
 
           const panelId = `weekly-month-panel-${group.monthNumber}`;
           const triggerId = `weekly-month-trigger-${group.monthNumber}`;
@@ -282,7 +267,7 @@ export function WeeklyComparisonList({ groups, reportYear, compareYear, metric, 
 
               {isExpanded && (
                 <div id={panelId} className="customer-trends-weekly__week-list" role="region" aria-labelledby={triggerId}>
-                  {group.weeks.map((week: any) => {
+                  {group.weeks.map((week) => {
                     const weekDelta = hasCompare ? week.report - week.compare : 0;
 
                     return (
@@ -406,13 +391,13 @@ export function TrendComparisonChart({ data, reportYear, compareYear, metric, gr
         ) : (
           <div className="customer-trends-comparison-chart__canvas" style={{ width: canvasWidth }}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data} barCategoryGap="26%" barGap={4} margin={{ top: 8, right: 10, left: 0, bottom: 2 }}>
+              <BarChart data={data} barCategoryGap="26%" barGap={0} margin={{ top: 8, right: 10, left: 0, bottom: 2 }}>
                 <CartesianGrid vertical={false} stroke="var(--color-border-light)" strokeDasharray="3 3" opacity={0.7} />
                 <XAxis dataKey="label" axisLine={false} tickLine={false} interval={0} tick={{ fill: 'var(--color-text-tertiary)', fontSize: 10, fontWeight: 800 }} dy={7} />
                 <YAxis axisLine={false} tickLine={false} tickFormatter={(value: number) => fmtAxis(value, metric)} tick={{ fill: 'var(--color-text-tertiary)', fontSize: 10, fontWeight: 750 }} width={58} />
                 <Tooltip content={<TrendComparisonTooltip metric={metric} reportYear={reportYear} compareYear={compareYear} />} cursor={{ fill: 'color-mix(in srgb, var(--color-brand-500) 6%, transparent)' }} />
-                {hasCompare && <Bar dataKey="compare" name={compareYear} fill="var(--color-text-quaternary)" maxBarSize={30} isAnimationActive={false} shape={<InteractiveTrendBar year={compareYear!} series="compare" metric={metric} fillColor="var(--color-text-quaternary)" onActivate={onDrilldown} />} />}
-                <Bar dataKey="report" name={reportYear} fill="var(--color-brand-500)" maxBarSize={30} isAnimationActive={false} shape={<InteractiveTrendBar year={reportYear} series="report" metric={metric} fillColor="var(--color-brand-500)" onActivate={onDrilldown} />} />
+                {hasCompare && <Bar dataKey="compare" name={compareYear} fill="var(--color-text-quaternary)" isAnimationActive={false} shape={<InteractiveTrendBar year={compareYear!} series="compare" metric={metric} fillColor="var(--color-text-quaternary)" onActivate={onDrilldown} />} />}
+                <Bar dataKey="report" name={reportYear} fill="var(--color-brand-500)" isAnimationActive={false} shape={<InteractiveTrendBar year={reportYear} series="report" metric={metric} fillColor="var(--color-brand-500)" onActivate={onDrilldown} />} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -421,6 +406,8 @@ export function TrendComparisonChart({ data, reportYear, compareYear, metric, gr
     </section>
   );
 }
+
+const searchButton: CSSProperties = { position: 'absolute', right: 4, width: 22, height: 22, display: 'grid', placeItems: 'center', border: '1px solid var(--color-border-light)', borderRadius: 5, background: 'var(--color-surface-1)', color: 'var(--color-text-tertiary)', cursor: 'pointer' };
 
 export function SearchBox({ value, onChange, onKeyDown, onClear }: { value: string; onChange: (value: string) => void; onKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void; onClear: () => void }) {
   return (
@@ -482,46 +469,3 @@ export function TableSkeletonRows({ columns, rows = 8 }: { columns: number; rows
     </>
   );
 }
-
-export const pageShell: CSSProperties = { minHeight: 0, background: 'var(--color-surface-1)' };
-
-
-
-const searchButton: CSSProperties = { position: 'absolute', right: 4, width: 22, height: 22, display: 'grid', placeItems: 'center', border: '1px solid var(--color-border-light)', borderRadius: 5, background: 'var(--color-surface-1)', color: 'var(--color-text-tertiary)', cursor: 'pointer' };
-
-
-
-
-
-
-export const filterToolbar: CSSProperties = { position: 'relative', display: 'grid', overflow: 'visible', background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)', borderRadius: 8 };
-export const filterPrimaryRow: CSSProperties = { display: 'flex', alignItems: 'center', columnGap: 10, rowGap: 8, minHeight: 52, padding: '8px 12px', flexWrap: 'wrap' };
-export const filterCollapsedRow: CSSProperties = { display: 'flex', alignItems: 'center', gap: 8, minHeight: 42, padding: '6px 12px' };
-export const filterCollapsedSummary: CSSProperties = { minWidth: 0, flex: '1 1 auto', overflow: 'hidden', color: 'var(--color-text-secondary)', fontSize: 'var(--erp-text-dense)', fontWeight: 850, textOverflow: 'ellipsis', whiteSpace: 'nowrap' };
-export const filterBlock: CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 6, minWidth: 0 };
-
-export const filterLabel: CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--color-text-tertiary)', fontSize: 'var(--erp-text-dense)', fontWeight: 900, whiteSpace: 'nowrap' };
-export const filterSectionLabel: CSSProperties = { ...filterLabel, color: 'var(--color-text-secondary)' };
-export const filterControlDivider: CSSProperties = { width: 1, minHeight: 26, alignSelf: 'stretch', background: 'var(--color-border-light)' };
-export const selectStyle: CSSProperties = { height: 32, borderRadius: 6, border: '1px solid var(--color-border-light)', background: 'var(--color-surface-1)', color: 'var(--color-text-primary)', fontSize: 'var(--erp-text-dense)', fontWeight: 900, padding: '0 8px', outline: 'none', fontFamily: 'var(--font-body)' };
-
-
-
-
-export const orderPanel: CSSProperties = { width: '100%', minHeight: 0, flex: '1 1 0' };
-export const panelTitle: CSSProperties = { margin: 0, color: 'var(--color-text-primary)', fontSize: 'var(--erp-text-control)', fontWeight: 900 };
-export const panelHeaderRight: CSSProperties = { display: 'inline-flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8 };
-export const panelMeta: CSSProperties = { color: 'var(--color-text-tertiary)', fontSize: 'var(--erp-text-dense)', fontWeight: 900 };
-export const tableScroll: CSSProperties = { width: '100%', minHeight: 0 };
-export const td: CSSProperties = { height: 46, padding: '6px 8px', color: 'var(--color-text-primary)', fontSize: 'var(--erp-text-dense)', fontWeight: 500, verticalAlign: 'middle', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
-export const tdStrongCenter: CSSProperties = { ...td, fontWeight: 900, textAlign: 'center' };
-export const tdCenter: CSSProperties = { ...td, textAlign: 'center' };
-export const tdStrong: CSSProperties = { ...td, fontWeight: 900 };
-export const tdStrongRight: CSSProperties = { ...td, fontWeight: 900, textAlign: 'right', fontVariantNumeric: 'tabular-nums' };
-export const linkButton: CSSProperties = { background: 'none', border: 'none', color: 'var(--color-brand-600)', fontSize: 'var(--erp-text-dense)', fontWeight: 900, cursor: 'pointer', padding: 0, fontFamily: 'var(--font-body)' };
-export const paginationBar: CSSProperties = { minHeight: 38, padding: '6px 10px' };
-export const paginationText: CSSProperties = { color: 'var(--color-text-tertiary)', fontSize: 'var(--erp-text-dense)', fontWeight: 850 };
-export const paginationButtons: CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 6 };
-export const pageButton: CSSProperties = { width: 28, height: 28, display: 'inline-grid', placeItems: 'center', borderRadius: 6, border: '1px solid var(--color-border-light)', background: 'var(--color-surface-1)', color: 'var(--color-text-primary)', cursor: 'pointer' };
-export const pageButtonDisabled: CSSProperties = { opacity: 0.45, cursor: 'not-allowed' };
-export const pageText: CSSProperties = { color: 'var(--color-text-primary)', fontSize: 'var(--erp-text-dense)', fontWeight: 900, minWidth: 82, textAlign: 'center' };

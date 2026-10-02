@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useState, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import type { BreadcrumbItem } from '../config/breadcrumbs';
 import { menuConfig } from '../config/menuConfig';
@@ -10,7 +10,7 @@ interface BreadcrumbContextType {
   effectiveBreadcrumbs: BreadcrumbItem[];
 }
 
-export function getFallbackBreadcrumbs(pathname: string): BreadcrumbItem[] {
+function getFallbackBreadcrumbs(pathname: string): BreadcrumbItem[] {
   if (pathname === '/') {
     return [{ label: 'Overview' }, { label: 'Factory Overview' }];
   }
@@ -93,11 +93,6 @@ export function getFallbackBreadcrumbs(pathname: string): BreadcrumbItem[] {
   return [];
 }
 
-export function getFallbackParentBreadcrumbs(pathname: string): BreadcrumbItem[] {
-  const full = getFallbackBreadcrumbs(pathname);
-  return full.length > 1 ? full.slice(0, -1) : full;
-}
-
 const BreadcrumbContext = createContext<BreadcrumbContextType>({
   breadcrumbs: [],
   setBreadcrumbs: () => {},
@@ -110,9 +105,11 @@ export function BreadcrumbProvider({ children }: { children: React.ReactNode }) 
   const location = useLocation();
 
   // Reset breadcrumbs on route change so stale page breadcrumb isn't shown
-  useEffect(() => {
+  const [prevPath, setPrevPath] = useState(location.pathname);
+  if (prevPath !== location.pathname) {
+    setPrevPath(location.pathname);
     setBreadcrumbs([]);
-  }, [location.pathname]);
+  }
 
   const effectiveBreadcrumbs = useMemo(() => {
     return breadcrumbs.length > 0 ? breadcrumbs : getFallbackBreadcrumbs(location.pathname);

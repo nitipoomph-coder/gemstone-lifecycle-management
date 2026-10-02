@@ -119,3 +119,58 @@ Loading skeletons should cover only the content outlet they replace. Do not skel
 
 ## Boundary Rule
 Dashboard and Sales report screens are not production tracking screens. Do not route users into PO Tracker or production-stage detail unless the user explicitly asks for production/order tracking navigation.
+
+## ProductionSummaryPage.tsx
+Production output summary with chart + table for customer groups (N008, N098, N051).
+
+Route: `/production/summary`
+
+Features:
+- View modes: Year (monthly bars), Month (daily bars), Week (weekly bars), Day (custom date range)
+- Step selector: GR (Grind), TB, AS, etc.
+- Mode selector: Good, All
+- Uses `usePeriodSetup` hook + `PeriodSetupPanel` for unified period filtering
+- Chart: `ComposedChart` with stacked bars per customer group + average line
+- Table: Fixed-layout table with Total and Avg/Day rows, auto-scaling font by column count
+
+API: `GET /api/production-summary/year|month|week|day` with `step`, `mode`, `year`, `month`, `fromWeek`, `toWeek` params.
+
+## ProductionForecastPage.tsx
+Production forecast comparing order qty vs finish qty by category type (BBS, BES+BCS, BNS+BPS, BTS, BRS, OTHER).
+
+Route: `/production/forecast`
+
+Features:
+- Group selector: Item Type (BBS, etc.)
+- Uses `usePeriodSetup` hook + `PeriodSetupPanel`
+- Chart: `ComposedChart` with paired bars (order vs finish)
+- Table: Category breakdown + Order Qty / Finish Qty / Balance Qty summary rows
+
+## OrderVolumeSummaryPage.tsx
+Order volume trends and risk customer analysis.
+
+Route: `/dashboard/customer/trends`
+
+Features:
+- Uses `useOrderVolumeSummaryData` hook
+- Order volume trend line chart
+- Risk customer bar chart
+- Volume filter bar with metric/period/group selectors
+
+## Period Setup Panel (System-Wide)
+`PeriodSetupPanel.tsx` is the shared period filter popover used across all dashboard pages.
+
+Key behaviors:
+- Default preset: `full-year` (shows all 12 months)
+- Supported presets: `full-year`, `ytd`, `this-month`, `last-month`, `month`, `week`, `day`, `custom`
+- Compare Target: Checkbox-activated year comparison (up to 2 compare years)
+- Month selector: Clickable month grid (single for `month` preset, multi for `custom`)
+- Week selector: Range picker (fromWeek — toWeek)
+- Day selector: Date range picker (max 31 days)
+- State managed by `usePeriodSetup` hook with draft/committed pattern
+
+## Chart Styling Rules (System-Wide as of Oct 2026)
+- **Square corners**: `radius={[0, 0, 0, 0]}` on all `<Bar>` components
+- **No gaps in groups**: `barGap={0}` on all `BarChart`/`ComposedChart` containers
+- **No max bar size**: Do not use `maxBarSize` — let bars fill naturally
+- **Custom HTML bars** (e.g., `FactoryOutputTrendChart`): Use `borderRadius: 0`

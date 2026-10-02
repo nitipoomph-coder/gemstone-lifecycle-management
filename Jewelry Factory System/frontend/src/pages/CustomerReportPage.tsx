@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { DollarSign, Hash } from 'lucide-react';
 import './SalesResponsive.css';
-import { ALL_GROUPS } from '../config/customerGroups';
+import { ALL_GROUPS, type CustomerGroup } from '../config/customerGroups';
 import PageHeader from '../components/layout/PageHeader';
 import { BREADCRUMBS } from '../config/breadcrumbs';
 import PeriodSetupPanel from '../components/period/PeriodSetupPanel';
@@ -218,12 +218,12 @@ export default function CustomerReportPage() {
               {groupKpis.length > 0 && (
                 <div style={{ marginBottom: 20 }}>
                   <div className="sales-report-kpis flex-wrap" style={{ display: 'flex', gap: 12 }}>
-                    {groupKpis.map((g: any) => {
+                    {groupKpis.map((g: CustomerGroup & { totals: Record<string, number> }) => {
                       const sortedYearsDesc = [...activeYears].map(String).sort((y1, y2) => Number(y2) - Number(y1));
                       const cardBaseYear = sortedYearsDesc[0] || activeYears[0];
-                      const cardCompYear = kpiCompareYear && activeYears.includes(kpiCompareYear) && kpiCompareYear !== cardBaseYear
+                      const cardCompYear = kpiCompareYear === 'none' ? null : (kpiCompareYear && activeYears.includes(kpiCompareYear) && kpiCompareYear !== cardBaseYear
                         ? kpiCompareYear
-                        : (sortedYearsDesc.length > 1 ? sortedYearsDesc.find(y => y !== cardBaseYear) || null : null);
+                        : (sortedYearsDesc.length > 1 ? sortedYearsDesc.find(y => y !== cardBaseYear) || null : null));
 
                       const bTotal = g.totals[cardBaseYear] || 0;
                       const cTotal = cardCompYear ? (g.totals[cardCompYear] || 0) : 0;

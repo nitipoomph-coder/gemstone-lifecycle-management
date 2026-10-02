@@ -14,6 +14,31 @@ interface OrderVolumeTrendChartProps {
   compareYear: string;
 }
 
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: Array<{ color: string; name: string; value: number }>;
+  label?: string;
+  metric: Metric;
+}
+
+function CustomTooltip({ active, payload, label, metric }: CustomTooltipProps) {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-[var(--color-surface-0)] border border-[var(--color-border-light)] p-2.5 rounded-lg shadow-[var(--shadow-dropdown)]">
+        <p className="font-black m-0 mb-1.5 text-[var(--color-text-primary)] text-xs border-b border-[var(--color-border-light)] pb-1">
+          {label}
+        </p>
+        {payload.map((entry, index) => (
+          <p key={index} style={{ color: entry.color }} className="my-0.5 text-xs font-bold">
+            {entry.name}: {entry.name.includes('%') ? `${entry.value.toFixed(1)}%` : fmtMetric(entry.value, metric)}
+          </p>
+        ))}
+      </div>
+    );
+  }
+  return null;
+}
+
 export function OrderVolumeTrendChart({ data, metric, hasCompareYear, primaryYear, compareYear }: OrderVolumeTrendChartProps) {
   const [showRates, setShowRates] = useState(false);
 
@@ -33,68 +58,13 @@ export function OrderVolumeTrendChart({ data, metric, hasCompareYear, primaryYea
     };
   });
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div
-          style={{
-            background: 'var(--color-surface-0)',
-            border: '1px solid var(--color-border-light)',
-            padding: '10px 14px',
-            borderRadius: 8,
-            boxShadow: 'var(--shadow-dropdown)'
-          }}
-        >
-          <p
-            style={{
-              fontWeight: 900,
-              margin: '0 0 6px 0',
-              color: 'var(--color-text-primary)',
-              fontSize: '0.8rem',
-              borderBottom: '1px solid var(--color-border-light)',
-              paddingBottom: 4
-            }}
-          >
-            {label}
-          </p>
-          {payload.map((entry: any, index: number) => (
-            <p key={index} style={{ color: entry.color, margin: '3px 0', fontSize: '0.75rem', fontWeight: 800 }}>
-              {entry.name}: {entry.name.includes('%') ? `${entry.value.toFixed(1)}%` : fmtMetric(entry.value, metric)}
-            </p>
-          ))}
-        </div>
-      );
-    }
-    return null;
-  };
-
   return (
-    <div
-      style={{
-        background: 'var(--color-surface-0)',
-        borderRadius: 8,
-        padding: '14px 16px',
-        border: '1px solid var(--color-border-light)',
-        display: 'flex',
-        flexDirection: 'column',
-        width: '100%'
-      }}
-    >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-        <h3 style={{ margin: 0, fontSize: '0.86rem', fontWeight: 900, color: 'var(--color-text-primary)' }}>
+    <div className="bg-[var(--color-surface-0)] rounded-lg p-3.5 border border-[var(--color-border-light)] flex flex-col w-full">
+      <div className="flex justify-between items-center mb-2">
+        <h3 className="m-0 text-[0.86rem] font-black text-[var(--color-text-primary)]">
           Order Volume & Delivery Rate Trend
         </h3>
-        <label
-          style={{
-            fontSize: '0.72rem',
-            fontWeight: 700,
-            color: 'var(--color-text-secondary)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 5,
-            cursor: 'pointer'
-          }}
-        >
+        <label className="text-[0.72rem] font-bold text-[var(--color-text-secondary)] flex items-center gap-1.5 cursor-pointer">
           <input
             type="checkbox"
             checked={showRates}
@@ -104,8 +74,8 @@ export function OrderVolumeTrendChart({ data, metric, hasCompareYear, primaryYea
         </label>
       </div>
 
-      <div style={{ width: '100%', height: 230 }}>
-        <ResponsiveContainer>
+      <div className="w-full h-[230px]">
+        <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={chartData} margin={{ top: 8, right: 10, left: 5, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border-light)" />
             <XAxis
@@ -135,11 +105,11 @@ export function OrderVolumeTrendChart({ data, metric, hasCompareYear, primaryYea
                 width={45}
               />
             )}
-            <Tooltip content={<CustomTooltip />} />
+            <Tooltip content={<CustomTooltip metric={metric} />} />
             <Legend
               wrapperStyle={{ fontSize: '11px', paddingTop: 4 }}
               formatter={(value) => (
-                <span style={{ color: 'var(--color-text-secondary)', fontWeight: 700, marginRight: 8 }}>
+                <span className="text-[var(--color-text-secondary)] font-bold mr-2">
                   {value}
                 </span>
               )}
@@ -151,8 +121,8 @@ export function OrderVolumeTrendChart({ data, metric, hasCompareYear, primaryYea
                 type="monotone"
                 dataKey="compareVolume"
                 name={`${compareYear} Volume`}
-                stroke="#f59e0b"
-                fill="#f59e0b"
+                stroke="var(--color-warning-500)"
+                fill="var(--color-warning-500)"
                 fillOpacity={0.12}
                 strokeDasharray="4 4"
               />
@@ -163,9 +133,9 @@ export function OrderVolumeTrendChart({ data, metric, hasCompareYear, primaryYea
               type="monotone"
               dataKey="primaryVolume"
               name={`${primaryYear} Volume`}
-              stroke="#3b82f6"
+              stroke="var(--color-brand-500)"
               strokeWidth={2.5}
-              dot={{ r: 4, fill: '#3b82f6' }}
+              dot={{ r: 4, fill: 'var(--color-brand-500)' }}
               activeDot={{ r: 6 }}
             />
 
@@ -176,9 +146,9 @@ export function OrderVolumeTrendChart({ data, metric, hasCompareYear, primaryYea
                   type="monotone"
                   dataKey="primaryOnTimeRate"
                   name="On-Time %"
-                  stroke="#10b981"
+                  stroke="var(--color-success-600)"
                   strokeWidth={2.5}
-                  dot={{ r: 4, fill: '#10b981' }}
+                  dot={{ r: 4, fill: 'var(--color-success-600)' }}
                   activeDot={{ r: 6 }}
                 />
                 <Line
@@ -186,9 +156,9 @@ export function OrderVolumeTrendChart({ data, metric, hasCompareYear, primaryYea
                   type="monotone"
                   dataKey="primaryOverdueRate"
                   name="Overdue %"
-                  stroke="#f43f5e"
+                  stroke="var(--color-danger-500)"
                   strokeWidth={2.5}
-                  dot={{ r: 4, fill: '#f43f5e' }}
+                  dot={{ r: 4, fill: 'var(--color-danger-500)' }}
                   activeDot={{ r: 6 }}
                 />
               </>

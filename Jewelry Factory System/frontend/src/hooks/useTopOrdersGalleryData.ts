@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { fetchAvailableYears } from '../services/dashboardAPI';
 import { fetchTopItemsGallery, type TopGalleryItem, type TopGalleryResponse } from '../services/itemYearlySummaryAPI';
-import { ALL_GROUPS, ACTIVE_GROUP_IDS } from '../config/customerGroups';
+import { ALL_GROUPS, ACTIVE_GROUP_IDS, type CustomerGroup } from '../config/customerGroups';
 import { usePeriodSetup } from './usePeriodSetup';
 
 // --- Shared Constants & Types ---
@@ -48,7 +48,7 @@ export const normalizeStyleNo = (value: unknown) => String(value || "").trim().t
 export const normalizeCustomerCode = (value: unknown) => String(value || "").trim().toUpperCase();
 export const customerItemKey = (customerCode: unknown, styleNo: unknown) => `${normalizeCustomerCode(customerCode)}|${normalizeStyleNo(styleNo)}`;
 
-export const getGroupLabel = (groupId: string) => ALL_GROUPS.find((group: any) => group.id === groupId)?.label || groupId;
+export const getGroupLabel = (groupId: string) => ALL_GROUPS.find((group: CustomerGroup) => group.id === groupId)?.label || groupId;
 
 export const currentMonthNumber = () => new Date().getMonth() + 1;
 export const clampMonth = (month: number) => Math.min(12, Math.max(1, Number(month) || 1));
@@ -172,9 +172,9 @@ export function useTopOrdersGalleryData() {
   useEffect(() => {
     let cancelled = false;
     fetchAvailableYears()
-      .then((years: any) => {
+      .then((years: number[]) => {
         if (cancelled) return;
-        const stringYears = (years || []).map(String).sort((a: any, b: any) => b.localeCompare(a));
+        const stringYears = (years || []).map(String).sort((a: string, b: string) => b.localeCompare(a));
         if (stringYears.length > 0) {
           setAvailableYears(stringYears);
           if (!periodSetup.committed.baseYear) {
@@ -201,10 +201,14 @@ export function useTopOrdersGalleryData() {
     if (!periodSetup.committed.baseYear || availableYears.length === 0) return;
 
     let cancelled = false;
-    if (hasLoadedInitialRef.current) {
-      setFilterLoading(true);
-    }
-    setLoading(true);
+    Promise.resolve().then(() => {
+      if (!cancelled) {
+        if (hasLoadedInitialRef.current) {
+          setFilterLoading(true);
+        }
+        setLoading(true);
+      }
+    });
 
     const baseYr = periodSetup.committed.baseYear;
     const compYr1 = periodSetup.committed.compareActive1 ? periodSetup.committed.compareYear1 : undefined;

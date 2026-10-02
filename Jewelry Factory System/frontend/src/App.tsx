@@ -23,8 +23,6 @@ import RequisitionDocPage from './pages/document/RequisitionDocPage';
 import SampleDocPage from './pages/document/SampleDocPage';
 import VendorPerformanceDashboardPage from './pages/subcontract/VendorPerformanceDashboardPage';
 import {
-  // @ts-ignore
-  CUSTOMER_TRENDS_PATH,
   customerTrendsPathFromSearch,
   LEGACY_CUSTOMER_TRENDS_PATH,
 } from './utils/customerTrendsUrl';

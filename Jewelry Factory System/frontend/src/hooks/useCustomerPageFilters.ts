@@ -1,10 +1,11 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { ACTIVE_GROUP_IDS, ALL_GROUPS, getCustomerGroupId } from '../config/customerGroups';
-import { usePeriodSetup, type PeriodSetupConfig } from './usePeriodSetup';
+import { ACTIVE_GROUP_IDS, ALL_GROUPS, getCustomerGroupId, type CustomerGroup } from '../config/customerGroups';
+import { usePeriodSetup, type PeriodSetupConfig, type PeriodPreset } from './usePeriodSetup';
 import { parseListParam } from '../utils/periodUtils';
+import type { CustomerSummaryRow } from './useCustomerSalesData';
 
-export const ALL_GROUP_IDS = ALL_GROUPS.map((group: any) => group.id);
+export const ALL_GROUP_IDS = ALL_GROUPS.map((group: CustomerGroup) => group.id);
 
 export function parseGroups(value: string | null) {
   const normalized = String(value || '').trim().toLowerCase();
@@ -15,7 +16,7 @@ export function parseGroups(value: string | null) {
   return parseListParam(value).filter(groupId => groupIds.has(groupId));
 }
 
-export function useCustomerPageFilters(availableYears: string[], configOverrides?: Partial<PeriodSetupConfig>, custData: any[] = []) {
+export function useCustomerPageFilters(availableYears: string[], configOverrides?: Partial<PeriodSetupConfig>, custData: CustomerSummaryRow[] = []) {
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Global Filter States
@@ -33,7 +34,7 @@ export function useCustomerPageFilters(availableYears: string[], configOverrides
   const periodSetupConfig = useMemo(() => ({
     availableYears,
     syncToUrl: true,
-    presets: ['full-year', 'ytd', 'month', 'week', 'day', 'custom'] as any,
+    presets: ['full-year', 'ytd', 'month', 'week', 'day', 'custom'] as PeriodPreset[],
     compareSlots: 2 as const,
     allowWeekRange: true,
     onReset: () => {
@@ -66,10 +67,10 @@ export function useCustomerPageFilters(availableYears: string[], configOverrides
     if (!custData || custData.length === 0) return ACTIVE_GROUP_IDS; // fallback while loading
 
     const groupTotals: Record<string, number> = {};
-    ALL_GROUPS.forEach((g: any) => groupTotals[g.id] = 0);
+    ALL_GROUPS.forEach((g: CustomerGroup) => { groupTotals[g.id] = 0; });
 
     custData.forEach(customer => {
-      const gId = getCustomerGroupId(customer.id);
+      const gId = getCustomerGroupId(customer.id || '');
       selectedYears.forEach(y => {
         const yData = customer.monthly?.[y];
         const yQtyData = customer.monthlyQty?.[y];
@@ -86,7 +87,7 @@ export function useCustomerPageFilters(availableYears: string[], configOverrides
       });
     });
 
-    const active = ALL_GROUPS.filter((g: any) => groupTotals[g.id] > 0).map((g: any) => g.id);
+    const active = ALL_GROUPS.filter((g: CustomerGroup) => groupTotals[g.id] > 0).map((g: CustomerGroup) => g.id);
     return active.length > 0 ? active : ACTIVE_GROUP_IDS;
   }, [custData, selectedYears]);
 
@@ -100,7 +101,7 @@ export function useCustomerPageFilters(availableYears: string[], configOverrides
     const isFullYear = periodSetup.committed.preset === 'full-year' || (periodSetup.committed.monthFrom === 1 && periodSetup.committed.monthTo === 12);
     const isPeriodFiltered = !(isDefaultMonth || isFullYear) || periodSetup.committed.compareActive1 || periodSetup.committed.compareActive2;
     
-    const isGroupsFiltered = selGroups.length !== ACTIVE_GROUP_IDS.length || !ACTIVE_GROUP_IDS.every((id: any) => selGroups.includes(id));
+    const isGroupsFiltered = selGroups.length !== ACTIVE_GROUP_IDS.length || !ACTIVE_GROUP_IDS.every((id: string) => selGroups.includes(id));
     return isPeriodFiltered || isGroupsFiltered;
   }, [periodSetup.committed, selGroups]);
 

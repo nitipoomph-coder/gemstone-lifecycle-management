@@ -140,8 +140,8 @@ export default function UserAvatarDropdown() {
 
       showToast('User profile saved successfully', 'success');
       setShowProfileModal(false);
-    } catch (err: any) {
-      setProfileError(err?.message || 'Error saving data');
+    } catch (err: unknown) {
+      setProfileError(err instanceof Error ? err.message : 'Error saving data');
     } finally {
       setIsSubmittingProfile(false);
     }
@@ -178,8 +178,8 @@ export default function UserAvatarDropdown() {
 
       showToast('Password changed successfully', 'success');
       setShowPasswordModal(false);
-    } catch (err: any) {
-      setPasswordError(err?.message || 'Cannot change password. Check current password.');
+    } catch (err: unknown) {
+      setPasswordError(err instanceof Error ? err.message : 'Cannot change password. Check current password.');
     } finally {
       setIsSubmittingPassword(false);
     }
@@ -292,7 +292,7 @@ export default function UserAvatarDropdown() {
 
       {/* Modal 1: Edit Profile & Desk Phone */}
       {showProfileModal && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-[color-mix(in_srgb,var(--color-surface-900)_70%,transparent)] backdrop-blur-xs">
           <div
             className="w-full max-w-md rounded-2xl border border-[var(--color-border-light)] bg-[var(--color-ui-surface)] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150"
             role="dialog"
@@ -383,7 +383,7 @@ export default function UserAvatarDropdown() {
 
       {/* Modal 2: Change Password */}
       {showPasswordModal && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-[color-mix(in_srgb,var(--color-surface-900)_70%,transparent)] backdrop-blur-xs">
           <div
             className="w-full max-w-md rounded-2xl border border-[var(--color-border-light)] bg-[var(--color-ui-surface)] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150"
             role="dialog"

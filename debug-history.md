@@ -372,4 +372,53 @@ The backend route was querying `v.ExportAmnt` and `v.ProductType`. However, the 
 1. **Always verify physical columns on MS SQL Server via `INFORMATION_SCHEMA.COLUMNS` before referencing them in backend query templates.**
 2. **When views are updated or simplified, ensure all query projections match the exact column schema.**
 
+## Issue: Bar Charts Showing Gaps Despite barGap={0}
+**Date:** 2026-10-01
+**Components:** `ProductionSummaryChart.tsx`, `CustomerSalesChart.tsx`, `InfographicSalesTrends.tsx`
+
+### Symptoms:
+User reported bars within the same group still had visible gaps even after setting `barGap={0}` on the chart container.
+
+### Root Cause:
+The `<Bar>` components had `maxBarSize` props (e.g., `maxBarSize={38}`, `maxBarSize={calculatedMaxBar}`, `maxBarSize={30}`) that capped the width of individual bars. When the available chart width was larger than the total of all max-sized bars, recharts rendered the bars at their max width with empty space between them — making it look like there was still a gap.
+
+### Fix:
+Removed all `maxBarSize` props from every `<Bar>` component across the system. Bars now expand to fill the allocated category space naturally and sit flush against each other.
+
+### Prevention & Lessons Learned:
+1. **`barGap` alone is not sufficient** — `maxBarSize` can override bar width and create visual gaps even when `barGap={0}`.
+2. When standardizing chart spacing, audit **both** the chart container props (`barGap`, `barCategoryGap`) **and** the individual `<Bar>` component props (`maxBarSize`, `barSize`).
+
+## Issue: Recharts `radius` Prop on `<Cell>` Causes TS Errors
+**Date:** 2026-10-01
+**Components:** `RiskCustomerChart.tsx`, `ProductionForecastChart.tsx`
+
+### Symptoms:
+TypeScript compilation errors: `Property 'radius' does not exist on type 'IntrinsicAttributes & CellProps'`.
+
+### Root Cause:
+The `radius` prop was being passed to individual `<Cell>` components inside `<Bar>`. In recharts, `radius` is only valid on the parent `<Bar>` element, not on `<Cell>`.
+
+### Fix:
+Moved `radius={[0, 0, 0, 0]}` to the parent `<Bar>` component and removed `<Cell>` mapping entirely (since it was only used for radius). Cleaned up unused `Cell` imports.
+
+### Prevention & Lessons Learned:
+1. **Recharts type constraints**: `radius` belongs on `<Bar>`, not `<Cell>`. When applying corner radius, always set it on the parent bar element.
+2. After removing component usage, always clean up the corresponding import statement.
+
+## Issue: Production Summary Table Avg Row Showing "0" Instead of "-"
+**Date:** 2026-10-01
+**Component:** `ProductionSummaryTable.tsx`
+
+### Symptoms:
+The "Avg.(Day/Pcs)" row in the Production Summary table displayed `0` for months with no data, while all other rows correctly showed `-`.
+
+### Root Cause:
+The `renderCell` function had a special `isAvg` parameter that bypassed the zero-check: `if (val === 0 && !isAvg) return '-'`. This was intentionally designed so that average rows would always show a number, but the user found `0` misleading for empty months.
+
+### Fix:
+Simplified `renderCell` to a single check: `if (!val || val === 0 || isNaN(val)) return '-'`. Removed all `isAvg` parameter usages. Now all zero values display `-` consistently across the entire table.
+
+### Prevention & Lessons Learned:
+1. **Consistent zero-handling**: Use a single rendering function for all cells without special cases per row type. If a row needs different formatting, create a separate formatter rather than overloading a boolean flag.
 

@@ -124,9 +124,9 @@ export function useCustomerSalesData({
   const summaries = useMemo(() => {
     const sortedDesc = [...activeYears].sort((a, b) => Number(b) - Number(a));
     const baseYear = sortedDesc.length > 0 ? sortedDesc[0] : null;
-    const targetCompYear = kpiCompareYear && activeYears.includes(kpiCompareYear) && kpiCompareYear !== baseYear
+    const targetCompYear = kpiCompareYear === 'none' ? null : (kpiCompareYear && activeYears.includes(kpiCompareYear) && kpiCompareYear !== baseYear
       ? kpiCompareYear
-      : (sortedDesc.length > 1 ? sortedDesc.find(y => y !== baseYear) || null : null);
+      : (sortedDesc.length > 1 ? sortedDesc.find(y => y !== baseYear) || null : null));
 
     return sortedSel.map(gId => {
       const g = ALL_GROUPS.find(x => x.id === gId)!;
@@ -156,9 +156,9 @@ export function useCustomerSalesData({
   const yearSummaries = useMemo(() => {
     const sortedDesc = [...activeYears].sort((a, b) => Number(b) - Number(a));
     const baseYear = sortedDesc.length > 0 ? sortedDesc[0] : null;
-    const targetCompYear = kpiCompareYear && activeYears.includes(kpiCompareYear) && kpiCompareYear !== baseYear
+    const targetCompYear = kpiCompareYear === 'none' ? null : (kpiCompareYear && activeYears.includes(kpiCompareYear) && kpiCompareYear !== baseYear
       ? kpiCompareYear
-      : (sortedDesc.length > 1 ? sortedDesc.find(y => y !== baseYear) || null : null);
+      : (sortedDesc.length > 1 ? sortedDesc.find(y => y !== baseYear) || null : null));
 
     const yearTotals: Record<string, number> = {};
     activeYears.forEach(y => yearTotals[y] = 0);
@@ -205,9 +205,9 @@ export function useCustomerSalesData({
 
     const reversedYears = [...activeYears].sort((a, b) => Number(b) - Number(a));
     const latestYear = reversedYears.length > 0 ? reversedYears[0] : null;
-    const targetCompYear = kpiCompareYear && activeYears.includes(kpiCompareYear) && kpiCompareYear !== latestYear
+    const targetCompYear = kpiCompareYear === 'none' ? null : (kpiCompareYear && activeYears.includes(kpiCompareYear) && kpiCompareYear !== latestYear
       ? kpiCompareYear
-      : (reversedYears.length > 1 ? reversedYears.find(y => y !== latestYear) || null : null);
+      : (reversedYears.length > 1 ? reversedYears.find(y => y !== latestYear) || null : null));
 
     if (latestYear) {
       gTotal = grandYearTotals[latestYear] || 0;

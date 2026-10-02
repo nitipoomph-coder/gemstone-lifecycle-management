@@ -1,7 +1,17 @@
 const CATS = ["BBS", "BES+BCS", "BNS+BPS", "BTS", "BRS", "OTHER"];
 
+export interface ForecastSlot {
+  periodLabel: string;
+  orderMap: Record<string, number>;
+  doneMap: Record<string, number>;
+  totalOrder: number;
+  totalDone: number;
+  totalRemain: number;
+  [key: string]: unknown;
+}
+
 interface ProductionForecastTableProps {
-  data: any[];
+  data: ForecastSlot[];
   viewMode?: string;
 }
 
@@ -73,7 +83,7 @@ export function ProductionForecastTable({ data }: ProductionForecastTableProps) 
                 key={i}
                 title={d.periodLabel}
                 style={{
-                  padding: '4px 2px',
+                  padding: '4px 6px',
                   textAlign: 'center',
                   borderRight: '1px solid var(--color-border-light)',
                   fontWeight: 600,
@@ -86,7 +96,7 @@ export function ProductionForecastTable({ data }: ProductionForecastTableProps) 
                     <div style={{ fontSize: '9px', opacity: 0.7 }}>{d.periodLabel.slice(6)}</div>
                   </div>
                 ) : (
-                  d.periodLabel
+                  typeof d.periodLabel === 'string' ? d.periodLabel.charAt(0).toUpperCase() + d.periodLabel.slice(1).toLowerCase() : d.periodLabel
                 )}
               </th>
             ))}
@@ -99,7 +109,7 @@ export function ProductionForecastTable({ data }: ProductionForecastTableProps) 
                 color: 'var(--color-danger-600)',
               }}
             >
-              TOTAL
+              Total
             </th>
           </tr>
         </thead>
@@ -128,7 +138,7 @@ export function ProductionForecastTable({ data }: ProductionForecastTableProps) 
                 <td
                   key={i}
                   style={{
-                    padding: '4px 2px',
+                    padding: '4px 6px',
                     borderRight: '1px solid var(--color-border-light)',
                     color: d.orderMap[cat] > 0 ? 'var(--color-text-primary)' : 'var(--color-text-tertiary)'
                   }}
@@ -172,7 +182,7 @@ export function ProductionForecastTable({ data }: ProductionForecastTableProps) 
               <td
                 key={i}
                 style={{
-                  padding: '4px 2px',
+                  padding: '4px 6px',
                   fontWeight: 700,
                   borderRight: '1px solid var(--color-border-light)',
                   color: d.totalOrder > 0 ? 'var(--color-brand-600)' : 'var(--color-text-tertiary)'
@@ -216,7 +226,7 @@ export function ProductionForecastTable({ data }: ProductionForecastTableProps) 
               <td
                 key={i}
                 style={{
-                  padding: '4px 2px',
+                  padding: '4px 6px',
                   fontWeight: 700,
                   borderRight: '1px solid var(--color-border-light)',
                   color: d.totalDone > 0 ? 'var(--color-success-600)' : 'var(--color-text-tertiary)'
@@ -259,7 +269,7 @@ export function ProductionForecastTable({ data }: ProductionForecastTableProps) 
               <td
                 key={i}
                 style={{
-                  padding: '2px 2px',
+                  padding: '4px 6px',
                   fontWeight: 700,
                   borderRight: '1px solid var(--color-border-light)',
                   color: d.totalRemain > 0 ? 'var(--color-danger-600)' : 'var(--color-text-tertiary)'
@@ -270,7 +280,7 @@ export function ProductionForecastTable({ data }: ProductionForecastTableProps) 
             ))}
             <td
               style={{
-                padding: '2px 6px',
+                padding: '4px 8px',
                 fontWeight: 800,
                 textAlign: 'center',
                 color: 'var(--color-danger-600)',

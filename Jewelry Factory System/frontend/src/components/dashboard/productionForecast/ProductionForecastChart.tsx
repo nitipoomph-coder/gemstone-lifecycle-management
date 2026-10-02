@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { ComposedChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList, Cell } from 'recharts';
+import { ComposedChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList } from 'recharts';
 
 function niceNum(range: number, round = false) {
   const exponent = Math.floor(Math.log10(range));
@@ -19,8 +19,54 @@ function niceNum(range: number, round = false) {
   return niceFraction * Math.pow(10, exponent);
 }
 
+export interface ForecastDataPoint {
+  periodLabel: string;
+  totalOrder: number;
+  totalDone: number;
+  totalRemain: number;
+  [key: string]: unknown;
+}
+
 interface ProductionForecastChartProps {
-  data: any[];
+  data: ForecastDataPoint[];
+}
+
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: Array<{ dataKey?: string | number; value?: number; [key: string]: unknown }>;
+  label?: string;
+}
+
+function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
+  if (active && payload && payload.length) {
+    const finish = Number(payload.find((p) => p.dataKey === 'totalDone')?.value || 0);
+    const remain = Number(payload.find((p) => p.dataKey === 'totalRemain')?.value || 0);
+    const total = finish + remain;
+    
+    return (
+      <div className="p-3 rounded-lg border border-[var(--color-border-light)] min-w-[200px] bg-[var(--color-ui-surface)] shadow-[var(--shadow-dropdown)]">
+        <p className="text-[length:var(--erp-text-panel)] font-black text-[var(--color-text-primary)] mb-2 border-b border-[var(--color-border-light)] pb-1.5">
+          {label}
+        </p>
+        <div className="flex flex-col gap-1.5">
+          <div className="flex justify-between text-[11px] font-extrabold">
+            <span className="text-[var(--color-text-secondary)]">Finish Qty:</span>
+            <span className="text-[var(--color-success-600)]">{finish.toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between text-[11px] font-extrabold">
+            <span className="text-[var(--color-text-secondary)]">Balance Qty:</span>
+            <span className="text-[var(--color-danger-600)]">{remain.toLocaleString()}</span>
+          </div>
+          <div className="border-t border-dashed border-[var(--color-border-light)] my-1" />
+          <div className="flex justify-between text-xs font-black">
+            <span className="text-[var(--color-text-primary)]">Total Order:</span>
+            <span>{total.toLocaleString()}</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  return null;
 }
 
 export function ProductionForecastChart({ data }: ProductionForecastChartProps) {
@@ -30,15 +76,10 @@ export function ProductionForecastChart({ data }: ProductionForecastChartProps) 
     }
 
     let maxTotal = 0;
-    
-    // VB Code colors: ColDone = Color.FromArgb(46, 125, 50) -> #2e7d32
-    // ColRemain = Color.FromArgb(211, 47, 47) -> #d32f2f
 
     const pData = data.map(d => {
       if (d.totalOrder > maxTotal) maxTotal = d.totalOrder;
       
-      // Calculate _balanceLabelY to position the label above the stacked bars
-      // _balanceLabelY will be equal to totalOrder
       return {
         ...d,
         _balanceLabelY: d.totalRemain > 0 ? d.totalOrder : null
@@ -65,41 +106,12 @@ export function ProductionForecastChart({ data }: ProductionForecastChartProps) 
 
   const isCrowded = processedData.length > 14;
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      const finish = payload.find((p: any) => p.dataKey === 'totalDone')?.value || 0;
-      const remain = payload.find((p: any) => p.dataKey === 'totalRemain')?.value || 0;
-      const total = finish + remain;
-      
-      return (
-        <div style={{ padding: '12px 16px', borderRadius: 8, border: '1px solid var(--color-border-light)', minWidth: 200, background: 'var(--color-ui-surface)', boxShadow: 'var(--shadow-dropdown)' }}>
-          <p style={{ fontSize: 'var(--erp-text-panel)', fontWeight: 900, color: 'var(--color-text-primary)', marginBottom: 8, borderBottom: '1px solid var(--color-border-light)', paddingBottom: 6 }}>
-            {label}
-          </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: 800 }}>
-              <span style={{ color: 'var(--color-text-secondary)' }}>Finish Qty:</span>
-              <span style={{ color: 'var(--color-success-600)' }}>{finish.toLocaleString()}</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: 800 }}>
-              <span style={{ color: 'var(--color-text-secondary)' }}>Balance Qty:</span>
-              <span style={{ color: 'var(--color-danger-600)' }}>{remain.toLocaleString()}</span>
-            </div>
-            <div style={{ borderTop: '1px dashed var(--color-border-light)', margin: '4px 0' }} />
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: 900 }}>
-              <span style={{ color: 'var(--color-text-primary)' }}>Total Order:</span>
-              <span>{total.toLocaleString()}</span>
-            </div>
-          </div>
-        </div>
-      );
-    }
-    return null;
-  };
-
-  const renderBalanceLabel = (props: any) => {
-    const { x, y, value, width } = props;
-    if (!value || value === 0) return <g />;
+  const renderBalanceLabel = (props: { x?: number | string; y?: number | string; value?: unknown; width?: number | string }) => {
+    const x = Number(props.x || 0);
+    const y = Number(props.y || 0);
+    const width = Number(props.width || 0);
+    const value = props.value;
+    if (!value || Number(value) === 0) return <g />;
     
     return (
       <text
@@ -117,7 +129,7 @@ export function ProductionForecastChart({ data }: ProductionForecastChartProps) 
 
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <ComposedChart data={processedData} margin={{ top: 20, right: 24, left: 0, bottom: isCrowded ? 24 : 5 }}>
+      <ComposedChart data={processedData} margin={{ top: 20, right: 24, left: 0, bottom: isCrowded ? 24 : 5 }} barGap={0} barCategoryGap="25%">
         <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--color-border-light)" />
         <XAxis 
           dataKey="periodLabel" 
@@ -133,7 +145,10 @@ export function ProductionForecastChart({ data }: ProductionForecastChartProps) 
               const parts = val.split('/');
               if (parts.length === 3) return `${parts[0]}/${parts[1]}`;
             }
-            return val;
+            if (typeof val === 'string') {
+              return val.charAt(0).toUpperCase() + val.slice(1).toLowerCase();
+            }
+            return String(val);
           }}
           height={isCrowded ? 45 : 30}
         />
@@ -144,7 +159,7 @@ export function ProductionForecastChart({ data }: ProductionForecastChartProps) 
           tickFormatter={(val) => val.toLocaleString()} 
           tick={{ fontSize: 10, fill: 'var(--color-text-secondary)', fontWeight: 500 }} 
           axisLine={{ stroke: 'var(--color-border-strong)', strokeWidth: 1.5 }}
-          tickLine={{ stroke: 'var(--color-border-strong)', strokeWidth: 1 }}
+          tickLine={{ stroke: 'var(--color-border-strong)', strokeWidth: 1 }} 
           tickMargin={6} 
           width={60} 
         />
@@ -158,21 +173,15 @@ export function ProductionForecastChart({ data }: ProductionForecastChartProps) 
           maxBarSize={40}
           isAnimationActive={true}
           animationDuration={600}
-        >
-          {data.map((entry: any, index: number) => (
-            <Cell 
-              key={`cell-${index}`} 
-              radius={((!entry.totalRemain || entry.totalRemain === 0) ? [4, 4, 0, 0] : [0, 0, 0, 0]) as any} 
-            />
-          ))}
-        </Bar>
+          radius={[0, 0, 0, 0]}
+        />
         
         {/* Balance Qty (Red) */}
         <Bar 
           dataKey="totalRemain" 
           stackId="a" 
           fill="var(--color-danger-500)" 
-          radius={[4, 4, 0, 0]}
+          radius={[0, 0, 0, 0]}
           maxBarSize={40}
           isAnimationActive={true}
           animationDuration={600}

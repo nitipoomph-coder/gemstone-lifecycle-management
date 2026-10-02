@@ -12,6 +12,7 @@ import {
   type SalesRiskPoint,
   type SalesAnalyticsParams
 } from '../services/orderVolumeSummaryAPI';
+export type { SalesOrderRow } from '../services/orderVolumeSummaryAPI';
 import { CUSTOMER_GROUPS, getCustomerGroupId } from '../config/customerGroups';
 import { useCustomerPageFilters } from './useCustomerPageFilters';
 
@@ -95,7 +96,7 @@ const emptyTotals: SalesTotals = { avgQtyPerOrder: 0, avgAmountPerOrder: 0, qty:
 
 function selectedCustomerCodes(groupIds: string[]) {
   if (groupIds.length === 0) return [];
-  return CUSTOMER_GROUPS.filter((group: any) => groupIds.includes(group.id)).flatMap((group: any) => group.prefixes);
+  return CUSTOMER_GROUPS.filter(group => groupIds.includes(group.id)).flatMap(group => group.prefixes);
 }
 
 function calcTotalsFromMonthly(rows: SalesMonthlyPoint[], year: string): SalesTotals {
@@ -164,7 +165,7 @@ export const fmtAxis = (value: number, metric: Metric) => metric === 'amount' ? 
 
 export function useOrderVolumeSummaryData() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { availableYears, refreshCounter, setIsRefreshing, triggerRefresh, isRefreshing } = useOutletContext<any>();
+  const { availableYears, refreshCounter, setIsRefreshing, triggerRefresh, isRefreshing } = useOutletContext<import('../pages/CustomerDashboardLayout').CustomerDashboardOutletContext>();
 
   // Pass an empty custData for now or fetch it if needed for dynamic groups, but typically Trends can just use availableYears.
   // Wait, does Trends need dynamic active groups? It's fine to just use the default.
@@ -289,7 +290,7 @@ export function useOrderVolumeSummaryData() {
   }, []);
 
   const primaryYear = draftYear || availableYears[availableYears.length - 1] || '';
-  const compareYear = (kpiCompareYear && selectedYears.includes(kpiCompareYear) && kpiCompareYear !== primaryYear)
+  const compareYear = kpiCompareYear === 'none' ? 'none' : (kpiCompareYear && selectedYears.includes(kpiCompareYear) && kpiCompareYear !== primaryYear)
     ? kpiCompareYear
     : compareYearVal1 || 'none';
   const hasCompareYear = compareYear !== 'none';
@@ -451,7 +452,7 @@ export function useOrderVolumeSummaryData() {
 
   useEffect(() => {
     if (activeView === 'details' && drilldownOrders.length === 0 && !drilldownLoading) {
-      void loadAllDetailsOrders();
+      void Promise.resolve().then(() => loadAllDetailsOrders());
     }
   }, [activeView, drilldownOrders.length, drilldownLoading, loadAllDetailsOrders]);
 

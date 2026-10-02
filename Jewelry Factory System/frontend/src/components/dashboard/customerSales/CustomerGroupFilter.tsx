@@ -28,6 +28,8 @@ export function CustomerGroupFilter({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const isAllActiveSelected = selGroups.length === dynamicActiveGroups.length && dynamicActiveGroups.every(id => selGroups.includes(id));
+
   return (
     <div style={{ position: 'relative' }} ref={groupPopoverRef}>
       <button
@@ -53,9 +55,9 @@ export function CustomerGroupFilter({
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
             <span style={{ fontWeight: 900, fontSize: 'var(--erp-text-control)', color: 'var(--color-text-primary)' }}>Customer Groups</span>
             <button
-              onClick={() => selGroups.length === dynamicActiveGroups.length && dynamicActiveGroups.every((id: any) => selGroups.includes(id)) ? setSelGroups([]) : setSelGroups(dynamicActiveGroups)}
-              style={{ fontSize: 'var(--erp-text-meta)', fontWeight: 800, background: 'none', border: 'none', color: selGroups.length === dynamicActiveGroups.length && dynamicActiveGroups.every((id: any) => selGroups.includes(id)) ? 'var(--color-danger-500)' : 'var(--color-ui-interactive)', cursor: 'pointer' }}>
-              {selGroups.length === dynamicActiveGroups.length && dynamicActiveGroups.every((id: any) => selGroups.includes(id)) ? 'None' : 'All'}
+              onClick={() => isAllActiveSelected ? setSelGroups([]) : setSelGroups(dynamicActiveGroups)}
+              style={{ fontSize: 'var(--erp-text-meta)', fontWeight: 800, background: 'none', border: 'none', color: isAllActiveSelected ? 'var(--color-danger-500)' : 'var(--color-ui-interactive)', cursor: 'pointer' }}>
+              {isAllActiveSelected ? 'None' : 'All'}
             </button>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>

@@ -8,8 +8,15 @@ import './CustomerSales.css';
 
 const YEAR_COLORS = ['var(--color-chart-1)', 'var(--color-chart-2)', 'var(--color-chart-3)', 'var(--color-chart-4)', 'var(--color-chart-5)', 'var(--color-chart-6)'];
 
-type TooltipPayloadEntry = { value?: number; color?: string; dataKey?: string | number; name?: string; payload?: any };
-type CustomTooltipProps = { active?: boolean; payload?: TooltipPayloadEntry[]; label?: string; metric: Metric; chartData?: any[]; mode?: string; monthlySeries?: string; };
+type ProcessedChartDatum = {
+  label: string;
+  sortKey?: string;
+  _actualTotal?: number;
+  _totalPlotY?: number | null;
+  [key: string]: string | number | null | undefined;
+};
+type TooltipPayloadEntry = { value?: number; color?: string; dataKey?: string | number; name?: string; payload?: ProcessedChartDatum };
+type CustomTooltipProps = { active?: boolean; payload?: TooltipPayloadEntry[]; label?: string; metric: Metric; chartData?: ChartDatum[]; mode?: string; monthlySeries?: string; };
 
 const CustomTooltip = ({ active, payload, label, metric, chartData, mode, monthlySeries }: CustomTooltipProps) => {
   if (active && payload && payload.length) {
@@ -34,11 +41,11 @@ const CustomTooltip = ({ active, payload, label, metric, chartData, mode, monthl
 
             let diff = null;
             let pct = null;
-            const currVal = entry.dataKey === '_totalPlotY' ? Number(entry.payload._actualTotal || 0) : Number(entry.value || 0);
+            const currVal = entry.dataKey === '_totalPlotY' ? Number(entry.payload?._actualTotal || 0) : Number(entry.value || 0);
 
             if (monthlySeries === 'year' && String(entry.dataKey).length === 4) {
               const prevYear = String(Number(entry.dataKey) - 1);
-              const prevEntry = payload.find((p: any) => String(p.dataKey) === prevYear);
+              const prevEntry = payload.find(p => String(p.dataKey) === prevYear);
               if (prevEntry) {
                 const prevVal = Number(prevEntry.value || 0);
                 if (prevVal > 0 || currVal > 0) {
@@ -166,7 +173,7 @@ export function CustomerSalesChart({
     const keys = monthlySeries === 'group' ? sortedSel : activeYears;
 
     // หา Max Bar andคำนวณ Total ของแต่ละช่วง
-    chartData.forEach((d: any) => {
+    chartData.forEach((d: ChartDatum & { _actualTotal?: number }) => {
       let tot = 0;
       keys.forEach(k => {
         const val = Number(d[k] || 0);
@@ -204,7 +211,7 @@ export function CustomerSalesChart({
     let sumTotal = 0;
     let countTotal = 0;
 
-    const processed = chartData.map((d: any) => {
+    const processed: ProcessedChartDatum[] = chartData.map((d: ChartDatum & { _actualTotal?: number }) => {
       const tot = d._actualTotal || 0;
       let totalPlotY: number | null = null;
 
@@ -233,11 +240,11 @@ export function CustomerSalesChart({
     }
 
     return { processedData: processed, yAxisMax: calculatedYMax, yAxisTicks: calculatedTicks, avgPlotY, avgActualTotal };
-  }, [chartData, monthlySeries, sortedSel, activeYears]);
+  }, [chartData, monthlySeries, sortedSel, activeYears, mode]);
 
-  const renderTotalLabel = (props: any) => {
-    const { x, y, index } = props;
-    const item = processedData[index];
+  const renderTotalLabel = (props: { x?: number; y?: number; index?: number }) => {
+    const { x = 0, y = 0, index } = props;
+    const item = typeof index === 'number' ? processedData[index] : undefined;
     if (!item || !item._actualTotal || item._actualTotal === 0) return <g />;
 
     const isAboveAvg = avgActualTotal !== null && item._actualTotal >= avgActualTotal;
@@ -263,7 +270,7 @@ export function CustomerSalesChart({
 
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <ComposedChart data={processedData} margin={{ top: 20, right: 24, left: 0, bottom: 5 }}>
+      <ComposedChart data={processedData} margin={{ top: 20, right: 24, left: 0, bottom: 5 }} barGap={0} barCategoryGap="20%">
         <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--color-border-light)" />
         <XAxis 
           dataKey="label" 
@@ -292,8 +299,8 @@ export function CustomerSalesChart({
               dataKey={gId}
               name={g.label}
               fill={g.color}
-              radius={[4, 4, 0, 0]}
               maxBarSize={calculatedMaxBar}
+              radius={[0, 0, 0, 0]}
               isAnimationActive={true}
               animationDuration={600}
               animationEasing="ease-in-out"
@@ -313,8 +320,8 @@ export function CustomerSalesChart({
               dataKey={y}
               name={`Year ${y}`}
               fill={color}
-              radius={[4, 4, 0, 0]}
               maxBarSize={calculatedMaxBar}
+              radius={[0, 0, 0, 0]}
               isAnimationActive={true}
               animationDuration={600}
               animationEasing="ease-in-out"
@@ -333,9 +340,9 @@ export function CustomerSalesChart({
             type="monotone"
             dataKey="_totalPlotY"
             name="Total"
-            stroke="#3b82f6"
+            stroke="var(--color-brand-500)"
             strokeWidth={3}
-            dot={{ r: 4, fill: "#3b82f6", stroke: 'var(--color-ui-surface)', strokeWidth: 1.5 }}
+            dot={{ r: 4, fill: "var(--color-brand-500)", stroke: 'var(--color-ui-surface)', strokeWidth: 1.5 }}
             activeDot={{ r: 6 }}
             connectNulls={true}
             label={renderTotalLabel}

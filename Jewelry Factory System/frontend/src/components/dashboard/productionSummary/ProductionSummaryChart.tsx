@@ -18,20 +18,87 @@ import {
 } from '../../../config/productionSummaryConfig';
 import type { ProdCustomerGroup } from '../../../config/productionSummaryConfig';
 
-interface ChartProps {
-  data: any[];
-  title: string;
-  showAvgLine?: boolean; // year/week tabs have avg
+export interface ProductionSummaryChartProps {
+  data: Record<string, unknown>[];
+  title?: string;
+  showAvgLine?: boolean;
 }
 
-export function ProductionSummaryChart({ data, title, showAvgLine = false }: ChartProps) {
+interface ProcessedSummaryPoint extends Record<string, unknown> {
+  _totalPlotY: number | null;
+  _avg: number | null;
+  total?: unknown;
+}
+
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: Array<{ payload?: Record<string, unknown>; [key: string]: unknown }>;
+  label?: string;
+  showAvgLine: boolean;
+}
+
+function CustomTooltip({ active, payload, label, showAvgLine }: CustomTooltipProps) {
+  if (active && payload && payload.length) {
+    const currentItem = payload[0]?.payload as Record<string, number> | undefined;
+    return (
+      <div className="py-3 px-4 pb-2 bg-[var(--color-ui-surface)] border border-[var(--color-border-light)] rounded-[10px] shadow-[var(--shadow-dropdown)] min-w-[190px]">
+        <p className="font-extrabold mb-2.5 text-[var(--color-text-primary)] border-b border-[var(--color-border-light)] pb-1.5">
+          {label}
+        </p>
+
+        {PROD_CUSTOMER_GROUPS.map((g: ProdCustomerGroup) => {
+          const val = currentItem?.[g.id];
+          if (val == null || val === 0) return null;
+          return (
+            <div key={g.id} className="flex items-center justify-between gap-4 mb-1">
+              <div className="flex items-center gap-2">
+                <div className="w-2.5 h-2.5 rounded-[2px]" style={{ backgroundColor: g.color }} />
+                <span className="text-[var(--color-text-secondary)] text-xs">{g.id}</span>
+              </div>
+              <span className="font-bold text-[var(--color-text-primary)] text-xs">
+                {Number(val).toLocaleString()}
+              </span>
+            </div>
+          );
+        })}
+
+        {currentItem && Number(currentItem.total) > 0 && (
+          <div className="flex items-center justify-between gap-4 mt-1.5 pt-1 border-t border-dashed border-[var(--color-border-light)]">
+            <div className="flex items-center gap-2">
+              <div className="w-3.5 h-[3px]" style={{ backgroundColor: CHART_COLORS.total }} />
+              <span className="text-[var(--color-text-primary)] text-xs font-semibold">Total</span>
+            </div>
+            <span className="font-extrabold text-xs" style={{ color: CHART_COLORS.total }}>
+              {Number(currentItem.total).toLocaleString()}
+            </span>
+          </div>
+        )}
+
+        {showAvgLine && currentItem && Number(currentItem.avg) > 0 && (
+          <div className="flex items-center justify-between gap-4 mt-1">
+            <div className="flex items-center gap-2">
+              <div className="w-3.5 h-[3px]" style={{ backgroundColor: CHART_COLORS.avg }} />
+              <span className="text-[var(--color-text-secondary)] text-xs">Avg (Day/Pcs)</span>
+            </div>
+            <span className="font-extrabold text-xs" style={{ color: CHART_COLORS.avg }}>
+              {Number(currentItem.avg).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+            </span>
+          </div>
+        )}
+      </div>
+    );
+  }
+  return null;
+}
+
+export function ProductionSummaryChart({ data, title, showAvgLine = false }: ProductionSummaryChartProps) {
   // -------------------------------------------------------------
   // 1. คำนวณสเกล 3-Zone Layering + Ticks แกน Y + Smart Trimming
   // -------------------------------------------------------------
   const { chartData, yAxisMax, yAxisTicks, y2Min, y2Max, hasData } = useMemo(() => {
     if (!data || data.length === 0) {
       return {
-        chartData: [],
+        chartData: [] as ProcessedSummaryPoint[],
         yAxisMax: 100,
         yAxisTicks: [0, 50, 100],
         y2Min: 0,
@@ -47,7 +114,7 @@ export function ProductionSummaryChart({ data, title, showAvgLine = false }: Cha
     let minAvg = Number.MAX_VALUE;
     let anyData = false;
 
-    data.forEach((d) => {
+    data.forEach((d: Record<string, unknown>) => {
       PROD_CUSTOMER_GROUPS.forEach((g) => {
         const val = Number(d[g.id] || 0);
         if (val > maxBar) maxBar = val;
@@ -110,7 +177,7 @@ export function ProductionSummaryChart({ data, title, showAvgLine = false }: Cha
     let firstIdx = -1;
     let lastIdx = -1;
 
-    data.forEach((d, index) => {
+    data.forEach((d: Record<string, unknown>, index: number) => {
       const tot = Number(d.total || 0);
       if (tot > 0) {
         if (firstIdx === -1) firstIdx = index;
@@ -121,7 +188,7 @@ export function ProductionSummaryChart({ data, title, showAvgLine = false }: Cha
     // ถ้าไม่มีข้อมูลเลยในทุกช่วง
     if (firstIdx === -1) {
       return {
-        chartData: [],
+        chartData: [] as ProcessedSummaryPoint[],
         yAxisMax: 100,
         yAxisTicks: [0, 50, 100],
         y2Min: 0,
@@ -133,7 +200,7 @@ export function ProductionSummaryChart({ data, title, showAvgLine = false }: Cha
     // ตัดเอาเฉพาะช่วงวัน/เดือนแรกที่มีข้อมูล ถึงวัน/เดือนสุดท้ายที่มีข้อมูล
     const activeData = data.slice(firstIdx, lastIdx + 1);
 
-    const processed = activeData.map((d) => {
+    const processed: ProcessedSummaryPoint[] = activeData.map((d: Record<string, unknown>) => {
       const tot = Number(d.total || 0);
       let totalPlotY: number | null = null;
 
@@ -166,10 +233,11 @@ export function ProductionSummaryChart({ data, title, showAvgLine = false }: Cha
   // -------------------------------------------------------------
   // 2. Data Labels (Show Numbersจริง)
   // -------------------------------------------------------------
-  const renderTotalLabel = (props: any) => {
-    const { x, y, index } = props;
+  const renderTotalLabel = (props: { x?: number; y?: number; index?: number }) => {
+    const { x = 0, y = 0, index = 0 } = props;
     const item = chartData[index];
-    if (!item || !item.total || item.total === 0) return <g />; // 👈 เปลี่ยนเป็น <g />;
+    const total = item && item.total != null ? Number(item.total) : 0;
+    if (!item || total === 0) return <g />;
 
     return (
       <text
@@ -180,14 +248,14 @@ export function ProductionSummaryChart({ data, title, showAvgLine = false }: Cha
         fontSize={10}
         fontWeight={700}
       >
-        {Number(item.total).toLocaleString()}
+        {total.toLocaleString()}
       </text>
     );
   };
 
-  const renderAvgLabel = (props: any) => {
-    const { x, y, value } = props;
-    if (value == null || value === 0) return <g />; // 👈 เปลี่ยนเป็น <g />;
+  const renderAvgLabel = (props: { x?: number; y?: number; value?: unknown }) => {
+    const { x = 0, y = 0, value } = props;
+    if (value == null || Number(value) === 0) return <g />; // 👈 เปลี่ยนเป็น <g />;
 
     return (
       <text
@@ -201,107 +269,6 @@ export function ProductionSummaryChart({ data, title, showAvgLine = false }: Cha
         {Number(value).toLocaleString(undefined, { maximumFractionDigits: 0 })}
       </text>
     );
-  };
-
-  // -------------------------------------------------------------
-  // 3. Custom Tooltip
-  // -------------------------------------------------------------
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      const currentItem = payload[0]?.payload;
-      return (
-        <div
-          style={{
-            padding: '12px 16px 8px', //บน-ซ้าย-ล่าง
-            background: 'var(--color-ui-surface)',
-            border: '1px solid var(--color-border-light)',
-            borderRadius: '10px',
-            boxShadow: 'var(--shadow-dropdown)',
-            minWidth: '190px',
-          }}
-        >
-          <p
-            style={{
-              fontWeight: 800,
-              marginBottom: '10px',
-              color: 'var(--color-text-primary)',
-              borderBottom: '1px solid var(--color-border-light)',
-              paddingBottom: '6px',
-            }}
-          >
-            {label}
-          </p>
-
-          {PROD_CUSTOMER_GROUPS.map((g: ProdCustomerGroup) => {
-            const val = currentItem?.[g.id];
-            if (val == null || val === 0) return null;
-            return (
-              <div
-                key={g.id}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: '16px',
-                  marginBottom: '4px',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <div style={{ width: '10px', height: '10px', borderRadius: '2px', backgroundColor: g.color }} />
-                  <span style={{ color: 'var(--color-text-secondary)', fontSize: '12px' }}>{g.id}</span>
-                </div>
-                <span style={{ fontWeight: 700, color: 'var(--color-text-primary)', fontSize: '12px' }}>
-                  {Number(val).toLocaleString()}
-                </span>
-              </div>
-            );
-          })}
-
-          {currentItem?.total > 0 && (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '16px',
-                marginTop: '6px',
-                paddingTop: '4px',
-                borderTop: '1px dashed var(--color-border-light)',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{ width: '14px', height: '3px', backgroundColor: CHART_COLORS.total }} />
-                <span style={{ color: 'var(--color-text-primary)', fontSize: '12px', fontWeight: 600 }}>Total</span>
-              </div>
-              <span style={{ fontWeight: 800, color: CHART_COLORS.total, fontSize: '12px' }}>
-                {Number(currentItem.total).toLocaleString()}
-              </span>
-            </div>
-          )}
-
-          {showAvgLine && currentItem?.avg > 0 && (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '16px',
-                marginTop: '4px',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{ width: '14px', height: '3px', backgroundColor: CHART_COLORS.avg }} />
-                <span style={{ color: 'var(--color-text-secondary)', fontSize: '12px' }}>Avg (Day/Pcs)</span>
-              </div>
-              <span style={{ fontWeight: 800, color: CHART_COLORS.avg, fontSize: '12px' }}>
-                {Number(currentItem.avg).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-              </span>
-            </div>
-          )}
-        </div>
-      );
-    }
-    return null;
   };
 
 
@@ -355,7 +322,7 @@ export function ProductionSummaryChart({ data, title, showAvgLine = false }: Cha
       {/* 👈 กราฟความHeight 100% ตามกล่องแม่ (320px) */}
       <div style={{ width: '100%', height: '100%', minHeight: 0 }}>
         <ResponsiveContainer width="99%" height="100%">
-          <ComposedChart data={chartData} margin={{ top: 20, right: 20, left: 10, bottom: 0 }}>
+          <ComposedChart data={chartData} margin={{ top: 20, right: 20, left: 10, bottom: 0 }} barGap={0} barCategoryGap="20%">
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border-light)" />
             <XAxis
               dataKey="periodLabel"
@@ -396,7 +363,7 @@ export function ProductionSummaryChart({ data, title, showAvgLine = false }: Cha
               hide={true}
             />
 
-            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'var(--color-surface-2)' }} />
+            <Tooltip content={<CustomTooltip showAvgLine={showAvgLine} />} cursor={{ fill: 'var(--color-surface-2)' }} />
 
             <Legend
               wrapperStyle={{ fontSize: 11, paddingTop: '6px', fontWeight: 600 }}
@@ -412,8 +379,7 @@ export function ProductionSummaryChart({ data, title, showAvgLine = false }: Cha
                 dataKey={g.id}
                 name={g.id}
                 fill={g.color}
-                maxBarSize={38}
-                radius={[3, 3, 0, 0]}
+                radius={[0, 0, 0, 0]}
               />
             ))}
 

@@ -1,4 +1,4 @@
-import { ALL_GROUPS } from '../../../config/customerGroups';
+import { ALL_GROUPS, type CustomerGroup } from '../../../config/customerGroups';
 
 const YEAR_COLORS = ['var(--color-chart-1)', 'var(--color-chart-2)', 'var(--color-chart-3)', 'var(--color-chart-4)', 'var(--color-chart-5)', 'var(--color-chart-6)'];
 
@@ -8,7 +8,7 @@ interface CustomerDashboardSkeletonProps {
 }
 
 export function CustomerDashboardSkeleton({ sortedSel, activeYears }: CustomerDashboardSkeletonProps) {
-  const sortedGroups = sortedSel.map(gId => ALL_GROUPS.find((x: any) => x.id === gId)).filter(Boolean);
+  const sortedGroups = sortedSel.map(gId => ALL_GROUPS.find((x: CustomerGroup) => x.id === gId)).filter((g): g is CustomerGroup => Boolean(g));
 
   return (
     <div className="content-scrollbar flex-1 overflow-y-auto" style={{ background: 'var(--color-surface-1)' }}>
@@ -41,7 +41,7 @@ export function CustomerDashboardSkeleton({ sortedSel, activeYears }: CustomerDa
                 {/* Chart Legend Skeleton */}
                 <div style={{ display: 'flex', gap: 10, marginTop: 12, flexWrap: 'wrap', alignItems: 'center' }}>
                   <div className="app-skeleton" style={{ width: 80, height: 14, borderRadius: 4 }} />
-                  {(sortedGroups.length > 0 ? sortedGroups : Array.from({ length: 6 })).map((g: any, idx) => (
+                  {((sortedGroups.length > 0 ? sortedGroups : Array.from({ length: 6 }).map(() => null)) as (CustomerGroup | null)[]).map((g, idx) => (
                     <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <span style={{ width: 10, height: 10, borderRadius: 2, background: g?.color || 'var(--color-surface-3)' }} />
                       <div className="app-skeleton" style={{ width: 65, height: 14, borderRadius: 4 }} />
@@ -109,7 +109,7 @@ export function CustomerDashboardSkeleton({ sortedSel, activeYears }: CustomerDa
             })}
 
             {/* Group KPI Skeletons */}
-            {(sortedGroups.length > 0 ? sortedGroups : Array.from({ length: 6 })).map((g: any, idx) => {
+            {((sortedGroups.length > 0 ? sortedGroups : Array.from({ length: 6 }).map(() => null)) as (CustomerGroup | null)[]).map((g, idx) => {
               const color = g?.color || 'var(--color-border-light)';
               const label = g?.label || `Group ${idx + 1}`;
               return (

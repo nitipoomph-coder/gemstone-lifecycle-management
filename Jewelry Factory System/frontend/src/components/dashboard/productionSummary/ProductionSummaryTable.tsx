@@ -2,8 +2,20 @@
 import { PROD_CUSTOMER_GROUPS } from '../../../config/productionSummaryConfig';
 import type { ProdCustomerGroup } from '../../../config/productionSummaryConfig';
 
+export interface ProductionSummaryRow {
+  N008?: number;
+  N098?: number;
+  N051?: number;
+  total?: number;
+  workDays?: number;
+  avg?: number;
+  period?: string | number;
+  periodLabel?: string;
+  [key: string]: unknown;
+}
+
 interface TableProps {
-  data: any[];
+  data: ProductionSummaryRow[];
   tab: 'year' | 'week' | 'month' | 'day';
 }
 
@@ -32,14 +44,15 @@ export function ProductionSummaryTable({ data, tab }: TableProps) {
 
   const avgTotal = totals.workDays > 0 ? totals.total / totals.workDays : 0;
 
-  const renderCell = (val: number | null | undefined, isAvg = false) => {
-    if (val === 0 && !isAvg) return '-';
+  const renderCell = (val: unknown) => {
     if (val == null) return '-';
-    return Number(val).toLocaleString(undefined, { maximumFractionDigits: 0 });
+    const num = Number(val);
+    if (isNaN(num) || num === 0) return '-';
+    return num.toLocaleString(undefined, { maximumFractionDigits: 0 });
   };
 
   // ปรับSizeฟอนต์AutoตามQtyคอลัมน์ (ยิ่งวันเยอะ ยิ่งปรับฟอนต์ให้กะทัดรัด)
-  const cellFontSize = totalCols > 25 ? '10px' : totalCols > 15 ? '10.5px' : '11px';
+  const cellFontSize = totalCols > 25 ? '11px' : totalCols > 15 ? '12px' : '13px';
 
   return (
     <div
@@ -73,7 +86,7 @@ export function ProductionSummaryTable({ data, tab }: TableProps) {
             {/* คอลัมน์แรก: ชื่อกลุ่ม (ความกว้างคงที่) */}
             <th
               style={{
-                width: totalCols > 25 ? '58px' : '75px',
+                width: totalCols > 25 ? '75px' : '95px',
                 padding: '4px 6px',
                 textAlign: 'center',
                 borderRight: '1px solid var(--color-border-light)',
@@ -98,7 +111,7 @@ export function ProductionSummaryTable({ data, tab }: TableProps) {
                   key={d.period}
                   title={d.periodLabel}
                   style={{
-                    padding: '2px 1px',
+                    padding: '4px 2px',
                     textAlign: 'center',
                     borderRight: '1px solid var(--color-border-light)',
                     fontWeight: 600,
@@ -141,12 +154,12 @@ export function ProductionSummaryTable({ data, tab }: TableProps) {
               key={g.id}
               style={{
                 borderBottom: '1px solid var(--color-border-light)',
-                height: '22px',
+                height: '30px',
               }}
             >
               <td
                 style={{
-                  padding: '2px 6px',
+                  padding: '4px 6px',
                   textAlign: 'center',
                   fontWeight: 700,
                   color: g.color,
@@ -160,7 +173,7 @@ export function ProductionSummaryTable({ data, tab }: TableProps) {
                 <td
                   key={d.period}
                   style={{
-                    padding: '2px 2px',
+                    padding: '4px 4px',
                     borderRight: '1px solid var(--color-border-light)',
                   }}
                 >
@@ -170,7 +183,7 @@ export function ProductionSummaryTable({ data, tab }: TableProps) {
 
               <td
                 style={{
-                  padding: '2px 6px',
+                  padding: '4px 8px',
                   fontWeight: 700,
                   textAlign: 'center',
                   color: 'var(--color-text-primary)',
@@ -180,8 +193,7 @@ export function ProductionSummaryTable({ data, tab }: TableProps) {
                   ? renderCell(
                     totals.workDays > 0
                       ? totals[g.id as keyof typeof totals] / totals.workDays
-                      : 0,
-                    true
+                      : 0
                   )
                   : renderCell(totals[g.id as keyof typeof totals])}
               </td>
@@ -193,12 +205,12 @@ export function ProductionSummaryTable({ data, tab }: TableProps) {
             style={{
               background: 'var(--color-prod-total-row-bg)',
               borderBottom: '1px solid var(--color-border-light)',
-              height: '24px',
+              height: '30px',
             }}
           >
             <td
               style={{
-                padding: '2px 6px',
+                padding: '4px 8px',
                 textAlign: 'center',
                 fontWeight: 800,
                 color: 'var(--color-chart-1)',
@@ -212,7 +224,7 @@ export function ProductionSummaryTable({ data, tab }: TableProps) {
               <td
                 key={d.period}
                 style={{
-                  padding: '2px 2px',
+                  padding: '4px 4px',
                   fontWeight: 700,
                   borderRight: '1px solid var(--color-border-light)',
                 }}
@@ -223,13 +235,13 @@ export function ProductionSummaryTable({ data, tab }: TableProps) {
 
             <td
               style={{
-                padding: '2px 6px',
+                padding: '4px 8px',
                 fontWeight: 800,
                 textAlign: 'center',
                 color: 'var(--color-chart-1)',
               }}
             >
-              {isDaily ? renderCell(avgTotal, true) : renderCell(totals.total)}
+              {isDaily ? renderCell(avgTotal) : renderCell(totals.total)}
             </td>
           </tr>
 
@@ -238,45 +250,44 @@ export function ProductionSummaryTable({ data, tab }: TableProps) {
             <tr
               style={{
                 background: 'var(--color-prod-avg-row-bg)',
-                height: '22px',
+                height: '30px',
               }}
             >
               <td
                 style={{
-                  padding: '2px 4px',
+                  padding: '4px 6px',
                   textAlign: 'center',
                   fontWeight: 700,
                   color: 'var(--color-chart-2)',
                   borderRight: '1px solid var(--color-border-light)',
-                  fontSize: '9.5px',
                   lineHeight: '1.1',
                 }}
               >
-                Avg.(Day/Pcs)
+                Avg / Day
               </td>
 
               {data.map((d) => (
                 <td
                   key={d.period}
                   style={{
-                    padding: '2px 2px',
+                    padding: '4px 4px',
                     fontWeight: 700,
                     borderRight: '1px solid var(--color-border-light)',
                   }}
                 >
-                  {renderCell(d.avg, true)}
+                  {renderCell(d.avg)}
                 </td>
               ))}
 
               <td
                 style={{
-                  padding: '2px 6px',
+                  padding: '4px 8px',
                   fontWeight: 800,
                   textAlign: 'center',
                   color: 'var(--color-chart-2)',
                 }}
               >
-                {renderCell(avgTotal, true)}
+                {renderCell(avgTotal)}
               </td>
             </tr>
           )}

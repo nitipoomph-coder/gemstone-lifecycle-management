@@ -21,8 +21,16 @@ export interface ProductionDataPoint {
   qty: number;
 }
 
+const toQueryString = (params: Record<string, string | number | undefined>) => {
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined) query.set(key, String(value));
+  }
+  return query.toString();
+};
+
 export const getProductionYearly = async (params: ProductionSummaryParams): Promise<ProductionDataPoint[]> => {
-  const q = new URLSearchParams(params as any).toString();
+  const q = toQueryString(params as unknown as Record<string, string | number | undefined>);
   const response = await fetchWithAuth(`/api/production-summary/year?${q}`);
   if (!response.ok) throw new Error('API Error');
   const data = await response.json();
@@ -30,7 +38,7 @@ export const getProductionYearly = async (params: ProductionSummaryParams): Prom
 };
 
 export const getProductionWeekly = async (params: WeekParams): Promise<ProductionDataPoint[]> => {
-  const q = new URLSearchParams(params as any).toString();
+  const q = toQueryString(params as unknown as Record<string, string | number | undefined>);
   const response = await fetchWithAuth(`/api/production-summary/week?${q}`);
   if (!response.ok) throw new Error('API Error');
   const data = await response.json();
@@ -38,7 +46,7 @@ export const getProductionWeekly = async (params: WeekParams): Promise<Productio
 };
 
 export const getProductionMonthly = async (params: YearMonthParams): Promise<ProductionDataPoint[]> => {
-  const q = new URLSearchParams(params as any).toString();
+  const q = toQueryString(params as unknown as Record<string, string | number | undefined>);
   const response = await fetchWithAuth(`/api/production-summary/month?${q}`);
   if (!response.ok) throw new Error('API Error');
   const data = await response.json();

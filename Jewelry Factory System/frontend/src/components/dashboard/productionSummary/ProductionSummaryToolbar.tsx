@@ -48,10 +48,10 @@ export function ProductionSummaryToolbar(props: ToolbarProps) {
     }}>
       {/* Tabs */}
       <div style={{ display: 'flex', borderBottom: '1px solid var(--color-border-light)' }}>
-        {['year', 'week', 'month'].map(t => (
+        {(['year', 'week', 'month'] as const).map(t => (
           <button
             key={t}
-            onClick={() => setTab(t as any)}
+            onClick={() => setTab(t)}
             style={{
               padding: '8px 16px',
               background: 'transparent',

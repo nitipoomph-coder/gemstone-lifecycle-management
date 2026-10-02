@@ -7,6 +7,7 @@ import { useToast } from '../../../contexts/ToastContext';
 import { fetchWithAuth } from '../../../utils/fetchWithAuth';
 import { ProductionForecastChart } from './ProductionForecastChart.tsx';
 import { ProductionForecastTable } from './ProductionForecastTable.tsx';
+import type { ForecastSlot } from './ProductionForecastTable.tsx';
 import { ProductionForecastSkeleton } from './ProductionForecastSkeleton.tsx';
 import { getYearOptions } from '../../../config/productionSummaryConfig';
 import { useTopbarActions } from '../../../contexts/TopbarActionContext';
@@ -26,7 +27,7 @@ const GROUPS = [
 
 export function ProductionForecastDashboard() {
   const [group, setGroup] = useState('All Customer');
-  const [data, setData] = useState<any[]>([]);
+  const [data, setData] = useState<ForecastSlot[]>([]);
   const [loading, setLoading] = useState(false);
   const { showToast } = useToast();
 
@@ -124,13 +125,13 @@ export function ProductionForecastDashboard() {
       const json = await res.json();
       
       if (json.ok) {
-        const rawData: any[] = json.data || [];
-        const rawMap = new Map<string, any>();
+        const rawData: ForecastSlot[] = json.data || [];
+        const rawMap = new Map<string, ForecastSlot>();
         rawData.forEach((d) => {
           rawMap.set(d.periodLabel, d);
         });
 
-        const emptySlot = (periodLabel: string) => ({
+        const emptySlot = (periodLabel: string): ForecastSlot => ({
           periodLabel,
           orderMap: { BBS: 0, 'BES+BCS': 0, 'BNS+BPS': 0, BTS: 0, BRS: 0, OTHER: 0 },
           doneMap: { BBS: 0, 'BES+BCS': 0, 'BNS+BPS': 0, BTS: 0, BRS: 0, OTHER: 0 },
@@ -139,7 +140,7 @@ export function ProductionForecastDashboard() {
           totalRemain: 0
         });
 
-        let finalData: any[] = [];
+        let finalData: ForecastSlot[] = [];
 
         if (viewModeType === 'year') {
           // มุมมองปี: แสดง 12 เดือนเต็ม (JAN - DEC) ของปีนั้น
@@ -170,7 +171,7 @@ export function ProductionForecastDashboard() {
           // มุมมองช่วงวัน: ฟอร์แมต dd/MM/yyyy
           const cur = new Date(startStr);
           const end = new Date(endStr);
-          const daySlots: any[] = [];
+          const daySlots: ForecastSlot[] = [];
           while (cur <= end) {
             const y = cur.getFullYear();
             const m = cur.getMonth() + 1;
@@ -204,18 +205,28 @@ export function ProductionForecastDashboard() {
       } else {
         showToast(json.error || 'Failed to fetch', 'error');
       }
-    } catch (err: any) {
-      showToast(err.message, 'error');
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : 'Failed to fetch forecast', 'error');
     } finally {
       setLoading(false);
     }
   };
 
   const fetchDataRef = useRef<() => void>(() => {});
-  fetchDataRef.current = fetchData;
+  useEffect(() => {
+    fetchDataRef.current = fetchData;
+  });
 
   useEffect(() => {
-    fetchData();
+    let isCancelled = false;
+    const run = async () => {
+      await Promise.resolve();
+      if (!isCancelled) {
+        fetchData();
+      }
+    };
+    run();
+    return () => { isCancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [group, committed]);
 

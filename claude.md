@@ -12,8 +12,13 @@
 >    - Stored Procedures ทุกตัวต้องคงสถานะตาม **Baseline เดิมของระบบ (รับ 2 Parameters: `@FromDate`, `@ToDate`)**
 > 3. **การประมวลผลและการกรองข้อมูล (Filtering, Grouping, Calculation) ให้ทำที่ Application Layer เท่านั้น**:
 >    - หากต้องการกรองสถานะ (Pending/Finish), จัดกลุ่มลูกค้า, หรือคำนวณสถิติใหม่ ให้ทำในหน่วยความจำ (In-Memory) ฝั่ง Backend (Node.js/Express) หรือ Frontend (React) เท่านั้น ห้ามแก้ที่ Database!
-> 4. **อ่านข้อมูลอย่างเดียว (READ-ONLY ACCESS)**:
+> 4. **อ่านข้อมูลเป็นหลัก (READ-ONLY CORE POLICY)**:
 >    - อนุญาตเฉพาะคำสั่ง `SELECT` หรือการ `EXECUTE` Stored Procedures ที่มีอยู่เดิมตาม Baseline เท่านั้น
+>    - **ข้อยกเว้นงานระบบที่ได้รับอนุญาต (Controlled Application-Level Exceptions)**:
+>      1. ตาราง `system_users` สำหรับการจัดการผู้ใช้ระบบเว็บ (Auth)
+>      2. อัปเดตช่องหมายเหตุเฉพาะจุดใน `OrdDT` (Recvmark, Enamark, Crysmark, Assemmark, Shelfmark, Packmark, Prodmark) ผ่าน PO Tracker Remarks API
+>      3. อัปเดตข้อมูลหัวเอกสารจัดซื้อรับเข้าเฉพาะฟิลด์ที่กำหนด (BuyName, RefDocuNo) ผ่าน Procurement API
+>      *ห้ามสร้าง ลบ ดัดแปลง Table/View/Index/Procedure ใดๆ นอกเหนือจากนี้โดยเด็ดขาด*
 
 ## Project Overview
 
@@ -175,7 +180,37 @@ gemstone-lifecycle-management/
     │       │   ├── dashboard/
     │       │   │   ├── StatCard.tsx              # Dashboard stat card component
     │       │   │   ├── CardDetailPanel.tsx       # Dashboard card drill-down panel (YoY comparison)
-    │       │   │   └── OrderTable.tsx            # PO Tracker order summary table (display-only; data-entry removed 4 ก.ค. 2026)
+    │       │   │   ├── OrderTable.tsx            # PO Tracker order summary table (display-only)
+    │       │   │   ├── overview/
+    │       │   │   │   └── FactoryOutputTrendChart.tsx  # Custom HTML bar chart (not recharts)
+    │       │   │   ├── customerSales/
+    │       │   │   │   └── CustomerSalesChart.tsx       # ComposedChart (Bar + Line) for customer sales
+    │       │   │   ├── productionSummary/
+    │       │   │   │   ├── ProductionSummaryChart.tsx   # ComposedChart for production output by group
+    │       │   │   │   ├── ProductionSummaryTable.tsx   # Data table for production output
+    │       │   │   │   ├── ProductionSummaryToolbar.tsx # Toolbar component
+    │       │   │   │   └── ProductionDashboardSkeleton.tsx # Loading skeleton
+    │       │   │   ├── productionForecast/
+    │       │   │   │   ├── ProductionForecastChart.tsx  # ComposedChart for forecast
+    │       │   │   │   ├── ProductionForecastDashboard.tsx # Dashboard wrapper
+    │       │   │   │   ├── ProductionForecastTable.tsx  # Data table for forecast
+    │       │   │   │   └── ProductionForecastSkeleton.tsx # Loading skeleton
+    │       │   │   ├── orderVolume/
+    │       │   │   │   ├── OrderVolumeTrendChart.tsx    # ComposedChart (Line + Area) for trends
+    │       │   │   │   ├── RiskCustomerChart.tsx        # BarChart for risk/overdue by customer
+    │       │   │   │   └── VolumeFilterBar.tsx          # Filter toolbar
+    │       │   │   ├── orderTracking/
+    │       │   │   │   └── OrderTrackStepper.tsx        # FBE 17-step stepper
+    │       │   │   ├── poTracker/
+    │       │   │   │   └── OrderTable.tsx               # PO Tracker table (legacy path)
+    │       │   │   ├── fbeOrderTrack/                   # FBE order tracking components
+    │       │   │   └── topAnalytics/                    # Top analytics components
+    │       │   ├── infographic/
+    │       │   │   └── InfographicSalesTrends.tsx       # BarChart for customer trends comparison
+    │       │   ├── period/
+    │       │   │   └── PeriodSetupPanel.tsx             # ⭐ Centralized period filter popover (used across all dashboards)
+    │       │   ├── sales/                               # Sales-specific sub-components
+    │       │   ├── topOrders/                            # Top orders gallery sub-components
     │       │   ├── orderDetail/
     │       │   │   ├── LineDetailDrawer.tsx      # Order line detail side drawer (with photo tabs)
     │       │   │   ├── OrderLineTable.tsx        # Order lines data table
@@ -186,7 +221,7 @@ gemstone-lifecycle-management/
     │       │   │   ├── CustomerReportFilters.tsx # Customer report filter panel
     │       │   │   └── CustomerReportTable.tsx   # Customer report matrix table
     │       │   ├── ui/
-    │       │   │   └── CustomSelect.tsx     # ⭐ Shared custom dropdown (SSOT — ใช้แทนการ copy-paste dropdown ในหน้าต่างๆ)
+    │       │   │   └── CustomSelect.tsx     # ⭐ Shared custom dropdown (SSOT)
     │       │   └── navigation/
     │       │       └── NavGroup.tsx         # Collapsible nav group component
     │       │
@@ -200,37 +235,58 @@ gemstone-lifecycle-management/
     │       │   │   └── components/            # Forms, cover, language control, fields, and modals
     │       │   ├── Dashboard.tsx              # หน้าภาพรวม (home, admin only)
     │       │   ├── DashboardDetail.tsx         # Dashboard detail drilldown
-    │       │   ├── SalesDashboard.tsx          # ⭐ Sales Summary By Rep (กราฟเปรียบเทียบยอดขาย Sales)
+    │       │   ├── SalesDashboard.tsx          # ⭐ Sales Summary By Rep
     │       │   ├── CustomerDashboard.tsx       # ⭐ Yearly Sales By Customer (metric: amount | qty)
-    │       │   ├── CustomerReportPage.tsx      # ⭐ Customer Report (Matrix Table สรุปยอดขายรายลูกค้า)
-    │       │   ├── TopOrdersGalleryPage.tsx    # ⭐ Top Orders Gallery (Enterprise BI layout with custom themes)
-    │       │   ├── POTrackerAdvanced.tsx       # ⭐ PO Tracker main (list view — เดิมชื่อ OrderTrackerAdvanced)
-    │       │   ├── SalesCustomerGroupAnalytics.tsx # ✅ Customer Trends overview route: /dashboard/sales-customer-groups
-    │       │   ├── SalesCustomerGroupDetail.tsx     # ✅ Customer Order List route: /dashboard/sales-customer-detail
+    │       │   ├── CustomerReportPage.tsx      # ⭐ Customer Report (Matrix Table)
+    │       │   ├── TopOrdersGalleryPage.tsx    # ⭐ Top Orders Gallery
+    │       │   ├── TopOrdersAnalyticsPage.tsx  # Top Orders Analytics (draft)
+    │       │   ├── POTrackerAdvanced.tsx       # ⭐ PO Tracker main (list view)
+    │       │   ├── SalesCustomerGroupDetail.tsx     # ✅ Customer Order List
     │       │   ├── OrderDetailPage.tsx         # Order detail (by ord/po/group)
     │       │   ├── ItemDetailPage.tsx          # Item-level detail
+    │       │   ├── ProductionSummaryPage.tsx   # ⭐ Production Summary (chart + table, period-aware)
+    │       │   ├── ProductionForecastPage.tsx  # Production Forecast (wrapper)
+    │       │   ├── OrderVolumeSummaryPage.tsx  # ⭐ Order Volume Summary (trends + risk)
+    │       │   ├── FBEOrderTrackPage.tsx       # ⭐ FBE 17-step order tracker
     │       │   ├── PlaceholderPage.tsx         # Placeholder for unimplemented modules
     │       │   ├── document/
     │       │   │   ├── ProcurementDocPage.tsx   # 🏗️ จัดซื้อและรับเข้า (SPA, SRA, SRB, SIR)
     │       │   │   ├── RequisitionDocPage.tsx   # 🏗️ ออเดอร์และการเบิก (SOA, SIA, SIB, SIP, SIS)
     │       │   │   └── SampleDocPage.tsx        # 🏗️ ห้องตัวอย่าง (SSA, SIM)
     │       │   └── subcontract/
-    │       │       └── VendorPerformanceDashboardPage.tsx  # 🟡 UI Preview เท่านั้น (ไม่มี Backend/SP เชื่อมจริง)
+    │       │       └── VendorPerformanceDashboardPage.tsx  # 🟡 UI Preview เท่านั้น (ไม่มี Backend)
     │       │
     │       ├── services/
-    │       │   ├── authAPI.ts         # 🔐 API client for authentication (login, verify-admin)
-    │       │   ├── poTrackerAPI.ts     # API client for PO Tracker endpoints
-    │       │   ├── orderAPI.ts        # API client for order detail endpoints
-    │       │   ├── dashboardAPI.ts    # API client for dashboard/sales/customer stats
-    │       │   ├── procurementAPI.ts  # API client for procurement document endpoints
-    │       │   ├── requisitionAPI.ts  # API client for requisition document endpoints
-    │       │   └── sampleAPI.ts       # API client for sample room endpoints
+    │       │   ├── authAPI.ts              # 🔐 Authentication (login, verify-admin)
+    │       │   ├── poTrackerAPI.ts          # PO Tracker endpoints
+    │       │   ├── orderAPI.ts             # Order detail endpoints
+    │       │   ├── dashboardAPI.ts         # Dashboard/sales/customer stats
+    │       │   ├── customerSummaryAPI.ts   # Customer summary fetch
+    │       │   ├── itemYearlySummaryAPI.ts # Item yearly comparison
+    │       │   ├── orderVolumeSummaryAPI.ts # Order volume trends/risk
+    │       │   ├── orderTrackingAPI.ts     # FBE order tracking
+    │       │   ├── productionSummaryAPI.ts # Production summary (year/month/week/day)
+    │       │   ├── procurementAPI.ts       # Procurement document endpoints
+    │       │   ├── requisitionAPI.ts       # Requisition document endpoints
+    │       │   └── sampleAPI.ts            # Sample room endpoints
+    │       │
+    │       ├── hooks/
+    │       │   ├── usePeriodSetup.ts            # ⭐ Centralized period filter state management
+    │       │   ├── useCustomerSalesData.ts      # Customer sales data hook
+    │       │   ├── useCustomerReportData.ts     # Customer report data hook
+    │       │   ├── useCustomerPageFilters.ts    # Customer page filter state
+    │       │   ├── useOrderVolumeSummaryData.ts # Order volume summary hook
+    │       │   ├── usePOTrackerAdvanced.ts      # PO Tracker data hook
+    │       │   └── useTopOrdersGalleryData.ts   # Top orders gallery hook
     │       │
     │       ├── config/
+    │       │   ├── api.ts                  # API base URL config
+    │       │   ├── breadcrumbs.ts          # Breadcrumb definitions
     │       │   ├── menuConfig.ts           # Sidebar menu structure definition (role-based)
     │       │   ├── formConfigs.ts          # Document form field configurations (all doc types)
     │       │   ├── customerGroups.ts       # SSOT for customer group mapping (N008, MLT, etc.)
-    │       │   └── orderDetailColumns.ts   # Order detail table column definitions
+    │       │   ├── orderDetailColumns.ts   # Order detail table column definitions
+    │       │   └── productionSummaryConfig.ts # Production step/group/mode definitions
     │       │
     │       ├── contexts/
     │       │   └── ThemeContext.tsx    # Theme provider (dark-gold/royal-white/modern-dark)
@@ -240,8 +296,15 @@ gemstone-lifecycle-management/
     │       │
     │       ├── utils/
     │       │   ├── fetchWithAuth.ts          # 🔐 Fetch wrapper with JWT Bearer token injection
+    │       │   ├── periodUtils.ts            # Period helper functions (getDefaultCompareYear, parseMonths, monthRange)
+    │       │   ├── customerTrendsUrl.ts      # Customer trends URL builder
+    │       │   ├── navigationUtils.ts        # Navigation utility helpers
+    │       │   ├── photoUrl.ts               # Photo URL builder (psPhotoUrl, attachPhotoFallback)
+    │       │   ├── printChart.ts             # Print chart utility
+    │       │   ├── errors.ts                 # Error utility types
     │       │   ├── exportPOTrackerExcel.ts   # 📊 Excel export for PO Tracker data
-    │       │   └── exportOrderDetailExcel.ts # 📊 Excel export for Order Detail data
+    │       │   ├── exportOrderDetailExcel.ts # 📊 Excel export for Order Detail data
+    │       │   └── exportOrderVolumeDetailsExcel.ts # 📊 Excel export for Order Volume
     │       │
     │       └── assets/                # Static assets (images, icons)
     │           └── hero.png           # Login page hero image
@@ -966,17 +1029,17 @@ Inside route handlers, add only short section labels for important boxes/queries
    - เมื่อแสดงผล: ตัวเลขเปอร์เซ็นต์ขนาดใหญ่ `24px` หนา คมชัด พร้อมคำว่า `ความคืบหน้า`
    - สถิติตัวเลข 4 ช่อง: ขนาด `26px` ไร้กรอบ (ทั้งหมด=สีน้ำเงิน, เสร็จแล้ว=สีเขียว, กำลังทำ=สีส้ม, คงเหลือ=สีกรม/เทา)
 
-### 4. Current Work: Refactoring Period Setup (Sept 2026)
-- **Goal**: Consolidate redundant "Period Setup" logic (currently spread across multiple hooks like `useCustomerDashboardLayout` and `useCustomerReportData`) into a single, centralized hook named `usePeriodSetup`.
-- **Scope**:
-  - `CustomerDashboardLayout.tsx` (Dashboard/Trends)
-  - `CustomerReportPage.tsx` (Matrix)
-- **Key Improvements**:
-  - Unified Type definitions (`PeriodState`, `PeriodSetupConfig`).
-  - Unified period selection logic (`getDefaultCompareYear`, `parseMonths`) housed in `periodUtils.ts`.
-  - Fixes bugs in older positional-based comparison year selections, moving to a smarter numeric proximity logic.
-  - Standardizes URL syncing and State syncing correctly avoiding duplicate URL states (`groups` vs `period`).
-- **Status**: Currently at Step 3 (Migrating Dashboard/Trends to use the new hook).
+### 4. Period Setup Consolidation (Sept–Oct 2026) — ✅ Completed
+- **Goal**: Consolidate redundant "Period Setup" logic into a single centralized hook `usePeriodSetup` + UI component `PeriodSetupPanel.tsx`.
+- **Scope**: All dashboards — CustomerDashboard, CustomerReport, SalesDashboard, ProductionSummary, ProductionForecast, OrderVolumeSummary.
+- **Key Files**:
+  - `src/hooks/usePeriodSetup.ts` — Centralized state management (presets, compare years, week/month/day ranges, URL sync)
+  - `src/components/period/PeriodSetupPanel.tsx` — Shared popover UI with preset buttons, month/week/day selectors, compare year checkboxes
+  - `src/utils/periodUtils.ts` — Shared helpers (`getDefaultCompareYear`, `parseMonths`, `monthRange`)
+- **Supported Presets**: `full-year`, `ytd`, `this-month`, `last-month`, `month`, `week`, `day`, `custom`
+- **Default Period**: `full-year` (changed from `month` on 2026-10-01)
+- **Compare Target**: Checkbox-based activation (Compare 1 / Compare 2) with auto-selection of compare year
+- **Status**: ✅ Completed and deployed across all dashboard pages.
 
 ---
 
@@ -1009,3 +1072,44 @@ Inside route handlers, add only short section labels for important boxes/queries
 4. **Dropdown วันที่เป็นอิสระ (Decoupled Date Filter)**:
    - Dropdown วันที่ทำหน้าที่เลือก SP ตามเดิม (Order Date, Factory Due Date, Cust Due Date, Finish Date)
    - การสลับปุ่มสถานะ (Pending / Finish / ALL) จะไม่ไปบังคับสลับเงื่อนไขวันที่อีกต่อไป
+
+---
+
+## 2026-10-01 Chart UI Standardization & Production Summary Improvements
+
+### 1. Bar Chart System-Wide Standardization
+All bar charts across the system have been standardized with consistent styling rules:
+
+- **Square Edges**: All bar charts use `radius={[0, 0, 0, 0]}` — no rounded corners on any bar.
+- **Zero Bar Gap**: All grouped bar charts use `barGap={0}` — bars within the same category group are flush against each other with no spacing.
+- **No Max Bar Size**: Removed `maxBarSize` constraints from all `<Bar>` components to allow bars to fill available space naturally without gaps.
+- **Unused `Cell` imports removed**: Cleaned up unused `Cell` imports from `RiskCustomerChart.tsx` and `ProductionForecastChart.tsx`.
+
+**Affected Chart Files:**
+
+| File | Chart Type | Changes |
+|------|-----------|---------|
+| `ProductionSummaryChart.tsx` | `ComposedChart` | `barGap={0}`, removed `maxBarSize={38}`, `radius=[0,0,0,0]` |
+| `ProductionForecastChart.tsx` | `ComposedChart` | `barGap={0}`, `radius=[0,0,0,0]`, removed unused `Cell` import |
+| `CustomerSalesChart.tsx` | `ComposedChart` | `barGap={0}`, removed `maxBarSize={calculatedMaxBar}`, `radius=[0,0,0,0]` |
+| `RiskCustomerChart.tsx` | `BarChart` | `barGap={0}`, `radius=[0,0,0,0]`, removed unused `Cell` import |
+| `InfographicSalesTrends.tsx` | `BarChart` | `barGap={0}`, removed `maxBarSize={30}`, `radius=[0,0,0,0]` via custom shape |
+| `FactoryOutputTrendChart.tsx` | Custom HTML bars | `borderRadius: 0` (was `4px 4px 1px 1px`) |
+
+### 2. Production Summary Table Improvements (`ProductionSummaryTable.tsx`)
+- **Increased row height**: From `22px`/`24px` to `30px` for all rows (data, total, avg) to match Forecast table density.
+- **Increased padding**: Cell padding raised from `2px` to `4px`/`6px`/`8px` across all cells for better readability.
+- **Font size increase**: Cell font size raised from `10px`/`10.5px`/`11px` to `11px`/`12px`/`13px`.
+- **First column width increase**: From `58px`/`75px` to `75px`/`95px` to accommodate label text.
+- **Avg row label**: Changed from `Avg.(Day/Pcs)` (with forced `fontSize: 9.5px`) to `Avg / Day` (using standard font size).
+- **Zero value display**: Fixed `renderCell` logic — zero values now display `-` consistently (previously avg rows showed `0`).
+
+### 3. Period Setup Default Change
+- **Default preset** changed from `month` to `full-year` in `usePeriodSetup.ts`.
+- When `full-year` is selected, `monthFrom` defaults to `1` and `monthTo` defaults to `12` (full range).
+- This ensures the "Year" filter mode displays all 12 months of data by default.
+
+### 4. Compare Target Checkbox
+- Added checkbox-based activation for Compare Year selection in `PeriodSetupPanel.tsx`.
+- Users can toggle Compare 1 / Compare 2 independently via checkboxes.
+- When a checkbox is activated, the compare year auto-selects the nearest available year.

@@ -7,7 +7,7 @@ import { RefreshCw, AlertTriangle, Filter, Layers, FilterX, RotateCcw } from 'lu
 import { usePOTrackerAdvanced } from '../hooks/usePOTrackerAdvanced';
 import { useTopbarActions } from '../contexts/TopbarActionContext';
 import { ErpSegmentedControl } from '../components/ui/ErpButtons';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 const GROUP_OPTIONS = [
   { value: 'N008', label: 'N008' },
@@ -79,7 +79,7 @@ export default function POTrackerAdvanced() {
   const { setTopbarActions } = useTopbarActions();
   const [isSpinning, setIsSpinning] = useState(false);
 
-  const handleReload = async () => {
+  const handleReload = useCallback(async () => {
     setIsSpinning(true);
     const minDelay = new Promise((resolve) => setTimeout(resolve, 600));
     try {
@@ -88,7 +88,7 @@ export default function POTrackerAdvanced() {
     } finally {
       setIsSpinning(false);
     }
-  };
+  }, [load]);
 
   const isRefreshing = isSpinning || loading;
 
@@ -132,7 +132,7 @@ export default function POTrackerAdvanced() {
       </button>
     );
     return () => setTopbarActions(null);
-  }, [setTopbarActions, isRefreshing]);
+  }, [setTopbarActions, handleReload, isRefreshing]);
 
   return (
     <div className="app-page font-body">
@@ -354,7 +354,7 @@ export default function POTrackerAdvanced() {
                   background: 'var(--color-surface-1)',
                   border: '1px solid var(--color-border-light)',
                   borderRadius: '8px',
-                  boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.02)'
+                  boxShadow: 'var(--shadow-panel)'
                 }}
               >
                 {/* Primary Active Status */}
@@ -427,7 +427,7 @@ export default function POTrackerAdvanced() {
                   borderRadius: '8px',
                   border: '1px solid var(--color-border-strong)',
                   background: 'var(--color-surface-0)',
-                  boxShadow: '0 1px 4px rgba(0, 0, 0, 0.04)',
+                  boxShadow: 'var(--shadow-panel)',
                   overflow: 'hidden'
                 }}
               >

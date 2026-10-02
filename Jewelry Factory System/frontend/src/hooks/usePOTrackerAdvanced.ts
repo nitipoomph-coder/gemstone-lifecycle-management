@@ -134,15 +134,15 @@ export function usePOTrackerAdvanced() {
   const error = hasCurrentOrders ? ordersState.error : null;
   const loading = !hasCurrentOrders;
   // Sync incoming URL changes to state (e.g. from Topbar global search)
-  useEffect(() => {
+  const [prevSearch, setPrevSearch] = useState(location.search);
+  if (prevSearch !== location.search) {
+    setPrevSearch(location.search);
     const params = new URLSearchParams(location.search);
-    
     const newFPO = params.get('fPO') || '';
-    setFilterPO(prev => (prev !== newFPO ? newFPO : prev));
-
+    if (filterPO !== newFPO) setFilterPO(newFPO);
     const newFCust = params.get('fCust') || '';
-    setFilterCust(prev => (prev !== newFCust ? newFCust : prev));
-  }, [location.search]);
+    if (filterCust !== newFCust) setFilterCust(newFCust);
+  }
 
   // Sync state back to URL automatically
   useEffect(() => {

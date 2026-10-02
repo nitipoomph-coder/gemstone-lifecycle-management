@@ -1,8 +1,8 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { CalendarDays, ChevronDown } from 'lucide-react';
 import CustomSelect from '../ui/CustomSelect';
 import { MONTHS } from '../../utils/periodUtils';
-import { usePeriodSetup } from '../../hooks/usePeriodSetup';
+import { usePeriodSetup, type PeriodState } from '../../hooks/usePeriodSetup';
 import { useToast } from '../../contexts/ToastContext';
 
 interface PeriodSetupPanelProps {
@@ -43,17 +43,18 @@ export default function PeriodSetupPanel({ periodSetup, availableYears, isOpen, 
   const { showToast } = useToast();
   const [internalOpen, setInternalOpen] = useState(false);
   const showPeriodPopover = isOpen !== undefined ? isOpen : internalOpen;
-  const setShowPeriodPopover = (open: boolean) => {
+  const setShowPeriodPopover = useCallback((open: boolean) => {
     if (onOpenChange) onOpenChange(open);
     setInternalOpen(open);
-  };
+  }, [onOpenChange]);
   const periodPopoverRef = useRef<HTMLDivElement>(null);
 
+  const syncDraft = periodSetup.actions.syncDraft;
   useEffect(() => {
     if (isOpen) {
-      periodSetup.actions.syncDraft();
+      syncDraft();
     }
-  }, [isOpen]);
+  }, [isOpen, syncDraft]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -65,7 +66,7 @@ export default function PeriodSetupPanel({ periodSetup, availableYears, isOpen, 
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, []);
+  }, [setShowPeriodPopover]);
 
   const selectedYears = periodSetup.committed.selectedYears;
   const committedPreset = periodSetup.committed.preset;
@@ -100,7 +101,7 @@ export default function PeriodSetupPanel({ periodSetup, availableYears, isOpen, 
   };
 
   return (
-    <div style={{ position: 'relative' }} ref={periodPopoverRef}>
+    <div className="relative" ref={periodPopoverRef}>
       <button
         type="button"
         onClick={() => {
@@ -109,31 +110,25 @@ export default function PeriodSetupPanel({ periodSetup, availableYears, isOpen, 
           }
           setShowPeriodPopover(!showPeriodPopover);
         }}
-        style={{
-          display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px',
-          background: showPeriodPopover ? 'var(--color-surface-2)' : 'transparent',
-          border: 'none', borderRadius: 6,
-          fontSize: '0.85rem', fontWeight: 900, color: 'var(--color-text-primary)',
-          cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'var(--font-display)',
-          transition: 'background 0.15s'
-        }}
-        className="hover:bg-[var(--color-surface-1)]"
+        className={`flex items-center gap-1.5 px-2.5 py-1.5 border-none rounded-md text-[0.85rem] font-black text-[var(--color-text-primary)] cursor-pointer whitespace-nowrap font-display transition-colors hover:bg-[var(--color-surface-1)] ${
+          showPeriodPopover ? 'bg-[var(--color-surface-2)]' : 'bg-transparent'
+        }`}
       >
-        <CalendarDays size={14} style={{ color: 'var(--color-brand-500)' }} />
+        <CalendarDays size={14} className="text-[var(--color-brand-500)]" />
         <>
-          <span style={{ color: "var(--color-text-secondary)", fontSize: "0.76rem", fontWeight: 700 }}>
+          <span className="text-[var(--color-text-secondary)] text-[0.76rem] font-bold">
             Period:
           </span>
           <span>{getPeriodLabelText()}</span>
-          <span style={{ color: "var(--color-text-tertiary)", fontSize: "0.72rem", fontWeight: 800 }}>
+          <span className="text-[var(--color-text-tertiary)] text-[0.72rem] font-extrabold">
             ({getPeriodRangeDetailText()})
           </span>
         </>
-        <ChevronDown size={14} style={{ color: 'var(--color-text-tertiary)' }} />
+        <ChevronDown size={14} className="text-[var(--color-text-tertiary)]" />
       </button>
 
       {showPeriodPopover && (
-        <div className="sales-gallery-period-menu absolute left-0 z-[110] mt-2 period-popover-animate" style={{ width: 480, position: 'absolute', top: '100%' }}>
+        <div className="sales-gallery-period-menu absolute left-0 top-full z-[110] mt-2 w-[480px] period-popover-animate">
           {/* New Filter: Period Setup for all screens */}
           <div className="flex items-center justify-between border-b border-[var(--color-border-light)] pb-2.5 mb-3">
             <div className="flex items-center gap-4">
@@ -402,7 +397,20 @@ export default function PeriodSetupPanel({ periodSetup, availableYears, isOpen, 
                   <input
                     type="checkbox"
                     checked={periodSetup.draft.compareActive1}
-                    onChange={(e) => periodSetup.actions.setDraftField({ compareActive1: e.target.checked })}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      const updates: Partial<PeriodState> = { compareActive1: checked };
+                      if (checked && periodSetup.draft.compareYear1 && periodSetup.draft.compareYear1 !== 'none' && (!periodSetup.draft.compareActive2 || periodSetup.draft.kpiCompareYear === 'none')) {
+                        updates.kpiCompareYear = periodSetup.draft.compareYear1;
+                      } else if (!checked) {
+                        if (periodSetup.draft.compareActive2 && periodSetup.draft.compareYear2 && periodSetup.draft.compareYear2 !== 'none') {
+                          updates.kpiCompareYear = periodSetup.draft.compareYear2;
+                        } else {
+                          updates.kpiCompareYear = 'none';
+                        }
+                      }
+                      periodSetup.actions.setDraftField(updates);
+                    }}
                     className="rounded border-[var(--color-border-light)] text-[var(--color-brand-600)] focus:ring-[var(--color-brand-400)]"
                   />
                   <span className="text-[10px] font-black text-[var(--color-text-secondary)]">Compare 1</span>
@@ -412,8 +420,11 @@ export default function PeriodSetupPanel({ periodSetup, availableYears, isOpen, 
                     value={periodSetup.draft.compareYear1}
                     disabled={!periodSetup.draft.compareActive1}
                     onChange={(val: string) => {
-                      periodSetup.actions.setDraftField({ compareYear1: val });
-                      periodSetup.actions.setDraftField({ kpiCompareYear: val });
+                      const updates: Partial<PeriodState> = { compareYear1: val };
+                      if (periodSetup.draft.kpiCompareYear === periodSetup.draft.compareYear1 || !periodSetup.draft.compareActive2 || periodSetup.draft.kpiCompareYear === 'none') {
+                        updates.kpiCompareYear = val;
+                      }
+                      periodSetup.actions.setDraftField(updates);
                     }}
                     options={availableYears.filter(yr => {
                       if (yr === periodSetup.draft.baseYear) return false;
@@ -431,7 +442,20 @@ export default function PeriodSetupPanel({ periodSetup, availableYears, isOpen, 
                   <input
                     type="checkbox"
                     checked={periodSetup.draft.compareActive2}
-                    onChange={(e) => periodSetup.actions.setDraftField({ compareActive2: e.target.checked })}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      const updates: Partial<PeriodState> = { compareActive2: checked };
+                      if (checked && periodSetup.draft.compareYear2 && periodSetup.draft.compareYear2 !== 'none' && (!periodSetup.draft.compareActive1 || periodSetup.draft.kpiCompareYear === 'none')) {
+                        updates.kpiCompareYear = periodSetup.draft.compareYear2;
+                      } else if (!checked) {
+                        if (periodSetup.draft.compareActive1 && periodSetup.draft.compareYear1 && periodSetup.draft.compareYear1 !== 'none') {
+                          updates.kpiCompareYear = periodSetup.draft.compareYear1;
+                        } else {
+                          updates.kpiCompareYear = 'none';
+                        }
+                      }
+                      periodSetup.actions.setDraftField(updates);
+                    }}
                     className="rounded border-[var(--color-border-light)] text-[var(--color-brand-600)] focus:ring-[var(--color-brand-400)]"
                   />
                   <span className="text-[10px] font-black text-[var(--color-text-secondary)]">Compare 2</span>
@@ -441,8 +465,15 @@ export default function PeriodSetupPanel({ periodSetup, availableYears, isOpen, 
                     value={periodSetup.draft.compareYear2}
                     disabled={!periodSetup.draft.compareActive2}
                     onChange={(val: string) => {
-                      periodSetup.actions.setDraftField({ compareYear2: val });
-                      if (val !== 'none') periodSetup.actions.setDraftField({ kpiCompareYear: val });
+                      const updates: Partial<PeriodState> = { compareYear2: val };
+                      if (val !== 'none') {
+                        if (periodSetup.draft.kpiCompareYear === periodSetup.draft.compareYear2 || !periodSetup.draft.compareActive1 || periodSetup.draft.kpiCompareYear === 'none') {
+                          updates.kpiCompareYear = val;
+                        }
+                      } else if (!periodSetup.draft.compareActive1) {
+                        updates.kpiCompareYear = 'none';
+                      }
+                      periodSetup.actions.setDraftField(updates);
                     }}
                     options={[
                       { value: 'none', label: 'None' },
@@ -459,13 +490,27 @@ export default function PeriodSetupPanel({ periodSetup, availableYears, isOpen, 
 
               {/* Compare Target (Primary comparison year for YoY calculations) */}
               <div className="flex flex-col gap-1 bg-[var(--color-surface-1)] p-2 rounded-lg border border-[var(--color-border-light)]">
-                <div className="flex items-center gap-1.5 cursor-pointer">
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={periodSetup.draft.kpiCompareYear !== 'none'}
+                    disabled={!periodSetup.draft.compareActive1 && !periodSetup.draft.compareActive2}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        const valid = periodSetup.draft.compareActive1 ? periodSetup.draft.compareYear1 : periodSetup.draft.compareActive2 ? periodSetup.draft.compareYear2 : '';
+                        periodSetup.actions.setDraftField({ kpiCompareYear: valid || '' });
+                      } else {
+                        periodSetup.actions.setDraftField({ kpiCompareYear: 'none' });
+                      }
+                    }}
+                    className="rounded border-[var(--color-border-light)] text-[var(--color-brand-600)] focus:ring-[var(--color-brand-400)]"
+                  />
                   <span className="text-[10px] font-black text-[var(--color-text-secondary)]">Compare Target</span>
-                </div>
+                </label>
                 <div className="mt-1">
                   <CustomSelect
-                    value={periodSetup.draft.kpiCompareYear}
-                    disabled={!periodSetup.draft.compareActive1 && !periodSetup.draft.compareActive2}
+                    value={periodSetup.draft.kpiCompareYear === 'none' ? '' : periodSetup.draft.kpiCompareYear}
+                    disabled={periodSetup.draft.kpiCompareYear === 'none' || (!periodSetup.draft.compareActive1 && !periodSetup.draft.compareActive2)}
                     onChange={(val: string) => periodSetup.actions.setDraftField({ kpiCompareYear: val })}
                     options={[
                       ...(periodSetup.draft.compareActive1 && periodSetup.draft.compareYear1 && periodSetup.draft.compareYear1 !== 'none' ? [{ value: periodSetup.draft.compareYear1, label: periodSetup.draft.compareYear1 }] : []),

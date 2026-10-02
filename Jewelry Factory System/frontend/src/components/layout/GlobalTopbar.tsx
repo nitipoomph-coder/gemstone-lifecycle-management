@@ -188,7 +188,7 @@ export default function GlobalTopbar({ isSidebarOpen, onToggleSidebar }: GlobalT
                 className="flex w-full cursor-not-allowed items-center gap-3 border-none rounded-lg px-3 py-2 text-[length:var(--erp-text-body)] opacity-40 bg-transparent text-[var(--color-text-primary)] font-semibold select-none"
                 title="Currently unavailable"
               >
-                <FileSpreadsheet size={16} strokeWidth={1.75} className="text-emerald-600 shrink-0" />
+                <FileSpreadsheet size={16} strokeWidth={1.75} className="text-[var(--color-success-600)] shrink-0" />
                 <span>Export to Excel</span>
               </button>
               <button
@@ -197,7 +197,7 @@ export default function GlobalTopbar({ isSidebarOpen, onToggleSidebar }: GlobalT
                 className="flex w-full cursor-not-allowed items-center gap-3 border-none rounded-lg px-3 py-2 text-[length:var(--erp-text-body)] opacity-40 bg-transparent text-[var(--color-text-primary)] font-semibold select-none"
                 title="Currently unavailable"
               >
-                <FileText size={16} strokeWidth={1.75} className="text-blue-600 shrink-0" />
+                <FileText size={16} strokeWidth={1.75} className="text-[var(--color-brand-600)] shrink-0" />
                 <span>Export to CSV</span>
               </button>
               <div className="my-1.5 h-px w-full bg-[var(--color-border-light)]" />

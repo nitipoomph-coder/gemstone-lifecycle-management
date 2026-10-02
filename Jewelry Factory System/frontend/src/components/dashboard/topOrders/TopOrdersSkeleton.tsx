@@ -7,7 +7,7 @@ export function TopOrdersSkeleton() {
           100% { background-position: -200% 0; } 
         }
         .gallery-sk-cell {
-          background: linear-gradient(110deg, var(--color-surface-2) 25%, color-mix(in srgb, var(--color-surface-3, #cbd5e1) 65%, var(--color-surface-2)) 50%, var(--color-surface-2) 75%);
+          background: linear-gradient(110deg, var(--color-surface-2) 25%, color-mix(in srgb, var(--color-surface-3) 65%, var(--color-surface-2)) 50%, var(--color-surface-2) 75%);
           background-size: 400% 100%;
           animation: shimmer 1.5s linear infinite;
           border-radius: 4px;

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import PageHeader from '../components/layout/PageHeader';
 import { BREADCRUMBS } from '../config/breadcrumbs';
 import {
@@ -26,9 +26,12 @@ export default function FBEOrderTrackPage() {
   const breadcrumb = BREADCRUMBS.FBE_ORDER_TRACK;
 
   const ordNoRef = useRef(ordNo);
-  ordNoRef.current = ordNo;
   const ordLineNoRef = useRef(ordLineNo);
-  ordLineNoRef.current = ordLineNo;
+
+  useEffect(() => {
+    ordNoRef.current = ordNo;
+    ordLineNoRef.current = ordLineNo;
+  }, [ordNo, ordLineNo]);
 
   // ฟังก์ชันSearchพร้อมเงื่อนไขNotificationsแบบแยกเคส
   const executeSearch = useCallback(async (targetOrd: string, targetLine: string) => {
@@ -55,9 +58,9 @@ export default function FBEOrderTrackPage() {
     try {
       const res = await getOrderTracking(cleanOrd, cleanLine);
       setData(res);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setData(null);
-      setError(err.message || 'Order data not found and Line specified in system');
+      setError(err instanceof Error ? err.message : 'Order data not found and Line specified in system');
     } finally {
       setLoading(false);
     }
@@ -88,7 +91,7 @@ export default function FBEOrderTrackPage() {
   const { setTopbarActions } = useTopbarActions();
   const [isSpinning, setIsSpinning] = React.useState(false);
 
-  const handleReload = async () => {
+  const handleReload = useCallback(async () => {
     setIsSpinning(true);
     const minDelay = new Promise((resolve) => setTimeout(resolve, 600));
     try {
@@ -99,7 +102,7 @@ export default function FBEOrderTrackPage() {
     } finally {
       setIsSpinning(false);
     }
-  };
+  }, [executeSearch]);
 
   const isRefreshing = isSpinning || loading;
 
@@ -143,7 +146,7 @@ export default function FBEOrderTrackPage() {
       </button>
     );
     return () => setTopbarActions(null);
-  }, [setTopbarActions, executeSearch, isRefreshing]);
+  }, [setTopbarActions, handleReload, isRefreshing]);
 
   return (
     <div className="erp-page-container flex flex-col h-full overflow-hidden" style={{ background: 'var(--color-ui-canvas)', color: 'var(--color-text-primary)' }}>
@@ -642,7 +645,7 @@ export default function FBEOrderTrackPage() {
                           cx="59"
                           cy="59"
                           r="47"
-                          stroke="rgba(255, 255, 255, 0.9)"
+                          stroke="var(--color-text-inverse)"
                           strokeWidth="9"
                           fill="transparent"
                           strokeDasharray={`15 ${2 * Math.PI * 47}`}

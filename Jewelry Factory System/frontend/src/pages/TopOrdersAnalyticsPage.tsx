@@ -127,7 +127,7 @@ export default function TopOrdersAnalyticsPage() {
                 <div className="app-skeleton" style={{ width: 160, height: 16, borderRadius: 4 }} />
                 <div className="app-skeleton" style={{ width: 150, height: 32, borderRadius: 6 }} />
               </div>
-              <div style={{ padding: '16px 20px', borderRadius: 12, background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)', borderLeft: '4px solid var(--color-brand-600)', display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ padding: '16px 20px', borderRadius: 12, background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)', display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <div className="app-skeleton" style={{ width: 110, height: 16, borderRadius: 4 }} />
                 <div className="app-skeleton" style={{ width: 190, height: 32, borderRadius: 6 }} />
               </div>
@@ -198,7 +198,6 @@ export default function TopOrdersAnalyticsPage() {
                   borderRadius: 12,
                   background: 'var(--color-surface-0)',
                   border: '1px solid var(--color-border-light)',
-                  borderLeft: '4px solid var(--color-brand-600)',
                   display: 'flex',
                   flexDirection: 'column',
                   gap: 6,
@@ -250,7 +249,7 @@ export default function TopOrdersAnalyticsPage() {
                         fontWeight: isSel ? 900 : 700,
                         border: isSel ? '1px solid var(--color-brand-600)' : '1px solid var(--color-border-light)',
                         background: isSel ? 'var(--color-brand-600)' : 'var(--color-surface-0)',
-                        color: isSel ? '#ffffff' : 'var(--color-text-secondary)',
+                        color: isSel ? 'var(--color-text-inverse)' : 'var(--color-text-secondary)',
                         cursor: 'pointer',
                         transition: 'all 0.15s ease'
                       }}

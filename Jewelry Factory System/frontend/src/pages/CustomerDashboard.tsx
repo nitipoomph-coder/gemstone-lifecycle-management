@@ -15,6 +15,7 @@ import { useCustomerSalesData, type Metric, type CustomerSummaryRow } from '../h
 import { CustomerSalesChart } from '../components/dashboard/customerSales/CustomerSalesChart';
 import { CustomerKpiCards } from '../components/dashboard/customerSales/CustomerKpiCards';
 import { CustomerDashboardSkeleton } from '../components/dashboard/customerSales/CustomerDashboardSkeleton';
+import type { CustomerDashboardOutletContext } from './CustomerDashboardLayout';
 import './CustomerDashboard.css';
 
 const YEAR_COLORS = ['var(--color-chart-1)', 'var(--color-chart-2)', 'var(--color-chart-3)', 'var(--color-chart-4)', 'var(--color-chart-5)', 'var(--color-chart-6)'];
@@ -22,7 +23,7 @@ const YEAR_COLORS = ['var(--color-chart-1)', 'var(--color-chart-2)', 'var(--colo
 export default function CustomerDashboard({ metric: propMetric = 'amount' }: { metric?: Metric }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const metric = (searchParams.get('metric') as Metric) || propMetric;
-  const { availableYears, refreshCounter, setIsRefreshing, setIsChildLoading } = useOutletContext<any>();
+  const { availableYears, refreshCounter, setIsRefreshing, setIsChildLoading } = useOutletContext<CustomerDashboardOutletContext>();
   const [custData, setCustData] = useState<CustomerSummaryRow[]>([]);
 
   const {
@@ -46,11 +47,12 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
 
   // Track user manual override for labels
   const [userCustomLabels, setUserCustomLabels] = useState<boolean | null>(null);
+  const [prevSeriesFilter, setPrevSeriesFilter] = useState({ mode, monthlySeries });
 
-  // When filter changes, reset user manual override
-  useEffect(() => {
+  if (prevSeriesFilter.mode !== mode || prevSeriesFilter.monthlySeries !== monthlySeries) {
+    setPrevSeriesFilter({ mode, monthlySeries });
     setUserCustomLabels(null);
-  }, [mode, monthlySeries]);
+  }
 
   // Default: if filter = By Group + Month simultaneously -> default hide (false), else default show (true)
   const defaultShowLabels = !(mode === 'monthly' && monthlySeries === 'group');
@@ -81,9 +83,14 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
     if (!availableYears || availableYears.length === 0) {
       return;
     }
-    setLoading(true);
-    setCustData([]);
-    if (setIsChildLoading) setIsChildLoading(true);
+    let cancelled = false;
+    Promise.resolve().then(() => {
+      if (!cancelled) {
+        setLoading(true);
+        setCustData([]);
+        if (setIsChildLoading) setIsChildLoading(true);
+      }
+    });
 
     const minDelay = new Promise((resolve) => setTimeout(resolve, 500));
     const isWeekMode = periodSetup.committed.preset === 'week';
@@ -102,17 +109,23 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
 
     Promise.all([fetchWork, minDelay])
       .then(([data]) => {
-        setCustData(data as CustomerSummaryRow[]);
+        if (!cancelled) setCustData(data as CustomerSummaryRow[]);
       })
       .catch((err) => {
-        console.error('Error fetching customer summary:', err);
+        if (!cancelled) console.error('Error fetching customer summary:', err);
       })
       .finally(() => {
-        setLoading(false);
-        if (setIsRefreshing) setIsRefreshing(false);
-        if (setIsChildLoading) setIsChildLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+          if (setIsRefreshing) setIsRefreshing(false);
+          if (setIsChildLoading) setIsChildLoading(false);
+        }
       });
-  }, [availableYears, refreshCounter, periodSetup.committed]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [availableYears, refreshCounter, periodSetup.committed, setIsChildLoading, setIsRefreshing]);
 
   // Keep groups in ALL_GROUPS order for consistent colors
   const sortedSel = useMemo(
@@ -174,7 +187,7 @@ export default function CustomerDashboard({ metric: propMetric = 'amount' }: { m
           <body>
             <table>
               <thead>
-                <tr style="background-color: #2563eb; color: #ffffff; font-weight: bold;">
+                <tr style="background-color: \x232563eb; color: \x23ffffff; font-weight: bold;">
                   ${keys.map(k => `<th>${k.toUpperCase()}</th>`).join('')}
                 </tr>
               </thead>

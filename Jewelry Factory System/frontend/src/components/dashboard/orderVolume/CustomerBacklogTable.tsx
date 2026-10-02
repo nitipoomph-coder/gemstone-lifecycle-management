@@ -25,7 +25,6 @@ interface GroupSummary {
 
 export const CustomerBacklogTable: React.FC<Props> = ({
   customers,
-  metric: _metric,
   selectedGroups = []
 }) => {
   // Aggregate data by Customer Group

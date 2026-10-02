@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import type { SalesRiskPoint, SalesMetric } from '../../../services/orderVolumeSummaryAPI';
 import { CUSTOMER_GROUPS } from '../../../config/customerGroups';
 import { fmtCurrency, fmtQty } from '../../../hooks/useOrderVolumeSummaryData';
@@ -49,7 +49,7 @@ export const RiskCustomerChart: React.FC<Props> = ({ riskData, metric, selectedG
         wip: groupMap[gId].wip,
         overdue: groupMap[gId].overdue,
         safe: groupMap[gId].safe,
-        color: g?.color || '#3b82f6'
+        color: g?.color || 'var(--color-info-500)'
       };
     });
   }, [riskData, metric, groupsToDisplay]);
@@ -62,19 +62,19 @@ export const RiskCustomerChart: React.FC<Props> = ({ riskData, metric, selectedG
   };
 
   return (
-    <div style={{ background: 'var(--color-surface-0)', borderRadius: 8, padding: '14px 16px', border: '1px solid var(--color-border-light)', display: 'flex', flexDirection: 'column', width: '100%' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-        <h3 style={{ margin: 0, fontSize: '0.86rem', fontWeight: 900, color: 'var(--color-text-primary)' }}>
+    <div className="bg-[var(--color-ui-surface)] rounded-md py-[14px] px-4 border border-[var(--color-border-light)] flex flex-col w-full">
+      <div className="flex justify-between items-center mb-1.5">
+        <h3 className="m-0 text-[0.86rem] font-black text-[var(--color-text-primary)]">
           Delivery Risk by Customer Group
         </h3>
-        <span style={{ fontSize: '0.7rem', color: 'var(--color-text-tertiary)', fontWeight: 700 }}>
+        <span className="text-[0.7rem] text-[var(--color-text-tertiary)] font-bold">
           On Schedule vs Overdue • {metric === 'amount' ? 'USD ($)' : 'Pieces (PCS)'}
         </span>
       </div>
 
-      <div style={{ height: 210, width: '100%' }}>
+      <div className="h-[210px] w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData} margin={{ top: 8, right: 15, left: 5, bottom: 2 }}>
+          <BarChart data={chartData} margin={{ top: 8, right: 15, left: 5, bottom: 2 }} barGap={0} barCategoryGap="25%">
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border-light)" />
             <XAxis dataKey="label" tick={{ fontSize: 10, fill: 'var(--color-text-secondary)', fontWeight: 700 }} axisLine={false} tickLine={false} dy={4} />
             <YAxis tickFormatter={formatAxisValue} tick={{ fontSize: 10, fill: 'var(--color-text-quaternary)', fontWeight: 700 }} axisLine={false} tickLine={false} dx={-4} width={55} />
@@ -82,15 +82,15 @@ export const RiskCustomerChart: React.FC<Props> = ({ riskData, metric, selectedG
               content={({ active, payload, label }) => {
                 if (active && payload && payload.length) {
                   return (
-                    <div style={{ background: 'var(--color-surface-0)', padding: '12px 16px', border: '1px solid var(--color-border-light)', borderRadius: 8, boxShadow: 'var(--shadow-dropdown)' }}>
-                      <p style={{ margin: '0 0 8px 0', fontWeight: 900, fontSize: 'var(--erp-text-panel)', color: 'var(--color-text-primary)', borderBottom: '1px solid var(--color-border-light)', paddingBottom: 6 }}>{label}</p>
+                    <div className="bg-[var(--color-ui-surface)] py-3 px-4 border border-[var(--color-border-light)] rounded-md shadow-[var(--shadow-dropdown)]">
+                      <p className="m-0 mb-2 font-black text-[length:var(--erp-text-panel)] text-[var(--color-text-primary)] border-b border-[var(--color-border-light)] pb-1.5">{label}</p>
                       {payload.map((entry, index) => (
-                        <div key={index} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 4 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <div style={{ width: 10, height: 10, borderRadius: 2, background: entry.color }} />
-                            <span style={{ fontSize: 'var(--erp-text-control)', color: 'var(--color-text-secondary)', fontWeight: 700 }}>{entry.name}</span>
+                        <div key={index} className="flex items-center justify-between gap-3 mb-1">
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-[10px] h-[10px] rounded-sm" style={{ background: entry.color }} />
+                            <span className="text-[length:var(--erp-text-control)] text-[var(--color-text-secondary)] font-bold">{entry.name}</span>
                           </div>
-                          <span style={{ fontSize: 'var(--erp-text-body)', color: 'var(--color-text-primary)', fontWeight: 900 }}>
+                          <span className="text-[length:var(--erp-text-body)] text-[var(--color-text-primary)] font-black">
                             {metric === 'amount' ? fmtCurrency(Number(entry.value)) : fmtQty(Number(entry.value))}
                           </span>
                         </div>
@@ -105,20 +105,13 @@ export const RiskCustomerChart: React.FC<Props> = ({ riskData, metric, selectedG
             <Legend
               wrapperStyle={{ paddingTop: 4, fontSize: '11px' }}
               formatter={(value) => (
-                <span style={{ color: 'var(--color-text-secondary)', fontWeight: 700, marginRight: 8 }}>
+                <span className="text-[var(--color-text-secondary)] font-bold mr-2">
                   {value}
                 </span>
               )}
             />
-            <Bar dataKey="safe" stackId="a" name="On Schedule" fill="#3b82f6">
-              {chartData.map((entry: any, index: number) => (
-                <Cell 
-                  key={`cell-${index}`} 
-                  radius={((!entry.overdue || entry.overdue === 0) ? [4, 4, 0, 0] : [0, 0, 0, 0]) as any} 
-                />
-              ))}
-            </Bar>
-            <Bar dataKey="overdue" stackId="a" name="Overdue / At Risk" fill="#ef4444" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="safe" stackId="a" name="On Schedule" fill="var(--color-info-500)" radius={[0, 0, 0, 0]} />
+            <Bar dataKey="overdue" stackId="a" name="Overdue / At Risk" fill="var(--color-danger-500)" radius={[0, 0, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>

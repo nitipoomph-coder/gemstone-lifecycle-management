@@ -65,14 +65,14 @@ export function usePeriodSetup(config: PeriodSetupConfig) {
   // Initialization: read from URL if syncToUrl is true (and not ignored), otherwise use initialValues
   const initializeState = useCallback((ignoreUrl = false): PeriodState => {
     const currentMonth = new Date().getMonth() + 1;
-    let preset: PeriodPreset = config.initialValues?.preset || 'month';
-    let monthFrom = config.initialValues?.monthFrom || currentMonth;
-    let monthTo = config.initialValues?.monthTo || currentMonth;
+    let preset: PeriodPreset = config.initialValues?.preset || 'full-year';
+    let monthFrom = config.initialValues?.monthFrom || (preset === 'full-year' ? 1 : currentMonth);
+    let monthTo = config.initialValues?.monthTo || (preset === 'full-year' ? 12 : currentMonth);
     let weekFrom = config.initialValues?.weekFrom || 1;
     let weekTo = config.initialValues?.weekTo || 12;
       let dateFrom = config.initialValues?.dateFrom;
       let dateTo = config.initialValues?.dateTo;
-    let selectedMonths: string[] = config.initialValues?.selectedMonths || monthRange(monthFrom, monthTo).map(String);
+    let selectedMonths: string[] = config.initialValues?.selectedMonths || (preset === 'full-year' ? ['1','2','3','4','5','6','7','8','9','10','11','12'] : monthRange(monthFrom, monthTo).map(String));
     let baseYear = config.initialValues?.baseYear || (config.availableYears.length > 0 ? config.availableYears[0] : String(new Date().getFullYear()));
     let compareActive1 = config.initialValues?.compareActive1 || false;
     let compareYear1 = config.initialValues?.compareYear1 || getDefaultCompareYear(baseYear, config.availableYears);
@@ -112,11 +112,22 @@ export function usePeriodSetup(config: PeriodSetupConfig) {
         monthTo = numMonths[numMonths.length - 1];
         if (!urlPreset) preset = urlMonths.length === 12 ? 'full-year' : 'month';
       } else {
-        const currentM = new Date().getMonth() + 1;
-        selectedMonths = [String(currentM)];
-        monthFrom = currentM;
-        monthTo = currentM;
-        if (!urlPreset) preset = 'month';
+        if (preset === 'full-year') {
+          selectedMonths = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
+          monthFrom = 1;
+          monthTo = 12;
+        } else if (preset === 'ytd') {
+          const currentM = new Date().getMonth() + 1;
+          selectedMonths = Array.from({ length: currentM }, (_, i) => String(i + 1));
+          monthFrom = 1;
+          monthTo = currentM;
+        } else {
+          const currentM = new Date().getMonth() + 1;
+          selectedMonths = [String(currentM)];
+          monthFrom = currentM;
+          monthTo = currentM;
+          if (!urlPreset) preset = 'month';
+        }
       }
 
       if (urlYears.length > 0) {

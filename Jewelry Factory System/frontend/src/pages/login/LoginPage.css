@@ -669,7 +669,7 @@
     content: '';
     position: absolute;
     inset: 0;
-    background: rgba(0, 0, 0, 0.4);
+    background: color-mix(in srgb, var(--color-surface-900) 40%, transparent);
     backdrop-filter: blur(12px);
     z-index: 1;
   }
@@ -703,19 +703,19 @@
   .login-language-toggle {
     top: calc(env(safe-area-inset-top) + 16px);
     right: max(20px, env(safe-area-inset-right));
-    background: rgba(0, 0, 0, 0.3);
+    background: color-mix(in srgb, var(--color-surface-900) 30%, transparent);
     padding: 6px 10px;
     border-radius: 12px;
     backdrop-filter: blur(4px);
-    color: white;
+    color: var(--color-text-inverse);
   }
   
   .login-language-toggle button {
-    color: rgba(255, 255, 255, 0.7);
+    color: color-mix(in srgb, var(--color-text-inverse) 70%, transparent);
   }
   
   .login-language-toggle button.is-active {
-    color: white;
+    color: var(--color-text-inverse);
   }
 
   /* Make the form a beautiful floating card */
@@ -728,7 +728,7 @@
     background: var(--color-login-parchment);
     padding: 32px 24px;
     border-radius: 24px;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    box-shadow: var(--shadow-modal);
     margin: auto; /* center in flex container */
     position: relative;
   }

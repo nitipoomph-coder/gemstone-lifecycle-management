@@ -3,7 +3,6 @@ import type { KeyboardEvent } from 'react';
 import {
   SearchBox,
   EmptyRow,
-  orderPanel, panelTitle, panelMeta, tableScroll, tdStrongCenter, tdCenter, tdStrongRight, paginationBar, paginationText, paginationButtons, pageButton, pageButtonDisabled, pageText
 } from '../../infographic/InfographicSalesTrends';
 import type { SalesOrderRow } from '../../../services/orderVolumeSummaryAPI';
 import type { Drilldown } from '../../../hooks/useOrderVolumeSummaryData';
@@ -32,6 +31,21 @@ const cellCompact: React.CSSProperties = {
   whiteSpace: 'nowrap'
 };
 
+const orderPanel: React.CSSProperties = { width: '100%', minHeight: 0, flex: '1 1 0' };
+const panelTitle: React.CSSProperties = { margin: 0, color: 'var(--color-text-primary)', fontSize: 'var(--erp-text-control)', fontWeight: 900 };
+const panelMeta: React.CSSProperties = { color: 'var(--color-text-tertiary)', fontSize: 'var(--erp-text-dense)', fontWeight: 900 };
+const tableScroll: React.CSSProperties = { width: '100%', minHeight: 0 };
+const td: React.CSSProperties = { height: 46, padding: '6px 8px', color: 'var(--color-text-primary)', fontSize: 'var(--erp-text-dense)', fontWeight: 500, verticalAlign: 'middle', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
+const tdStrongCenter: React.CSSProperties = { ...td, fontWeight: 900, textAlign: 'center' };
+const tdCenter: React.CSSProperties = { ...td, textAlign: 'center' };
+const tdStrongRight: React.CSSProperties = { ...td, fontWeight: 900, textAlign: 'right', fontVariantNumeric: 'tabular-nums' };
+const paginationBar: React.CSSProperties = { minHeight: 38, padding: '6px 10px' };
+const paginationText: React.CSSProperties = { color: 'var(--color-text-tertiary)', fontSize: 'var(--erp-text-dense)', fontWeight: 850 };
+const paginationButtons: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 6 };
+const pageButton: React.CSSProperties = { width: 28, height: 28, display: 'inline-grid', placeItems: 'center', borderRadius: 6, border: '1px solid var(--color-border-light)', background: 'var(--color-surface-1)', color: 'var(--color-text-primary)', cursor: 'pointer' };
+const pageButtonDisabled: React.CSSProperties = { opacity: 0.45, cursor: 'not-allowed' };
+const pageText: React.CSSProperties = { color: 'var(--color-text-primary)', fontSize: 'var(--erp-text-dense)', fontWeight: 900, minWidth: 82, textAlign: 'center' };
+
 /**
  * Modern Formal Status & Shipment Progress Load Bar
  * Displays clear delivery status alongside exact shipment completion percentage
@@ -47,35 +61,35 @@ function StatusProgressBar({ bucket, orderQty, shippedQty }: { bucket?: string; 
 
   // High contrast WCAG 2.1 AA colors (≥ 4.5:1 ratio)
   let statusText = bucket || 'Scheduled';
-  let textColor = 'var(--color-brand-700, #4338ca)';
-  let dotColor = '#6366f1';
-  let fillColor = '#4f46e5';
-  let trackColor = 'rgba(99, 102, 241, 0.12)';
+  let textColor = 'var(--color-brand-700)';
+  let dotColor = 'var(--color-brand-500)';
+  let fillColor = 'var(--color-brand-600)';
+  let trackColor = 'color-mix(in srgb, var(--color-brand-500) 15%, transparent)';
 
   if (isOverdue) {
     statusText = 'Overdue';
-    textColor = '#b91c1c';
-    dotColor = '#dc2626';
-    fillColor = '#dc2626';
-    trackColor = 'rgba(220, 38, 38, 0.15)';
+    textColor = 'var(--color-danger-700)';
+    dotColor = 'var(--color-danger-500)';
+    fillColor = 'var(--color-danger-600)';
+    trackColor = 'color-mix(in srgb, var(--color-danger-500) 15%, transparent)';
   } else if (isDue15) {
     statusText = 'Due ≤ 15d';
-    textColor = '#b45309';
-    dotColor = '#d97706';
-    fillColor = '#d97706';
-    trackColor = 'rgba(217, 119, 6, 0.15)';
+    textColor = 'var(--color-warning-700)';
+    dotColor = 'var(--color-warning-500)';
+    fillColor = 'var(--color-warning-600)';
+    trackColor = 'color-mix(in srgb, var(--color-warning-500) 15%, transparent)';
   } else if (isDue30) {
     statusText = 'Due ≤ 30d';
-    textColor = '#0369a1';
-    dotColor = '#0284c7';
-    fillColor = '#0284c7';
-    trackColor = 'rgba(2, 132, 199, 0.15)';
+    textColor = 'var(--color-info-700)';
+    dotColor = 'var(--color-info-500)';
+    fillColor = 'var(--color-info-600)';
+    trackColor = 'color-mix(in srgb, var(--color-info-500) 15%, transparent)';
   } else if (isShipped) {
     statusText = 'Shipped';
-    textColor = '#047857';
-    dotColor = '#059669';
-    fillColor = '#059669';
-    trackColor = 'rgba(5, 150, 105, 0.15)';
+    textColor = 'var(--color-success-700)';
+    dotColor = 'var(--color-success-500)';
+    fillColor = 'var(--color-success-600)';
+    trackColor = 'color-mix(in srgb, var(--color-success-500) 15%, transparent)';
   }
 
   const ariaLabelText = `Status: ${statusText}, Shipped: ${pct}% (${shippedQty} of ${orderQty} pcs)`;
@@ -104,7 +118,7 @@ function StatusProgressBar({ bucket, orderQty, shippedQty }: { bucket?: string; 
           style={{
             width: isOverdue && pct === 0 ? '100%' : `${pct}%`,
             height: '100%',
-            background: isOverdue && pct === 0 ? 'repeating-linear-gradient(45deg, #dc2626, #dc2626 3px, #ef4444 3px, #ef4444 6px)' : fillColor,
+            background: isOverdue && pct === 0 ? 'repeating-linear-gradient(45deg, var(--color-danger-500), var(--color-danger-500) 3px, var(--color-danger-600) 3px, var(--color-danger-600) 6px)' : fillColor,
             borderRadius: 2,
             transition: 'width 0.3s ease'
           }}
@@ -318,11 +332,11 @@ export function VolumeOrdersTable({
                 height: 28,
                 padding: '0 10px',
                 borderRadius: 6,
-                background: '#047857',
-                border: '1px solid #059669',
+                background: 'var(--color-success-600)',
+                border: '1px solid var(--color-success-700)',
                 fontSize: '0.73rem',
                 fontWeight: 700,
-                color: '#ffffff',
+                color: 'var(--color-text-inverse)',
                 cursor: filteredOrderRows.length === 0 ? 'not-allowed' : 'pointer',
                 opacity: filteredOrderRows.length === 0 ? 0.5 : 1
               }}
@@ -352,7 +366,7 @@ export function VolumeOrdersTable({
             <table className="sales-dense-table" style={{ width: '100%', minWidth: 1180, tableLayout: 'auto' }} aria-label="Production Order Items Table">
               <thead>
                 <tr>
-                  {ORDER_DETAIL_COLUMNS.map(([head, width]: any, index: any) => (
+                  {ORDER_DETAIL_COLUMNS.map(([head, width], index) => (
                     <th
                       key={head}
                       scope="col"
@@ -379,7 +393,7 @@ export function VolumeOrdersTable({
                       <td style={{ ...tdCenter, ...cellCompact, color: 'var(--color-text-tertiary)' }}>{rowNumber}</td>
                       <td style={{ ...tdCenter, ...cellCompact, fontWeight: 600, color: 'var(--color-text-secondary)' }}>{weekLabel}</td>
                       <td style={{ ...tdStrongCenter, ...cellCompact }}>
-                        <span style={{ fontWeight: 700, color: 'var(--color-brand-700, #4338ca)' }}>
+                        <span style={{ fontWeight: 700, color: 'var(--color-brand-700)' }}>
                           {row.customerCode}
                         </span>
                       </td>
@@ -392,7 +406,7 @@ export function VolumeOrdersTable({
                       <td style={{ ...tdCenter, ...cellCompact }}>
                         {formatDmY(row.ordDate)}
                       </td>
-                      <td style={{ ...tdCenter, ...cellCompact, fontWeight: isOverdue || isDue15 ? 700 : 400, color: isOverdue ? '#b91c1c' : isDue15 ? '#b45309' : 'inherit' }}>
+                      <td style={{ ...tdCenter, ...cellCompact, fontWeight: isOverdue || isDue15 ? 700 : 400, color: isOverdue ? 'var(--color-danger-700)' : isDue15 ? 'var(--color-warning-700)' : 'inherit' }}>
                         {formatDmY(row.custDate || row.dueDate)}
                       </td>
                       <td style={{ ...tdCenter, ...cellCompact }}>
@@ -404,9 +418,9 @@ export function VolumeOrdersTable({
                       <td style={{ ...tdStrongRight, ...cellCompact }}>{fmtQty(row.orderQty || 0)}</td>
                       <td style={{ ...tdStrongRight, ...cellCompact }}>{totalValue > 0 ? `$${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-'}</td>
                       <td style={{ ...tdStrongRight, ...cellCompact }}>{fmtQty(row.shippedQty || 0)}</td>
-                      <td style={{ ...tdStrongRight, ...cellCompact, color: row.openQty > 0 ? 'var(--color-brand-700, #4338ca)' : 'inherit' }}>{fmtQty(row.openQty || 0)}</td>
+                      <td style={{ ...tdStrongRight, ...cellCompact, color: row.openQty > 0 ? 'var(--color-brand-700)' : 'inherit' }}>{fmtQty(row.openQty || 0)}</td>
                       <td style={{ ...tdStrongRight, ...cellCompact }}>{backlogValue > 0 ? `$${backlogValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-'}</td>
-                      <td style={{ ...tdStrongRight, ...cellCompact, fontWeight: 700, color: row.daysToCustDue && row.daysToCustDue < 0 ? '#b91c1c' : 'inherit' }}>
+                      <td style={{ ...tdStrongRight, ...cellCompact, fontWeight: 700, color: row.daysToCustDue && row.daysToCustDue < 0 ? 'var(--color-danger-700)' : 'inherit' }}>
                         {row.daysToCustDue !== undefined && row.daysToCustDue !== null ? (row.daysToCustDue > 0 ? `+${row.daysToCustDue}` : `${row.daysToCustDue}`) : '-'}
                       </td>
                     </tr>

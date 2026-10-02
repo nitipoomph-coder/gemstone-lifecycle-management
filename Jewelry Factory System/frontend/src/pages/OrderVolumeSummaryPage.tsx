@@ -1,4 +1,3 @@
-import { pageShell } from '../components/infographic/InfographicSalesTrends';
 import {
   CustomerTrendsLoadingState,
   SummaryMetric,
@@ -136,7 +135,7 @@ export default function OrderVolumeSummaryPage() {
           </div>
         }
       />
-      <div className="content-scrollbar flex-1 overflow-y-auto" style={pageShell}>
+      <div className="content-scrollbar flex-1 overflow-y-auto" style={{ background: 'var(--color-surface-1)' }}>
         <div className={`app-content-frame app-content-frame--workspace app-page-content customer-trends-page customer-trends-page--${activeView}`}>
           <VolumeFilterBar
             metric={metric}

@@ -167,7 +167,7 @@ export const FactoryOutputTrendChart: React.FC<FactoryOutputTrendChartProps> = (
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'flex-end',
-                  borderRadius: '4px 4px 1px 1px',
+                  borderRadius: 0,
                   overflow: 'hidden',
                   backgroundColor: 'var(--color-surface-2)',
                   transition: 'height 0.4s ease, opacity 0.2s ease',

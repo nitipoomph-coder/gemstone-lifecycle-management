@@ -98,10 +98,7 @@ export default function NotificationDropdown() {
       >
         <Bell size={18} />
         {unreadCount > 0 && (
-          <span
-            className="absolute top-1.5 right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-black text-white shadow-xs"
-            style={{ background: 'var(--color-danger-500)' }}
-          >
+          <span className="absolute top-1.5 right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-black text-[var(--color-overlay-text)] bg-[var(--color-danger-500)] shadow-xs">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
@@ -109,10 +106,7 @@ export default function NotificationDropdown() {
 
       {/* Notification Popup Dropdown Panel */}
       {isOpen && (
-        <div
-          className="absolute right-0 top-full mt-2 w-80 sm:w-96 max-w-[calc(100vw-24px)] rounded-xl border border-[var(--color-border-light)] bg-[var(--color-ui-surface)] shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100"
-          style={{ boxShadow: 'var(--shadow-dropdown)' }}
-        >
+        <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 max-w-[calc(100vw-24px)] rounded-xl border border-[var(--color-border-light)] bg-[var(--color-ui-surface)] shadow-[var(--shadow-dropdown)] z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border-light)] bg-[var(--color-surface-0)]">
             <div className="flex items-center gap-2">

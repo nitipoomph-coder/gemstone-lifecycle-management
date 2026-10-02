@@ -17,19 +17,41 @@ router.post('/login', async (req, res) => {
       .input('username', sql.NVarChar, username.toUpperCase())
       .query('SELECT UserID, UserName, Password, UserType FROM dbo.PCCUser WHERE UPPER(UserName) = @username');
 
-    const user = result.recordset[0];
-    if (!user) {
-      return res.status(401).json({ success: false, message: 'Invalid username or password' });
+    let user = result.recordset[0];
+    let isAuthenticated = false;
+    let role = 'sales';
+    let fullName = username;
+    let userId = null;
+
+    if (user && password === user.Password) {
+      isAuthenticated = true;
+      role = user.UserName.toUpperCase() === 'ADMIN' ? 'admin' : 'sales';
+      fullName = user.UserName;
+      userId = user.UserID;
+    } else {
+      // Check system_users table (registered users with bcrypt)
+      try {
+        const sysUserRes = await pool.request()
+          .input('sysUsername', sql.NVarChar, username.toUpperCase())
+          .query('SELECT id, username, password_hash, full_name, role FROM system_users WHERE UPPER(username) = @sysUsername');
+        const sysUser = sysUserRes.recordset[0];
+        if (sysUser && sysUser.password_hash) {
+          const match = await bcrypt.compare(password, sysUser.password_hash);
+          if (match) {
+            isAuthenticated = true;
+            role = (sysUser.role || 'sales').toLowerCase();
+            fullName = sysUser.full_name || sysUser.username;
+            userId = sysUser.id;
+          }
+        }
+      } catch (sysErr) {
+        // If system_users table is not accessible, proceed to failure
+      }
     }
 
-    // Direct comparison for plain text password from legacy system
-    if (password !== user.Password) {
+    if (!isAuthenticated) {
       return res.status(401).json({ success: false, message: 'Invalid username or password' });
     }
-
-    // Map role based on username: only "admin" or "sales"
-    const role = user.UserName.toUpperCase() === 'ADMIN' ? 'admin' : 'sales';
-    const fullName = user.UserName;
 
     // Ensure JWT_SECRET is configured — refuse to run with a weak fallback
     if (!process.env.JWT_SECRET) {
@@ -38,12 +60,12 @@ router.post('/login', async (req, res) => {
     }
 
     const token = jwt.sign(
-      { id: user.UserID, username: user.UserName, role: role, name: fullName },
+      { id: userId, username: username.toUpperCase(), role: role, name: fullName },
       process.env.JWT_SECRET,
       { expiresIn: '12h' }
     );
 
-    return res.json({ success: true, role: role, username: user.UserName, name: fullName, token });
+    return res.json({ success: true, role: role, username: username.toUpperCase(), name: fullName, token });
   } catch (error) {
     console.error('Login error:', error);
     return res.status(500).json({ success: false, message: 'Internal server error' });

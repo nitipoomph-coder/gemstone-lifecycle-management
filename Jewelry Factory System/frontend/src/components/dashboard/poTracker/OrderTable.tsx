@@ -335,7 +335,7 @@ export default function OrderTable({
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, []);
+  }, [setColWidths]);
 
   const mandatory = ['no', 'week', 'cust', 'po', 'arrow'];
   const orderedKeys = [

@@ -114,10 +114,10 @@ export default function TopOrdersGalleryPage() {
 
     // 4-Color Category Segments: Leader + Top 2 Runner-ups + Others
     const colors = [
-      'var(--color-chart-1, #3b82f6)',
-      'var(--color-chart-2, #10b981)',
-      'var(--color-chart-3, #f59e0b)',
-      'var(--color-chart-4, #8b5cf6)',
+      'var(--color-chart-1)',
+      'var(--color-chart-2)',
+      'var(--color-chart-3)',
+      'var(--color-chart-4)',
     ];
 
     const segments: Array<{ label: string; sharePct: number; color: string }> = [];

@@ -1,7 +1,7 @@
 // src/components/dashboard/CardDetailPanel.tsx
 import { useState, useEffect, type ReactNode } from 'react';
 import { X, TrendingUp, TrendingDown, Minus, Calendar, Users, Loader2, AlertTriangle, Package, CheckCircle2, Settings, CalendarDays } from 'lucide-react';
-import { fetchCardDetail, fetchAvailableYears, type CardDetailData, type CardType, type MonthlyData } from '../../../services/dashboardAPI';
+import { fetchCardDetail, fetchAvailableYears, type CardDetailData, type CardType, type MonthlyData, type BreakdownItem } from '../../../services/dashboardAPI';
 import { getErrorMessage } from '../../../utils/errors';
 import './DashboardOverview.css';
 
@@ -763,7 +763,7 @@ export default function CardDetailPanel({ cardType, selectedYear, onClose }: { c
                     </tr>
                   </thead>
                   <tbody>
-                    {data.breakdown.map((r: any) => (
+                    {data.breakdown.map((r: BreakdownItem) => (
                       <tr key={r.code} style={{ borderBottom:'1px solid var(--color-border-light)', transition:'background 0.15s' }}
                         onMouseEnter={e => e.currentTarget.style.background='var(--color-surface-1)'}
                         onMouseLeave={e => e.currentTarget.style.background='transparent'}

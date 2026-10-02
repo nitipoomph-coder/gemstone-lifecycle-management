@@ -1,3 +1,4 @@
+import { formatDateDDMMYYYY } from '../../utils/dateUtils';
 // color-lint-ignore-file: print-only output requires fixed black and white ink colors.
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
@@ -121,7 +122,7 @@ function ProcurementDocWorkspace({ docType }: { docType: string }) {
       setIsEditing(true);
       const newHeader: ProcDocHeader = {
         docNumber: nextNo,
-        docDate: new Date().toLocaleDateString('th-TH'),
+        docDate: formatDateDDMMYYYY(new Date()),
         purchaseDate: '',
         dueDate: '',
         receiveDate: '',

@@ -200,10 +200,10 @@ export function usePOTrackerAdvanced() {
 
   const [showCustomViewModal, setShowCustomViewModal] = useState(false);
 
-  const filtered = useMemo(() => {
+  const baseFilteredOrders = useMemo(() => {
     let filteredList = orders;
 
-    // 1. Group Filter (อิงเป๊ะตามระบบเดิม PC_Face_OrdTrack_Sum.vb)
+    // 1. Group Filter
     if (groupFilter === 'N008') {
       filteredList = filteredList.filter(o => isN008(o.CustCode));
     } else if (groupFilter === 'N044') {
@@ -217,15 +217,10 @@ export function usePOTrackerAdvanced() {
     } else if (groupFilter === 'N083') {
       filteredList = filteredList.filter(o => o.CustCode?.trim().toUpperCase().startsWith('N083'));
     } else if (groupFilter === 'ALL' || groupFilter === 'General') {
-      // General: กรองลูกค้าอื่นๆ ทั้งหมดที่ไม่ใช่ N008, N044, N051, N098, U411-U426
       filteredList = filteredList.filter(o => isGeneral(o.CustCode));
     }
-    // CUSTOM -> แสดงทั้งหมดไม่กรอง Group
 
-    // 2. Status Filter (Pending / Finish / ALL)
-    // Pending -> กรองแถวที่ UnFinishQty !== 0
-    // Finish -> กรองแถวที่ FinishQty !== 0
-    // ALL -> ไม่กรอง แสดงทั้งหมด
+    // 2. Status Filter
     if (statusFilter === 'pending') {
       filteredList = filteredList.filter(o => o.UnFinishQty != null && Number(o.UnFinishQty) !== 0);
     } else if (statusFilter === 'finish') {
@@ -261,21 +256,33 @@ export function usePOTrackerAdvanced() {
         });
       }
     }
+    
+    return filteredList;
+  }, [search, orders, groupFilter, statusFilter]);
+
+  const filtered = useMemo(() => {
+    let filteredList = baseFilteredOrders;
 
     const qWeek = filterWeek.trim().toLowerCase();
     if (qWeek) {
-      filteredList = filteredList.filter(o => {
-        const val = String(o.Week ?? '').trim().toLowerCase();
-        return val.includes(qWeek);
-      });
+      const parts = qWeek.split(',').map(s => s.trim()).filter(Boolean);
+      if (parts.length > 0) {
+        filteredList = filteredList.filter(o => {
+          const val = String(o.Week ?? '').trim().toLowerCase();
+          return parts.some(part => val.includes(part));
+        });
+      }
     }
 
     const qCust = filterCust.trim().toLowerCase();
     if (qCust) {
-      filteredList = filteredList.filter(o => {
-        const val = String(o.CustCode ?? '').trim().toLowerCase();
-        return val.includes(qCust);
-      });
+      const parts = qCust.split(',').map(s => s.trim()).filter(Boolean);
+      if (parts.length > 0) {
+        filteredList = filteredList.filter(o => {
+          const val = String(o.CustCode ?? '').trim().toLowerCase();
+          return parts.some(part => val.includes(part));
+        });
+      }
     }
 
     const qPO = filterPO.trim().toLowerCase();
@@ -304,7 +311,7 @@ export function usePOTrackerAdvanced() {
     }
 
     return filteredList;
-  }, [search, orders, groupFilter, statusFilter, filterType, filterWeek, filterCust, filterPO, filterShipTo]);
+  }, [baseFilteredOrders, filterType, filterWeek, filterCust, filterPO, filterShipTo]);
 
   const totalQty = filtered.reduce((s, o) => s + (o.TotalQty || 0), 0);
   const totalAmount = filtered.reduce((s, o) => s + (o.Amount || 0), 0);
@@ -323,11 +330,28 @@ export function usePOTrackerAdvanced() {
 
   const uniqueTypes = useMemo(() => {
     const types = new Set<string>();
-    orders.forEach(o => {
+    baseFilteredOrders.forEach(o => {
       if (o.OrdKind && o.OrdKind !== '-') types.add(o.OrdKind.trim());
     });
     return Array.from(types).sort();
-  }, [orders]);
+  }, [baseFilteredOrders]);
+
+  const uniqueWeeks = useMemo(() => {
+    const weeks = new Set<string>();
+    baseFilteredOrders.forEach(o => {
+      if (o.Week && o.Week !== '-') weeks.add(String(o.Week).trim());
+    });
+    // Sort descending (latest week first)
+    return Array.from(weeks).sort((a, b) => b.localeCompare(a));
+  }, [baseFilteredOrders]);
+
+  const uniqueCusts = useMemo(() => {
+    const custs = new Set<string>();
+    baseFilteredOrders.forEach(o => {
+      if (o.CustCode && o.CustCode !== '-') custs.add(String(o.CustCode).trim());
+    });
+    return Array.from(custs).sort();
+  }, [baseFilteredOrders]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const page = Math.min(Math.max(1, requestedPage), totalPages);
@@ -430,6 +454,8 @@ export function usePOTrackerAdvanced() {
     pendingCount,
     delayedCount,
     uniqueTypes,
+    uniqueWeeks,
+    uniqueCusts,
     totalPages,
     page,
     pageStart,

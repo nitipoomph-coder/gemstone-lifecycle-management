@@ -8,6 +8,7 @@ import { usePOTrackerAdvanced } from '../hooks/usePOTrackerAdvanced';
 import { useTopbarActions } from '../contexts/TopbarActionContext';
 import { ErpSegmentedControl } from '../components/ui/ErpButtons';
 import { useState, useEffect, useCallback } from 'react';
+import { MultiSelectFilterInput } from '../components/dashboard/poTracker/MultiSelectFilterInput';
 
 const GROUP_OPTIONS = [
   { value: 'N008', label: 'N008' },
@@ -68,6 +69,8 @@ export default function POTrackerAdvanced() {
     totalAmount,
     delayedCount,
     uniqueTypes,
+    uniqueWeeks,
+    uniqueCusts,
     totalPages,
     page,
     pageStart,
@@ -248,11 +251,11 @@ export default function POTrackerAdvanced() {
                   >
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--color-text-tertiary)', textTransform: 'capitalize', letterSpacing: '0.05em' }}>Week</label>
-                      <input type="text" value={filterWeek} onChange={e => setFilterWeek(e.target.value)} placeholder="Filter Week..." style={{ width: '120px', padding: '10px 14px', borderRadius: '10px', border: '1px solid var(--color-border-strong)', background: 'var(--color-surface-0)', fontSize: '0.8rem', fontWeight: 600, outline: 'none' }} className="focus:border-brand-400" />
+                      <MultiSelectFilterInput value={filterWeek} onChange={setFilterWeek} options={uniqueWeeks} placeholder="Filter Week..." width="120px" />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--color-text-tertiary)', textTransform: 'capitalize', letterSpacing: '0.05em' }}>Customer</label>
-                      <input type="text" value={filterCust} onChange={e => setFilterCust(e.target.value)} placeholder="Filter Cust..." style={{ width: '120px', padding: '10px 14px', borderRadius: '10px', border: '1px solid var(--color-border-strong)', background: 'var(--color-surface-0)', fontSize: '0.8rem', fontWeight: 600, outline: 'none' }} className="focus:border-brand-400" />
+                      <MultiSelectFilterInput value={filterCust} onChange={setFilterCust} options={uniqueCusts} placeholder="Filter Cust..." width="120px" />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--color-text-tertiary)', textTransform: 'capitalize', letterSpacing: '0.05em' }}>PO / Order No</label>

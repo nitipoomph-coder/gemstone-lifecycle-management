@@ -1,16 +1,16 @@
 // src/pages/OrderDetailPage.tsx
-import { useState, useEffect, useRef, type CSSProperties, type ReactNode } from 'react';
+import { useState, useEffect, useRef, useCallback, type CSSProperties, type ReactNode } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
-import { RefreshCw, AlertTriangle, ChevronDown, Search, Package, DollarSign, FileSpreadsheet, Image, X, Layers } from 'lucide-react';
+import { AlertTriangle, ChevronDown, Search, Package, DollarSign, RefreshCw, X, Layers } from 'lucide-react';
 import PageHeader from '../components/layout/PageHeader';
 import { BREADCRUMBS } from '../config/breadcrumbs';
 import { fetchOrderDetail, fetchOrderByPo, fetchOrderByGroup, type OrderDetail } from '../services/poTrackerAPI';
-import { PhotoGalleryModal } from '../components/orderDetail/PhotoGalleryModal';
 import OrderLineTable from '../components/orderDetail/OrderLineTable';
 import LineDetailDrawer from '../components/orderDetail/LineDetailDrawer';
-import { exportOrderDetailExcel } from '../utils/exportOrderDetailExcel';
-import { ORDER_DETAIL_COLUMNS, COLUMN_GROUP_PRESETS, type ColGroup, type ColumnPreset } from '../config/orderDetailColumns';
+import OrderDetailCustomViewModal from '../components/orderDetail/OrderDetailCustomViewModal';
+import { ORDER_DETAIL_COLUMNS, COLUMN_GROUP_PRESETS, type ColumnPreset } from '../config/orderDetailColumns';
 import { fQty, fAmt } from '../components/orderDetail/format';
+import { useTopbarActions } from '../contexts/TopbarActionContext';
 
 const PRESET_BUTTONS: { key: ColumnPreset; label: string; icon: ReactNode }[] = [
   { key: 'Sales', label: 'Sales View', icon: <DollarSign size={14} /> },
@@ -18,21 +18,10 @@ const PRESET_BUTTONS: { key: ColumnPreset; label: string; icon: ReactNode }[] = 
   { key: 'All', label: 'All Details', icon: <Layers size={14} /> },
 ];
 
-const TOGGLEABLE_GROUPS: { group: ColGroup; label: string }[] = [
-  { group: 'info', label: 'Item & Dates' },
-  { group: 'sales', label: 'Sales & Shipping' },
-  { group: 'production', label: 'Production' },
-  { group: 'remark', label: 'Remarks' },
-];
-
 const VIEW_PARAM_TO_PRESET: Record<string, ColumnPreset> = { sales: 'Sales', prod: 'Production', all: 'All' };
 
 // ── Shared flat styles (theme-variable, no gradients/hardcoded hex) ──
 const LBL: CSSProperties = { fontSize: '0.7rem', fontWeight: 800, color: 'var(--color-text-tertiary)', textTransform: 'capitalize', letterSpacing: '0.05em' };
-const ACT_ICON: CSSProperties = { width: 32, height: 32, borderRadius: '8px', border: '1px solid var(--color-border-strong)', background: 'var(--color-surface-0)', color: 'var(--color-text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease' };
-const ACT_BTN: CSSProperties = { display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 12px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer', transition: 'color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease', letterSpacing: 0 };
-const ACT_NEUTRAL: CSSProperties = { border: '1px solid var(--color-border-strong)', background: 'var(--color-surface-0)', color: 'var(--color-text-primary)' };
-const ACT_DANGER: CSSProperties = { border: '1px solid color-mix(in srgb, var(--color-danger-500) 35%, transparent)', background: 'color-mix(in srgb, var(--color-danger-500) 10%, var(--color-surface-0))', color: 'var(--color-danger-600)' };
 
 // ── Segmented pill toggle (เข้าชุดกับ PO Tracker list) ──
 function Segmented({ options, value, onChange }: { options: { value: string; label: string }[]; value: string; onChange: (v: string) => void }) {
@@ -177,7 +166,6 @@ export default function OrderDetailPage() {
   const [activePreset, setActivePreset] = useState<ColumnPreset | null>(initialPreset);
   const [visibleKeys, setVisibleKeys] = useState<string[]>(COLUMN_GROUP_PRESETS[initialPreset]);
   const [showColPicker, setShowColPicker] = useState(false);
-  const [colSearch, setColSearch] = useState('');
   const [selectedLine, setSelectedLine] = useState<{ line: Record<string, unknown>; index: number } | null>(null);
 
   const [refreshVersion, setRefreshVersion] = useState(0);
@@ -187,8 +175,7 @@ export default function OrderDetailPage() {
     error: string | null;
   }>({ key: '', detail: null, error: null });
   const [searchTerm, setSearchTerm] = useState('');
-  const [showPhotoGallery, setShowPhotoGallery] = useState(false);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [activeProcessFilters, setActiveProcessFilters] = useState<string[]>([]);
 
   // Locked date range (carried from PO Tracker list) + current status filter
   const dateFrom = searchParams.get('dateFrom');
@@ -202,6 +189,42 @@ export default function OrderDetailPage() {
   const error = hasCurrentDetail ? detailState.error : null;
   const loading = !hasCurrentDetail;
 
+  // ── Global Topbar: Refresh button ──
+  const { setTopbarActions } = useTopbarActions();
+  const [isSpinning, setIsSpinning] = useState(false);
+
+  const handleReload = useCallback(async () => {
+    setIsSpinning(true);
+    const minDelay = new Promise((resolve) => setTimeout(resolve, 600));
+    try {
+      setRefreshVersion((v) => v + 1);
+      await minDelay;
+    } finally {
+      setIsSpinning(false);
+    }
+  }, []);
+
+  const isRefreshing = isSpinning || loading;
+
+  useEffect(() => {
+    setTopbarActions(
+      <button
+        onClick={handleReload}
+        disabled={isRefreshing}
+        className="flex items-center justify-center w-9 h-9 rounded-lg border-none bg-transparent text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-brand-600)] transition-colors cursor-pointer disabled:cursor-wait disabled:opacity-80"
+        title="Refresh Data"
+        aria-label="Refresh Data"
+      >
+        <RefreshCw
+          size={18}
+          strokeWidth={1.75}
+          className={isRefreshing ? 'animate-spin text-[var(--color-brand-600)]' : ''}
+        />
+      </button>
+    );
+    return () => setTopbarActions(null);
+  }, [setTopbarActions, handleReload, isRefreshing]);
+
   const updateCombinedFilter = (s: string, p: string) => {
     const params = new URLSearchParams(searchParams);
     params.set('status', s);
@@ -212,11 +235,6 @@ export default function OrderDetailPage() {
   const applyPreset = (preset: ColumnPreset) => {
     setActivePreset(preset);
     setVisibleKeys(COLUMN_GROUP_PRESETS[preset]);
-  };
-
-  const toggleColumn = (key: string) => {
-    setActivePreset(null);
-    setVisibleKeys((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
   };
 
   useEffect(() => {
@@ -260,10 +278,33 @@ export default function OrderDetailPage() {
 
   // Filter lines locally
   const lines = rawLines.filter(line => {
-    if (!searchTerm.trim()) return true;
-    const s = searchTerm.toLowerCase();
-    return Object.values(line).some(v => String(v).toLowerCase().includes(s));
+    // 1. Keyword search
+    if (searchTerm.trim()) {
+      const s = searchTerm.toLowerCase();
+      if (!Object.values(line).some(v => String(v).toLowerCase().includes(s))) return false;
+    }
+    // 2. Process active filters (legacy system behavior: filter rows that have quantity in checked processes)
+    if (activeProcessFilters.length > 0) {
+      for (const key of activeProcessFilters) {
+        if (Number(line[key] || 0) === 0) return false;
+      }
+    }
+    return true;
   });
+
+  // Calculate process summaries like the old system (sum of quantities for each production process)
+  const LEGACY_SUMMARY_KEYS = [
+    'StoneQty', 'FindingQty', 'WaxQty', 'CastQty', 'ControlQty', 
+    'GrindQty', 'SolderQty', 'FilingQty', 'SetQty', 'PolishQty', 
+    'PlatingQty', 'FQCQty'
+  ];
+  
+  const processSummaries = ORDER_DETAIL_COLUMNS
+    .filter(c => c.group === 'production' && LEGACY_SUMMARY_KEYS.includes(c.key))
+    .map(col => {
+      const sum = lines.reduce((acc, l) => acc + Number(l[col.key] || 0), 0);
+      return { ...col, sum };
+    });
 
   const pageTitle = isGroup
     ? String(h.PONo || 'Group Detail')
@@ -302,37 +343,14 @@ export default function OrderDetailPage() {
           )}
         </div>
 
-        <div className="order-detail-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <button onClick={() => setRefreshVersion(version => version + 1)} title="Refresh Data" style={ACT_ICON}>
-            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-          </button>
-          <button
-            onClick={() => exportOrderDetailExcel(lines, h as unknown as Record<string, unknown>, pageTitle, (filePath) => {
-              setToastMessage(`Exported successfully to: ${filePath}`);
-              setTimeout(() => setToastMessage(null), 5000);
-            })}
-            disabled={loading || lines.length === 0}
-            title="Export to Excel"
-            style={{ ...ACT_BTN, ...ACT_NEUTRAL, cursor: loading || lines.length === 0 ? 'not-allowed' : 'pointer', opacity: loading || lines.length === 0 ? 0.5 : 1 }}
-          >
-            <FileSpreadsheet size={16} /> Excel
-          </button>
-          <button
-            onClick={() => setShowPhotoGallery(true)}
-            disabled={loading}
-            title="View All Photos"
-            style={{ ...ACT_BTN, ...ACT_NEUTRAL, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.5 : 1 }}
-          >
-            <Image size={16} /> Photo
-          </button>
-          <button
-            onClick={() => navigate('/po-tracker')}
-            title="Close & return to PO Tracker"
-            style={{ ...ACT_BTN, ...ACT_DANGER }}
-          >
-            <X size={16} /> Close
-          </button>
-        </div>
+        <button
+          onClick={() => navigate('/po-tracker')}
+          title="Close &amp; return to PO Tracker"
+          className="group flex items-center gap-2 h-9 pl-3 pr-4 rounded-lg border border-[var(--color-border-default)] bg-[var(--color-surface-0)] text-[var(--color-text-secondary)] text-[0.8rem] font-extrabold tracking-wide cursor-pointer transition-all duration-200 hover:border-[var(--color-danger-200)] hover:bg-[var(--color-danger-50)] hover:text-[var(--color-danger-500)] hover:shadow-[0_0_0_3px_var(--color-danger-50)]"
+        >
+          <X size={16} strokeWidth={2.5} className="transition-transform duration-200 group-hover:rotate-90" />
+          <span>Close</span>
+        </button>
       </div>
 
       {/* ══ Toolbar Row 2 — view mode · status · search · columns ══ */}
@@ -385,10 +403,10 @@ export default function OrderDetailPage() {
             </div>
           </div>
 
-          {/* View Columns popover */}
+          {/* View Columns Button */}
           <div style={{ position: 'relative' }}>
             <button
-              onClick={(e) => { e.stopPropagation(); setShowColPicker(!showColPicker); }}
+              onClick={() => setShowColPicker(true)}
               style={{
                 padding: '8px 12px', borderRadius: 8,
                 border: '1px solid var(--color-border-strong)', background: 'var(--color-surface-0)',
@@ -396,73 +414,49 @@ export default function OrderDetailPage() {
                 outline: 'none', cursor: 'pointer',
                 display: 'flex', alignItems: 'center', gap: '8px',
               }}
+              className="hover:bg-[var(--color-surface-2)] transition-colors"
             >
               <Layers size={16} style={{ color: 'var(--color-text-tertiary)' }} />
               <span>View Columns</span>
-              <ChevronDown size={13} style={{ transform: showColPicker ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s ease' }} />
             </button>
-
-            {showColPicker && (
-              <>
-                <div
-                  onClick={() => { setShowColPicker(false); setColSearch(''); }}
-                  style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'transparent' }}
-                />
-                <div
-                  onClick={(e) => e.stopPropagation()}
-                  style={{
-                    position: 'absolute', top: 'calc(100% + 8px)', right: 0,
-                    background: 'var(--color-ui-surface)', borderRadius: '8px',
-                    boxShadow: 'var(--shadow-dropdown)',
-                    padding: '8px', zIndex: 101,
-                    width: '260px', display: 'flex', flexDirection: 'column', gap: '8px',
-                  }}
-                >
-                  <div style={{ position: 'relative' }}>
-                    <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-quaternary)' }} />
-                    <input
-                      autoFocus
-                      placeholder="Find column..."
-                      value={colSearch}
-                      onChange={(e) => setColSearch(e.target.value)}
-                      style={{
-                        width: '100%', padding: '8px 10px 8px 30px', borderRadius: '8px',
-                        background: 'var(--color-surface-0)', border: '1px solid var(--color-border-light)',
-                        fontSize: '0.75rem', color: 'var(--color-text-primary)', fontWeight: 600,
-                        outline: 'none',
-                      }}
-                    />
-                  </div>
-
-                  <div className="custom-scrollbar" style={{ maxHeight: '360px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px', paddingRight: '4px' }}>
-                    {TOGGLEABLE_GROUPS.map(({ group, label }) => {
-                      const cols = ORDER_DETAIL_COLUMNS.filter((c) => c.group === group && c.label.toLowerCase().includes(colSearch.toLowerCase()));
-                      if (cols.length === 0) return null;
-                      return (
-                        <div key={group}>
-                          <div style={{ fontSize: '0.62rem', fontWeight: 800, color: 'var(--color-text-quaternary)', textTransform: 'capitalize', letterSpacing: '0.08em', padding: '6px 8px 2px' }}>
-                            {label}
-                          </div>
-                          {cols.map((col) => (
-                            <button
-                              key={col.key}
-                              onClick={() => toggleColumn(col.key)}
-                              style={{ border: 'none', cursor: 'pointer', textAlign: 'left', width: '100%' }}
-                              className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm transition-colors font-bold ${visibleKeys.includes(col.key) ? 'bg-[var(--color-brand-100)] text-[var(--color-brand-600)]' : 'text-[var(--color-text-primary)] hover:bg-[var(--color-surface-0)]'}`}
-                            >
-                              <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{col.label}</span>
-                              {visibleKeys.includes(col.key) && <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-brand-500)] ml-2 flex-shrink-0" />}
-                            </button>
-                          ))}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </>
-            )}
           </div>
         </div>
+      </div>
+
+      {/* -- Process Summary & Quick Column Toggle (Legacy System Port) -- */}
+      <div className="custom-scrollbar" style={{
+        padding: '10px 20px', background: 'var(--color-surface-0)', borderBottom: '1px solid var(--color-border-strong)',
+        display: 'flex', alignItems: 'center', gap: '12px', overflowX: 'auto', flexShrink: 0
+      }}>
+        <div style={{ fontSize: '0.7rem', fontWeight: 900, color: 'var(--color-brand-600)', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap', marginRight: '8px' }}>
+          Process Tracking
+        </div>
+        {processSummaries.map(p => {
+          const isActive = activeProcessFilters.includes(p.key);
+          return (
+            <label key={p.key} style={{
+              display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', whiteSpace: 'nowrap',
+              padding: '4px 8px', borderRadius: '6px', 
+              background: isActive ? 'var(--color-brand-50)' : 'transparent',
+              border: isActive ? '1px solid var(--color-brand-200)' : '1px solid transparent',
+              transition: 'all 0.15s'
+            }} className="hover:bg-[var(--color-surface-2)]">
+              <input 
+                type="checkbox" 
+                checked={isActive}
+                onChange={(e) => {
+                  if (e.target.checked) setActiveProcessFilters(prev => [...prev, p.key]);
+                  else setActiveProcessFilters(prev => prev.filter(k => k !== p.key));
+                }}
+                style={{ margin: 0, cursor: 'pointer', width: '13px', height: '13px', accentColor: 'var(--color-brand-500)' }}
+              />
+              <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--color-text-secondary)' }}>{p.label}</span>
+              <span style={{ fontSize: '0.75rem', fontWeight: 900, color: p.sum < 0 ? 'var(--color-danger-500)' : 'var(--color-text-primary)' }}>
+                {p.sum.toLocaleString()}
+              </span>
+            </label>
+          );
+        })}
       </div>
 
       {/* -- Error -- */}
@@ -496,16 +490,19 @@ export default function OrderDetailPage() {
         )}
       </div>
 
-      {toastMessage && (
-        <div style={{ position: 'fixed', right: 24, bottom: 24, zIndex: 200, padding: '12px 16px', borderRadius: 10, background: 'var(--color-surface-0)', border: '1px solid var(--color-success-500)', color: 'var(--color-success-600)', fontSize: '0.8rem', fontWeight: 800, boxShadow: '0 12px 32px color-mix(in srgb, var(--color-surface-900) 18%, transparent)' }}>
-          {toastMessage}
-        </div>
-      )}
 
-      {/* Photo Gallery Modal */}
-      {showPhotoGallery && (
-        <PhotoGalleryModal lines={lines} onClose={() => setShowPhotoGallery(false)} />
-      )}
+
+      {/* View Columns Modal */}
+      <OrderDetailCustomViewModal
+        isOpen={showColPicker}
+        onClose={() => setShowColPicker(false)}
+        initialVisibleKeys={visibleKeys}
+        initialPreset={activePreset || 'Production'}
+        onApply={(keys) => {
+          setVisibleKeys(keys);
+          setActivePreset(null);
+        }}
+      />
 
       {/* Line Detail Drawer */}
       {selectedLine && (

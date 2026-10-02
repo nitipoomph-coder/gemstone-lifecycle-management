@@ -1,3 +1,4 @@
+import { formatDateDDMMYYYY } from '../../utils/dateUtils';
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PageHeader from './PageHeader';
@@ -184,9 +185,9 @@ export default function DocumentLayout({
   const getHeaderValue = (h: any, name: string): string => {
     const map: Record<string, string> = {
       docNumber: h.docNumber || h.DocuNo,
-      docDate: h.docDate || (h.DocuDate ? new Date(h.DocuDate).toLocaleDateString('th-TH') : ''),
+      docDate: h.docDate || (h.DocuDate ? formatDateDDMMYYYY(h.DocuDate) : ''),
       purchaseDate: h.purchaseDate,
-      dueDate: h.dueDate || (h.DueDate ? new Date(h.DueDate).toLocaleDateString('th-TH') : ''),
+      dueDate: h.dueDate || (h.DueDate ? formatDateDDMMYYYY(h.DueDate) : ''),
       receiveDate: h.receiveDate,
       supplierCode: h.supplierCode || h.CustCode || h.VendorCode || '',
       supplierName: h.supplierName || h.CustName || '',
@@ -200,7 +201,7 @@ export default function DocumentLayout({
       refNumber: h.refNumber || h.RefNo || h.RefDocuNo || '',
       receiptNumber: h.billNumber,
       orderNumber: h.orderNumber || h.OrdNo || h.OrderNo || '',
-      orderDate: h.orderDate || (h.OrdDate || h.OrderDate ? new Date(h.OrdDate || h.OrderDate).toLocaleDateString('th-TH') : ''),
+      orderDate: h.orderDate || (h.OrdDate || h.OrderDate ? formatDateDDMMYYYY(h.OrdDate || h.OrderDate) : ''),
       poNumber: h.poNumber || h.PONo || '',
       itemCount: String(lines.length),
       jobNumber: h.jobNumber || h.JobNo || '',

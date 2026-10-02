@@ -1,3 +1,4 @@
+import { formatDateDDMMYY } from '../../../utils/dateUtils';
 import React from 'react';
 import { Check } from 'lucide-react';
 import type { TrackingStep } from '../../../services/orderTrackingAPI';
@@ -156,7 +157,7 @@ export const OrderTrackStepper: React.FC<OrderTrackStepperProps> = ({ steps }) =
                                     ) : isDone ? (
                                         <div style={{ color: 'var(--color-text-secondary)', fontWeight: 600 }}>
                                             {step.repDate
-                                                ? new Date(step.repDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' })
+                                                ? formatDateDDMMYY(step.repDate)
                                                 : '-'}
                                         </div>
                                     ) : (

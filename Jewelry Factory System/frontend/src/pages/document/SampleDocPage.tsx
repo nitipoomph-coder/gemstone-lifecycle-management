@@ -1,3 +1,4 @@
+import { formatDateDDMMYYYY } from '../../utils/dateUtils';
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import DocumentLayout from '../../components/layout/DocumentLayout';
@@ -56,7 +57,7 @@ function SampleDocWorkspace({ docType }: { docType: string }) {
         if (cancelled) return;
         const mappedList = response.data.map(d => ({
           no: d.DocuNo,
-          date: d.DocuDate ? new Date(d.DocuDate).toLocaleDateString('th-TH') : '',
+          date: d.DocuDate ? formatDateDDMMYYYY(d.DocuDate) : '',
         }));
         setDocList(mappedList);
         setTotalPages(response.totalPages || 1);

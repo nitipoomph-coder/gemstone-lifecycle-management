@@ -1,11 +1,13 @@
 // src/components/orderDetail/format.ts
 import type { OrderDetailColumn } from '../../config/orderDetailColumns';
 
+import { formatDateDDMMYY } from '../../utils/dateUtils';
+
 export const DATE_KEYS = new Set(['OrdDate', 'DueDate', 'QCDate', 'CustDueDate', 'InvoiceDate']);
 
 export const fDate = (d: string | null | undefined) => {
   if (!d) return '—';
-  return new Date(d).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: '2-digit' });
+  return formatDateDDMMYY(d);
 };
 
 export const fQty = (n: number | string | null | undefined) =>

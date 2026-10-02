@@ -1,3 +1,4 @@
+import { formatDateDDMMYY } from '../utils/dateUtils';
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import PageHeader from '../components/layout/PageHeader';
 import { BREADCRUMBS } from '../config/breadcrumbs';
@@ -307,13 +308,13 @@ export default function FBEOrderTrackPage() {
                   <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
                     <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)', fontWeight: 600 }}>Order Date ( Date ) :</span>
                     <span style={{ fontWeight: 700, color: 'var(--color-text-primary)', fontSize: '12.5px' }}>
-                      {info?.OrdDate ? new Date(info.OrdDate).toLocaleDateString('en-GB') : '-'}
+                      {info?.OrdDate ? formatDateDDMMYY(info.OrdDate) : '-'}
                     </span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span style={{ fontSize: '11px', color: 'var(--color-warning-600)', fontWeight: 800 }}>Due Date ( Due Date ) :</span>
                     <span style={{ fontWeight: 900, color: 'var(--color-warning-600)', fontSize: '13px' }}>
-                      {info?.DueDate ? new Date(info.DueDate).toLocaleDateString('en-GB') : '-'}
+                      {info?.DueDate ? formatDateDDMMYY(info.DueDate) : '-'}
                     </span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
@@ -478,7 +479,7 @@ export default function FBEOrderTrackPage() {
                             {h.stepIndex}. {h.nameEN} <span style={{ color: 'var(--color-text-secondary)', fontWeight: 500 }}>({h.nameTH})</span>
                           </td>
                           <td style={{ padding: '6px 8px', color: 'var(--color-text-primary)', fontVariantNumeric: 'tabular-nums', borderRight: '1px solid var(--color-border-default)' }}>
-                            {h.repDate ? new Date(h.repDate).toLocaleDateString('en-GB') : '-'}
+                            {h.repDate ? formatDateDDMMYY(h.repDate) : '-'}
                           </td>
                           <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 700, color: 'var(--color-text-primary)', fontVariantNumeric: 'tabular-nums', borderRight: '1px solid var(--color-border-default)' }}>
                             {h.recQty > 0 ? h.recQty.toLocaleString() : '-'}

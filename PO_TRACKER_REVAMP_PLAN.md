@@ -134,10 +134,11 @@
 3. ✅ เช็ค `POTrackerAdvanced.tsx` — always-on/filtered list (`no/week/cust/po/arrow`) ยังตรง, ไม่ต้องแก้
 4. ✅ Verify — `tsc --noEmit` ผ่าน (ไฟล์ที่แก้ไม่มี error) · eslint ไม่มี error ใหม่
 
-### Phase 2 — SQL (รอ user สั่ง)
-4. เพิ่ม `EXNo` (PO2), `CloseStatus`, `Metal(OrdMat มีแล้ว)` ใน SELECT ของ `_OrdDate` + `_All`
-5. เพิ่ม Stage Qty (`ExportQty`/`BalQty`/`ExpPct`) ที่ `_All` ยังไม่ส่ง
-6. เพิ่ม `@Status` ให้ SP อีก 4 ตัว (แก้ปัญหา Status toggle ที่ทำงานแค่ Order Date)
+### Phase 2 — SQL ❌ ยกเลิก (แก้ SP แล้วระบบ VB.NET เดิมพัง → นโยบายปัจจุบันไม่แตะ DB 100%)
+> SP บน DB เป็นตัวเดิม (รับ `@FromDate`, `@ToDate`) — การกรองสถานะ Pending/Finish/All ทำใน Node.js/React แทน รายการด้านล่างเก็บไว้เป็นประวัติ ห้ามทำ
+4. ~~เพิ่ม `EXNo` (PO2), `CloseStatus`, `Metal(OrdMat มีแล้ว)` ใน SELECT ของ `_OrdDate` + `_All`~~
+5. ~~เพิ่ม Stage Qty (`ExportQty`/`BalQty`/`ExpPct`) ที่ `_All` ยังไม่ส่ง~~
+6. ~~เพิ่ม `@Status` ให้ SP อีก 4 ตัว~~
 
 ---
 
@@ -146,11 +147,11 @@
 - [x] `PC2/PL/PPL` label — ใช้ชื่อเต็ม (Control/Polish/Plating)
 - [x] ระบบคีย์งาน — ลบทิ้ง (ไม่เก็บ comment)
 
-### เหลือทำ (Phase 2 — SQL, รอ user สั่ง)
-- [ ] เพิ่ม `EXNo` (PO2) + `CloseStatus` ใน SELECT ของ `_OrdDate` + `_All` → PO2/late-highlight ทำงานบน "Order Date" (default view)
-- [ ] เพิ่ม `ExportQty`/`BalQty`/`ExpPct` ที่ `_All` ยังไม่ส่ง (Shipped/Balance/%Shipped ว่างในโหมด All Dates)
-- [ ] `BookShip` มีเฉพาะ SP `_Due/_Fin/_CustDue` → เพิ่มใน `_OrdDate`/`_All` ถ้าต้องการ
-- [ ] เพิ่ม `@Status` ให้ SP อีก 4 ตัว → แก้ Status toggle (pending/finish/all) ที่ตอนนี้ทำงานแค่ Order Date
+### ❌ Phase 2 — SQL (ยกเลิกทั้งหมด ห้ามแก้ SP)
+- ~~เพิ่ม `EXNo` (PO2) + `CloseStatus` ใน SELECT ของ `_OrdDate` + `_All`~~
+- ~~เพิ่ม `ExportQty`/`BalQty`/`ExpPct` ที่ `_All` ยังไม่ส่ง~~
+- ~~`BookShip` เพิ่มใน `_OrdDate`/`_All`~~
+- ~~เพิ่ม `@Status` ให้ SP อีก 4 ตัว~~ → แก้แล้วด้วยการกรองสถานะใน Memory
 
 ### หมายเหตุ known-issue (pre-existing, ไม่ได้แก้ในรอบนี้)
 - eslint `react-refresh/only-export-components` ที่ export `MASTER_COLS`/`GROUP_PRESETS` จาก `OrderTable.tsx` — เป็น architecture เดิม (POTrackerAdvanced import ไปใช้) ถ้าจะเคลียร์ต้องแยกไป `orderTableColumns.ts`

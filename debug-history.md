@@ -67,6 +67,8 @@ After restoring the missing braces in TopOrdersGalleryPage, the npm run build pr
 **Date:** 2026-07-02
 **Component:** `PC_Show_OrdTrack_Sum_*` (dbGeneration), `routes/orders.js`, `backend/sql/`
 
+> ⚠️ **สถานะปัจจุบัน (2026-10-08):** Index (Fix #2) **ยังอยู่และใช้งานจริง** — แต่การแก้ SP ทั้งหมด (Fix #1, #3) และการส่ง `@Status` (Fix #4) **ถูกยกเลิก** เพราะทำให้ระบบ VB.NET เดิมพัง → SP บน DB เป็นตัวเดิม, backend ส่งแค่ `@FromDate`/`@ToDate`, กรองสถานะใน Memory และนโยบายตอนนี้คือ **ไม่แตะ DB 100%**
+
 ### Symptoms:
 งานหลักคือตัดการดึงรูปแบบ base64 (VARBINARY จาก `GMItemPhoto`) ออกจากระบบ + เร่ง SP ให้เร็วขึ้น ระหว่างเช็คข้อมูลจริงก่อนแก้ พบปัญหาที่ซ่อนอยู่หลายจุด
 

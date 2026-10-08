@@ -681,7 +681,7 @@ SP ทั้ง 5 ตัวใช้โครงสร้าง CTE เดีย
 |-----------|-------------|---------|--------|
 | `IX_OrdWeekPlanHD_PlanDate` | `PlanDate` | PlanYear, PlanWeek | JOIN DueDate |
 
-**SQL Script สำหรับ Index:** เก็บไว้เป็น Reference ใน `backend/sql/indexes.sql` เท่านั้น — **🛑 ห้ามนำไปรันบน Database เด็ดขาด** ทุกการดำเนินการบน DB ต้องเป็นไปตามที่ผู้ดูแลระบบและระบบเดิมกำหนดไว้เท่านั้น
+**SQL Script สำหรับ Index:** `backend/sql/indexes.sql` (22 ตัว) และ View `VW_Web_SalesDashboard` — **สร้างบน DB แล้วและใช้งานอยู่จริง** เก็บไฟล์ไว้เป็น SSOT เผื่อ DB ถูก restore — **🛑 AI ห้ามรัน/สร้าง/ลบ Index หรือ View เพิ่มเอง** (นโยบายไม่แตะ DB 100%) ส่วนไฟล์ใน `backend/sql/stored-procedures/` เป็นแบบร่างที่ยกเลิก ห้ามรันเด็ดขาด
 
 ---
 

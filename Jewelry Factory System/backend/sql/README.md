@@ -5,6 +5,13 @@ SSOT ของ Stored Procedures และ Index ที่ระบบ PO Tracke
 
 Target: **SQL Server 2012 Enterprise** · DB `dbGeneration` · server `192.168.5.40`
 
+> [!IMPORTANT]
+> **สถานะจริงบน Database ปัจจุบัน (อัปเดต 2026-10-08)**
+> - ✅ **Index 22 ตัว (`indexes.sql`) และ View `VW_Web_SalesDashboard`** — สร้างแล้วและ **ใช้งานอยู่จริง**
+> - ❌ **Stored Procedures `PC_Show_OrdTrack_Sum_*`** — **ไม่ได้ใช้เวอร์ชันที่แก้** เพราะทำให้ระบบ VB.NET เดิมพัง → บน DB เป็น SP ตัวเดิม (Baseline รับ 2 params: `@FromDate`, `@ToDate`) และ backend ส่งแค่ 2 params นี้
+> - ไฟล์ใน `stored-procedures/` เป็น **แบบร่างที่ยกเลิกแล้ว ห้ามนำไปรัน** — ส่วนที่พูดถึงการแก้ SP ด้านล่างเก็บไว้เป็นประวัติเท่านั้น
+> - **นโยบายปัจจุบัน: ไม่แตะ DB 100%** — ห้ามสร้าง/ลบ/แก้ Index, View, SP, Table เพิ่มเติม
+
 ## โครงสร้าง
 
 ```
@@ -13,7 +20,7 @@ sql/
 ├── indexes.sql                     # 22 covering indexes (9 SP + 13 Web App)
 ├── views/                          # Database Views สำหรับระบบเว็บ (SSOT)
 │   └── VW_Web_SalesDashboard.sql   # Central View สำหรับ Customer Dashboard, Matrix & Order Trends
-├── stored-procedures/              # SP เวอร์ชันปัจจุบัน (ตัดรูป base64 ออกแล้ว)
+├── stored-procedures/              # ❌ แบบร่าง SP ที่ยกเลิก (ไม่ได้ใช้บน DB) — ห้ามรัน
 │   ├── PC_Show_OrdTrack_Sum_OrdDate.sql      # @FromDate/@ToDate/@Status · 63 cols
 │   ├── PC_Show_OrdTrack_Sum_DueDate.sql      # @FromDate/@ToDate/@Status · 63 cols
 │   ├── PC_Show_OrdTrack_Sum_CustDueDate.sql  # @FromDate/@ToDate/@Status · 63 cols
@@ -65,7 +72,7 @@ sql/
 
 ## การเปลี่ยนแปลงหลัก (2026-07-02)
 
-### 1. ตัดรูป base64 ออกจาก SP → ประสิทธิภาพ
+### 1. ตัดรูป base64 ออกจาก SP → ประสิทธิภาพ — ❌ ยกเลิก (SP บน DB เป็นตัวเดิม)
 เดิมทุก SP `LEFT JOIN GMItemPhoto` แล้ว `MAX(CAST(ItemPhoto AS VARBINARY(MAX)))` ในทุก aggregate CTE
 และ outer query ยัง `GROUP BY` ด้วยก้อน blob อีกชั้น → คอขวด
 - ลบ join รูปทั้งหมด แล้วส่ง **`SampleItemNo` = `MIN(OrdDT.ItemNo)`** (ItemNo ตัวแทน 1 ค่า/กลุ่ม) แทน
@@ -87,12 +94,14 @@ sql/
 - **Item Yearly Summary**: ใช้ index จาก Search + Customer Sales ร่วมกัน
 
 
-### 4. ซ่อม `_All` ที่พังอยู่เดิม
+### 4. ซ่อม `_All` ที่พังอยู่เดิม — ❌ ยกเลิก (ไม่ได้แก้บน DB)
 `_All` เดิม `LEFT JOIN VPC_OrdSum_Detail` ซึ่งเป็น view ที่ binding error (อ้างตาราง MasterFileProduct/Item_Head
 ที่หายหลัง restore) ทำให้ ALTER/รันไม่ได้ — view ถูก join แบบ LEFT แต่ไม่มีคอลัมน์ใดถูก SELECT (dead join, no-op
 ต่อผลลัพธ์เพราะ GROUP BY ยุบ row ซ้ำ) จึงลบทิ้ง → `_All` กลับมาใช้งานได้
 
-## การเปลี่ยนแปลงหลัก (2026-07-04) — เติมคอลัมน์ที่ UI มีช่องแต่ว่าง + @Status ครบทุกตัว
+## ❌ [ยกเลิก — ทำให้ระบบ VB.NET พัง] การเปลี่ยนแปลง (2026-07-04) — เติมคอลัมน์ + @Status ครบทุกตัว
+
+> ส่วนนี้เก็บไว้เป็นประวัติเท่านั้น — SP บน DB ไม่มี `@Status` และการกรองสถานะทำใน Node.js/React แทน
 
 ทั้ง 5 SP ตอนนี้คืน **63 คอลัมน์เท่ากัน** (เดิม `_OrdDate`=60, `_All`=57, `_Due/_CustDue/_Fin`=62) และรับ `@Status` ครบ
 ทุกการเปลี่ยนเป็นแบบ **"เพิ่ม" อย่างเดียว ไม่ลบ/ไม่แก้ logic เดิม** และ **behavior-preserving สำหรับ `@Status='pending'`**
@@ -148,25 +157,8 @@ View กลางตัวเดียว (Single Source of Truth) ที่เ�
 
 ---
 
-## วิธี Apply (ตามลำดับ)
+## การใช้ไฟล์ในโฟลเดอร์นี้
 
-รันด้วย SSMS หรือ `sqlcmd` (ไฟล์มี `GO` batch separator + `IF NOT EXISTS` / `ALTER PROCEDURE` กันพัง):
-
-```bash
-# 1) Database View (สร้างหรืออัปเดต View กลาง)
-sqlcmd -S 192.168.5.40 -d dbGeneration -U <user> -i views/VW_Web_SalesDashboard.sql
-
-# 2) Index ก่อน (ONLINE, ใช้เวลาไม่กี่วินาที)
-sqlcmd -S 192.168.5.40 -d dbGeneration -U <user> -i indexes.sql
-
-# 3) Stored Procedures (ALTER — คงสิทธิ์เดิม ไม่ต้อง DROP)
-sqlcmd -S 192.168.5.40 -d dbGeneration -U <user> -i stored-procedures/PC_Show_OrdTrack_Sum_OrdDate.sql
-#   ... ทำครบทั้ง 5 ไฟล์
-```
-
-> ⚠️ **ต้อง apply SP ทั้ง 5 ก่อน deploy backend รุ่นใหม่**: `routes/orders.js` ตอนนี้ส่ง `@Status` ให้ SP **ทุกตัว**
-> — ถ้ายังไม่ apply SP ใหม่ ตัวที่ยังไม่มี `@Status` จะ error "too many arguments" ทันที (apply SQL → แล้วค่อย deploy backend)
-
-## Rollback
-ALTER กลับด้วยไฟล์ใน `_baseline/` (ต้องเติม `USE [dbGeneration]` + เปลี่ยน `CREATE` เป็น `ALTER` เอง
-เพราะ dump มาเป็น `CREATE PROCEDURE`)
+- `indexes.sql` และ `views/VW_Web_SalesDashboard.sql` — **สร้างบน DB แล้ว** เก็บไว้เป็น SSOT สำหรับกรณี DB ถูก restore แล้วหาย (ให้ผู้ดูแลระบบเป็นคนตัดสินใจรันเท่านั้น — AI ห้ามรันเอง)
+- `stored-procedures/` — ❌ **ห้ามรัน** (เคยทดลองแล้วทำให้ระบบ VB.NET เดิมพัง)
+- `_baseline/` — definition SP ตัวเดิม = สิ่งที่อยู่บน DB จริงตอนนี้ ใช้อ้างอิงคอลัมน์ที่ SP คืนมา

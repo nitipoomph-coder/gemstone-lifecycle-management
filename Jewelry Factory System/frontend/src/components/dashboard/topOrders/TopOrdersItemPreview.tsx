@@ -62,7 +62,7 @@ export function TopOrdersItemPreview({
       style={{
         position: 'fixed',
         inset: 0,
-        backgroundColor: 'color-mix(in srgb, var(--color-surface-950) 45%, transparent)',
+        backgroundColor: 'color-mix(in srgb, var(--color-surface-900) 45%, transparent)',
         backdropFilter: 'blur(3px)',
         zIndex: 9999,
         display: 'flex',

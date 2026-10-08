@@ -200,7 +200,7 @@ export function TopOrdersGalleryGrid({
                   zIndex: 10,
                   opacity: 0,
                   transition: 'opacity 0.2s ease',
-                  background: 'color-mix(in srgb, var(--color-surface-950) 94%, transparent)',
+                  background: 'color-mix(in srgb, var(--color-surface-900) 94%, transparent)',
                   backdropFilter: 'blur(6px)',
                   pointerEvents: 'none',
                 }}

@@ -40,7 +40,10 @@ function getWorkDaysInDateRange(minDateStr: string, maxDateStr: string, holidays
   if (!minDateStr || !maxDateStr) return 0;
   let workDays = 0;
   const d = parseDateLocal(minDateStr);
-  const end = parseDateLocal(maxDateStr);
+  let end = parseDateLocal(maxDateStr);
+  const today = new Date();
+  today.setHours(23, 59, 59, 999);
+  if (end > today) end = today;
 
   while (d <= end) {
     if (d.getDay() !== 0) {
@@ -57,8 +60,13 @@ function getWorkDaysInDateRange(minDateStr: string, maxDateStr: string, holidays
 function getWorkDaysInMonth(year: number, month: number, holidays: string[]): number {
   let workDays = 0;
   const daysInMonth = new Date(year, month, 0).getDate();
+  const today = new Date();
+  today.setHours(23, 59, 59, 999);
+
   for (let d = 1; d <= daysInMonth; d++) {
     const date = new Date(year, month - 1, d);
+    if (date > today) break;
+
     if (date.getDay() === 0) continue;
 
     const dStr = toLocalYMD(date);
@@ -141,7 +149,8 @@ export default function ProductionSummaryPage() {
             total += val;
           });
 
-          const workDays = getWorkDaysInMonth(activeYear, m, holidays);
+          let workDays = getWorkDaysInMonth(activeYear, m, holidays);
+          if (total === 0) workDays = 0;
           const avg = workDays > 0 ? total / workDays : 0;
 
           return {
@@ -182,7 +191,8 @@ export default function ProductionSummaryPage() {
           } else {
             workDays = 6;
           }
-
+          
+          if (total === 0) workDays = 0;
           const avg = workDays > 0 ? total / workDays : 0;
 
           return {
@@ -219,6 +229,7 @@ export default function ProductionSummaryPage() {
           if (date.getDay() !== 0 && !holidays.includes(dStr)) {
             workDays = 1;
           }
+          if (total === 0) workDays = 0;
 
           return {
             period: dStr,
@@ -269,6 +280,7 @@ export default function ProductionSummaryPage() {
           if (dateObj.getDay() !== 0 && !holidays.includes(dStr)) {
             workDays = 1;
           }
+          if (total === 0) workDays = 0;
 
           const parts = dStr.split('-');
           const label = `${parts[2]}/${parts[1]}/${parts[0]}`;

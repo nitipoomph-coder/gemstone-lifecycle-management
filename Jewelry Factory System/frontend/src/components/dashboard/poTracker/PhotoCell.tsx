@@ -81,7 +81,7 @@ export function PhotoCell({ itemNo, title }: PhotoCellProps) {
               position: 'fixed',
               inset: 0,
               zIndex: 99999,
-              background: 'color-mix(in srgb, var(--color-surface-950) 85%, transparent)',
+              background: 'color-mix(in srgb, var(--color-surface-900) 85%, transparent)',
               backdropFilter: 'blur(5px)',
               display: 'flex',
               alignItems: 'center',
@@ -127,7 +127,7 @@ export function PhotoCell({ itemNo, title }: PhotoCellProps) {
                 maxHeight: '85vh',
                 objectFit: 'contain',
                 cursor: 'default',
-                filter: 'drop-shadow(0 12px 28px color-mix(in srgb, var(--color-surface-950) 60%, transparent))',
+                filter: 'drop-shadow(0 12px 28px color-mix(in srgb, var(--color-surface-900) 60%, transparent))',
               }}
               onError={(e) => {
                 const img = e.currentTarget;

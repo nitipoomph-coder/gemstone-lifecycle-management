@@ -114,6 +114,18 @@
   color: var(--color-text-secondary);
 }
 
+.erp-icon-btn--ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--color-text-secondary);
+}
+
+.erp-icon-btn--ghost:hover:not(:disabled) {
+  background: var(--color-surface-2);
+  border-color: transparent;
+  color: var(--color-brand-600);
+}
+
 .erp-icon-btn--delete {
   color: var(--color-danger-500);
 }

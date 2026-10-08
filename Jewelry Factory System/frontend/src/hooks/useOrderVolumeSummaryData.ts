@@ -165,7 +165,7 @@ export const fmtAxis = (value: number, metric: Metric) => metric === 'amount' ? 
 
 export function useOrderVolumeSummaryData() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { availableYears, refreshCounter, setIsRefreshing, triggerRefresh, isRefreshing } = useOutletContext<import('../pages/CustomerDashboardLayout').CustomerDashboardOutletContext>();
+  const { availableYears, refreshCounter, setIsRefreshing, triggerRefresh, isRefreshing, setIsChildLoading } = useOutletContext<import('../pages/CustomerDashboardLayout').CustomerDashboardOutletContext>();
 
   // Pass an empty custData for now or fetch it if needed for dynamic groups, but typically Trends can just use availableYears.
   // Wait, does Trends need dynamic active groups? It's fine to just use the default.
@@ -276,9 +276,13 @@ export function useOrderVolumeSummaryData() {
       setRiskData([]);
       setError(err instanceof Error ? err.message : 'Failed to load order volume summary');
     } finally {
-      if (requestId === loadRequestIdRef.current) setLoading(false);
+      if (requestId === loadRequestIdRef.current) {
+        setLoading(false);
+        if (setIsChildLoading) setIsChildLoading(false);
+        if (setIsRefreshing) setIsRefreshing(false);
+      }
     }
-  }, [customersKey, selectedYearsKey, selectedMonthsKey, yearsLoading]);
+  }, [customersKey, selectedYearsKey, selectedMonthsKey, yearsLoading, setIsChildLoading, setIsRefreshing]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => { void loadOverviewData(); }, 0);

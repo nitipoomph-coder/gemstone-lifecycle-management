@@ -29,17 +29,12 @@ export interface CustomerReportMatrixRow extends Record<string, unknown> {
   topItemQty?: number;
 }
 
-interface CustomerOutletContext {
-  availableYears: string[];
-  refreshCounter?: number;
-  triggerRefresh?: () => void;
-  isRefreshing?: boolean;
-}
+import type { CustomerDashboardOutletContext } from '../pages/CustomerDashboardLayout';
 
 export function useCustomerReportData() {
   const { theme } = useTheme();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { availableYears, refreshCounter, triggerRefresh, isRefreshing } = useOutletContext<CustomerOutletContext>();
+  const { availableYears, refreshCounter, triggerRefresh, isRefreshing, setIsChildLoading, setIsRefreshing } = useOutletContext<CustomerDashboardOutletContext>();
 
   const { periodSetup, selGroups, setSelGroups, toggleGroup, dynamicActiveGroups, isFiltered, resetFilters } = useCustomerPageFilters(
     availableYears, 
@@ -158,7 +153,13 @@ export function useCustomerReportData() {
       })
         .then((cData) => { if (!cancelled) setCustData(cData); })
         .catch((err: unknown) => console.error('Error fetching customer summary data:', err))
-        .finally(() => { if (!cancelled) setLoading(false); });
+        .finally(() => { 
+          if (!cancelled) {
+            setLoading(false);
+            if (setIsChildLoading) setIsChildLoading(false);
+            if (setIsRefreshing) setIsRefreshing(false);
+          }
+        });
     }, 0);
     return () => {
       cancelled = true;

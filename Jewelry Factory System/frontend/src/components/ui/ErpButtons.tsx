@@ -36,7 +36,7 @@ export function ErpButton({
   );
 }
 
-type IconButtonTone = 'view' | 'edit' | 'refresh' | 'delete' | 'export' | 'neutral';
+type IconButtonTone = 'view' | 'edit' | 'refresh' | 'delete' | 'export' | 'neutral' | 'ghost';
 
 interface ErpIconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   label: string;

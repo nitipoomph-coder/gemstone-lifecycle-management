@@ -388,7 +388,7 @@ export default function POTrackerAdvanced() {
                       title="Late orders calculated based on Customer Due Date (CustDueDate)"
                     >
                       <span style={{ fontSize: '0.62rem', fontWeight: 800, color: delayedCount > 0 ? 'var(--color-danger-600)' : 'var(--color-text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                        LATE (CUST DUE)
+                        OVERDUE
                       </span>
                       <span style={{ fontSize: '1.25rem', fontWeight: 850, color: delayedCount > 0 ? 'var(--color-danger-600)' : 'var(--color-text-secondary)', fontFamily: 'var(--font-display)', lineHeight: 1 }}>
                         {delayedCount.toLocaleString()}

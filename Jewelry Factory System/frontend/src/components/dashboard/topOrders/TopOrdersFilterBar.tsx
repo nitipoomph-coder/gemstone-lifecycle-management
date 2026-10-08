@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, type KeyboardEvent } from 'react';
 import { Search, X, Users, Tag, ChevronDown, Layers, ArrowLeftRight, FilterX } from 'lucide-react';
-import { ALL_GROUPS } from '../../../config/customerGroups';
+import { ALL_GROUPS, ACTIVE_GROUP_IDS } from '../../../config/customerGroups';
 import { PRODUCT_TYPE_OPTIONS, type PerspectiveMode } from '../../../hooks/useTopOrdersGalleryData';
 
 import { ErpSegmentedControl } from '../../ui/ErpButtons';
@@ -35,6 +35,7 @@ interface TopOrdersFilterBarProps {
   swapYears?: () => void;
   isFiltered?: boolean;
   onReset?: () => void;
+  dynamicActiveGroups?: string[];
 }
 
 export function TopOrdersFilterBar({
@@ -59,6 +60,7 @@ export function TopOrdersFilterBar({
   setPerspectiveMode,
   isFiltered = false,
   onReset,
+  dynamicActiveGroups = ACTIVE_GROUP_IDS,
 }: TopOrdersFilterBarProps) {
   const { showToast } = useToast();
   const [showGroupMenu, setShowGroupMenu] = useState(false);
@@ -68,8 +70,10 @@ export function TopOrdersFilterBar({
   const [showPeriodPopover, setShowPeriodPopover] = useState(false);
 
   // Separate active and inactive groups matching CustomerDashboard standard
-  const activeCustomerGroups = ALL_GROUPS.filter(g => g.id !== 'N083');
-  const inactiveCustomerGroups = ALL_GROUPS.filter(g => g.id === 'N083');
+  const activeCustomerGroups = ALL_GROUPS.filter(g => dynamicActiveGroups.includes(g.id));
+  const inactiveCustomerGroups = ALL_GROUPS.filter(g => !dynamicActiveGroups.includes(g.id));
+
+  const isAllActiveSelected = selGroups.length === dynamicActiveGroups.length && dynamicActiveGroups.every(id => selGroups.includes(id));
 
   const typeOptions = PRODUCT_TYPE_OPTIONS.filter(opt => opt.value !== 'ALL');
   const activeTypes = selTypes ?? (productType && productType !== 'ALL' ? productType.split(',') : []);
@@ -377,17 +381,17 @@ export function TopOrdersFilterBar({
               <span style={{ fontWeight: 900, fontSize: 'var(--erp-text-control)', color: 'var(--color-text-primary)' }}>Customer Groups</span>
               <button
                 type="button"
-                onClick={() => selGroups.length === ALL_GROUPS.length ? setSelGroups([]) : setSelGroups(ALL_GROUPS.map(g => g.id))}
+                onClick={() => isAllActiveSelected ? setSelGroups([]) : setSelGroups(dynamicActiveGroups)}
                 style={{
                   fontSize: 'var(--erp-text-meta)',
                   fontWeight: 800,
                   background: 'none',
                   border: 'none',
-                  color: selGroups.length === ALL_GROUPS.length ? 'var(--color-danger-500)' : 'var(--color-ui-interactive)',
+                  color: isAllActiveSelected ? 'var(--color-danger-500)' : 'var(--color-ui-interactive)',
                   cursor: 'pointer'
                 }}
               >
-                {selGroups.length === ALL_GROUPS.length ? 'None' : 'All'}
+                {isAllActiveSelected ? 'None' : 'All'}
               </button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>

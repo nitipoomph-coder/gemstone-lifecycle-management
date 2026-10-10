@@ -12,6 +12,8 @@ import {
   LayoutList,
   TrendingUp,
   Handshake,
+  ShieldAlert,
+  ShieldCheck,
 } from 'lucide-react';
 import type { NavMenuGroup, NavMenuItem } from '../../types';
 import { isNavigationItemActive } from '../../utils/navigationUtils';
@@ -32,6 +34,8 @@ const iconComponents: Record<string, React.ElementType> = {
   'layout-list': LayoutList,
   'trending-up': TrendingUp,
   'handshake': Handshake,
+  'shield-alert': ShieldAlert,
+  'shield-check': ShieldCheck,
 };
 
 interface NavGroupProps {

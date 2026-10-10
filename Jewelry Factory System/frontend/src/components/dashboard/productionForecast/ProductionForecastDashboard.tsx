@@ -3,6 +3,7 @@ import PageHeader from '../../layout/PageHeader';
 import { BREADCRUMBS } from '../../../config/breadcrumbs';
 import { RefreshCw, FilterX } from 'lucide-react';
 import CustomSelect from '../../ui/CustomSelect';
+import { ErpSegmentedControl } from '../../ui/ErpButtons';
 import { useToast } from '../../../contexts/ToastContext';
 import { fetchWithAuth } from '../../../utils/fetchWithAuth';
 import { ProductionForecastChart } from './ProductionForecastChart.tsx';
@@ -13,6 +14,14 @@ import { getYearOptions } from '../../../config/productionSummaryConfig';
 import { useTopbarActions } from '../../../contexts/TopbarActionContext';
 import PeriodSetupPanel from '../../period/PeriodSetupPanel';
 import { usePeriodSetup } from '../../../hooks/usePeriodSetup';
+
+type FactoryFilter = 'ALL' | 'CLL' | 'FBE';
+
+const FACTORY_OPTIONS: { value: FactoryFilter; label: string }[] = [
+  { value: 'ALL', label: 'All Factory' },
+  { value: 'CLL', label: 'CLL' },
+  { value: 'FBE', label: 'FBE' },
+];
 
 const GROUPS = [
   { value: 'All Customer', label: 'All Customer' },
@@ -26,6 +35,7 @@ const GROUPS = [
 ];
 
 export function ProductionForecastDashboard() {
+  const [factory, setFactory] = useState<FactoryFilter>('ALL');
   const [group, setGroup] = useState('All Customer');
   const [data, setData] = useState<ForecastSlot[]>([]);
   const [loading, setLoading] = useState(false);
@@ -92,12 +102,14 @@ export function ProductionForecastDashboard() {
     endStr = `${targetYear}-12-31`;
   }
 
-  const isFiltered = group !== 'All Customer' || 
+  const isFiltered = factory !== 'ALL' ||
+    group !== 'All Customer' || 
     committed.preset !== 'full-year' || 
     committed.baseYear !== String(new Date().getFullYear()) ||
     Boolean(committed.compareActive1);
 
   const handleResetFilters = () => {
+    setFactory('ALL');
     setGroup('All Customer');
     periodSetup.actions.reset();
   };
@@ -121,7 +133,7 @@ export function ProductionForecastDashboard() {
         }
       }
 
-      const res = await fetchWithAuth(`/api/production-forecast?startDate=${startStr}&endDate=${endStr}&group=${encodeURIComponent(group)}&viewMode=${apiViewMode}`);
+      const res = await fetchWithAuth(`/api/production-forecast?startDate=${startStr}&endDate=${endStr}&group=${encodeURIComponent(group)}&viewMode=${apiViewMode}&factory=${factory}`);
       const json = await res.json();
       
       if (json.ok) {
@@ -228,7 +240,7 @@ export function ProductionForecastDashboard() {
     run();
     return () => { isCancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [group, committed]);
+  }, [factory, group, committed]);
 
   const { setTopbarActions } = useTopbarActions();
   const [isSpinning, setIsSpinning] = useState(false);
@@ -305,6 +317,18 @@ export function ProductionForecastDashboard() {
           {/* Unified Filter Card Toolbar - Matches Production Summary Pattern */}
           <div className="no-print bg-[var(--color-surface-0)] border border-[var(--color-border-light)] rounded-lg p-2.5 flex flex-col gap-3 shadow-sm shrink-0">
             <div className="flex items-start gap-4 flex-wrap">
+              {/* Factory Filter */}
+              <div className="flex items-center shrink-0">
+                <ErpSegmentedControl
+                  ariaLabel="Factory Filter"
+                  value={factory}
+                  onChange={(val) => setFactory(val as FactoryFilter)}
+                  options={FACTORY_OPTIONS}
+                />
+              </div>
+
+              <div className="w-[1px] h-8 bg-[var(--color-border-light)] shrink-0 self-center" />
+
               <div className="flex items-center gap-2 shrink-0">
                 <div style={{ width: 180 }}>
                   <CustomSelect
@@ -356,7 +380,7 @@ export function ProductionForecastDashboard() {
               {/* Chart */}
               <div className="bg-[var(--color-ui-surface)] p-4 rounded-md border border-[var(--color-border-default)] shadow-[var(--shadow-panel)] shrink-0" style={{ height: 420 }}>
                 <h3 className="text-base font-extrabold text-[var(--color-text-primary)] mb-2 text-center">
-                  Production Forecast: {group} ( {viewModeType === 'year' ? targetYear : viewModeType === 'week' ? `W${fromWk}-W${toWk} ${targetYear}` : `${new Date(targetYear, targetMonth - 1, 1).toLocaleString('en-US', { month: 'long' })} ${targetYear}`} )
+                  Production Forecast: {factory !== 'ALL' ? `[${factory}] ` : ''}{group} ( {viewModeType === 'year' ? targetYear : viewModeType === 'week' ? `W${fromWk}-W${toWk} ${targetYear}` : `${new Date(targetYear, targetMonth - 1, 1).toLocaleString('en-US', { month: 'long' })} ${targetYear}`} )
                 </h3>
                 <div className="h-[calc(100%-32px)]">
                   <ProductionForecastChart data={data} />

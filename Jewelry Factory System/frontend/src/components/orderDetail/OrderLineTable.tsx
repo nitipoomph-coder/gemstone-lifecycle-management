@@ -52,16 +52,18 @@ interface OrderLineTableProps {
   onPhotoClick?: (itemNo: string) => void;
 }
 
-// หัวตารางแบบ solid (เข้าชุดกับ PO Tracker list — เลิก glassmorphism/blur, ตัวใหญ่ขึ้น อ่านง่ายขึ้น)
+// หัวตารางแบบ solid (เข้าชุดกับ PO Tracker list — ใช้ theme design tokens)
 // userInput = คอลัมน์กลุ่ม remark (ข้อมูลที่ผู้ใช้คีย์เอง) → พื้นอำพันเหมือน list
 const headerCellStyle = (sticky: boolean, left: number, userInput = false): React.CSSProperties => ({
-  background: userInput ? '#004A75' : '#003366', // Classic Dark Blue
+  background: userInput
+    ? 'color-mix(in srgb, var(--color-warning-500) 16%, var(--color-surface-1))'
+    : 'var(--color-surface-1)',
   padding: '6px 8px',
   fontSize: '0.65rem',
-  fontWeight: 700,
-  color: '#ffffff',
-  borderBottom: '1px solid #001F3D',
-  borderRight: '1px solid #004A75',
+  fontWeight: 800,
+  color: 'var(--color-text-primary)',
+  borderBottom: '1px solid var(--color-border-strong)',
+  borderRight: '1px solid var(--color-border-light)',
   textTransform: 'capitalize',
   letterSpacing: '0.02em',
   fontFamily: 'var(--font-body)',

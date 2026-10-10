@@ -22,6 +22,10 @@ import ProcurementDocPage from './pages/document/ProcurementDocPage';
 import RequisitionDocPage from './pages/document/RequisitionDocPage';
 import SampleDocPage from './pages/document/SampleDocPage';
 import VendorPerformanceDashboardPage from './pages/subcontract/VendorPerformanceDashboardPage';
+import SecurityRadarPage from './pages/admin/SecurityRadarPage';
+import AuditLogsPage from './pages/admin/AuditLogsPage';
+import ActiveSessionsPage from './pages/admin/ActiveSessionsPage';
+import UserManagementPage from './pages/admin/UserManagementPage';
 import {
   customerTrendsPathFromSearch,
   LEGACY_CUSTOMER_TRENDS_PATH,
@@ -169,6 +173,12 @@ export default function App() {
             <Route path="/po-tracker/ord/:ordNo" element={<OrderDetailPage />} />
             <Route path="/po-tracker/:ordNo" element={<OrderDetailPage />} />
             <Route path="/item-detail/:id" element={<ItemDetailPage />} />
+
+            {/* Administration & Security (Zero-DB) */}
+            <Route path="/admin/security-radar" element={<SecurityRadarPage />} />
+            <Route path="/admin/users" element={<UserManagementPage />} />
+            <Route path="/admin/audit-logs" element={<AuditLogsPage />} />
+            <Route path="/admin/sessions" element={<ActiveSessionsPage />} />
 
             <Route path="*" element={<PlaceholderPage />} />
           </Route>

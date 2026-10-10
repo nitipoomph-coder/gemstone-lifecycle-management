@@ -744,6 +744,22 @@ router.post('/remarks', async (req, res) => {
       return res.status(400).json({ ok: false, error: 'OrdNo and LineNo are required' });
     }
 
+    // ─── Zero-DB Audit: Capture previous remarks to record exact Diff ─────────
+    let prevRemarks = {};
+    try {
+      const prevCheck = await pool.request()
+        .input('ordNo', sql.NVarChar, String(OrdNo))
+        .input('lineNo', sql.NVarChar, String(LineNo))
+        .query(`
+          SELECT Recvmark, Enamark, Crysmark, Assemmark, Shelfmark, Packmark, Prodmark
+          FROM OrdDT
+          WHERE OrdNo = @ordNo AND OrdLineNo = @lineNo
+        `);
+      prevRemarks = prevCheck.recordset[0] || {};
+    } catch (e) {
+      // Non-blocking query failure
+    }
+
     await pool.request()
       .input('ordNo', sql.NVarChar, String(OrdNo))
       .input('lineNo', sql.NVarChar, String(LineNo))
@@ -765,6 +781,47 @@ router.post('/remarks', async (req, res) => {
             Prodmark = @prod
         WHERE OrdNo = @ordNo AND OrdLineNo = @lineNo
       `);
+
+    // ─── Zero-DB Audit: Log changes to local JSON storage ─────────────────────
+    try {
+      const changes = {};
+      const fields = [
+        { key: 'RecRemark', oldVal: prevRemarks.Recvmark, newVal: RecRemark },
+        { key: 'EnaRemark', oldVal: prevRemarks.Enamark, newVal: EnaRemark },
+        { key: 'CryRemark', oldVal: prevRemarks.Crysmark, newVal: CryRemark },
+        { key: 'AsmRemark', oldVal: prevRemarks.Assemmark, newVal: AsmRemark },
+        { key: 'ShfRemark', oldVal: prevRemarks.Shelfmark, newVal: ShfRemark },
+        { key: 'PkRemark', oldVal: prevRemarks.Packmark, newVal: PkRemark },
+        { key: 'ProdRemark', oldVal: prevRemarks.Prodmark, newVal: ProdRemark },
+      ];
+
+      for (const f of fields) {
+        const o = (f.oldVal || '').trim();
+        const n = (f.newVal || '').trim();
+        if (o !== n) {
+          changes[f.key] = { old: o, new: n };
+        }
+      }
+
+      if (Object.keys(changes).length > 0) {
+        const auditService = require('../services/auditService');
+        auditService.logEvent({
+          category: 'DATA_CHANGE',
+          action: 'PO_REMARK_UPDATE',
+          actor: req.user?.username || 'ANONYMOUS',
+          ip: req.ip || req.headers['x-forwarded-for'],
+          status: 'SUCCESS',
+          severity: 'LOW',
+          details: {
+            ordNo: OrdNo,
+            lineNo: LineNo,
+            diff: changes,
+          },
+        });
+      }
+    } catch (auditErr) {
+      console.error('[AuditService Warning] Failed to log remark change:', auditErr.message);
+    }
 
     res.json({ ok: true });
   } catch (err) {

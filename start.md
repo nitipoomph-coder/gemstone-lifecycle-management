@@ -47,9 +47,9 @@
    - **เนื้อหา:** ความหมายของฟิลด์ใน ERP, Business Logic การคำนวณ, รายการ Index/View ที่มีบน DB
 
 ### 📍 คัมภีร์เฉพาะระบบ (อ่านเมื่อต้องทำฟีเจอร์นั้นๆ)
-5. `PO_TRACKER_REVAMP_PLAN.md`
-   - **เนื้อหา:** โครงสร้างและที่มาของข้อมูลหน้า PO Tracker
-   - **สำคัญ:** ควรอ่านเมื่อต้องทำหน้ารายงาน PO มีรายละเอียดการ Map ฟิลด์จาก Stored Procedure (`PC_Show_OrdTrack_Sum_*`)
+5. `PO_TRACKER_REVAMP_PLAN.md` & `LEGACY_PO_TRACKER_ARCHITECTURE.md`
+   - **เนื้อหา:** โครงสร้างและที่มาของข้อมูลหน้า PO Tracker และ Order Detail Line Items (อิงสถาปัตยกรรมระบบเก่า VB.NET 100%)
+   - **สำคัญ:** ควรอ่านเมื่อต้องทำหน้ารายงาน PO และหน้า Detail มีรายละเอียดการ Map ฟิลด์จาก Stored Procedure (`PC_Show_OrdTrack_Sum_*`), ตาราง `OrdTrackDT`, ตาราง `OrdTrack`, กฎ 5-Axis/6-Axis, และการเปลี่ยนชื่อคอลัมน์ของกลุ่ม N044/KSP
 
 6. `production_stages_mapping_log.md`
    - **เนื้อหา:** ลำดับขั้นตอนการผลิตของ FBE

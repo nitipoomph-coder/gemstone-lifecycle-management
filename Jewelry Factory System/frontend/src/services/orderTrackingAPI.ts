@@ -5,6 +5,7 @@ export interface OrderInfo {
     OrdDate: string;
     DueDate: string;
     PONo: string;
+    ProFac?: string | null;
     ItemNo: string;
     ItemMat: string;
     ItemCust: string;
@@ -61,4 +62,30 @@ export const getOrderTracking = async (
         throw new Error(err.error || `HTTP error ${res.status}`);
     }
     return res.json();
+};
+
+export interface OrderSuggestion {
+    OrdNo: string;
+    OrdLineNo: number | string;
+    ItemNo: string;
+    CustCode: string;
+    ItemDesc?: string;
+    ProFac?: string | null;
+}
+
+/**
+ * Autocomplete search for matching orders in FBE (100% Read-Only)
+ */
+export const getOrderSuggestions = async (q: string): Promise<OrderSuggestion[]> => {
+    if (!q || q.trim().length < 2) return [];
+    const params = new URLSearchParams({ q: q.trim() });
+
+    try {
+        const res = await fetchWithAuth(`/api/order-tracking/suggest?${params.toString()}`);
+        if (!res.ok) return [];
+        const data = await res.json().catch(() => ({}));
+        return (data.suggestions || []) as OrderSuggestion[];
+    } catch {
+        return [];
+    }
 };

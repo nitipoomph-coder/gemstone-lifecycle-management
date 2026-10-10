@@ -24,6 +24,50 @@ const PRODUCTION_STEPS = [
 ];
 
 /**
+ * GET /api/order-tracking/suggest
+ * Query params: q (string, minimum 2 chars)
+ * 100% READ-ONLY search for Order suggestions in FBE
+ */
+router.get('/suggest', async (req, res) => {
+    const q = (req.query.q || '').trim();
+
+    if (!q || q.length < 2) {
+        return res.json({ suggestions: [] });
+    }
+
+    try {
+        const pool = await getPool();
+        const sqlQuery = `
+          SELECT DISTINCT TOP 15
+            dt.OrdNo,
+            dt.OrdLineNo,
+            dt.ItemNo,
+            hd.CustCode,
+            dt.ItemDesc,
+            hd.ProFac,
+            CASE WHEN hd.ProFac = 'FBD' THEN 0 ELSE 1 END AS FacRank
+          FROM OrdDT dt WITH (NOLOCK)
+          INNER JOIN OrdHD hd WITH (NOLOCK) ON hd.OrdNo = dt.OrdNo
+          WHERE dt.OrdNo LIKE @q + '%'
+            AND (hd.OrdDate >= '2024-01-01' OR dt.OrdNo = @q)
+          ORDER BY 
+            FacRank ASC,
+            dt.OrdNo DESC, 
+            dt.OrdLineNo ASC
+        `;
+
+        const request = pool.request();
+        request.input('q', sql.NVarChar, q);
+
+        const result = await request.query(sqlQuery);
+        return res.json({ suggestions: result.recordset || [] });
+    } catch (err) {
+        console.error('Order suggestions query error:', err);
+        return res.status(500).json({ error: 'Failed to fetch order suggestions' });
+    }
+});
+
+/**
  * GET /api/order-tracking/track
  * Query params: ordNo (จำเป็น), ordLineNo (ถ้ามี)
  */
@@ -31,7 +75,7 @@ router.get('/track', async (req, res) => {
     const { ordNo, ordLineNo } = req.query;
 
     if (!ordNo || !ordNo.trim()) {
-        return res.status(400).json({ error: 'กรุณาระบุเลขที่ออเดอร์ (Order No.)' });
+        return res.status(400).json({ error: 'Order No. is required' });
     }
 
     const cleanOrdNo = ordNo.trim();
@@ -43,7 +87,7 @@ router.get('/track', async (req, res) => {
         // 1) ดึงข้อมูลหัวออเดอร์ (OrdHD + OrdDT)
         let ordSql = `
       SELECT 
-        hd.CustCode, hd.OrdDate, hd.DueDate, hd.PONo,
+        hd.CustCode, hd.OrdDate, hd.DueDate, hd.PONo, hd.ProFac,
         dt.ItemNo, dt.ItemMat, dt.ItemCust, dt.ItemDesc,
         dt.ItemStone, dt.ItemPlate, dt.ItemSize, dt.ItemQty,
         dt.OrdLineNo
@@ -62,7 +106,7 @@ router.get('/track', async (req, res) => {
         const ordResult = await ordReq.query(ordSql);
 
         if (!ordResult.recordset || ordResult.recordset.length === 0) {
-            return res.status(404).json({ error: 'ไม่พบข้อมูลออเดอร์นี้ในระบบ' });
+            return res.status(404).json({ error: 'Order not found in system' });
         }
 
         const orderInfo = ordResult.recordset[0];
@@ -190,14 +234,14 @@ router.get('/track', async (req, res) => {
                 totalSteps,
                 doneSteps,
                 inProgressCount: currentSteps.length,
-                currentStepName: inProgressStep ? `${inProgressStep.nameEN} (${inProgressStep.nameTH})` : (doneSteps === totalSteps ? 'Completed' : 'Not Started'),
+                currentStepName: inProgressStep ? inProgressStep.nameEN : (doneSteps === totalSteps ? 'Completed' : 'Not Started'),
                 percent,
             },
         });
 
     } catch (err) {
         console.error('Order tracking query error:', err);
-        return res.status(500).json({ error: 'เกิดข้อผิดพลาดในการดึงข้อมูล: ' + err.message });
+        return res.status(500).json({ error: 'Failed to fetch order tracking: ' + err.message });
     }
 });
 

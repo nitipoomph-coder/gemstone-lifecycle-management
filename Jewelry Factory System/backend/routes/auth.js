@@ -49,7 +49,32 @@ router.post('/login', async (req, res) => {
       }
     }
 
+    const clientIp = (req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : null) || req.ip;
+    const auditService = require('../services/auditService');
+
     if (!isAuthenticated) {
+      const banResult = auditService.recordFailedAttempt(clientIp, username);
+
+      auditService.logEvent({
+        category: 'AUTH',
+        action: 'LOGIN_FAIL',
+        actor: username,
+        ip: clientIp,
+        status: 'FAILED',
+        severity: banResult.autoBanned ? 'CRITICAL' : 'MEDIUM',
+        details: banResult.autoBanned
+          ? 'Invalid credentials. IP auto-banned for 15 minutes due to 5 repeated failures.'
+          : `Invalid username or password (Attempt ${banResult.attemptCount}/5)`,
+      });
+
+      if (banResult.autoBanned) {
+        return res.status(403).json({
+          success: false,
+          error: 'IP_TEMPORARILY_BANNED',
+          message: 'Too many failed login attempts. Your IP has been temporarily blocked for 15 minutes.',
+        });
+      }
+
       return res.status(401).json({ success: false, message: 'Invalid username or password' });
     }
 
@@ -65,6 +90,18 @@ router.post('/login', async (req, res) => {
       { expiresIn: '12h' }
     );
 
+    // Record active session and log successful login event
+    auditService.recordSession(token, { id: userId, username, role, name: fullName }, clientIp, req.headers['user-agent']);
+    auditService.logEvent({
+      category: 'AUTH',
+      action: 'LOGIN_SUCCESS',
+      actor: username,
+      ip: clientIp,
+      status: 'SUCCESS',
+      severity: 'LOW',
+      details: { role, fullName },
+    });
+
     return res.json({ success: true, role: role, username: username.toUpperCase(), name: fullName, token });
   } catch (error) {
     console.error('Login error:', error);
@@ -74,6 +111,9 @@ router.post('/login', async (req, res) => {
 
 router.post('/verify-admin', async (req, res) => {
   const { password } = req.body;
+  const clientIp = req.ip || req.headers['x-forwarded-for'];
+  const auditService = require('../services/auditService');
+
   if (!password) {
     return res.status(400).json({ success: false, message: 'Password is required' });
   }
@@ -87,8 +127,27 @@ router.post('/verify-admin', async (req, res) => {
   const a = Buffer.from(password);
   const b = Buffer.from(adminPwd);
   if (a.length === b.length && crypto.timingSafeEqual(a, b)) {
+    auditService.logEvent({
+      category: 'SECURITY',
+      action: 'VERIFY_ADMIN_SUCCESS',
+      actor: 'ADMIN_PROSPECT',
+      ip: clientIp,
+      status: 'SUCCESS',
+      severity: 'LOW',
+      details: 'Master admin password verified',
+    });
     return res.json({ success: true });
   }
+
+  auditService.logEvent({
+    category: 'SECURITY',
+    action: 'VERIFY_ADMIN_FAIL',
+    actor: 'ANONYMOUS',
+    ip: clientIp,
+    status: 'BLOCKED',
+    severity: 'HIGH',
+    details: 'Incorrect master admin password entered',
+  });
   return res.status(401).json({ success: false, message: 'Invalid Admin Password' });
 });
 

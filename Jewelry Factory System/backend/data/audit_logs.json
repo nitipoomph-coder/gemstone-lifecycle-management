@@ -1,0 +1,43 @@
+[
+  {
+    "id": "evt_1791625576279_g7ga6",
+    "timestamp": "2026-10-10T09:46:16.279Z",
+    "category": "AUTH",
+    "action": "LOGIN_FAIL",
+    "actor": "ADMIN",
+    "ip": "127.0.0.1",
+    "status": "FAILED",
+    "severity": "MEDIUM",
+    "details": {
+      "message": "Invalid username or password (Attempt 1/5)"
+    }
+  },
+  {
+    "id": "evt_1791615859465_x1t9j",
+    "timestamp": "2026-10-10T07:04:19.465Z",
+    "category": "AUTH",
+    "action": "LOGIN_SUCCESS",
+    "actor": "SALES",
+    "ip": "127.0.0.1",
+    "status": "SUCCESS",
+    "severity": "LOW",
+    "details": {
+      "role": "sales",
+      "fullName": "SALES"
+    }
+  },
+  {
+    "id": "evt_1791604408434_k7v2t",
+    "timestamp": "2026-10-10T03:53:28.434Z",
+    "category": "AUTH",
+    "action": "LOGIN_SUCCESS",
+    "actor": "ADMIN",
+    "ip": "192.168.5.40",
+    "status": "SUCCESS",
+    "severity": "LOW",
+    "details": {
+      "role": "admin",
+      "fullName": "ADMIN"
+    }
+  }
+]

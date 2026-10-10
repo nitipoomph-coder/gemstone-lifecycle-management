@@ -135,4 +135,20 @@ export const menuConfig: NavMenuGroup[] = [
       { id: 'sp-check-status', label: 'Spare Parts Status Tracking', path: '/spare-parts/check-status' },
     ],
   },
+
+  // ── Administration & Security ──
+  {
+    id: 'admin-security',
+    label: 'Security & Audit',
+    icon: 'shield-alert',
+    accentColor: 'var(--color-brand-500)',
+    roles: ['admin'],
+    section: 'Administration',
+    items: [
+      { id: 'admin-radar', label: 'Threat Radar', path: '/admin/security-radar' },
+      { id: 'admin-users', label: 'User Management', path: '/admin/users' },
+      { id: 'admin-audit', label: 'Audit Logs', path: '/admin/audit-logs' },
+      { id: 'admin-sessions', label: 'Active Sessions', path: '/admin/sessions' },
+    ],
+  },
 ];

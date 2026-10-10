@@ -29,7 +29,7 @@ export const OrderTrackStepper: React.FC<OrderTrackStepperProps> = ({ steps }) =
                             <div
                                 key={step.stepIndex}
                                 role="listitem"
-                                aria-label={`Step No. ${step.stepIndex}: ${step.nameEN} (${step.nameTH}) - Status ${statusLabel}`}
+                                aria-label={`Step No. ${step.stepIndex}: ${step.nameEN} - Status ${statusLabel}`}
                                 style={{
                                     display: 'flex',
                                     flexDirection: 'column',
@@ -39,7 +39,7 @@ export const OrderTrackStepper: React.FC<OrderTrackStepperProps> = ({ steps }) =
                                     minWidth: 0,
                                 }}
                             >
-                                {/* แถว Node andเส้นเชื่อมต่อ (ต่อชิดขอบวงกmmพอดี ไม่ลอดใต้ ไม่ทับซ้อน) */}
+                                {/* แถว Node and เส้นเชื่อมต่อ */}
                                 <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
                                     {/* เส้นครึ่งซ้าย */}
                                     <div
@@ -54,7 +54,7 @@ export const OrderTrackStepper: React.FC<OrderTrackStepperProps> = ({ steps }) =
                                         }}
                                     />
 
-                                    {/* จุดวงกmm Node */}
+                                    {/* จุดวงกลม Node */}
                                     <div
                                         aria-hidden="true"
                                         className={isCurrent ? 'step-current-blink' : undefined}
@@ -68,7 +68,6 @@ export const OrderTrackStepper: React.FC<OrderTrackStepperProps> = ({ steps }) =
                                             justifyContent: 'center',
                                             fontWeight: 800,
                                             fontSize: '15px',
-                                            fontFamily: 'monospace',
                                             transition: 'all 0.2s ease',
                                             background: isDone
                                                 ? 'var(--color-track-done)'
@@ -103,18 +102,18 @@ export const OrderTrackStepper: React.FC<OrderTrackStepperProps> = ({ steps }) =
                                     />
                                 </div>
 
-                                {/* ชื่อStep EN / TH */}
-                                <div style={{ marginTop: 6, maxWidth: 68 }}>
+                                {/* ชื่อ Step EN */}
+                                <div style={{ marginTop: 6, maxWidth: 72 }}>
                                     <div
                                         style={{
-                                            fontSize: '11.5px',
+                                            fontSize: '12px',
                                             fontWeight: isCurrent || isDone ? 800 : 600,
                                             color: isCurrent
                                                 ? 'var(--color-track-current-text)'
                                                 : isDone
                                                     ? 'var(--color-track-done-text)'
                                                     : 'var(--color-text-primary)',
-                                            lineHeight: 1.2,
+                                            lineHeight: 1.25,
                                             whiteSpace: 'nowrap',
                                             overflow: 'hidden',
                                             textOverflow: 'ellipsis',
@@ -122,21 +121,6 @@ export const OrderTrackStepper: React.FC<OrderTrackStepperProps> = ({ steps }) =
                                         title={step.nameEN}
                                     >
                                         {step.nameEN}
-                                    </div>
-                                    <div
-                                        style={{
-                                            fontSize: '10.5px',
-                                            color: 'var(--color-text-secondary)',
-                                            marginTop: 2,
-                                            lineHeight: 1.1,
-                                            fontWeight: 500,
-                                            whiteSpace: 'nowrap',
-                                            overflow: 'hidden',
-                                            textOverflow: 'ellipsis',
-                                        }}
-                                        title={step.nameTH}
-                                    >
-                                        {step.nameTH}
                                     </div>
                                 </div>
 

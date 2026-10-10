@@ -26,9 +26,21 @@ function getCustFilter(groupId) {
   return `AND RTRIM(hd.CustCode) IN (${inStr})`;
 }
 
+function getFactoryFilter(factory) {
+  if (!factory || factory.toUpperCase() === 'ALL') return '';
+  const f = factory.toUpperCase();
+  if (f === 'FBE' || f === 'FBD') {
+    return `AND (RTRIM(hd.ProFac) = 'FBD' OR RTRIM(hd.ProFac) = 'FBE')`;
+  }
+  if (f === 'CLL') {
+    return `AND (RTRIM(hd.ProFac) = 'CLL' OR hd.ProFac IS NULL OR RTRIM(hd.ProFac) = '')`;
+  }
+  return '';
+}
+
 router.get('/', async (req, res) => {
   try {
-    const { startDate, endDate, group = 'All Customer', viewMode = 'day' } = req.query;
+    const { startDate, endDate, group = 'All Customer', viewMode = 'day', factory = 'ALL' } = req.query;
 
     if (!startDate || !endDate) {
       return res.status(400).json({ ok: false, error: 'startDate and endDate are required' });
@@ -69,11 +81,11 @@ router.get('/', async (req, res) => {
     }
 
     query += `
-      FROM OrdDT dt
-      INNER JOIN OrdHD hd ON hd.OrdNo = dt.OrdNo
+      FROM OrdDT dt WITH (NOLOCK)
+      INNER JOIN OrdHD hd WITH (NOLOCK) ON hd.OrdNo = dt.OrdNo
       WHERE hd.CustDueDate >= @startDate AND hd.CustDueDate <= @endDate
         AND LEFT(hd.OrdNo, 3) NOT IN ('BBL', 'BBD', 'BBI', 'BBP')
-        AND hd.ProFac = 'CLL'
+        ${getFactoryFilter(factory)}
         ${getCustFilter(group)}
     `;
 

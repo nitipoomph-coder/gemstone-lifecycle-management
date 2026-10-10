@@ -37,6 +37,25 @@ app.use((req, res, next) => {
 
 app.use(express.json({ limit: '1mb' }));
 
+// ─── IP Jail & Auto-Ban Defense Filter (Front Gate) ───────────────────────────
+app.use((req, res, next) => {
+  try {
+    const auditService = require('./services/auditService');
+    const clientIp = (req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : null) || req.ip;
+    const banInfo = auditService.checkIPBanned(clientIp);
+    if (banInfo) {
+      return res.status(403).json({
+        success: false,
+        error: 'IP_TEMPORARILY_BANNED',
+        message: `Your IP (${banInfo.ip}) has been blocked due to security violations. Reason: ${banInfo.reason}`,
+        bannedAt: banInfo.bannedAt,
+        expiresAt: banInfo.expiresAt,
+      });
+    }
+  } catch (err) {}
+  next();
+});
+
 // Health check
 app.get('/api/health', async (req, res) => {
   try {
@@ -58,10 +77,24 @@ app.get('/api/health', async (req, res) => {
 const fs = require('fs');
 
 // Helper: validate itemNo to prevent path traversal
-function sanitizeItemNo(itemNo) {
-  const cleaned = itemNo.trim();
+function sanitizeItemNo(itemNo, req) {
+  const cleaned = (itemNo || '').trim();
   // Block path traversal characters
   if (/[\/\\:*?"<>|]|\.\./g.test(cleaned) || cleaned.length > 100) {
+    try {
+      const auditService = require('./services/auditService');
+      auditService.logEvent({
+        category: 'SECURITY',
+        action: 'PATH_TRAVERSAL_ATTEMPT',
+        actor: req?.user?.username || 'ANONYMOUS',
+        ip: req?.ip || req?.headers['x-forwarded-for'],
+        status: 'BLOCKED',
+        severity: 'CRITICAL',
+        details: `Path traversal probe detected in Photo Bridge parameter: "${itemNo}"`,
+      });
+    } catch (e) {
+      // Ignore logging failure in sanitizer
+    }
     return null;
   }
   return cleaned;
@@ -69,7 +102,7 @@ function sanitizeItemNo(itemNo) {
 
 // Register the Photo Bridge API Route (PS Photo / Cost)
 app.get('/api/photos/ps/:itemNo', (req, res) => {
-  const itemNo = sanitizeItemNo(req.params.itemNo);
+  const itemNo = sanitizeItemNo(req.params.itemNo, req);
   if (!itemNo) {
     return res.status(400).send('Invalid item number');
   }
@@ -107,7 +140,7 @@ app.get('/api/photos/ps/:itemNo', (req, res) => {
 
 // Register the Photo Bridge API Route (CAD Photo / MoldCAD)
 app.get('/api/photos/cad/:itemNo', (req, res) => {
-  const itemNo = sanitizeItemNo(req.params.itemNo);
+  const itemNo = sanitizeItemNo(req.params.itemNo, req);
   if (!itemNo) {
     return res.status(400).send('Invalid item number');
   }
@@ -155,6 +188,21 @@ const authLimiter = rateLimit({
   message: { success: false, message: 'Too many login attempts. Please try again after 15 minutes.' },
   standardHeaders: true,
   legacyHeaders: false,
+  handler: (req, res, next, options) => {
+    try {
+      const auditService = require('./services/auditService');
+      auditService.logEvent({
+        category: 'SECURITY',
+        action: 'RATE_LIMIT_EXCEEDED',
+        actor: req.body?.username || 'ANONYMOUS',
+        ip: req.ip || req.headers['x-forwarded-for'],
+        status: 'BLOCKED',
+        severity: 'HIGH',
+        details: 'Exceeded 15 login attempts within 15 minutes',
+      });
+    } catch (e) {}
+    res.status(options.statusCode).json(options.message);
+  },
 });
 
 // General API rate limit
@@ -166,12 +214,15 @@ const apiLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+
 app.use('/api/', apiLimiter);
 
 // ─── Routes ────────────────────────────────────────────────────────────────────
 const { authMiddleware, requireRole } = require('./middleware/authMiddleware');
 
 app.use('/api/auth', authLimiter, require('./routes/auth'));   // Login API (rate limited)
+app.use('/api/admin/audit', authMiddleware, requireRole('admin'), require('./routes/adminAudit')); // 🛡️ Zero-DB Admin Security & Audit
+app.use('/api/admin/users', authMiddleware, requireRole('admin'), require('./routes/adminUsers')); // 👥 Admin User Management
 app.use('/api/orders', authMiddleware, require('./routes/poTracker'));
 app.use('/api/dashboard', authMiddleware, require('./routes/productionDashboard'));
 app.use('/api/dashboard', authMiddleware, require('./routes/customerReportMatrix'));

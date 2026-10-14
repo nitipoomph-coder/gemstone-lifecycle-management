@@ -1,8 +1,7 @@
 import type { NavMenuGroup } from '../types';
 
-
 export const menuConfig: NavMenuGroup[] = [
-  // ── Overview ──
+  // ── Overview (PCC) ──
   {
     id: 'home',
     label: 'Factory Overview',
@@ -11,6 +10,7 @@ export const menuConfig: NavMenuGroup[] = [
     accentColor: 'var(--color-brand-500)',
     roles: ['admin'],
     section: 'Overview',
+    workspace: 'PCC',
   },
   {
     id: 'sales-dashboard',
@@ -19,6 +19,7 @@ export const menuConfig: NavMenuGroup[] = [
     accentColor: 'var(--color-brand-500)',
     roles: ['admin', 'sales'],
     section: 'Overview',
+    workspace: 'PCC',
     items: [
       { id: 'dash-cust', label: 'Sales Summary', path: '/dashboard/customer' },
       { id: 'dash-matrix', label: 'Customer Report Matrix', path: '/dashboard/customer/matrix' },
@@ -28,14 +29,15 @@ export const menuConfig: NavMenuGroup[] = [
     ],
   },
 
-  // ── Production and Procurement ──
+  // ── Production (PCC) ──
   {
     id: 'order-tracker',
     label: 'Production',
     icon: 'layout-list',
     accentColor: 'var(--color-brand-500)',
     roles: ['admin', 'sales'],
-    section: 'Production and Procurement',
+    section: 'Production',
+    workspace: 'PCC',
     items: [
       { id: 'po-tracker', label: 'PO Tracker', path: '/po-tracker' },
       { id: 'pro-sum', label: 'Production Summary', path: '/dashboard/production-summary' },
@@ -49,20 +51,24 @@ export const menuConfig: NavMenuGroup[] = [
     icon: 'handshake',
     accentColor: 'var(--color-brand-500)',
     roles: ['admin'],
-    section: 'Production and Procurement',
+    section: 'Production',
+    workspace: 'PCC',
     items: [
       { id: 'sub-vendor-performance', label: 'Vendor Performance Dashboard', path: '/subcontract/vendor-performance', roles: ['admin'] },
       { id: 'sub-vendor-price', label: 'Vendor Price History', path: '/subcontract/vendor-price-history' },
       { id: 'sub-aging', label: 'Aging Report', path: '/subcontract/aging-report' },
     ],
   },
+
+  // ── Stone & Gem Procurement (Inventory Management System) ──
   {
     id: 'procurement',
     label: 'Procurement & Receiving',
     icon: 'package-check',
     accentColor: 'var(--color-brand-500)',
     roles: ['admin'],
-    section: 'Production and Procurement',
+    section: 'Stone System',
+    workspace: 'INVENTORY',
     items: [
       { id: 'spa', label: 'Gem Purchase Order', code: 'SPA', path: '/procurement/purchase' },
       { id: 'sra', label: 'Gem Receipt', code: 'SRA', path: '/procurement/receive' },
@@ -76,7 +82,8 @@ export const menuConfig: NavMenuGroup[] = [
     icon: 'clipboard-list',
     accentColor: 'var(--color-brand-500)',
     roles: ['admin'],
-    section: 'Production and Procurement',
+    section: 'Stone System',
+    workspace: 'INVENTORY',
     items: [
       { id: 'soa', label: 'Gem Order', code: 'SOA', path: '/orders/create' },
       { id: 'sia', label: 'Gem Issue', code: 'SIA', path: '/orders/issue' },
@@ -91,21 +98,23 @@ export const menuConfig: NavMenuGroup[] = [
     icon: 'flask-conical',
     accentColor: 'var(--color-brand-500)',
     roles: ['admin'],
-    section: 'Production and Procurement',
+    section: 'Stone System',
+    workspace: 'INVENTORY',
     items: [
       { id: 'ssa', label: 'Sample Request', code: 'SSA', path: '/sample/order' },
       { id: 'sim', label: 'Sample Dispatch', code: 'SIM', path: '/sample/dispatch' },
     ],
   },
 
-  // ── Warehouse and Parts ──
+  // ── Warehouse and Stock (Inventory Management System) ──
   {
     id: 'inventory',
     label: 'Inventory Control',
     icon: 'bar-chart-3',
     accentColor: 'var(--color-brand-500)',
     roles: ['admin'],
-    section: 'Warehouse and Parts',
+    section: 'Stock & Warehouse',
+    workspace: 'INVENTORY',
     items: [
       { id: 'check-dispatch', label: 'Check Dispatch for Order', path: '/inventory/check-dispatch' },
       { id: 'check-sample', label: 'Check Sample Issue', path: '/inventory/check-sample' },
@@ -121,7 +130,8 @@ export const menuConfig: NavMenuGroup[] = [
     icon: 'wrench',
     accentColor: 'var(--color-brand-500)',
     roles: ['admin'],
-    section: 'Warehouse and Parts',
+    section: 'Stock & Warehouse',
+    workspace: 'INVENTORY',
     items: [
       { id: 'sp-order', label: 'Spare Parts Order', path: '/spare-parts/order' },
       { id: 'sp-issue', label: 'Spare Parts Issue', path: '/spare-parts/issue' },
@@ -136,7 +146,19 @@ export const menuConfig: NavMenuGroup[] = [
     ],
   },
 
-  // ── Administration & Security ──
+  // ── Administration & Security (Shared / ALL) ──
+  {
+    id: 'audit-management',
+    label: 'Audit',
+    icon: 'clipboard-check',
+    accentColor: 'var(--color-brand-500)',
+    roles: ['admin'],
+    section: 'Administration',
+    workspace: 'ALL',
+    items: [
+      { id: 'audit-bom-print', label: 'BOM Print', code: 'BOM', path: '/audit/bom-print' },
+    ],
+  },
   {
     id: 'admin-security',
     label: 'Security & Audit',
@@ -144,6 +166,7 @@ export const menuConfig: NavMenuGroup[] = [
     accentColor: 'var(--color-brand-500)',
     roles: ['admin'],
     section: 'Administration',
+    workspace: 'ALL',
     items: [
       { id: 'admin-radar', label: 'Threat Radar', path: '/admin/security-radar' },
       { id: 'admin-users', label: 'User Management', path: '/admin/users' },

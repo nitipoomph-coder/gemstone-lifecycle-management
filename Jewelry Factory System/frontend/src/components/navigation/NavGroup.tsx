@@ -14,6 +14,8 @@ import {
   Handshake,
   ShieldAlert,
   ShieldCheck,
+  ClipboardCheck,
+  Printer,
 } from 'lucide-react';
 import type { NavMenuGroup, NavMenuItem } from '../../types';
 import { isNavigationItemActive } from '../../utils/navigationUtils';
@@ -36,6 +38,8 @@ const iconComponents: Record<string, React.ElementType> = {
   'handshake': Handshake,
   'shield-alert': ShieldAlert,
   'shield-check': ShieldCheck,
+  'clipboard-check': ClipboardCheck,
+  'printer': Printer,
 };
 
 interface NavGroupProps {

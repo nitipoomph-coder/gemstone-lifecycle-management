@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import NavGroup from '../navigation/NavGroup';
 import { menuConfig } from '../../config/menuConfig';
 import { getActiveGroupId } from '../../utils/navigationUtils';
+import { useWorkspace } from '../../contexts/WorkspaceContext';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -13,10 +14,11 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
   const location = useLocation();
   const scrollRef = useRef<HTMLElement>(null);
   const [scrollState, setScrollState] = useState<'top' | 'middle' | 'bottom'>('top');
+  const { workspace } = useWorkspace();
 
   const role = (localStorage.getItem('auth_role') || 'sales').toLowerCase();
   const filteredMenu = menuConfig
-    .filter(g => !g.roles || g.roles.includes(role))
+    .filter(g => (!g.roles || g.roles.includes(role)) && (!g.workspace || g.workspace === 'ALL' || g.workspace === workspace))
     .map(g => ({
       ...g,
       items: g.items?.filter(item => !item.roles || item.roles.includes(role)),

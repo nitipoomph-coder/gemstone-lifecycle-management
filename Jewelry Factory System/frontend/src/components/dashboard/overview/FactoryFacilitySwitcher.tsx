@@ -16,23 +16,28 @@ export const FactoryFacilitySwitcher: React.FC<FactoryFacilitySwitcherProps> = (
   fbeShare = 31,
   cllShare = 69,
 }) => {
-  const options: { id: FacilityView; label: string; icon: React.ReactNode; badge?: string }[] = [
+  const options: {
+    id: FacilityView;
+    label: string;
+    icon: React.ReactNode;
+    badge?: string;
+  }[] = [
     {
       id: 'ALL',
       label: 'ALL (Compare)',
-      icon: <Layers size={14} />,
+      icon: <Layers size={14} strokeWidth={2} />,
       badge: 'Dual View',
     },
     {
       id: 'FBE',
       label: 'FBE Facility',
-      icon: <Building2 size={14} />,
+      icon: <Building2 size={14} strokeWidth={2} />,
       badge: `${fbeShare}%`,
     },
     {
       id: 'CLL',
       label: 'CLL Facility',
-      icon: <Factory size={14} />,
+      icon: <Factory size={14} strokeWidth={2} />,
       badge: `${cllShare}%`,
     },
   ];
@@ -45,10 +50,10 @@ export const FactoryFacilitySwitcher: React.FC<FactoryFacilitySwitcherProps> = (
         display: 'inline-flex',
         alignItems: 'center',
         padding: '3px',
-        borderRadius: '10px',
+        borderRadius: '8px',
         backgroundColor: 'var(--color-surface-1)',
         border: '1px solid var(--color-border-light)',
-        gap: '4px',
+        gap: '3px',
       }}
     >
       {options.map((opt) => {
@@ -64,20 +69,36 @@ export const FactoryFacilitySwitcher: React.FC<FactoryFacilitySwitcherProps> = (
               display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
-              padding: '6px 14px',
-              borderRadius: '7px',
-              fontSize: 'var(--erp-text-control, 0.78rem)',
+              padding: '6px 13px',
+              borderRadius: '6px',
+              fontSize: '0.76rem',
               fontWeight: 800,
               cursor: 'pointer',
               transition: 'all 0.15s ease',
-              border: isActive ? '1px solid var(--color-brand-300)' : '1px solid transparent',
+              border: isActive
+                ? '1px solid var(--color-border-default)'
+                : '1px solid transparent',
               backgroundColor: isActive
                 ? 'var(--color-surface-0)'
                 : 'transparent',
               color: isActive
                 ? 'var(--color-brand-600)'
                 : 'var(--color-text-secondary)',
-              boxShadow: isActive ? 'var(--shadow-sm)' : 'none',
+              boxShadow: isActive
+                ? '0 1px 4px color-mix(in srgb, var(--color-surface-800) 6%, transparent)'
+                : 'none',
+            }}
+            onMouseEnter={(e) => {
+              if (!isActive) {
+                e.currentTarget.style.backgroundColor = 'var(--color-surface-2)';
+                e.currentTarget.style.color = 'var(--color-text-primary)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isActive) {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.color = 'var(--color-text-secondary)';
+              }
             }}
           >
             <span
@@ -94,16 +115,19 @@ export const FactoryFacilitySwitcher: React.FC<FactoryFacilitySwitcherProps> = (
               <span
                 style={{
                   fontSize: '0.62rem',
-                  fontWeight: 900,
-                  padding: '1px 6px',
-                  borderRadius: '10px',
+                  fontWeight: 800,
+                  padding: '1px 5px',
+                  borderRadius: '4px',
                   backgroundColor: isActive
-                    ? 'color-mix(in srgb, var(--color-brand-500) 12%, transparent)'
+                    ? 'color-mix(in srgb, var(--color-brand-600) 10%, var(--color-surface-0))'
                     : 'var(--color-surface-2)',
                   color: isActive
                     ? 'var(--color-brand-600)'
                     : 'var(--color-text-tertiary)',
                   fontFamily: 'var(--font-mono, monospace)',
+                  border: isActive
+                    ? '1px solid color-mix(in srgb, var(--color-brand-600) 25%, transparent)'
+                    : '1px solid var(--color-border-light)',
                 }}
               >
                 {opt.badge}

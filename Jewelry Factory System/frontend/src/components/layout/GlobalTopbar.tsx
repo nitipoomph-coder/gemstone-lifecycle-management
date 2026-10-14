@@ -1,4 +1,4 @@
-import { Palette, Printer, FileSpreadsheet, FileText, ChevronLeft, ChevronRight, PanelLeft } from 'lucide-react';
+import { Palette, Printer, FileSpreadsheet, FileText, ChevronLeft, ChevronRight, PanelLeft, LayoutGrid, ChevronDown, Check, Building2, Package } from 'lucide-react';
 import { useTheme } from '../../contexts/useTheme';
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -6,6 +6,7 @@ import NotificationDropdown from './NotificationDropdown';
 import UserAvatarDropdown from './UserAvatarDropdown';
 import { useBreadcrumbs } from '../../contexts/BreadcrumbContext';
 import { useTopbarActions } from '../../contexts/TopbarActionContext';
+import { useWorkspace } from '../../contexts/WorkspaceContext';
 
 interface GlobalTopbarProps {
   isSidebarOpen?: boolean;
@@ -18,10 +19,13 @@ export default function GlobalTopbar({ isSidebarOpen, onToggleSidebar }: GlobalT
   const { effectiveBreadcrumbs } = useBreadcrumbs();
   const { theme, setTheme } = useTheme();
   const { topbarActions } = useTopbarActions();
+  const { workspace, switchWorkspace } = useWorkspace();
   const [showThemeMenu, setShowThemeMenu] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [showWorkspaceMenu, setShowWorkspaceMenu] = useState(false);
   const themeMenuRef = useRef<HTMLDivElement>(null);
   const exportMenuRef = useRef<HTMLDivElement>(null);
+  const workspaceMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -30,6 +34,9 @@ export default function GlobalTopbar({ isSidebarOpen, onToggleSidebar }: GlobalT
       }
       if (exportMenuRef.current && !exportMenuRef.current.contains(event.target as Node)) {
         setShowExportMenu(false);
+      }
+      if (workspaceMenuRef.current && !workspaceMenuRef.current.contains(event.target as Node)) {
+        setShowWorkspaceMenu(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
@@ -97,6 +104,126 @@ export default function GlobalTopbar({ isSidebarOpen, onToggleSidebar }: GlobalT
             Factory system
           </span>
         </button>
+
+        {/* Subtle vertical separator */}
+        <div className="h-4 w-px bg-[var(--color-border-light)] mx-1 sm:mx-1.5 shrink-0" />
+
+        {/* Workspace Switcher (PCC / Inventory) */}
+        <div className="relative shrink-0" ref={workspaceMenuRef}>
+          <button
+            type="button"
+            onClick={() => setShowWorkspaceMenu(!showWorkspaceMenu)}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[12px] font-bold transition-all cursor-pointer border shadow-sm"
+            style={{
+              backgroundColor: workspace === 'PCC' ? 'color-mix(in srgb, var(--color-brand-600) 8%, var(--color-surface-0))' : 'color-mix(in srgb, var(--color-proc-polishing, var(--color-success-600)) 8%, var(--color-surface-0))',
+              borderColor: workspace === 'PCC' ? 'color-mix(in srgb, var(--color-brand-600) 30%, transparent)' : 'color-mix(in srgb, var(--color-proc-polishing, var(--color-success-600)) 30%, transparent)',
+              color: 'var(--color-text-primary)',
+            }}
+            title="Switch Workspace: PCC Management System / Inventory Management System"
+            aria-label="Switch Workspace"
+          >
+            <LayoutGrid size={13} style={{ color: workspace === 'PCC' ? 'var(--color-brand-600)' : 'var(--color-proc-polishing, var(--color-success-600))' }} />
+            <span className="font-extrabold tracking-tight">
+              {workspace === 'PCC' ? 'PCC Management' : 'Inventory System'}
+            </span>
+            <span
+              className="text-[10px] font-mono font-black px-1.5 py-0.2 rounded"
+              style={{
+                backgroundColor: 'var(--color-surface-2)',
+                color: 'var(--color-text-secondary)',
+                border: '1px solid var(--color-border-light)',
+              }}
+            >
+              {workspace === 'PCC' ? 'PROD' : 'STONE'}
+            </span>
+            <ChevronDown size={11} style={{ color: 'var(--color-text-tertiary)' }} />
+          </button>
+
+          {/* Switcher Dropdown */}
+          {showWorkspaceMenu && (
+            <div
+              className="absolute left-0 mt-1.5 w-72 rounded-lg border shadow-lg p-1.5 z-[120] flex flex-col gap-1"
+              style={{
+                backgroundColor: 'var(--color-surface-0)',
+                borderColor: 'var(--color-border-default)',
+                boxShadow: 'var(--shadow-modal)',
+              }}
+            >
+              <div
+                className="px-2 py-1 text-[10px] font-black uppercase tracking-wider"
+                style={{ color: 'var(--color-text-tertiary)' }}
+              >
+                Select System Workspace
+              </div>
+
+              {/* Choice 1: PCC */}
+              <button
+                type="button"
+                onClick={() => {
+                  switchWorkspace('PCC');
+                  setShowWorkspaceMenu(false);
+                }}
+                className="flex items-start gap-2.5 p-2 rounded-md text-left transition-colors cursor-pointer border"
+                style={{
+                  backgroundColor: workspace === 'PCC' ? 'var(--color-surface-2)' : 'transparent',
+                  borderColor: workspace === 'PCC' ? 'var(--color-border-default)' : 'transparent',
+                }}
+              >
+                <div
+                  className="w-7 h-7 rounded flex items-center justify-center shrink-0 mt-0.5"
+                  style={{
+                    backgroundColor: 'color-mix(in srgb, var(--color-brand-600) 12%, transparent)',
+                    color: 'var(--color-brand-600)',
+                  }}
+                >
+                  <Building2 size={15} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[12px] font-extrabold flex items-center justify-between" style={{ color: 'var(--color-text-primary)' }}>
+                    PCC Management System
+                    {workspace === 'PCC' && <Check size={13} style={{ color: 'var(--color-brand-600)' }} />}
+                  </div>
+                  <div className="text-[11px] truncate" style={{ color: 'var(--color-text-tertiary)' }}>
+                    Production Control, Orders, Sales
+                  </div>
+                </div>
+              </button>
+
+              {/* Choice 2: Inventory */}
+              <button
+                type="button"
+                onClick={() => {
+                  switchWorkspace('INVENTORY');
+                  setShowWorkspaceMenu(false);
+                }}
+                className="flex items-start gap-2.5 p-2 rounded-md text-left transition-colors cursor-pointer border"
+                style={{
+                  backgroundColor: workspace === 'INVENTORY' ? 'var(--color-surface-2)' : 'transparent',
+                  borderColor: workspace === 'INVENTORY' ? 'var(--color-border-default)' : 'transparent',
+                }}
+              >
+                <div
+                  className="w-7 h-7 rounded flex items-center justify-center shrink-0 mt-0.5"
+                  style={{
+                    backgroundColor: 'color-mix(in srgb, var(--color-proc-polishing, var(--color-success-600)) 12%, transparent)',
+                    color: 'var(--color-proc-polishing, var(--color-success-600))',
+                  }}
+                >
+                  <Package size={15} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[12px] font-extrabold flex items-center justify-between" style={{ color: 'var(--color-text-primary)' }}>
+                    Inventory Management System
+                    {workspace === 'INVENTORY' && <Check size={13} style={{ color: 'var(--color-proc-polishing, var(--color-success-600))' }} />}
+                  </div>
+                  <div className="text-[11px] truncate" style={{ color: 'var(--color-text-tertiary)' }}>
+                    Stone Purchase (SPA/SRA), Stock Balance
+                  </div>
+                </div>
+              </button>
+            </div>
+          )}
+        </div>
 
         {/* Subtle vertical separator */}
         <div className="h-4 w-px bg-[var(--color-border-light)] mx-1 sm:mx-1.5 shrink-0" />

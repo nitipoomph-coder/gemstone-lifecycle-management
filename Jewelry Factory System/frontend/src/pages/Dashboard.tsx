@@ -43,14 +43,16 @@ export default function Dashboard() {
 
   const requestKey = `${selectedYear}:${selectedFacility}:${refreshVersion}`;
   const hasCurrentData = dashboardState.key === requestKey;
-  const data = hasCurrentData ? dashboardState.data : null;
+  // Stale-while-revalidate: keep last valid data during filter changes so page never flickers or unmounts!
+  const data = dashboardState.data;
   const error = hasCurrentData ? dashboardState.error : null;
   const loading = !hasCurrentData;
+  const isInitialLoading = !dashboardState.data && loading;
 
-  // Manual refresh with guaranteed minimum 600ms spin feedback & skeleton transition
+  // Manual refresh with guaranteed minimum 600ms spin feedback without skeleton flicker
   const load = useCallback(async () => {
     setIsRefreshing(true);
-    setDashboardState({ key: '', data: null, error: null });
+    setDashboardState((prev) => ({ ...prev, key: '', error: null }));
     const minTimer = new Promise((resolve) => setTimeout(resolve, 600));
     try {
       const [nextData] = await Promise.all([
@@ -60,11 +62,11 @@ export default function Dashboard() {
       setDashboardState({ key: `${selectedYear}:${selectedFacility}:${refreshVersion + 1}`, data: nextData, error: null });
       setRefreshVersion((v) => v + 1);
     } catch {
-      setDashboardState({
+      setDashboardState((prev) => ({
+        ...prev,
         key: `${selectedYear}:${selectedFacility}:${refreshVersion + 1}`,
-        data: null,
         error: 'Failed to connect to manufacturing database',
-      });
+      }));
       setRefreshVersion((v) => v + 1);
     } finally {
       setIsRefreshing(false);
@@ -174,10 +176,10 @@ export default function Dashboard() {
     return () => setTopbarActions(null);
   }, [setTopbarActions, load, isSpinning]);
 
-  // Loading skeleton layout (Zero-scroll matching layout)
-  if (loading && !data) {
+  // Loading skeleton layout ONLY on initial load before any data is cached
+  if (isInitialLoading) {
     return (
-      <div className="h-full w-full overflow-hidden flex flex-col justify-between p-3 gap-2 bg-[var(--color-surface-1)]">
+      <div className="flex-1 min-h-0 w-full overflow-y-auto content-scrollbar flex flex-col justify-between p-3 pb-12 gap-2 bg-[var(--color-surface-1)]">
         {/* Topbar Skeleton */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '40px' }}>
           <div className="app-skeleton" style={{ width: 340, height: 36, ...shimmerStyle }} />
@@ -240,9 +242,10 @@ export default function Dashboard() {
 
   return (
     <div
-      className="h-full w-full overflow-y-auto lg:overflow-hidden flex flex-col justify-start lg:justify-between p-3 gap-2.5 bg-[var(--color-surface-1)]"
+      className="flex-1 min-h-0 w-full overflow-y-auto content-scrollbar flex flex-col justify-start p-3 pb-12 gap-3"
       style={{
         boxSizing: 'border-box',
+        background: 'var(--color-surface-1)',
       }}
     >
       {/* ── Top Bar Controls ── */}
@@ -271,12 +274,12 @@ export default function Dashboard() {
               alignItems: 'center',
               gap: '6px',
               padding: '6px 12px',
-              borderRadius: '8px',
+              borderRadius: '6px',
               backgroundColor: 'var(--color-surface-0)',
               border: '1px solid var(--color-border-light)',
             }}
           >
-            <Clock size={14} style={{ color: 'var(--color-brand-600)' }} />
+            <Clock size={13} style={{ color: 'var(--color-brand-600)' }} />
             <span
               style={{
                 fontSize: '0.74rem',
@@ -312,6 +315,7 @@ export default function Dashboard() {
       <div style={{ flexShrink: 0 }}>
         <FactoryKpiStrip
           kpi={cockpit?.kpi}
+          dualPipeline={cockpit?.dualPipeline}
           selectedFacility={selectedFacility}
         />
       </div>
@@ -326,13 +330,15 @@ export default function Dashboard() {
         />
         <FactoryPipelineFlow
           pipeline={cockpit?.pipeline}
+          dualPipeline={cockpit?.dualPipeline}
           totalWipPcs={cockpit?.kpi?.totalWipPcs}
+          selectedFacility={selectedFacility}
         />
       </div>
 
       {/* ── Row 3: Operational Breakdown & Risk Matrix ── */}
       <div
-        className="flex flex-col lg:grid gap-[10px] lg:flex-1 min-h-[auto] lg:min-h-[280px]"
+        className="flex flex-col lg:grid gap-[10px] shrink-0"
         style={{
           gridTemplateColumns: '7fr 5fr',
         }}
@@ -340,6 +346,7 @@ export default function Dashboard() {
         <FactoryDepartmentMatrix
           departments={cockpit?.departments}
           selectedFacility={selectedFacility}
+          activeWorkdays={cockpit?.kpi?.activeWorkdays}
         />
         <FactoryRiskPanel
           overdueOrders={cockpit?.overdueOrders}

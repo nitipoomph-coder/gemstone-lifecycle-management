@@ -10,6 +10,8 @@ export interface NavMenuItem {
   items?: NavMenuItem[];
 }
 
+export type AppWorkspace = 'PCC' | 'INVENTORY';
+
 export interface NavMenuGroup {
   id: string;
   label: string;
@@ -20,6 +22,7 @@ export interface NavMenuGroup {
   accentColor?: string;
   roles?: string[];
   section?: string;
+  workspace?: AppWorkspace | 'ALL';
 }
 
 // ============================================

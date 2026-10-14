@@ -273,7 +273,7 @@ router.get('/', async (req, res) => {
         AND ((h.PONo IS NULL OR UPPER(h.PONo) NOT LIKE '%SAMPLE%') AND LEFT(h.OrdNo, 3) IN ('BBC','BBQ','BBD','BBI','BBF','BBP','BBT','BBX','BBK','BBR','BBL','BBS','BBE'))
         AND (@year IS NULL OR YEAR(h.OrdDate) = @year)
       GROUP BY h.CustCode, c.CustName
-      ORDER BY orderCount DESC
+      ORDER BY totalQty DESC
     `);
     const topCustomers = custResult.recordset.map(r => ({
       code: r.CustCode,
@@ -286,14 +286,15 @@ router.get('/', async (req, res) => {
     // 7. CRITICAL DELAY ORDERS (with PO & customer info)
     // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     const delayResult = await getReq().query(`
-      SELECT TOP 8
+      SELECT TOP 15
         h.OrdNo,
         h.PONo,
         h.CustCode,
         ISNULL(c.CustName, h.CustCode) AS custName,
         h.DueDate,
         DATEDIFF(day, h.DueDate, GETDATE()) AS delayDays,
-        h.SumOrdQty AS qty
+        h.SumOrdQty AS qty,
+        h.ProFac
       FROM OrdHD h
       LEFT JOIN GMCust c ON c.CustCode = h.CustCode
       WHERE h.DueDate < CAST(GETDATE() AS DATE)
@@ -304,12 +305,13 @@ router.get('/', async (req, res) => {
     `);
     const delayOrders = delayResult.recordset.map(r => ({
       ordNo: r.OrdNo,
-      poNo: r.PONo || 'â€”',
+      poNo: r.PONo || '—',
       custCode: r.CustCode,
       custName: r.custName,
       dueDate: r.DueDate,
       delayDays: r.delayDays,
       qty: r.qty,
+      proFac: r.ProFac,
     }));
 
     // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -372,34 +374,58 @@ router.get('/', async (req, res) => {
     const facilityParam = (req.query.facility || 'ALL').toUpperCase();
     const activeFacility = ['FBE', 'CLL'].includes(facilityParam) ? facilityParam : 'ALL';
 
-    // Active WIP from OrdHD
+    // Active WIP from OrdHD grouped by Facility
     const wipResult = await pool.request()
       .input('year', sql.Int, selectedYear)
       .query(`
         SELECT 
+          CASE WHEN ProFac IN ('FBD', 'FBE') THEN 'FBE' ELSE 'CLL' END AS Fac,
           COUNT(*) AS wipOrders,
           SUM(ISNULL(SumOrdQty, 0)) AS wipPcs
-        FROM OrdHD
+        FROM OrdHD WITH (NOLOCK)
         WHERE OrdStatus IN ('P','N') AND CloseStatus <> 'Y'
           AND ((PONo IS NULL OR UPPER(PONo) NOT LIKE '%SAMPLE%') AND LEFT(OrdNo, 3) IN ('BBC','BBQ','BBD','BBI','BBF','BBP','BBT','BBX','BBK','BBR','BBL','BBS','BBE'))
           AND (@year IS NULL OR YEAR(OrdDate) = @year)
+        GROUP BY CASE WHEN ProFac IN ('FBD', 'FBE') THEN 'FBE' ELSE 'CLL' END
       `);
-    const wipData = wipResult.recordset[0] || { wipOrders: 0, wipPcs: 0 };
+    let fbeWip = { orders: 0, pcs: 0 };
+    let cllWip = { orders: 0, pcs: 0 };
+    for (const row of wipResult.recordset) {
+      if (row.Fac === 'FBE') {
+        fbeWip = { orders: row.wipOrders || 0, pcs: row.wipPcs || 0 };
+      } else {
+        cllWip = { orders: row.wipOrders || 0, pcs: row.wipPcs || 0 };
+      }
+    }
+    const totalWipOrders = fbeWip.orders + cllWip.orders;
+    const totalWipPcs = fbeWip.pcs + cllWip.pcs;
 
-    // Overdue Orders from OrdHD
+    // Overdue Orders from OrdHD grouped by Facility
     const overdueResult = await pool.request()
       .input('year', sql.Int, selectedYear)
       .query(`
         SELECT 
+          CASE WHEN ProFac IN ('FBD', 'FBE') THEN 'FBE' ELSE 'CLL' END AS Fac,
           COUNT(*) AS overdueCount,
           SUM(ISNULL(SumOrdQty, 0)) AS overduePcs
-        FROM OrdHD
+        FROM OrdHD WITH (NOLOCK)
         WHERE DueDate < CAST(GETDATE() AS DATE) 
           AND OrdStatus IN ('P','N') AND CloseStatus <> 'Y'
           AND ((PONo IS NULL OR UPPER(PONo) NOT LIKE '%SAMPLE%') AND LEFT(OrdNo, 3) IN ('BBC','BBQ','BBD','BBI','BBF','BBP','BBT','BBX','BBK','BBR','BBL','BBS','BBE'))
           AND (@year IS NULL OR YEAR(OrdDate) = @year)
+        GROUP BY CASE WHEN ProFac IN ('FBD', 'FBE') THEN 'FBE' ELSE 'CLL' END
       `);
-    const overdueData = overdueResult.recordset[0] || { overdueCount: 0, overduePcs: 0 };
+    let fbeOverdue = { count: 0, pcs: 0 };
+    let cllOverdue = { count: 0, pcs: 0 };
+    for (const row of overdueResult.recordset) {
+      if (row.Fac === 'FBE') {
+        fbeOverdue = { count: row.overdueCount || 0, pcs: row.overduePcs || 0 };
+      } else {
+        cllOverdue = { count: row.overdueCount || 0, pcs: row.overduePcs || 0 };
+      }
+    }
+    const totalOverdueCount = fbeOverdue.count + cllOverdue.count;
+    const totalOverduePcs = fbeOverdue.pcs + cllOverdue.pcs;
 
     // 11 Departments Combined Output FBE vs CLL
     const deptUnion = `
@@ -455,25 +481,143 @@ router.get('/', async (req, res) => {
     const holidays = holidayRes.recordset[0]?.HolidayCount || 0;
     const workdays = Math.max(1, 313 - holidays); // ~313 non-Sunday days per year
 
-    // Pipeline Stage WIP
-    const pipelineWipResult = await pool.request()
+    // ── CLL Dual-Lane Pipeline (Milestone Waterfall via OrdDT) ──
+    const cllPipelineRes = await pool.request()
       .input('year', sql.Int, selectedYear)
       .query(`
-        SELECT 
-          SUM(CASE WHEN ISNULL(d.CastQty,0) = 0 THEN ISNULL(d.ItemQty,0) ELSE 0 END) AS WaxPcs,
-          SUM(CASE WHEN d.CastQty > 0 AND ISNULL(d.GrindQty,0) = 0 THEN ISNULL(d.ItemQty,0) ELSE 0 END) AS CastPcs,
-          SUM(CASE WHEN d.GrindQty > 0 AND ISNULL(d.PolishQty,0) = 0 THEN ISNULL(d.ItemQty,0) ELSE 0 END) AS GrindPcs,
-          SUM(CASE WHEN d.PolishQty > 0 AND ISNULL(d.PlateQty,0) = 0 THEN ISNULL(d.ItemQty,0) ELSE 0 END) AS PolishPcs,
-          SUM(CASE WHEN d.PlateQty > 0 AND ISNULL(d.QCQty,0) = 0 THEN ISNULL(d.ItemQty,0) ELSE 0 END) AS PlatePcs,
-          SUM(CASE WHEN d.QCQty > 0 AND ISNULL(d.PackQty,0) = 0 THEN ISNULL(d.ItemQty,0) ELSE 0 END) AS QCPcs,
-          SUM(CASE WHEN d.PackQty > 0 THEN ISNULL(d.ItemQty,0) ELSE 0 END) AS PackPcs
-        FROM OrdDT d
-        JOIN OrdHD h ON d.OrdNo = h.OrdNo
-        WHERE h.OrdStatus IN ('P','N') AND h.CloseStatus <> 'Y'
-          AND ((h.PONo IS NULL OR UPPER(h.PONo) NOT LIKE '%SAMPLE%') AND LEFT(h.OrdNo, 3) IN ('BBC','BBQ','BBD','BBI','BBF','BBP','BBT','BBX','BBK','BBR','BBL','BBS','BBE'))
-          AND (@year IS NULL OR YEAR(h.OrdDate) = @year)
+        SELECT
+          Stage,
+          COUNT(*) AS LineCount,
+          SUM(ItemQty) AS StagePcs
+        FROM (
+          SELECT
+            d.ItemQty,
+            CASE
+              WHEN ISNULL(d.PackQty, 0) > 0 THEN 'PACK'
+              WHEN ISNULL(d.QCQty, 0) > 0 THEN 'QC'
+              WHEN ISNULL(d.PlateQty, 0) > 0 THEN 'PLATE'
+              WHEN ISNULL(d.PolishQty, 0) > 0 THEN 'POLISH'
+              WHEN ISNULL(d.GrindQty, 0) > 0 THEN 'GRIND'
+              WHEN ISNULL(d.CastQty, 0) > 0 THEN 'CAST'
+              ELSE 'WAX'
+            END AS Stage
+          FROM OrdDT d WITH (NOLOCK)
+          JOIN OrdHD h WITH (NOLOCK) ON d.OrdNo = h.OrdNo
+          WHERE h.OrdStatus IN ('P','N') AND h.CloseStatus <> 'Y'
+            AND ((h.PONo IS NULL OR UPPER(h.PONo) NOT LIKE '%SAMPLE%') AND LEFT(h.OrdNo, 3) IN ('BBC','BBQ','BBD','BBI','BBF','BBP','BBT','BBX','BBK','BBR','BBL','BBS','BBE'))
+            AND (h.ProFac NOT IN ('FBD','FBE') OR h.ProFac IS NULL)
+            AND (@year IS NULL OR YEAR(h.OrdDate) = @year)
+        ) t
+        GROUP BY Stage
       `);
-    const pw = pipelineWipResult.recordset[0] || {};
+
+    const cllStageMap = {};
+    for (const r of cllPipelineRes.recordset) {
+      cllStageMap[r.Stage] = { pcs: r.StagePcs || 0, count: r.LineCount || 0 };
+    }
+
+    const cllRawStages = [
+      { id: 'wax', name: 'Wax & Prep', pcs: cllStageMap['WAX']?.pcs || 0, orderCount: cllStageMap['WAX']?.count || 0 },
+      { id: 'cast', name: 'Casting Process', pcs: cllStageMap['CAST']?.pcs || 0, orderCount: cllStageMap['CAST']?.count || 0 },
+      { id: 'grind', name: 'Filing & Grind', pcs: cllStageMap['GRIND']?.pcs || 0, orderCount: cllStageMap['GRIND']?.count || 0 },
+      { id: 'polish', name: 'Pre-Polishing', pcs: cllStageMap['POLISH']?.pcs || 0, orderCount: cllStageMap['POLISH']?.count || 0 },
+      { id: 'plate', name: 'Plating Process', pcs: cllStageMap['PLATE']?.pcs || 0, orderCount: cllStageMap['PLATE']?.count || 0 },
+      { id: 'qc', name: 'In-line QC', pcs: cllStageMap['QC']?.pcs || 0, orderCount: cllStageMap['QC']?.count || 0 },
+      { id: 'pack', name: 'Final Packing', pcs: cllStageMap['PACK']?.pcs || 0, orderCount: cllStageMap['PACK']?.count || 0 },
+    ];
+    const maxCllPcs = Math.max(...cllRawStages.map(s => s.pcs), 1);
+    const cllPipelineStages = cllRawStages.map(stg => ({
+      ...stg,
+      isBottleneck: stg.pcs === maxCllPcs && stg.pcs > 0,
+      sharePct: cllWip.pcs > 0 ? Math.round((stg.pcs / cllWip.pcs) * 100) : 0,
+    }));
+
+    // ── FBE Dual-Lane Pipeline (Department Progress Tracking) ──
+    const fbePipelineRes = await pool.request()
+      .input('year', sql.Int, selectedYear)
+      .query(`
+        WITH ActiveOrders AS (
+          SELECT OrdNo, SumOrdQty
+          FROM OrdHD WITH (NOLOCK)
+          WHERE OrdStatus IN ('P','N') AND CloseStatus <> 'Y'
+            AND ((PONo IS NULL OR UPPER(PONo) NOT LIKE '%SAMPLE%') AND LEFT(OrdNo, 3) IN ('BBC','BBQ','BBD','BBI','BBF','BBP','BBT','BBX','BBK','BBR','BBL','BBS','BBE'))
+            AND ProFac IN ('FBD','FBE')
+            AND (@year IS NULL OR YEAR(OrdDate) = @year)
+        ),
+        SenActivities AS (
+          SELECT d.OrdNo, 1 AS StepRank FROM GRSenDT d WITH (NOLOCK) INNER JOIN ActiveOrders ao ON d.OrdNo = ao.OrdNo GROUP BY d.OrdNo
+          UNION ALL
+          SELECT d.OrdNo, 2 AS StepRank FROM TBSenDT d WITH (NOLOCK) INNER JOIN ActiveOrders ao ON d.OrdNo = ao.OrdNo GROUP BY d.OrdNo
+          UNION ALL
+          SELECT d.OrdNo, 3 AS StepRank FROM FLSenDT d WITH (NOLOCK) INNER JOIN ActiveOrders ao ON d.OrdNo = ao.OrdNo GROUP BY d.OrdNo
+          UNION ALL
+          SELECT d.OrdNo, 4 AS StepRank FROM ASSenDT d WITH (NOLOCK) INNER JOIN ActiveOrders ao ON d.OrdNo = ao.OrdNo GROUP BY d.OrdNo
+          UNION ALL
+          SELECT d.OrdNo, 5 AS StepRank FROM LSSenDT d WITH (NOLOCK) INNER JOIN ActiveOrders ao ON d.OrdNo = ao.OrdNo GROUP BY d.OrdNo
+          UNION ALL
+          SELECT d.OrdNo, 6 AS StepRank FROM LPSenDT d WITH (NOLOCK) INNER JOIN ActiveOrders ao ON d.OrdNo = ao.OrdNo GROUP BY d.OrdNo
+          UNION ALL
+          SELECT d.OrdNo, 7 AS StepRank FROM PLSenDT d WITH (NOLOCK) INNER JOIN ActiveOrders ao ON d.OrdNo = ao.OrdNo GROUP BY d.OrdNo
+          UNION ALL
+          SELECT d.OrdNo, 8 AS StepRank FROM CPSenDT d WITH (NOLOCK) INNER JOIN ActiveOrders ao ON d.OrdNo = ao.OrdNo GROUP BY d.OrdNo
+          UNION ALL
+          SELECT d.OrdNo, 9 AS StepRank FROM PTSenDT d WITH (NOLOCK) INNER JOIN ActiveOrders ao ON d.OrdNo = ao.OrdNo GROUP BY d.OrdNo
+          UNION ALL
+          SELECT d.OrdNo, 10 AS StepRank FROM IQSenDT d WITH (NOLOCK) INNER JOIN ActiveOrders ao ON d.OrdNo = ao.OrdNo GROUP BY d.OrdNo
+        ),
+        MaxStep AS (
+          SELECT OrdNo, MAX(StepRank) AS MaxRank
+          FROM SenActivities
+          GROUP BY OrdNo
+        ),
+        OrderStepMapped AS (
+          SELECT 
+            ao.OrdNo,
+            ao.SumOrdQty,
+            CASE 
+              WHEN ms.MaxRank = 10 THEN 'IQ'
+              WHEN ms.MaxRank = 9 THEN 'PT'
+              WHEN ms.MaxRank = 8 THEN 'CP'
+              WHEN ms.MaxRank = 7 THEN 'PL'
+              WHEN ms.MaxRank = 6 THEN 'LP'
+              WHEN ms.MaxRank = 5 THEN 'LS'
+              WHEN ms.MaxRank = 4 THEN 'AS'
+              WHEN ms.MaxRank = 3 THEN 'FL'
+              WHEN ms.MaxRank = 2 THEN 'TB'
+              WHEN ms.MaxRank = 1 THEN 'GR'
+              ELSE 'PREP'
+            END AS Stage
+          FROM ActiveOrders ao
+          LEFT JOIN MaxStep ms ON ao.OrdNo = ms.OrdNo
+        )
+        SELECT 
+          Stage,
+          COUNT(*) AS OrderCount,
+          SUM(SumOrdQty) AS Pcs
+        FROM OrderStepMapped
+        GROUP BY Stage
+      `);
+
+    const fbeStageMap = {};
+    for (const r of fbePipelineRes.recordset) {
+      fbeStageMap[r.Stage] = { pcs: r.Pcs || 0, count: r.OrderCount || 0 };
+    }
+
+    const fbeRawStages = [
+      { id: 'prep', name: 'Prep & Queue', pcs: fbeStageMap['PREP']?.pcs || 0, orderCount: fbeStageMap['PREP']?.count || 0 },
+      { id: 'gr_tb', name: 'Grind & Tumbling', pcs: (fbeStageMap['GR']?.pcs || 0) + (fbeStageMap['TB']?.pcs || 0), orderCount: (fbeStageMap['GR']?.count || 0) + (fbeStageMap['TB']?.count || 0) },
+      { id: 'fl_lp', name: 'Filing & Lapping', pcs: (fbeStageMap['FL']?.pcs || 0) + (fbeStageMap['LP']?.pcs || 0), orderCount: (fbeStageMap['FL']?.count || 0) + (fbeStageMap['LP']?.count || 0) },
+      { id: 'as_ls', name: 'Assembly & Laser', pcs: (fbeStageMap['AS']?.pcs || 0) + (fbeStageMap['LS']?.pcs || 0), orderCount: (fbeStageMap['AS']?.count || 0) + (fbeStageMap['LS']?.count || 0) },
+      { id: 'pl', name: 'Polishing', pcs: fbeStageMap['PL']?.pcs || 0, orderCount: fbeStageMap['PL']?.count || 0 },
+      { id: 'cp_pt', name: 'Plating Process', pcs: (fbeStageMap['CP']?.pcs || 0) + (fbeStageMap['PT']?.pcs || 0), orderCount: (fbeStageMap['CP']?.count || 0) + (fbeStageMap['PT']?.count || 0) },
+      { id: 'iq', name: 'QC Inspection', pcs: fbeStageMap['IQ']?.pcs || 0, orderCount: fbeStageMap['IQ']?.count || 0 },
+    ];
+    const maxFbePcs = Math.max(...fbeRawStages.map(s => s.pcs), 1);
+    const fbePipelineStages = fbeRawStages.map(stg => ({
+      ...stg,
+      isBottleneck: stg.pcs === maxFbePcs && stg.pcs > 0,
+      sharePct: fbeWip.pcs > 0 ? Math.round((stg.pcs / fbeWip.pcs) * 100) : 0,
+    }));
 
     // Aggregates for KPI Strip
     const fbeTotalPcs = deptResult.recordset.reduce((acc, r) => acc + (r.FbePcs || 0), 0);
@@ -482,7 +626,7 @@ router.get('/', async (req, res) => {
     const fbeSharePct = grandFactoryPcs > 0 ? Math.round((fbeTotalPcs / grandFactoryPcs) * 100) : 0;
     const cllSharePct = grandFactoryPcs > 0 ? (100 - fbeSharePct) : 0;
     const dailyAvgOutput = Math.round(grandFactoryPcs / workdays);
-    const onTimeRate = s.wip > 0 ? Math.max(0, Math.round(((s.wip - overdueData.overdueCount) / s.wip) * 100)) : 100;
+    const onTimeRate = s.wip > 0 ? Math.max(0, Math.round(((s.wip - totalOverdueCount) / s.wip) * 100)) : 100;
 
     // Monthly Timeline Array (1..12)
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -502,22 +646,28 @@ router.get('/', async (req, res) => {
       };
     });
 
-    // Pipeline Stages with bottleneck detection
-    const pipelineStages = [
-      { id: 'wax', name: 'Wax & Prep', pcs: pw.WaxPcs || 0 },
-      { id: 'cast', name: 'Casting', pcs: pw.CastPcs || 0 },
-      { id: 'grind', name: 'Filing & Grind', pcs: pw.GrindPcs || 0 },
-      { id: 'polish', name: 'Pre-Polishing', pcs: pw.PolishPcs || 0 },
-      { id: 'plate', name: 'Plating Process', pcs: pw.PlatePcs || 0 },
-      { id: 'qc', name: 'In-line QC', pcs: pw.QCPcs || 0 },
-      { id: 'pack', name: 'Final Packing', pcs: pw.PackPcs || 0 },
-    ];
-    const maxStagePcs = Math.max(...pipelineStages.map(s => s.pcs), 1);
-    const pipeline = pipelineStages.map(stg => ({
-      ...stg,
-      isBottleneck: stg.pcs === maxStagePcs && stg.pcs > 0,
-      sharePct: Math.round((stg.pcs / (wipData.wipPcs || 1)) * 100),
-    }));
+    // Pipeline Stages based on active facility filter
+    const pipeline = activeFacility === 'FBE' ? fbePipelineStages : cllPipelineStages;
+
+    // Dual-Lane Bundle
+    const dualPipeline = {
+      cll: {
+        facility: 'CLL',
+        facilityName: 'CLL Facility (Bangna)',
+        wipPcs: cllWip.pcs,
+        wipOrders: cllWip.orders,
+        bottleneckStage: cllPipelineStages.find(s => s.isBottleneck)?.name || 'Casting Process',
+        stages: cllPipelineStages,
+      },
+      fbe: {
+        facility: 'FBE',
+        facilityName: 'FBE Facility (Bangplee)',
+        wipPcs: fbeWip.pcs,
+        wipOrders: fbeWip.orders,
+        bottleneckStage: fbePipelineStages.find(s => s.isBottleneck)?.name || 'QC Inspection',
+        stages: fbePipelineStages,
+      },
+    };
 
     // Department matrix with calculated daily averages and share
     const departments = deptResult.recordset.map(d => ({
@@ -532,43 +682,51 @@ router.get('/', async (req, res) => {
     }));
 
     // Customer volume share (Top 5)
+    const currentWipPcs = activeFacility === 'FBE' ? fbeWip.pcs : (activeFacility === 'CLL' ? cllWip.pcs : totalWipPcs);
     const customerShare = (topCustomers || []).slice(0, 5).map(c => ({
       code: c.code,
       name: c.name,
       orders: c.orders,
       qty: c.qty,
-      sharePct: wipData.wipPcs > 0 ? Math.min(100, Math.round((c.qty / wipData.wipPcs) * 100)) : 0,
+      sharePct: currentWipPcs > 0 ? Math.min(100, Math.round((c.qty / currentWipPcs) * 100)) : 0,
     }));
 
-    // Top 5 critical overdue orders
-    const topOverdueOrders = (delayOrders || []).slice(0, 5).map(o => ({
+    // Top 5 critical overdue orders with accurate facility identification & filter
+    const filteredDelayOrders = (delayOrders || []).filter(o => {
+      const fac = (o.proFac === 'FBD' || o.proFac === 'FBE') ? 'FBE' : 'CLL';
+      if (activeFacility === 'ALL') return true;
+      return fac === activeFacility;
+    });
+
+    const topOverdueOrders = filteredDelayOrders.slice(0, 5).map(o => ({
       ordNo: o.ordNo,
       poNo: o.poNo,
       custCode: o.custCode,
       dueDate: o.dueDate,
       delayDays: o.delayDays,
       qty: o.qty,
-      facility: o.ordNo.startsWith('L') ? 'CLL' : 'FBE',
+      facility: (o.proFac === 'FBD' || o.proFac === 'FBE') ? 'FBE' : 'CLL',
     }));
 
     // Executive Cockpit Bundle
     const cockpit = {
       facility: activeFacility,
       kpi: {
-        totalWipPcs: wipData.wipPcs || 0,
-        totalWipOrders: wipData.wipOrders || 0,
+        totalWipPcs: activeFacility === 'FBE' ? fbeWip.pcs : (activeFacility === 'CLL' ? cllWip.pcs : totalWipPcs),
+        totalWipOrders: activeFacility === 'FBE' ? fbeWip.orders : (activeFacility === 'CLL' ? cllWip.orders : totalWipOrders),
         fbeOutputPcs: fbeTotalPcs,
         fbeShare: fbeSharePct,
         cllOutputPcs: cllTotalPcs,
         cllShare: cllSharePct,
-        dailyRunRate: dailyAvgOutput,
+        dailyRunRate: activeFacility === 'FBE' ? Math.round(fbeTotalPcs / workdays) : (activeFacility === 'CLL' ? Math.round(cllTotalPcs / workdays) : dailyAvgOutput),
         activeWorkdays: workdays,
-        overdueCount: overdueData.overdueCount || 0,
-        overduePcs: overdueData.overduePcs || 0,
+        overdueCount: activeFacility === 'FBE' ? fbeOverdue.count : (activeFacility === 'CLL' ? cllOverdue.count : totalOverdueCount),
+        overduePcs: activeFacility === 'FBE' ? fbeOverdue.pcs : (activeFacility === 'CLL' ? cllOverdue.pcs : totalOverduePcs),
         onTimeRate,
       },
       timeline,
       pipeline,
+      dualPipeline,
       departments,
       customerShare,
       overdueOrders: topOverdueOrders,

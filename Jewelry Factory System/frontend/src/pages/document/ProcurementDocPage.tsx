@@ -3,6 +3,7 @@ import { formatDateDDMMYYYY } from '../../utils/dateUtils';
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import DocumentLayout from '../../components/layout/DocumentLayout';
+import { StonePOWorkspace } from '../../components/document/StonePOWorkspace';
 import type { DocListItem, BreadcrumbItem } from '../../components/layout/DocumentLayout';
 import { formConfigMap } from '../../config/formConfigs';
 import { BREADCRUMBS } from '../../config/breadcrumbs';
@@ -389,6 +390,28 @@ function ProcurementDocWorkspace({ docType }: { docType: string }) {
       </div>
     );
   };
+
+  if (docType === 'SPA') {
+    return (
+      <StonePOWorkspace
+        docList={docList}
+        selectedDocNo={selectedDocNo}
+        onSelectDoc={handleSelectDoc}
+        docDetail={docDetail}
+        loading={loading}
+        detailLoading={detailLoading}
+        error={error}
+        page={page}
+        totalPages={totalPages}
+        onPageChange={setPage}
+        search={search}
+        onSearchChange={(text) => {
+          setSearch(text);
+          setPage(1);
+        }}
+      />
+    );
+  }
 
   return (
     <DocumentLayout

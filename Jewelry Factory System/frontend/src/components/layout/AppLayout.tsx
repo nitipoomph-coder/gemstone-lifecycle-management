@@ -4,6 +4,7 @@ import Sidebar from './Sidebar';
 import GlobalTopbar from './GlobalTopbar';
 import { TopbarActionProvider } from '../../contexts/TopbarActionContext';
 import { BreadcrumbProvider } from '../../contexts/BreadcrumbContext';
+import { WorkspaceProvider } from '../../contexts/WorkspaceContext';
 
 const getInitialSidebarState = () => {
   if (typeof window === 'undefined') return true;
@@ -47,29 +48,31 @@ export default function AppLayout() {
   }, []);
 
   return (
-    <TopbarActionProvider>
-      <BreadcrumbProvider>
-        <div className="app-shell flex flex-col w-full h-[100dvh] overflow-hidden">
-          <GlobalTopbar
-            isSidebarOpen={sidebarOpen}
-            onToggleSidebar={() => setSidebar(!sidebarOpen)}
-          />
-          <div className="flex flex-1 min-h-0 w-full overflow-hidden relative">
-            <Sidebar isOpen={sidebarOpen} onToggle={() => setSidebar(!sidebarOpen)} />
-            {sidebarOpen && (
-              <button
-                type="button"
-                className="app-sidebar-scrim"
-                onClick={() => setSidebar(false)}
-                aria-label="Close navigation menu"
-              />
-            )}
-            <main className="app-main flex min-w-0 flex-1 flex-col overflow-hidden">
-              <Outlet />
-            </main>
+    <WorkspaceProvider>
+      <TopbarActionProvider>
+        <BreadcrumbProvider>
+          <div className="app-shell flex flex-col w-full h-[100dvh] overflow-hidden">
+            <GlobalTopbar
+              isSidebarOpen={sidebarOpen}
+              onToggleSidebar={() => setSidebar(!sidebarOpen)}
+            />
+            <div className="flex flex-1 min-h-0 w-full overflow-hidden relative">
+              <Sidebar isOpen={sidebarOpen} onToggle={() => setSidebar(!sidebarOpen)} />
+              {sidebarOpen && (
+                <button
+                  type="button"
+                  className="app-sidebar-scrim"
+                  onClick={() => setSidebar(false)}
+                  aria-label="Close navigation menu"
+                />
+              )}
+              <main className="app-main flex min-w-0 flex-1 flex-col overflow-hidden">
+                <Outlet />
+              </main>
+            </div>
           </div>
-        </div>
-      </BreadcrumbProvider>
-    </TopbarActionProvider>
+        </BreadcrumbProvider>
+      </TopbarActionProvider>
+    </WorkspaceProvider>
   );
 }

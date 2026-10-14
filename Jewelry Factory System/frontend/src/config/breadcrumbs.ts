@@ -115,6 +115,12 @@ export const BREADCRUMBS = {
     { label: `${itemLabel} (${docType})` },
   ],
 
+  // ── Audit ──
+  AUDIT_BOM_PRINT: [
+    { label: 'Audit' },
+    { label: 'BOM Print' },
+  ] as BreadcrumbItem[],
+
   // ── Dynamic Placeholder Pages ──
   PLACEHOLDER: (groupLabel: string, displayTitle: string): BreadcrumbItem[] => [
     { label: groupLabel },

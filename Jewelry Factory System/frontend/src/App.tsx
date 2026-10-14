@@ -26,6 +26,7 @@ import SecurityRadarPage from './pages/admin/SecurityRadarPage';
 import AuditLogsPage from './pages/admin/AuditLogsPage';
 import ActiveSessionsPage from './pages/admin/ActiveSessionsPage';
 import UserManagementPage from './pages/admin/UserManagementPage';
+import BOMPrintPage from './pages/audit/BOMPrintPage';
 import {
   customerTrendsPathFromSearch,
   LEGACY_CUSTOMER_TRENDS_PATH,
@@ -173,6 +174,10 @@ export default function App() {
             <Route path="/po-tracker/ord/:ordNo" element={<OrderDetailPage />} />
             <Route path="/po-tracker/:ordNo" element={<OrderDetailPage />} />
             <Route path="/item-detail/:id" element={<ItemDetailPage />} />
+
+            {/* Audit Module (Admin Only) */}
+            <Route path="/audit" element={<Navigate to="/audit/bom-print" replace />} />
+            <Route path="/audit/bom-print" element={<BOMPrintPage />} />
 
             {/* Administration & Security (Zero-DB) */}
             <Route path="/admin/security-radar" element={<SecurityRadarPage />} />

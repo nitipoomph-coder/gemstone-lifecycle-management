@@ -133,11 +133,26 @@ export interface CockpitOverdueOrder {
   facility: 'FBE' | 'CLL';
 }
 
+export interface DualPipelineLane {
+  facility: 'FBE' | 'CLL';
+  facilityName: string;
+  wipPcs: number;
+  wipOrders: number;
+  bottleneckStage: string;
+  stages: CockpitPipelineStage[];
+}
+
+export interface DualPipelineData {
+  cll: DualPipelineLane;
+  fbe: DualPipelineLane;
+}
+
 export interface CockpitBundle {
   facility: 'ALL' | 'FBE' | 'CLL';
   kpi: CockpitKpi;
   timeline: CockpitTimelinePoint[];
   pipeline: CockpitPipelineStage[];
+  dualPipeline?: DualPipelineData;
   departments: CockpitDepartment[];
   customerShare: CockpitCustomerShare[];
   overdueOrders: CockpitOverdueOrder[];

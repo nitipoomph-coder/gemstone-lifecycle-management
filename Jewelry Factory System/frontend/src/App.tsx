@@ -26,7 +26,7 @@ import SecurityRadarPage from './pages/admin/SecurityRadarPage';
 import AuditLogsPage from './pages/admin/AuditLogsPage';
 import ActiveSessionsPage from './pages/admin/ActiveSessionsPage';
 import UserManagementPage from './pages/admin/UserManagementPage';
-import BOMPrintPage from './pages/audit/BOMPrintPage';
+import CCTVAuditPage from './pages/audit/CCTVAuditPage';
 import {
   customerTrendsPathFromSearch,
   LEGACY_CUSTOMER_TRENDS_PATH,
@@ -176,8 +176,8 @@ export default function App() {
             <Route path="/item-detail/:id" element={<ItemDetailPage />} />
 
             {/* Audit Module (Admin Only) */}
-            <Route path="/audit" element={<Navigate to="/audit/bom-print" replace />} />
-            <Route path="/audit/bom-print" element={<BOMPrintPage />} />
+            <Route path="/audit" element={<Navigate to="/audit/cctv-report" replace />} />
+            <Route path="/audit/cctv-report" element={<CCTVAuditPage />} />
 
             {/* Administration & Security (Zero-DB) */}
             <Route path="/admin/security-radar" element={<SecurityRadarPage />} />

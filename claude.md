@@ -45,6 +45,7 @@
 | Order Trends           | —                                    | ✅ Order volume trends and evidence |
 | สต็อกอะไหล่             | SP-Order, SP-Issue, SP-Receive, …    | ⬜ Placeholder      |
 | งานเหมา (Subcontract Management) | —                           | 🟡 UI Preview (1/3, ไม่มี Backend) |
+| Audit — CCTV IT Audit Report | —                              | ✅ Live (admin only, Zero-DB) |
 
 ### Key Feature: PO tracker
 
@@ -226,6 +227,8 @@ gemstone-lifecycle-management/
     │       │       └── NavGroup.tsx         # Collapsible nav group component
     │       │
     │       ├── pages/
+    │       │   ├── audit/
+    │       │   │   └── CCTVAuditPage.tsx      # 🛡️ CCTV IT Audit Report (/audit/cctv-report)
     │       │   ├── login/                     # Authentication page feature folder
     │       │   │   ├── LoginPage.tsx          # Page composition only
     │       │   │   ├── LoginPage.css          # Login-only layout, fields, modals, and responsive styles
@@ -271,6 +274,7 @@ gemstone-lifecycle-management/
     │       │   └── sampleAPI.ts            # Sample room endpoints
     │       │
     │       ├── hooks/
+    │       │   ├── useCctvAuditForm.ts          # CCTV audit form state (localStorage + import/export + holidays)
     │       │   ├── usePeriodSetup.ts            # ⭐ Centralized period filter state management
     │       │   ├── useCustomerSalesData.ts      # Customer sales data hook
     │       │   ├── useCustomerReportData.ts     # Customer report data hook
@@ -282,6 +286,7 @@ gemstone-lifecycle-management/
     │       ├── config/
     │       │   ├── api.ts                  # API base URL config
     │       │   ├── breadcrumbs.ts          # Breadcrumb definitions
+    │       │   ├── cctvAuditConfig.ts      # CCTV audit defaults (columns, ✓/✗ options, signatures, Thai labels)
     │       │   ├── menuConfig.ts           # Sidebar menu structure definition (role-based)
     │       │   ├── formConfigs.ts          # Document form field configurations (all doc types)
     │       │   ├── customerGroups.ts       # SSOT for customer group mapping (N008, MLT, etc.)
@@ -296,6 +301,7 @@ gemstone-lifecycle-management/
     │       │
     │       ├── utils/
     │       │   ├── fetchWithAuth.ts          # 🔐 Fetch wrapper with JWT Bearer token injection
+    │       │   ├── cctvAuditForm.ts          # CCTV audit pure helpers (generate / edit / validate / export JSON)
     │       │   ├── periodUtils.ts            # Period helper functions (getDefaultCompareYear, parseMonths, monthRange)
     │       │   ├── customerTrendsUrl.ts      # Customer trends URL builder
     │       │   ├── navigationUtils.ts        # Navigation utility helpers
@@ -1113,3 +1119,31 @@ All bar charts across the system have been standardized with consistent styling 
 - Added checkbox-based activation for Compare Year selection in `PeriodSetupPanel.tsx`.
 - Users can toggle Compare 1 / Compare 2 independently via checkboxes.
 - When a checkbox is activated, the compare year auto-selects the nearest available year.
+
+
+## 2026-10-14 CCTV IT Audit Report (Audit → CCTV Report)
+
+### 1. ภาพรวม
+- **Route**: `/audit/cctv-report` (admin only) · เมนู `Audit → CCTV Report` (`menuConfig.ts`, id `audit-cctv-report`)
+- **วัตถุประสงค์**: ผู้ใช้ติ๊กผลตรวจกล้องวงจรปิดรายวันบนหน้าจอ → สั่งพิมพ์ A4 แนวนอน → เซ็นชื่อ/ลงวันที่ด้วยปากกา ใช้เป็นหลักฐาน ISO / IT Audit
+- **UI**: ไม่ใช้ checkbox ในตาราง — สถานะแสดงเป็นตัวอักษร `✓` / `✗` / `-` (คลิกเพื่อวน ว่าง → OK → NG → NA → ว่าง)
+- **ไฟล์**: `pages/audit/CCTVAuditPage.tsx`, `components/audit/CctvAuditTable.tsx`, `hooks/useCctvAuditForm.ts`, `utils/cctvAuditForm.ts`, `config/cctvAuditConfig.ts`, types `Cctv*` ใน `types/index.ts`, สไตล์ `.cctv-*` ท้าย `index.css`
+
+### 2. Zero-DB (ตามกฎ READ-ONLY 100%)
+- **ไม่มี Backend Endpoint ใหม่ และไม่เขียนลง DB**
+- วันหยุดดึงจาก endpoint เดิม `GET /api/production-summary/holidays?year=` → ตาราง `GMHoliday` (SELECT เท่านั้น) ผ่าน `getHolidays()` ใน `productionSummaryAPI.ts`
+- `GMHoliday` ส่งมาเป็นวันที่อย่างเดียว (ไม่มีชื่อวันหยุด) → แถวเส้นคั่นแสดงคำว่า "วันหยุด"
+- ฟอร์มเก็บเป็น JSON: React state + `localStorage` (key `cctv-audit-form`) + Import/Export ไฟล์ `.json` (`cctv-audit-YYYY-MM.json`) — **Export เก็บไว้เป็นหลักฐานก่อนพิมพ์เสมอ** เพราะ localStorage หายได้
+
+### 3. โครงสร้าง JSON (`CctvAuditForm`, `schemaVersion: 1`)
+- `columns[]` — `{ id, label, type: 'date'|'status'|'text', width?, fixed? }` คอลัมน์แรกต้องเป็น `date` เสมอ (แถววันหยุด merge ด้วย `colSpan = columns.length - 1`)
+- `rows[]` — `{ id, type: 'data'|'holiday', date: 'YYYY-MM-DD', cells?: Record<columnId, value>, holiday?: { name, source: 'company'|'sunday'|'manual' } }`
+- `cells` ผูกกับ `columnId` ไม่ใช่ลำดับ → เพิ่ม/ลบ/สลับคอลัมน์โดยข้อมูลเดิมไม่เพี้ยน
+- วันที่เป็น string (ไม่ใช้ `Date` ตรงๆ) เพื่อเลี่ยง timezone เลื่อนวัน
+- วันหยุดถูกฝังเป็น snapshot ตอน Generate — ฟอร์มเดือนเก่าไม่เปลี่ยนแม้ `GMHoliday` ถูกแก้ภายหลัง
+- Generate เดือนใหม่จะคัดลอก columns/signatures/location จากฟอร์มปัจจุบัน แต่ล้างเลขที่เอกสาร; ติ๊ก "วันอาทิตย์เป็นวันหยุด" เพื่อแทรกวันอาทิตย์เป็นเส้นคั่นอัตโนมัติ; ผู้ใช้สลับแถวเป็นวันหยุด/วันทำงานเองได้ (ไอคอนปฏิทิน, ไม่ถูกพิมพ์)
+
+### 4. Print
+- ใช้ named page `cctv-landscape` (`@page { size: A4 landscape; margin: 10mm }`) ผูกกับ `.cctv-sheet`
+- ตอนพิมพ์บังคับกระดาษขาว/ตัวหนังสือดำทุกธีม; แถบวันหยุดสีเทาใช้ `print-color-adjust: exact` (มีใน `@media print` เดิม); `thead` ซ้ำทุกหน้า; กล่องลายเซ็นไม่แบ่งหน้า
+- ปุ่ม/Toolbar/คอลัมน์สลับวันหยุดใช้ `.no-print`

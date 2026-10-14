@@ -120,6 +120,10 @@ export const BREADCRUMBS = {
     { label: 'Audit' },
     { label: 'BOM Print' },
   ] as BreadcrumbItem[],
+  AUDIT_CCTV_REPORT: [
+    { label: 'Audit' },
+    { label: 'CCTV Report' },
+  ] as BreadcrumbItem[],
 
   // ── Dynamic Placeholder Pages ──
   PLACEHOLDER: (groupLabel: string, displayTitle: string): BreadcrumbItem[] => [

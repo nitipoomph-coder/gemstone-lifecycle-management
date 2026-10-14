@@ -87,3 +87,61 @@ export interface DocumentListItem {
   docNumber: string;
   date: string;
 }
+
+// ============================================
+// CCTV IT Audit Report (Audit Module — Zero-DB: form is kept as a JSON file)
+// ============================================
+export type CctvColumnType = 'date' | 'status' | 'text';
+export type CctvRowType = 'data' | 'holiday';
+export type CctvHolidaySource = 'company' | 'sunday' | 'manual';
+
+export interface CctvColumn {
+  id: string;
+  label: string;
+  type: CctvColumnType;
+  width?: number;
+  fixed?: boolean;
+}
+
+export interface CctvStatusOption {
+  value: string;
+  label: string;
+}
+
+export interface CctvHolidayInfo {
+  name: string;
+  source: CctvHolidaySource;
+}
+
+export interface CctvRow {
+  id: string;
+  type: CctvRowType;
+  /** ISO date string "YYYY-MM-DD" (kept as string to avoid timezone shifts) */
+  date: string;
+  /** Cell values keyed by column id (not by index) */
+  cells?: Record<string, string>;
+  holiday?: CctvHolidayInfo;
+}
+
+export interface CctvSignature {
+  id: string;
+  role: string;
+}
+
+export interface CctvReportMeta {
+  title: string;
+  docNo: string;
+  year: number;
+  month: number;
+  location: string;
+  standard: string;
+}
+
+export interface CctvAuditForm {
+  schemaVersion: number;
+  meta: CctvReportMeta;
+  columns: CctvColumn[];
+  statusOptions: CctvStatusOption[];
+  rows: CctvRow[];
+  signatures: CctvSignature[];
+}

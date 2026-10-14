@@ -156,7 +156,7 @@ export const menuConfig: NavMenuGroup[] = [
     section: 'Administration',
     workspace: 'ALL',
     items: [
-      { id: 'audit-bom-print', label: 'BOM Print', code: 'BOM', path: '/audit/bom-print' },
+      { id: 'audit-cctv-report', label: 'CCTV Report', code: 'CCTV', path: '/audit/cctv-report' },
     ],
   },
   {

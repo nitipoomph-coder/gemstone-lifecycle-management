@@ -1749,3 +1749,240 @@ h6 {
     opacity: 0.88;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════
+   CCTV IT AUDIT REPORT (Audit module) — screen + A4 landscape print
+   Status is shown as text symbols (✓ ✗ -), never checkbox squares.
+   ═══════════════════════════════════════════════════════════ */
+.cctv-sheet {
+  page: cctv-landscape;
+  background: var(--color-surface-0);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border-light);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  font-size: var(--erp-text-body);
+}
+
+.cctv-sheet__title {
+  margin: 0 0 0.5rem;
+  text-align: center;
+  font-size: var(--erp-text-section);
+  font-weight: 700;
+}
+
+.cctv-sheet__meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.375rem 1rem;
+  margin-bottom: 0.75rem;
+  font-size: var(--erp-text-control);
+}
+
+.cctv-meta-field {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.cctv-meta-field__label {
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.cctv-input {
+  width: 100%;
+  min-width: 0;
+  padding: 2px 4px;
+  border: 0;
+  border-bottom: 1px solid var(--color-border-light);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+.cctv-input:focus-visible,
+.cctv-status:focus-visible,
+.cctv-toggle:focus-visible {
+  outline: 2px solid var(--color-ui-interactive);
+  outline-offset: 1px;
+}
+
+.cctv-table-wrap {
+  overflow-x: auto;
+}
+
+.cctv-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.cctv-table th,
+.cctv-table td {
+  height: 28px;
+  padding: 2px 6px;
+  border: 1px solid var(--color-border-strong);
+  text-align: center;
+  vertical-align: middle;
+}
+
+.cctv-table th {
+  background: var(--color-table-header);
+  font-weight: 600;
+}
+
+.cctv-table .cctv-cell--text {
+  text-align: left;
+}
+
+.cctv-table .cctv-action-cell {
+  width: 32px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+/* Holiday separator: merged gray band */
+.cctv-row-holiday td {
+  background: var(--color-surface-2);
+  color: var(--color-text-secondary);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.cctv-row-holiday td.cctv-action-cell {
+  background: transparent;
+}
+
+.cctv-status {
+  width: 100%;
+  min-height: 24px;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-primary);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cctv-status--ok {
+  color: var(--color-success-600);
+}
+
+.cctv-status--ng {
+  color: var(--color-danger-600);
+}
+
+.cctv-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 24px;
+  border: 0;
+  border-radius: 0.25rem;
+  background: transparent;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+}
+
+.cctv-toggle:hover {
+  background: var(--color-surface-2);
+  color: var(--color-text-primary);
+}
+
+.cctv-signatures {
+  display: flex;
+  justify-content: space-around;
+  gap: 1.5rem;
+  margin-top: 2.5rem;
+  break-inside: avoid;
+}
+
+.cctv-signature {
+  flex: 1;
+  max-width: 18rem;
+  text-align: center;
+}
+
+.cctv-signature__line {
+  height: 2.5rem;
+  margin-bottom: 0.375rem;
+  border-bottom: 1px solid var(--color-text-primary);
+}
+
+.cctv-signature__date {
+  margin-top: 0.375rem;
+  font-size: var(--erp-text-control);
+}
+
+@page cctv-landscape {
+  size: A4 landscape;
+  margin: 10mm;
+}
+
+@media print {
+  /* Paper is always white/black regardless of the active theme */
+  .cctv-sheet {
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 12px;
+  }
+
+  .cctv-sheet__title {
+    font-size: 16px;
+  }
+
+  .cctv-table th,
+  .cctv-table td {
+    height: 22px;
+    border-color: #000000;
+    color: #000000;
+    font-size: 12px;
+  }
+
+  .cctv-table th {
+    background: #eeeeee;
+  }
+
+  /* Gray band for holidays must survive printing */
+  .cctv-row-holiday td {
+    background: #d9d9d9;
+    color: #000000;
+  }
+
+  .cctv-row-holiday td.cctv-action-cell {
+    background: transparent;
+  }
+
+  /* ✓ / ✗ are distinguishable by glyph, safe on monochrome printers */
+  .cctv-status,
+  .cctv-status--ok,
+  .cctv-status--ng {
+    color: #000000;
+    font-size: 12px;
+  }
+
+  .cctv-input {
+    border-bottom: 0;
+    color: #000000;
+    font-size: 12px;
+  }
+
+  .cctv-meta-field__label,
+  .cctv-signature__date {
+    color: #000000;
+  }
+
+  .cctv-signature__line {
+    border-bottom-color: #000000;
+  }
+
+  .cctv-table-wrap {
+    overflow: visible;
+  }
+}

@@ -1,5 +1,217 @@
 [
   {
+    "id": "evt_1792030868037_zzdxa",
+    "timestamp": "2026-10-15T02:21:08.037Z",
+    "category": "SECURITY",
+    "action": "USER_MENU_PERMISSIONS_UPDATED",
+    "actor": "ADMIN",
+    "ip": "127.0.0.1",
+    "status": "SUCCESS",
+    "severity": "HIGH",
+    "details": {
+      "targetUser": "ADMIN",
+      "menuCount": 1,
+      "allowedMenus": [
+        "*"
+      ]
+    }
+  },
+  {
+    "id": "evt_1792030860316_28wpz",
+    "timestamp": "2026-10-15T02:21:00.316Z",
+    "category": "SECURITY",
+    "action": "USER_MENU_PERMISSIONS_UPDATED",
+    "actor": "ADMIN",
+    "ip": "127.0.0.1",
+    "status": "SUCCESS",
+    "severity": "HIGH",
+    "details": {
+      "targetUser": "ADMIN",
+      "menuCount": 49,
+      "allowedMenus": [
+        "home",
+        "sales-dashboard",
+        "dash-cust",
+        "dash-matrix",
+        "dash-top-orders",
+        "dash-top-orders-analytics",
+        "order-tracker",
+        "po-tracker",
+        "pro-sum",
+        "pro-forecast",
+        "fbe-order-track",
+        "procurement",
+        "spa",
+        "sra",
+        "srb",
+        "sir",
+        "orders",
+        "soa",
+        "sia",
+        "sib",
+        "sip",
+        "sis",
+        "sample",
+        "ssa",
+        "sim",
+        "inventory",
+        "check-dispatch",
+        "check-sample",
+        "check-purchase",
+        "audit",
+        "check-stock",
+        "check-status",
+        "spare-parts",
+        "sp-order",
+        "sp-issue",
+        "sp-receive",
+        "sp-pr",
+        "sp-po",
+        "sp-check-order",
+        "sp-check-stock",
+        "sp-summary-stock",
+        "sp-check-item",
+        "sp-check-status",
+        "admin-security",
+        "admin-radar",
+        "admin-users",
+        "admin-audit",
+        "admin-sessions",
+        "audit-cctv-report"
+      ]
+    }
+  },
+  {
+    "id": "evt_1792030128334_1eahc",
+    "timestamp": "2026-10-15T02:08:48.334Z",
+    "category": "AUTH",
+    "action": "LOGIN_SUCCESS",
+    "actor": "ADMIN",
+    "ip": "127.0.0.1",
+    "status": "SUCCESS",
+    "severity": "LOW",
+    "details": {
+      "role": "admin",
+      "fullName": "ADMIN"
+    }
+  },
+  {
+    "id": "evt_1792030084840_q3b8r",
+    "timestamp": "2026-10-15T02:08:04.840Z",
+    "category": "AUTH",
+    "action": "LOGIN_SUCCESS",
+    "actor": "SALES",
+    "ip": "127.0.0.1",
+    "status": "SUCCESS",
+    "severity": "LOW",
+    "details": {
+      "role": "sales",
+      "fullName": "SALES"
+    }
+  },
+  {
+    "id": "evt_1792030045372_iofbs",
+    "timestamp": "2026-10-15T02:07:25.372Z",
+    "category": "SECURITY",
+    "action": "USER_MENU_PERMISSIONS_UPDATED",
+    "actor": "ADMIN",
+    "ip": "127.0.0.1",
+    "status": "SUCCESS",
+    "severity": "HIGH",
+    "details": {
+      "targetUser": "SALES",
+      "menuCount": 7,
+      "allowedMenus": [
+        "sales-dashboard",
+        "dash-cust",
+        "dash-matrix",
+        "dash-top-orders",
+        "dash-top-orders-analytics",
+        "order-tracker",
+        "po-tracker"
+      ]
+    }
+  },
+  {
+    "id": "evt_1792026998180_hdh55",
+    "timestamp": "2026-10-15T01:16:38.180Z",
+    "category": "SECURITY",
+    "action": "PATH_TRAVERSAL_ATTEMPT",
+    "actor": "SIMULATED_SCANNER",
+    "ip": "127.0.0.1",
+    "status": "BLOCKED",
+    "severity": "CRITICAL",
+    "details": {
+      "message": "Simulated path traversal probe: /api/photos/ps/..%2f..%2fconfig"
+    }
+  },
+  {
+    "id": "evt_1792026996910_ccvpm",
+    "timestamp": "2026-10-15T01:16:36.910Z",
+    "category": "SECURITY",
+    "action": "PATH_TRAVERSAL_ATTEMPT",
+    "actor": "SIMULATED_SCANNER",
+    "ip": "127.0.0.1",
+    "status": "BLOCKED",
+    "severity": "CRITICAL",
+    "details": {
+      "message": "Simulated path traversal probe: /api/photos/ps/..%2f..%2fconfig"
+    }
+  },
+  {
+    "id": "evt_1792026994670_htb4j",
+    "timestamp": "2026-10-15T01:16:34.670Z",
+    "category": "SECURITY",
+    "action": "RATE_LIMIT_EXCEEDED",
+    "actor": "SIMULATED_BOT",
+    "ip": "127.0.0.1",
+    "status": "BLOCKED",
+    "severity": "HIGH",
+    "details": {
+      "message": "Simulated API flood: Exceeded 200 requests/minute threshold"
+    }
+  },
+  {
+    "id": "evt_1792026989821_jd6p2",
+    "timestamp": "2026-10-15T01:16:29.821Z",
+    "category": "SECURITY",
+    "action": "LOGIN_FAIL",
+    "actor": "SIMULATED_ATTACKER",
+    "ip": "127.0.0.1",
+    "status": "FAILED",
+    "severity": "MEDIUM",
+    "details": {
+      "message": "Simulated brute-force attempt with invalid password"
+    }
+  },
+  {
+    "id": "evt_1792026970623_c4s46",
+    "timestamp": "2026-10-15T01:16:10.623Z",
+    "category": "SECURITY",
+    "action": "PATH_TRAVERSAL_ATTEMPT",
+    "actor": "SIMULATED_SCANNER",
+    "ip": "127.0.0.1",
+    "status": "BLOCKED",
+    "severity": "CRITICAL",
+    "details": {
+      "message": "Simulated path traversal probe: /api/photos/ps/..%2f..%2fconfig"
+    }
+  },
+  {
+    "id": "evt_1792026509374_03rik",
+    "timestamp": "2026-10-15T01:08:29.374Z",
+    "category": "AUTH",
+    "action": "LOGIN_SUCCESS",
+    "actor": "ADMIN",
+    "ip": "127.0.0.1",
+    "status": "SUCCESS",
+    "severity": "LOW",
+    "details": {
+      "role": "admin",
+      "fullName": "ADMIN"
+    }
+  },
+  {
     "id": "evt_1791968577634_k054p",
     "timestamp": "2026-10-14T09:02:57.634Z",
     "category": "AUTH",

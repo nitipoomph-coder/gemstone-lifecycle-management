@@ -148,18 +148,6 @@ export const menuConfig: NavMenuGroup[] = [
 
   // ── Administration & Security (Shared / ALL) ──
   {
-    id: 'audit-management',
-    label: 'Audit',
-    icon: 'clipboard-check',
-    accentColor: 'var(--color-brand-500)',
-    roles: ['admin'],
-    section: 'Administration',
-    workspace: 'ALL',
-    items: [
-      { id: 'audit-cctv-report', label: 'CCTV Report', code: 'CCTV', path: '/audit/cctv-report' },
-    ],
-  },
-  {
     id: 'admin-security',
     label: 'Security & Audit',
     icon: 'shield-alert',
@@ -172,6 +160,7 @@ export const menuConfig: NavMenuGroup[] = [
       { id: 'admin-users', label: 'User Management', path: '/admin/users' },
       { id: 'admin-audit', label: 'Audit Logs', path: '/admin/audit-logs' },
       { id: 'admin-sessions', label: 'Active Sessions', path: '/admin/sessions' },
+      { id: 'audit-cctv-report', label: 'CCTV Report', code: 'CCTV', path: '/audit/cctv-report' },
     ],
   },
 ];

@@ -184,6 +184,7 @@ export default function App() {
             <Route path="/admin/users" element={<UserManagementPage />} />
             <Route path="/admin/audit-logs" element={<AuditLogsPage />} />
             <Route path="/admin/sessions" element={<ActiveSessionsPage />} />
+            <Route path="/admin/cctv-report" element={<Navigate to="/audit/cctv-report" replace />} />
 
             <Route path="*" element={<PlaceholderPage />} />
           </Route>

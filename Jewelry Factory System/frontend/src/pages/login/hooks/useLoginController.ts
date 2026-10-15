@@ -60,6 +60,11 @@ export function useLoginController() {
 
       localStorage.setItem('auth_role', response.role);
       localStorage.setItem('auth_user', response.username);
+      if (response.allowedMenus) {
+        localStorage.setItem('auth_allowed_menus', JSON.stringify(response.allowedMenus));
+      } else {
+        localStorage.removeItem('auth_allowed_menus');
+      }
       navigate(response.role === 'admin' ? '/' : '/dashboard/customer');
     } catch {
       setErrorMessage(copy.errSys);

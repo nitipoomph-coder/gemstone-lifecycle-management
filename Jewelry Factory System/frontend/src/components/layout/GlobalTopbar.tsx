@@ -1,4 +1,4 @@
-import { Palette, Printer, FileSpreadsheet, FileText, ChevronLeft, ChevronRight, PanelLeft, LayoutGrid, ChevronDown, Check, Building2, Package } from 'lucide-react';
+import { Palette, Printer, FileSpreadsheet, FileText, ChevronLeft, ChevronRight, PanelLeft, ChevronDown, Check, Layers, Boxes } from 'lucide-react';
 import { useTheme } from '../../contexts/useTheme';
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -108,118 +108,87 @@ export default function GlobalTopbar({ isSidebarOpen, onToggleSidebar }: GlobalT
         {/* Subtle vertical separator */}
         <div className="h-4 w-px bg-[var(--color-border-light)] mx-1 sm:mx-1.5 shrink-0" />
 
-        {/* Workspace Switcher (PCC / Inventory) */}
+        {/* Workspace Switcher (Production Control / Inventory & Supply) */}
         <div className="relative shrink-0" ref={workspaceMenuRef}>
           <button
             type="button"
             onClick={() => setShowWorkspaceMenu(!showWorkspaceMenu)}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[12px] font-bold transition-all cursor-pointer border shadow-sm"
-            style={{
-              backgroundColor: workspace === 'PCC' ? 'color-mix(in srgb, var(--color-brand-600) 8%, var(--color-surface-0))' : 'color-mix(in srgb, var(--color-proc-polishing, var(--color-success-600)) 8%, var(--color-surface-0))',
-              borderColor: workspace === 'PCC' ? 'color-mix(in srgb, var(--color-brand-600) 30%, transparent)' : 'color-mix(in srgb, var(--color-proc-polishing, var(--color-success-600)) 30%, transparent)',
-              color: 'var(--color-text-primary)',
-            }}
-            title="Switch Workspace: PCC Management System / Inventory Management System"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-all cursor-pointer border-0"
+            title="Switch Workspace"
             aria-label="Switch Workspace"
           >
-            <LayoutGrid size={13} style={{ color: workspace === 'PCC' ? 'var(--color-brand-600)' : 'var(--color-proc-polishing, var(--color-success-600))' }} />
-            <span className="font-extrabold tracking-tight">
-              {workspace === 'PCC' ? 'PCC Management' : 'Inventory System'}
+            <div className={`w-5 h-5 rounded-lg flex items-center justify-center shrink-0 ${
+              workspace === 'PCC'
+                ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400'
+                : 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400'
+            }`}>
+              {workspace === 'PCC' ? <Layers size={13} /> : <Boxes size={13} />}
+            </div>
+            <span className="font-semibold tracking-tight">
+              {workspace === 'PCC' ? 'Production Control' : 'Inventory & Supply'}
             </span>
-            <span
-              className="text-[10px] font-mono font-black px-1.5 py-0.2 rounded"
-              style={{
-                backgroundColor: 'var(--color-surface-2)',
-                color: 'var(--color-text-secondary)',
-                border: '1px solid var(--color-border-light)',
-              }}
-            >
-              {workspace === 'PCC' ? 'PROD' : 'STONE'}
-            </span>
-            <ChevronDown size={11} style={{ color: 'var(--color-text-tertiary)' }} />
+            <ChevronDown size={12} className="text-slate-400" />
           </button>
 
-          {/* Switcher Dropdown */}
+          {/* Switcher Dropdown (Concise & Modern) */}
           {showWorkspaceMenu && (
             <div
-              className="absolute left-0 mt-1.5 w-72 rounded-lg border shadow-lg p-1.5 z-[120] flex flex-col gap-1"
-              style={{
-                backgroundColor: 'var(--color-surface-0)',
-                borderColor: 'var(--color-border-default)',
-                boxShadow: 'var(--shadow-modal)',
-              }}
+              className="absolute left-0 mt-2 w-56 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-xl p-1.5 z-[120] flex flex-col gap-1 bg-white dark:bg-slate-900"
             >
-              <div
-                className="px-2 py-1 text-[10px] font-black uppercase tracking-wider"
-                style={{ color: 'var(--color-text-tertiary)' }}
-              >
-                Select System Workspace
+              <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                Workspace
               </div>
 
-              {/* Choice 1: PCC */}
+              {/* Choice 1: Production Control */}
               <button
                 type="button"
                 onClick={() => {
                   switchWorkspace('PCC');
                   setShowWorkspaceMenu(false);
                 }}
-                className="flex items-start gap-2.5 p-2 rounded-md text-left transition-colors cursor-pointer border"
-                style={{
-                  backgroundColor: workspace === 'PCC' ? 'var(--color-surface-2)' : 'transparent',
-                  borderColor: workspace === 'PCC' ? 'var(--color-border-default)' : 'transparent',
-                }}
+                className={`flex items-center justify-between p-2.5 rounded-xl text-left transition-colors cursor-pointer border-0 ${
+                  workspace === 'PCC'
+                    ? 'bg-indigo-50/80 dark:bg-indigo-950/40 text-indigo-950 dark:text-indigo-200 font-semibold'
+                    : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/40'
+                }`}
               >
-                <div
-                  className="w-7 h-7 rounded flex items-center justify-center shrink-0 mt-0.5"
-                  style={{
-                    backgroundColor: 'color-mix(in srgb, var(--color-brand-600) 12%, transparent)',
-                    color: 'var(--color-brand-600)',
-                  }}
-                >
-                  <Building2 size={15} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-[12px] font-extrabold flex items-center justify-between" style={{ color: 'var(--color-text-primary)' }}>
-                    PCC Management System
-                    {workspace === 'PCC' && <Check size={13} style={{ color: 'var(--color-brand-600)' }} />}
+                <div className="flex items-center gap-2.5">
+                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                    workspace === 'PCC'
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
+                  }`}>
+                    <Layers size={14} />
                   </div>
-                  <div className="text-[11px] truncate" style={{ color: 'var(--color-text-tertiary)' }}>
-                    Production Control, Orders, Sales
-                  </div>
+                  <span className="text-xs font-semibold">Production Control</span>
                 </div>
+                {workspace === 'PCC' && <Check size={14} className="text-indigo-600 dark:text-indigo-400" />}
               </button>
 
-              {/* Choice 2: Inventory */}
+              {/* Choice 2: Inventory & Supply */}
               <button
                 type="button"
                 onClick={() => {
                   switchWorkspace('INVENTORY');
                   setShowWorkspaceMenu(false);
                 }}
-                className="flex items-start gap-2.5 p-2 rounded-md text-left transition-colors cursor-pointer border"
-                style={{
-                  backgroundColor: workspace === 'INVENTORY' ? 'var(--color-surface-2)' : 'transparent',
-                  borderColor: workspace === 'INVENTORY' ? 'var(--color-border-default)' : 'transparent',
-                }}
+                className={`flex items-center justify-between p-2.5 rounded-xl text-left transition-colors cursor-pointer border-0 ${
+                  workspace === 'INVENTORY'
+                    ? 'bg-emerald-50/80 dark:bg-emerald-950/40 text-emerald-950 dark:text-emerald-200 font-semibold'
+                    : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/40'
+                }`}
               >
-                <div
-                  className="w-7 h-7 rounded flex items-center justify-center shrink-0 mt-0.5"
-                  style={{
-                    backgroundColor: 'color-mix(in srgb, var(--color-proc-polishing, var(--color-success-600)) 12%, transparent)',
-                    color: 'var(--color-proc-polishing, var(--color-success-600))',
-                  }}
-                >
-                  <Package size={15} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-[12px] font-extrabold flex items-center justify-between" style={{ color: 'var(--color-text-primary)' }}>
-                    Inventory Management System
-                    {workspace === 'INVENTORY' && <Check size={13} style={{ color: 'var(--color-proc-polishing, var(--color-success-600))' }} />}
+                <div className="flex items-center gap-2.5">
+                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                    workspace === 'INVENTORY'
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
+                  }`}>
+                    <Boxes size={14} />
                   </div>
-                  <div className="text-[11px] truncate" style={{ color: 'var(--color-text-tertiary)' }}>
-                    Stone Purchase (SPA/SRA), Stock Balance
-                  </div>
+                  <span className="text-xs font-semibold">Inventory & Supply</span>
                 </div>
+                {workspace === 'INVENTORY' && <Check size={14} className="text-emerald-600 dark:text-emerald-400" />}
               </button>
             </div>
           )}

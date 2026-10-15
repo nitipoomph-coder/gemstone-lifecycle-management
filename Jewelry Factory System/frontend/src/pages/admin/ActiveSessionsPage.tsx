@@ -191,24 +191,24 @@ export default function ActiveSessionsPage() {
 
   return (
     <div className="app-page-scroll content-scrollbar p-4 sm:p-6 w-full">
-      <div className="flex flex-col gap-5 max-w-[1500px] mx-auto w-full text-[var(--color-text-main)] pb-12">
-        {/* ─── Header ─────────────────────────────────────────────────────────────── */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-3 border-b border-[var(--color-border-subtle)]">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shadow-sm">
+      <div className="flex flex-col gap-6 max-w-[1600px] mx-auto w-full text-[var(--color-text-primary)] pb-12">
+        {/* ─── Top Header Bar ──────────────────────────────────────────────────────── */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4">
+          <div className="flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-500/20 via-teal-500/15 to-blue-500/10 flex items-center justify-center text-emerald-500 shadow-xs">
               <Users size={22} />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--color-text-main)] m-0">
-                  Active User Sessions & Data Presence
+                <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--color-text-primary)] m-0">
+                  Active User Sessions
                 </h1>
-                <span className="text-xs px-2 py-0.5 rounded-full font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-bold">
+                <span className="text-[11px] font-mono px-2.5 py-0.5 rounded-full bg-slate-500/10 text-slate-600 dark:text-slate-300 font-semibold">
                   {sessions.length} Online
                 </span>
               </div>
-              <p className="text-xs sm:text-sm text-[var(--color-text-muted)] m-0">
-                Live presence tracking: Monitor user navigation, active queries, and real-time operations
+              <p className="text-xs sm:text-sm text-[var(--color-text-secondary)] m-0 mt-0.5">
+                Monitor active enterprise user sessions, live page navigation, and operator activity.
               </p>
             </div>
           </div>
@@ -218,97 +218,94 @@ export default function ActiveSessionsPage() {
             <button
               type="button"
               onClick={() => setAutoRefresh(!autoRefresh)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all border cursor-pointer ${
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer border-0 shadow-xs ${
                 autoRefresh
-                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 shadow-sm'
-                  : 'bg-[var(--color-surface-2)] text-[var(--color-text-muted)] border-[var(--color-border-subtle)]'
+                  ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
               }`}
             >
-              <Radio size={14} className={autoRefresh ? 'animate-pulse text-emerald-400' : ''} />
-              <span>{autoRefresh ? 'Live (10s)' : 'Live Paused'}</span>
+              <Radio size={13} className={autoRefresh ? 'animate-pulse text-emerald-500' : ''} />
+              <span>{autoRefresh ? 'Live Sync (10s)' : 'Paused'}</span>
             </button>
 
             <button
               type="button"
               onClick={() => fetchSessions(true)}
               disabled={isRefreshing}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] text-[var(--color-text-main)] border border-[var(--color-border-subtle)] transition-all cursor-pointer disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 transition-all cursor-pointer shadow-xs border-0 disabled:opacity-50"
             >
-              <RefreshCw size={13} className={isRefreshing ? 'animate-spin' : ''} />
+              <RefreshCw size={13} className={isRefreshing ? 'animate-spin text-indigo-500' : ''} />
               <span>Refresh</span>
             </button>
           </div>
         </div>
 
-        {/* ─── Search & Metrics Bar ──────────────────────────────────────────────── */}
-        <div className="bg-[var(--color-ui-surface)] border border-[var(--color-border-subtle)] rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-sm">
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <div className="relative w-full sm:w-80">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
-              <input
-                type="text"
-                placeholder="Search user, IP, page, or query..."
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg bg-[var(--color-surface-2)] border border-[var(--color-border-subtle)] text-[var(--color-text-main)] outline-none focus:border-[var(--color-brand-500)]"
-              />
-            </div>
+        {/* ─── Search & Metrics Bar (Modern Clean) ─────────────────────────────────── */}
+        <div className="bg-slate-100/80 dark:bg-slate-900/60 rounded-2xl p-2.5 shadow-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <div className="relative flex-1 max-w-md">
+            <Search
+              size={14}
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+            />
+            <input
+              type="text"
+              placeholder="Search by user, IP address, page, or query..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-3 py-2 rounded-xl text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 outline-hidden focus:ring-2 focus:ring-indigo-500/20 placeholder:text-slate-400 transition-colors border border-slate-200/50 dark:border-slate-700/50"
+            />
           </div>
 
-          <div className="flex items-center gap-4 text-xs text-[var(--color-text-muted)] self-end sm:self-auto flex-wrap">
+          <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 self-end sm:self-auto px-2">
             <span>
-              Total Online: <strong className="text-[var(--color-text-main)] font-mono">{sessions.length}</strong>
+              Production: <strong className="text-slate-800 dark:text-slate-200 font-mono font-semibold">{poTrackerUsersCount}</strong>
             </span>
-            <span>•</span>
+            <span className="opacity-40">•</span>
             <span>
-              PO Tracker:{' '}
-              <strong className="text-emerald-400 font-mono">
-                {poTrackerUsersCount}
-              </strong>
+              Analytics: <strong className="text-slate-800 dark:text-slate-200 font-mono font-semibold">{matrixUsersCount}</strong>
             </span>
-            <span>•</span>
+            <span className="opacity-40">•</span>
             <span>
-              Sales Analytics:{' '}
-              <strong className="text-blue-400 font-mono">
-                {matrixUsersCount}
-              </strong>
-            </span>
-            <span>•</span>
-            <span>
-              Administrators:{' '}
-              <strong className="text-amber-400 font-mono">
-                {sessions.filter(s => s.role === 'admin').length}
-              </strong>
+              Admins: <strong className="text-purple-600 dark:text-purple-400 font-mono font-semibold">{sessions.filter(s => s.role === 'admin').length}</strong>
             </span>
           </div>
         </div>
 
-        {/* ─── Active Sessions Table ─────────────────────────────────────────────── */}
-        <div className="bg-[var(--color-ui-surface)] border border-[var(--color-border-subtle)] rounded-2xl p-5 shadow-sm">
-          <div className="overflow-x-auto rounded-xl border border-[var(--color-border-subtle)]">
+        {/* ─── Active Sessions Table (High Contrast & Clean Typography) ───────────── */}
+        <div className="bg-white dark:bg-slate-900/60 rounded-2xl shadow-xs overflow-hidden flex flex-col border border-slate-200/50 dark:border-slate-800/50">
+          <div className="px-5 py-3.5 flex items-center justify-between border-b border-slate-100 dark:border-slate-800/50 bg-slate-50/70 dark:bg-slate-900/80">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 m-0">
+              Live Operator Sessions ({filteredSessions.length})
+            </h2>
+            <span className="text-xs text-slate-400 hidden sm:inline">
+              Real-time interface presence and navigation tracking
+            </span>
+          </div>
+
+          <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="bg-[var(--color-surface-2)] text-[var(--color-text-muted)] border-b border-[var(--color-border-subtle)]">
-                  <th className="py-2.5 px-3 font-semibold">User</th>
-                  <th className="py-2.5 px-3 font-semibold">Role</th>
-                  <th className="py-2.5 px-3 font-semibold">Current Page</th>
-                  <th className="py-2.5 px-3 font-semibold">Active Data Query</th>
-                  <th className="py-2.5 px-3 font-semibold">Activity Status</th>
-                  <th className="py-2.5 px-3 font-semibold">IP Address</th>
-                  <th className="py-2.5 px-3 font-semibold">Login Time</th>
-                  <th className="py-2.5 px-3 font-semibold text-right">Action</th>
+                <tr className="bg-slate-50/50 dark:bg-slate-900/40 text-slate-500 dark:text-slate-400 border-b border-slate-100 dark:border-slate-800/50">
+                  <th className="py-3 px-5 font-semibold">User</th>
+                  <th className="py-3 px-5 font-semibold">Role</th>
+                  <th className="py-3 px-5 font-semibold">Current Page</th>
+                  <th className="py-3 px-5 font-semibold">Active Query</th>
+                  <th className="py-3 px-5 font-semibold">Activity Status</th>
+                  <th className="py-3 px-5 font-semibold">IP Address</th>
+                  <th className="py-3 px-5 font-semibold">Login Time</th>
+                  <th className="py-3 px-5 font-semibold text-right">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[var(--color-border-subtle)]">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/40 bg-white dark:bg-slate-900/30">
                 {isLoading ? (
                   <tr>
-                    <td colSpan={8} className="text-center py-8 text-[var(--color-text-muted)]">
+                    <td colSpan={8} className="text-center py-12 text-slate-400">
                       Loading live sessions...
                     </td>
                   </tr>
                 ) : filteredSessions.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="text-center py-8 text-[var(--color-text-muted)]">
+                    <td colSpan={8} className="text-center py-12 text-slate-400">
                       No active sessions found
                     </td>
                   </tr>
@@ -317,92 +314,87 @@ export default function ActiveSessionsPage() {
                     const statusBadge = getActiveStatusBadge(session.lastActiveAt);
 
                     return (
-                      <tr key={session.sessionId} className="hover:bg-[var(--color-surface-2)]/50 transition-colors">
+                      <tr key={session.sessionId} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
                         {/* User */}
-                        <td className="py-2.5 px-3 whitespace-nowrap">
-                          <div className="flex items-center gap-2">
-                            <div className="w-7 h-7 rounded-full bg-[var(--color-surface-3)] text-[var(--color-text-main)] font-bold flex items-center justify-center text-xs border border-[var(--color-border-subtle)]">
+                        <td className="py-3 px-5 whitespace-nowrap">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold flex items-center justify-center text-xs shrink-0">
                               {(session.name || session.username)[0].toUpperCase()}
                             </div>
                             <div>
-                              <div className="font-semibold text-[var(--color-text-main)]">{session.name}</div>
-                              <div className="text-[10px] text-[var(--color-text-muted)] font-mono">{session.username}</div>
+                              <div className="font-semibold text-slate-900 dark:text-white text-xs">{session.name}</div>
+                              <div className="text-[11px] text-slate-400 font-mono">@{session.username}</div>
                             </div>
                           </div>
                         </td>
 
-                        {/* Role */}
-                        <td className="py-2.5 px-3 whitespace-nowrap">
-                          <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-bold inline-flex items-center gap-1 ${
-                              session.role === 'admin'
-                                ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
-                                : 'bg-blue-500/15 text-blue-400 border border-blue-500/30'
-                            }`}
-                          >
-                            <Shield size={10} />
-                            {session.role.toUpperCase()}
+                        {/* Role (Clean Text & Colored Icon, No Background Pill) */}
+                        <td className="py-3 px-5 whitespace-nowrap">
+                          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200">
+                            <Shield
+                              size={14}
+                              className={session.role === 'admin' ? 'text-purple-600 dark:text-purple-400' : 'text-emerald-600 dark:text-emerald-400'}
+                            />
+                            <span>{session.role === 'admin' ? 'Administrator' : 'Sales / Operator'}</span>
                           </span>
                         </td>
 
                         {/* Current Page */}
-                        <td className="py-2.5 px-3 whitespace-nowrap">
+                        <td className="py-3 px-5 whitespace-nowrap">
                           <div className="flex flex-col gap-0.5">
-                            <span className="font-semibold text-[var(--color-text-main)] flex items-center gap-1.5">
+                            <span className="font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-1.5 text-xs">
                               {renderPageIcon(session.pageIcon)}
                               <span>{session.pageTitle || 'Factory Overview'}</span>
                             </span>
-                            <span className="font-mono text-[10px] text-indigo-400 bg-indigo-500/10 px-1.5 py-0.2 rounded border border-indigo-500/20 max-w-[180px] truncate" title={session.currentPage}>
+                            <span className="font-mono text-[10px] text-slate-400 max-w-[200px] truncate" title={session.currentPage}>
                               {session.currentPage || '/'}
                             </span>
                           </div>
                         </td>
 
-                        {/* Active Data Query */}
-                        <td className="py-2.5 px-3 max-w-[320px]">
+                        {/* Active Query */}
+                        <td className="py-3 px-5 max-w-[280px]">
                           <div className="flex flex-col gap-0.5">
-                            <span className="text-[11px] font-medium text-[var(--color-text-main)] flex items-center gap-1.5 truncate" title={session.currentAction}>
+                            <span className="text-xs font-medium text-slate-800 dark:text-slate-200 flex items-center gap-1.5 truncate" title={session.currentAction}>
                               {renderActionIcon(session.actionType)}
                               <span className="truncate">{session.currentAction || 'Browsing System'}</span>
                             </span>
                             {session.lastEndpoint && (
-                              <span className="font-mono text-[9px] text-[var(--color-text-muted)] truncate pl-4.5" title={session.lastEndpoint}>
+                              <span className="font-mono text-[10px] text-slate-400 truncate pl-4.5" title={session.lastEndpoint}>
                                 {session.lastEndpoint}
                               </span>
                             )}
                           </div>
                         </td>
 
-                        {/* Activity Status */}
-                        <td className="py-2.5 px-3 whitespace-nowrap">
-                          <div className="flex items-center gap-1.5">
-                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${statusBadge.color}`}>
-                              <span className={`w-1.5 h-1.5 rounded-full ${statusBadge.dot}`} />
-                              {statusBadge.label}
-                            </span>
-                          </div>
+                        {/* Activity Status (Clean Dot & Text) */}
+                        <td className="py-3 px-5 whitespace-nowrap">
+                          <span className="inline-flex items-center gap-2 text-xs font-medium text-slate-800 dark:text-slate-200">
+                            <span className={`w-2 h-2 rounded-full ${statusBadge.dot} shrink-0`} />
+                            <span>{statusBadge.label}</span>
+                          </span>
                         </td>
 
                         {/* IP Address */}
-                        <td className="py-2.5 px-3 whitespace-nowrap font-mono font-semibold text-[var(--color-text-main)]">
+                        <td className="py-3 px-5 whitespace-nowrap font-mono text-xs text-slate-600 dark:text-slate-400">
                           {session.ip}
                         </td>
 
                         {/* Login Time */}
-                        <td className="py-2.5 px-3 whitespace-nowrap text-[var(--color-text-muted)] font-mono text-[11px]">
+                        <td className="py-3 px-5 whitespace-nowrap text-slate-500 dark:text-slate-400 font-mono text-xs">
                           {new Date(session.createdAt).toLocaleTimeString('en-US', { hour12: false })}
                         </td>
 
                         {/* Action */}
-                        <td className="py-2.5 px-3 whitespace-nowrap text-right">
+                        <td className="py-3 px-5 whitespace-nowrap text-right">
                           <button
                             type="button"
                             onClick={() => setSessionToKill(session)}
-                            className="px-2.5 py-1 rounded text-[11px] font-semibold bg-rose-500/15 text-rose-400 border border-rose-500/30 hover:bg-rose-500 hover:text-white transition-all cursor-pointer inline-flex items-center gap-1 shadow-xs active:scale-95"
+                            className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 hover:bg-rose-600 hover:text-white transition-all cursor-pointer inline-flex items-center gap-1.5 shadow-xs border-0 active:scale-95"
                             title="Terminate Session"
                           >
                             <UserX size={12} />
-                            <span>Kill</span>
+                            <span>Terminate</span>
                           </button>
                         </td>
                       </tr>
@@ -416,26 +408,26 @@ export default function ActiveSessionsPage() {
 
         {/* ─── Kill Session Confirmation Modal ────────────────────────────────────── */}
         {sessionToKill && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-            <div className="bg-[var(--color-ui-surface)] border border-[var(--color-border-subtle)] rounded-2xl max-w-sm w-full p-5 shadow-2xl flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-150">
-              <div className="flex items-center gap-2 text-rose-400 font-bold text-sm">
-                <AlertCircle size={18} />
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-sm w-full p-6 shadow-2xl flex flex-col gap-4 animate-in zoom-in-95 duration-150">
+              <div className="flex items-center gap-2.5 text-rose-600 dark:text-rose-400 font-bold text-sm">
+                <AlertCircle size={20} />
                 <span>Terminate User Session</span>
               </div>
 
-              <div className="text-xs text-[var(--color-text-muted)]">
+              <div className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
                 Are you sure you want to forcibly terminate the session for{' '}
-                <strong className="text-[var(--color-text-main)]">{sessionToKill.name}</strong> (@
-                <span className="font-mono text-amber-400">{sessionToKill.username}</span>)?
+                <strong className="text-slate-900 dark:text-white">{sessionToKill.name}</strong> (@
+                <span className="font-mono text-amber-600 dark:text-amber-400">{sessionToKill.username}</span>)?
                 The user will be immediately signed out from all active interfaces.
               </div>
 
-              <div className="flex justify-end gap-2 pt-2 border-t border-[var(--color-border-subtle)]">
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setSessionToKill(null)}
                   disabled={isKilling}
-                  className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] text-[var(--color-text-main)] border border-[var(--color-border-subtle)] cursor-pointer"
+                  className="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 cursor-pointer border-0 transition-colors"
                 >
                   Cancel
                 </button>
@@ -443,7 +435,7 @@ export default function ActiveSessionsPage() {
                   type="button"
                   onClick={handleKillSession}
                   disabled={isKilling}
-                  className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-rose-600 hover:bg-rose-500 text-white cursor-pointer shadow-xs transition-all disabled:opacity-50"
+                  className="px-4 py-2 rounded-xl text-xs font-semibold bg-rose-600 hover:bg-rose-500 text-white cursor-pointer shadow-xs transition-all disabled:opacity-50 border-0"
                 >
                   {isKilling ? 'Terminating...' : 'Terminate Session'}
                 </button>

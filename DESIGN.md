@@ -257,6 +257,40 @@ Tables:
 - **Sales Detail:** Order No, Item No, Ord Date, Cust Due, Customer, Brand, Type, Ord Qty, Shipped, Amount, Status, Market, Actions.
 - **Status:** Sales uses Open, Partial, Shipped, Late. Do not show Casting, Polish, QC, or production-stage status in Sales tables.
 - **Links:** Order No and Item No can be action links, but must look like operational identifiers rather than marketing links.
+- **Spacing & Padding:** Table rows use generous padding (`px-5 py-3.5`) to eliminate cramped text. Avoid raw full-bleed edge stretching on wide displays.
+
+## Modern Analytics Table & Balanced Spacing Standard
+
+This standard was established from the Top Items Quantity Analytics redesign to eliminate full-bleed edge-clinging and awkward horizontal voids on modern wide screens (1920px+):
+
+### 1. Anti-Edge Clinging Layout (Breathing Room)
+- **Bounded Container:** Never let data tables stretch full-bleed (0px margins) across 1920px+ monitors. Wrap analytics pages in a centered container (`max-w-[1600px] mx-auto`) with responsive outer padding (`p-4 sm:p-6 lg:p-8 pb-16`).
+- **Optimal Margins:** On a 1920x1080 display, this yields ~160px of comfortable side margin, preventing visual fatigue and allowing users to scan all columns without excessive neck strain.
+
+### 2. Table Architecture (Frameless & Soft Separation)
+- **Container Styling:** Enclose tables in modern `rounded-2xl` surface cards with subtle 1px border (`border-slate-200/50 dark:border-slate-800/50`) and soft ambient shadow (`shadow-xs`).
+- **Divider Lines:** Replace heavy, rigid Excel-style gridlines with gentle borders (`border-b border-slate-100 dark:border-slate-800/40`).
+- **Cell Padding:** Enforce `px-5 py-3.5` for all table headers (`th`) and data cells (`td`). Rows must have breathing room around numbers and text.
+
+### 3. Column Distribution & Void Elimination
+- **Numeric Clustering:** Metric columns (Year values, Total, Average) use fixed compact widths (`w-28` to `w-32`), right-aligned, and grouped tightly side-by-side so comparison across years requires minimal horizontal scanning.
+- **Horizontal Void Filling (Volume Share):** When a wide gap appears between descriptive columns (Item, Customer) and right-aligned metrics, place an informative visualization column—such as a **Volume Share Mini-Progress Bar** showing `% portfolio share` + `pcs` count. This dynamically absorbs extra horizontal space and transforms dead whitespace into actionable insight.
+
+### 4. Visual Hierarchy & Micro-Interactions
+- **Rank Badges:** High-contrast rank indicators for top performers:
+  - Rank 1: Gold badge (`bg-amber-500/15 text-amber-600 dark:text-amber-400 font-mono font-black`)
+  - Rank 2: Silver badge (`bg-slate-400/20 text-slate-700 dark:text-slate-300 font-mono font-bold`)
+  - Rank 3: Bronze badge (`bg-orange-500/15 text-orange-600 dark:text-orange-400 font-mono font-bold`)
+  - Rank 4+: Muted monospace number.
+- **CAD Thumbnail Previews:** Clean centered thumbnails (`w-20 h-14 rounded-xl bg-white dark:bg-slate-800 border p-1 shadow-2xs hover:scale-105 transition-transform cursor-pointer`) with click-to-preview modal interaction.
+- **Category Chips:** Small rounded tags (`px-2 py-0.5 rounded-md text-[10px] bg-slate-100 dark:bg-slate-800`) beneath item codes to identify product families without taking an entire extra column.
+
+### 5. Hero Header & View Mode Switcher
+- **Hero Icon Badge:** Modern 44x44px rounded-2xl icon with subtle dual-color gradient (`bg-gradient-to-br from-blue-500/20 via-indigo-500/15 to-purple-500/10 text-blue-500`).
+- **Segmented View Mode Switcher:** Provide a segmented toggle (e.g., `Gallery` vs `Qty Table`) directly in the header toolbar so users can seamlessly toggle between visual cards and structured data without losing filter context.
+
+### 6. Metric Unit Discipline
+- **Quantity vs. Monetary Clarity:** Dashboards and analytics pages focused on production volume/units must strictly display `pcs` (never formatting quantities with currency symbols like `$`). Currency symbols are reserved strictly for financial/sales amount pages.
 
 ## Do's and Don'ts
 
@@ -280,3 +314,4 @@ Don't:
 - Do not make filters so large that they push the table or key report below the fold.
 - Do not introduce a new font unless the whole system is intentionally migrating.
 - Do not use thick colored borders on one side of a card (`borderLeft: 4px solid...`). This is a recognizable tell of AI-generated UIs. Use subtler accents or remove them entirely.
+- Do not add redundant or duplicate page-level Refresh buttons in the page header. The application shell already provides the standard Global Topbar Refresh button (which pages hook into using `useTopbarActions`).

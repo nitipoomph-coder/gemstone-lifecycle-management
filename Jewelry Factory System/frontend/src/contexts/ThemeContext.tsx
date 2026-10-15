@@ -20,6 +20,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     document.body.classList.remove('theme-dark-gold', 'theme-royal-white', 'theme-modern-dark');
     // Add the active theme class
     document.body.classList.add(`theme-${theme}`);
+    // Sync Tailwind dark mode class
+    const isDark = theme !== 'royal-white';
+    document.documentElement.classList.toggle('dark', isDark);
+    document.body.classList.toggle('dark', isDark);
   }, [theme]);
 
   return (

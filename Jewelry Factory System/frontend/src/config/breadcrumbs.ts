@@ -115,13 +115,13 @@ export const BREADCRUMBS = {
     { label: `${itemLabel} (${docType})` },
   ],
 
-  // ── Audit ──
+  // ── Security & Audit ──
   AUDIT_BOM_PRINT: [
-    { label: 'Audit' },
+    { label: 'Security & Audit' },
     { label: 'BOM Print' },
   ] as BreadcrumbItem[],
   AUDIT_CCTV_REPORT: [
-    { label: 'Audit' },
+    { label: 'Security & Audit' },
     { label: 'CCTV Report' },
   ] as BreadcrumbItem[],
 

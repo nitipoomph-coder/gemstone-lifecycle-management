@@ -17,12 +17,36 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
   const { workspace } = useWorkspace();
 
   const role = (localStorage.getItem('auth_role') || 'sales').toLowerCase();
+  const rawAllowedMenus = localStorage.getItem('auth_allowed_menus');
+  let allowedMenus: string[] | null = null;
+  try {
+    if (rawAllowedMenus) {
+      allowedMenus = JSON.parse(rawAllowedMenus);
+    }
+  } catch (e) {}
+
+  const isGroupAllowed = (groupId: string, items?: { id: string }[]) => {
+    if (!allowedMenus) return true;
+    if (allowedMenus.includes('*')) return true;
+    if (allowedMenus.includes(groupId)) return true;
+    if (items && items.some(item => allowedMenus.includes(item.id))) return true;
+    return false;
+  };
+
+  const isItemAllowed = (itemId: string, groupId: string) => {
+    if (!allowedMenus) return true;
+    if (allowedMenus.includes('*')) return true;
+    return allowedMenus.includes(itemId) || allowedMenus.includes(groupId);
+  };
+
   const filteredMenu = menuConfig
     .filter(g => (!g.roles || g.roles.includes(role)) && (!g.workspace || g.workspace === 'ALL' || g.workspace === workspace))
+    .filter(g => isGroupAllowed(g.id, g.items))
     .map(g => ({
       ...g,
-      items: g.items?.filter(item => !item.roles || item.roles.includes(role)),
-    }));
+      items: g.items?.filter(item => (!item.roles || item.roles.includes(role)) && isItemAllowed(item.id, g.id)),
+    }))
+    .filter(g => Boolean(g.path || (g.items && g.items.length > 0)));
 
   // Pure derived active group id directly from current route
   const activeGroupId = getActiveGroupId(filteredMenu, location.pathname, location.search);

@@ -1,0 +1,14 @@
+{
+  "ADMIN": [
+    "*"
+  ],
+  "SALES": [
+    "sales-dashboard",
+    "dash-cust",
+    "dash-matrix",
+    "dash-top-orders",
+    "dash-top-orders-analytics",
+    "order-tracker",
+    "po-tracker"
+  ]
+}

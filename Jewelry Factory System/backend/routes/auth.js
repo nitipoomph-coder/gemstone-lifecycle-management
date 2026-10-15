@@ -90,6 +90,9 @@ router.post('/login', async (req, res) => {
       { expiresIn: '12h' }
     );
 
+    const permissionService = require('../services/permissionService');
+    const allowedMenus = permissionService.getUserPermissions(username, role);
+
     // Record active session and log successful login event
     auditService.recordSession(token, { id: userId, username, role, name: fullName }, clientIp, req.headers['user-agent']);
     auditService.logEvent({
@@ -102,11 +105,19 @@ router.post('/login', async (req, res) => {
       details: { role, fullName },
     });
 
-    return res.json({ success: true, role: role, username: username.toUpperCase(), name: fullName, token });
+    return res.json({ success: true, role: role, username: username.toUpperCase(), name: fullName, token, allowedMenus });
   } catch (error) {
     console.error('Login error:', error);
     return res.status(500).json({ success: false, message: 'Internal server error' });
   }
+});
+
+// Get currently logged-in user's menu permissions
+const { authMiddleware: authPerm } = require('../middleware/authMiddleware');
+router.get('/permissions', authPerm, (req, res) => {
+  const permissionService = require('../services/permissionService');
+  const allowedMenus = permissionService.getUserPermissions(req.user.username, req.user.role);
+  res.json({ success: true, username: req.user.username, role: req.user.role, allowedMenus });
 });
 
 router.post('/verify-admin', async (req, res) => {

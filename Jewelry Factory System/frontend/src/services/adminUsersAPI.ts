@@ -10,7 +10,8 @@ export interface ManagedUser {
   role: 'admin' | 'sales';
   createdAt: string | null;
   lastLogin: string | null;
-  source: 'system' | 'legacy';
+  source: 'system' | 'legacy' | 'pcc';
+  allowedMenus?: string[];
 }
 
 export interface CreateUserPayload {
@@ -22,8 +23,8 @@ export interface CreateUserPayload {
 }
 
 export const adminUsersAPI = {
-  getUsers: async (): Promise<ManagedUser[]> => {
-    const res = await fetchWithAuth(API_BASE);
+  getUsers: async (showAll = false): Promise<ManagedUser[]> => {
+    const res = await fetchWithAuth(`${API_BASE}${showAll ? '?all=true' : ''}`);
     const json = await res.json();
     if (!json.ok) throw new Error(json.error || 'Failed to fetch users');
     return json.data;
@@ -59,6 +60,24 @@ export const adminUsersAPI = {
     });
     const json = await res.json();
     if (!json.ok) throw new Error(json.message || json.error || 'Failed to reset password');
+    return json;
+  },
+
+  getUserPermissions: async (username: string): Promise<string[]> => {
+    const res = await fetchWithAuth(`${API_BASE}/${encodeURIComponent(username)}/permissions`);
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.message || 'Failed to get permissions');
+    return json.allowedMenus || [];
+  },
+
+  updateUserPermissions: async (username: string, allowedMenus: string[]): Promise<{ ok: boolean; message: string; allowedMenus: string[] }> => {
+    const res = await fetchWithAuth(`${API_BASE}/${encodeURIComponent(username)}/permissions`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ allowedMenus }),
+    });
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.message || 'Failed to update permissions');
     return json;
   },
 };

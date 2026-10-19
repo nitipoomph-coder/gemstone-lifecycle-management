@@ -55,6 +55,7 @@ export const CUSTOMER_GROUPS: CustomerGroup[] = [
     label: 'N083 Group',
     color: 'var(--color-customer-group-n083)',
     prefixes: ['N083', 'N086', 'N087', 'N088', 'N089'],
+    isActive: true,
   },
 
   {
@@ -66,6 +67,7 @@ export const CUSTOMER_GROUPS: CustomerGroup[] = [
       'U417', 'U418', 'U419', 'U420', 'U421', 'U422',
       'U423', 'U424', 'U425', 'U426',
     ],
+    isActive: true,
   },
 ];
 
@@ -75,14 +77,14 @@ export const GENERAL_GROUP: CustomerGroup = {
   label: 'General',
   color: 'var(--color-customer-group-general)',
   prefixes: [],
-  isActive: false,
+  isActive: true,
 };
 
 /** ALL_GROUPS including General — Used for UI toggle / legend */
 export const ALL_GROUPS: CustomerGroup[] = [...CUSTOMER_GROUPS, GENERAL_GROUP];
 
 /** Active groups or those selected for default display */
-export const ACTIVE_GROUP_IDS: string[] = ALL_GROUPS.filter(g => g.isActive).map(g => g.id);
+export const ACTIVE_GROUP_IDS: string[] = ALL_GROUPS.map(g => g.id);
 
 /**
  * Determine which group a customer belongs to

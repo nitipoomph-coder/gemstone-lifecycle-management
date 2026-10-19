@@ -1,5 +1,127 @@
 [
   {
+    "id": "evt_1792371073868_5yxuz",
+    "timestamp": "2026-10-19T00:51:13.868Z",
+    "category": "AUTH",
+    "action": "LOGIN_SUCCESS",
+    "actor": "ADMIN",
+    "ip": "127.0.0.1",
+    "status": "SUCCESS",
+    "severity": "LOW",
+    "details": {
+      "role": "admin",
+      "fullName": "ADMIN"
+    }
+  },
+  {
+    "id": "evt_1792370907184_zmpma",
+    "timestamp": "2026-10-19T00:48:27.184Z",
+    "category": "AUTH",
+    "action": "LOGIN_FAIL",
+    "actor": "ADMIN",
+    "ip": "127.0.0.1",
+    "status": "FAILED",
+    "severity": "MEDIUM",
+    "details": {
+      "message": "Invalid username or password (Attempt 1/5)"
+    }
+  },
+  {
+    "id": "evt_1792120512909_6ozlr",
+    "timestamp": "2026-10-16T03:15:12.909Z",
+    "category": "AUTH",
+    "action": "LOGIN_SUCCESS",
+    "actor": "ADMIN",
+    "ip": "127.0.0.1",
+    "status": "SUCCESS",
+    "severity": "LOW",
+    "details": {
+      "role": "admin",
+      "fullName": "ADMIN"
+    }
+  },
+  {
+    "id": "evt_1792120493588_769zp",
+    "timestamp": "2026-10-16T03:14:53.588Z",
+    "category": "AUTH",
+    "action": "LOGIN_SUCCESS",
+    "actor": "ADMIN",
+    "ip": "127.0.0.1",
+    "status": "SUCCESS",
+    "severity": "LOW",
+    "details": {
+      "role": "admin",
+      "fullName": "ADMIN"
+    }
+  },
+  {
+    "id": "evt_1792120345603_waiu7",
+    "timestamp": "2026-10-16T03:12:25.603Z",
+    "category": "AUTH",
+    "action": "LOGIN_SUCCESS",
+    "actor": "ADMIN",
+    "ip": "127.0.0.1",
+    "status": "SUCCESS",
+    "severity": "LOW",
+    "details": {
+      "role": "admin",
+      "fullName": "ADMIN"
+    }
+  },
+  {
+    "id": "evt_1792118724527_wvofe",
+    "timestamp": "2026-10-16T02:45:24.527Z",
+    "category": "AUTH",
+    "action": "LOGIN_FAIL",
+    "actor": "ADMIN",
+    "ip": "127.0.0.1",
+    "status": "FAILED",
+    "severity": "MEDIUM",
+    "details": {
+      "message": "Invalid username or password (Attempt 3/5)"
+    }
+  },
+  {
+    "id": "evt_1792118676005_2xb2i",
+    "timestamp": "2026-10-16T02:44:36.005Z",
+    "category": "AUTH",
+    "action": "LOGIN_FAIL",
+    "actor": "ADMIN",
+    "ip": "127.0.0.1",
+    "status": "FAILED",
+    "severity": "MEDIUM",
+    "details": {
+      "message": "Invalid username or password (Attempt 2/5)"
+    }
+  },
+  {
+    "id": "evt_1792118362352_3yy7t",
+    "timestamp": "2026-10-16T02:39:22.352Z",
+    "category": "AUTH",
+    "action": "LOGIN_FAIL",
+    "actor": "ADMIN",
+    "ip": "127.0.0.1",
+    "status": "FAILED",
+    "severity": "MEDIUM",
+    "details": {
+      "message": "Invalid username or password (Attempt 1/5)"
+    }
+  },
+  {
+    "id": "evt_1792116324826_xljzv",
+    "timestamp": "2026-10-16T02:05:24.826Z",
+    "category": "AUTH",
+    "action": "LOGIN_SUCCESS",
+    "actor": "ADMIN",
+    "ip": "127.0.0.1",
+    "status": "SUCCESS",
+    "severity": "LOW",
+    "details": {
+      "role": "admin",
+      "fullName": "ADMIN"
+    }
+  },
+  {
     "id": "evt_1792030868037_zzdxa",
     "timestamp": "2026-10-15T02:21:08.037Z",
     "category": "SECURITY",

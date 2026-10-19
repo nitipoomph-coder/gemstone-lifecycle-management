@@ -162,6 +162,7 @@ export interface TopGalleryParams {
   endDate?: string;
   wStart?: number;
   wEnd?: number;
+  salesName?: string;
 }
 
 export const fetchTopItemsGallery = async (params: TopGalleryParams): Promise<TopGalleryResponse> => {
@@ -177,6 +178,7 @@ export const fetchTopItemsGallery = async (params: TopGalleryParams): Promise<To
   if (params.limit) qs.set('limit', String(params.limit));
   if (params.rankBy) qs.set('rankBy', params.rankBy);
   if (params.dateField) qs.set('dateField', params.dateField);
+  if (params.salesName && params.salesName !== 'ALL') qs.set('salesName', params.salesName);
   if (params.startDate && params.endDate) {
     qs.set('startDate', params.startDate);
     qs.set('endDate', params.endDate);
@@ -189,4 +191,11 @@ export const fetchTopItemsGallery = async (params: TopGalleryParams): Promise<To
   const res = await fetchWithAuth(`${BASE_URL}/items/top-gallery?${qs.toString()}`);
   if (!res.ok) throw new Error(`Top gallery API error: ${res.status}`);
   return await res.json();
+};
+
+export const fetchAvailableSalespersons = async (): Promise<string[]> => {
+  const res = await fetchWithAuth(`${BASE_URL}/items/salespersons`);
+  if (!res.ok) throw new Error(`Fetch salespersons API error: ${res.status}`);
+  const data = await res.json();
+  return data.salespersons || [];
 };

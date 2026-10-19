@@ -309,8 +309,9 @@ export function usePeriodSetup(config: PeriodSetupConfig) {
           next.delete('kpiCompare');
         }
 
-        if (draft.dateField === 'dueDate') {
-          next.set('dateField', 'dueDate');
+        const defaultDateField = config.initialValues?.dateField || 'ordDate';
+        if (draft.dateField !== defaultDateField) {
+          next.set('dateField', draft.dateField);
         } else {
           next.delete('dateField');
         }
@@ -405,8 +406,9 @@ export function usePeriodSetup(config: PeriodSetupConfig) {
             next.delete('kpiCompare');
           }
 
-          if (updatedDraft.dateField === 'dueDate') {
-            next.set('dateField', 'dueDate');
+          const defaultDateField = config.initialValues?.dateField || 'ordDate';
+          if (updatedDraft.dateField !== defaultDateField) {
+            next.set('dateField', updatedDraft.dateField);
           } else {
             next.delete('dateField');
           }

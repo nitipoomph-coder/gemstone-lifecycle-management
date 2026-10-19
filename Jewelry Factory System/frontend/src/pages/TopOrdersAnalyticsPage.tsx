@@ -1,13 +1,17 @@
 import { useMemo, useEffect } from "react";
-import { BarChart3, RefreshCw, Award, TrendingUp, Package } from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { BarChart3, Award, TrendingUp, Package, LayoutGrid, RefreshCw } from "lucide-react";
 import { useTopOrdersGalleryData } from "../hooks/useTopOrdersGalleryData";
 import { TopOrdersFilterBar } from "../components/dashboard/topOrders/TopOrdersFilterBar";
 import { TopAnalyticsTable } from "../components/dashboard/topAnalytics/TopAnalyticsTable";
 import { TopOrdersItemPreview } from "../components/dashboard/topOrders/TopOrdersItemPreview";
 import { useTopbarActions } from "../contexts/TopbarActionContext";
+import { ErpSegmentedControl } from "../components/ui/ErpButtons";
 
 export default function TopOrdersAnalyticsPage() {
   const dataProps = useTopOrdersGalleryData();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const {
     isInitialLoading,
@@ -15,6 +19,7 @@ export default function TopOrdersAnalyticsPage() {
     selectedPeriodLabel,
     refreshData,
     items,
+    summary,
     previewItem,
     setPreviewItem,
     baseYear,
@@ -43,18 +48,24 @@ export default function TopOrdersAnalyticsPage() {
     dataProps.periodSetup.committed.compareYear2,
   ]);
 
-  // Grand total quantity across all loaded items for the active displayYears
-  const grandTotalQty = useMemo(() => {
+  // Grand total volume from summary (full filtered portfolio), falling back to displayed items sum
+  const totalVolume = useMemo(() => {
+    if (summary && typeof summary.portfolioTotalQty === 'number' && summary.portfolioTotalQty > 0) {
+      return summary.portfolioTotalQty;
+    }
     return items.reduce((sum: number, item) => {
       return sum + displayYears.reduce((yrSum: number, yr: string) => yrSum + (item.yearlyTotals?.[yr]?.qty || 0), 0);
     }, 0);
-  }, [items, displayYears]);
+  }, [summary, items, displayYears]);
 
-  // Average quantity per item per year
+  // Total SKUs matching the filter
+  const totalSkuCount = summary?.totalItemsCount || items.length;
+
+  // Average quantity per SKU per year across the full filtered portfolio
   const avgPerItemPerYear = useMemo(() => {
-    if (items.length === 0 || displayYears.length === 0) return 0;
-    return Math.round(grandTotalQty / (items.length * displayYears.length));
-  }, [grandTotalQty, items.length, displayYears.length]);
+    if (totalSkuCount === 0 || displayYears.length === 0) return 0;
+    return Math.round(totalVolume / (totalSkuCount * displayYears.length));
+  }, [totalVolume, totalSkuCount, displayYears.length]);
 
   // Best selling item in the selected period
   const bestSellingItem = useMemo(() => {
@@ -74,127 +85,172 @@ export default function TopOrdersAnalyticsPage() {
     };
   }, [items, displayYears]);
 
+  // Hook into Global Topbar Refresh action
   const { setTopbarActions } = useTopbarActions();
   useEffect(() => {
     setTopbarActions(
       <button 
+        type="button"
         onClick={refreshData} 
-        className="w-9 h-9 rounded-xl border-0 bg-transparent text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-indigo-600 transition-colors flex items-center justify-center cursor-pointer"
+        className="w-9 h-9 rounded-lg border-0 flex items-center justify-center cursor-pointer transition-colors"
+        style={{ background: 'transparent', color: 'var(--color-text-secondary)' }}
         title="Refresh"
         aria-label="Refresh"
       >
-        <RefreshCw size={17} className={isFilterLoading ? 'animate-spin text-indigo-600' : ''} />
+        <RefreshCw size={17} className={isFilterLoading ? 'animate-spin' : ''} style={{ color: isFilterLoading ? 'var(--color-ui-interactive)' : 'inherit' }} />
       </button>
     );
     return () => setTopbarActions(null);
   }, [setTopbarActions, refreshData, isFilterLoading]);
 
+  // Compute reverse galleryPath preserving search parameters
+  const galleryPath = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    params.set("metric", "amount");
+    if (dataProps.periodSetup?.committed?.baseYear) params.set("year", dataProps.periodSetup.committed.baseYear);
+    if (dataProps.periodSetup?.committed?.compareActive1 && dataProps.periodSetup?.committed?.compareYear1) params.set("compareYear", dataProps.periodSetup.committed.compareYear1);
+    if (dataProps.selectedMonthNumbers?.length) params.set("months", dataProps.selectedMonthNumbers.join(","));
+    if (dataProps.periodSetup?.committed?.dateFrom) params.set("dateFrom", dataProps.periodSetup.committed.dateFrom);
+    if (dataProps.periodSetup?.committed?.dateTo) params.set("dateTo", dataProps.periodSetup.committed.dateTo);
+    if (dataProps.periodSetup?.committed?.weekFrom) params.set("wStart", String(dataProps.periodSetup.committed.weekFrom));
+    if (dataProps.periodSetup?.committed?.weekTo) params.set("wEnd", String(dataProps.periodSetup.committed.weekTo));
+    if (dataProps.periodSetup?.committed?.dateField && dataProps.periodSetup.committed.dateField !== 'dueDate') params.set("dateField", dataProps.periodSetup.committed.dateField);
+    if (dataProps.salesName && dataProps.salesName !== 'ALL') params.set("salesName", dataProps.salesName);
+    if (dataProps.selGroups?.length && dataProps.selGroups.length < 7) params.set("groups", dataProps.selGroups.join(","));
+    if (dataProps.selTypes && dataProps.selTypes.length > 0 && dataProps.selTypes.length < 5) {
+      params.set("type", dataProps.selTypes.join(','));
+    } else if (dataProps.selTypes && dataProps.selTypes.length === 0) {
+      params.set("type", "NONE");
+    }
+    const qs = params.toString();
+    return `/dashboard/top-orders${qs ? `?${qs}` : ''}`;
+  }, [location.search, dataProps]);
+
   return (
-    <div className="app-page-scroll content-scrollbar p-4 sm:p-6 lg:p-8 w-full">
-      <div className="flex flex-col gap-6 max-w-[1600px] mx-auto w-full text-[var(--color-text-primary)] pb-16">
-        {/* ─── Top Header Bar (Hero) ───────────────────────────────────────────────── */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-1">
-          <div className="flex items-center gap-3.5">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-500/20 via-indigo-500/15 to-purple-500/10 flex items-center justify-center text-blue-500 shadow-xs">
-              <BarChart3 size={22} />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--color-text-primary)] m-0">
-                  Top Items Quantity Analytics
-                </h1>
-                <span className="text-[11px] font-mono px-2.5 py-0.5 rounded-full bg-slate-500/10 text-slate-600 dark:text-slate-300 font-semibold">
-                  {selectedPeriodLabel}
-                </span>
-              </div>
-            </div>
+    <div className="app-page-scroll content-scrollbar w-full">
+      <div className="app-content-frame app-content-frame--dashboard-wide app-page-content flex flex-col gap-4 pb-16">
+        {/* ─── Filter Bar Card with Integrated View Switcher (No Hero Section) ───── */}
+        <div 
+          className="rounded-lg p-2.5 flex flex-wrap items-center justify-between gap-3"
+          style={{
+            backgroundColor: 'var(--color-ui-surface)',
+            border: '1px solid var(--color-border-light)',
+          }}
+        >
+          <div className="flex-1 min-w-0">
+            <TopOrdersFilterBar
+              periodButtonLabel={selectedPeriodLabel} 
+              {...dataProps} 
+              hidePerspectiveToggle={true}
+              onReset={dataProps.resetFilters} 
+            />
           </div>
 
-          {/* View Switcher */}
-          <div className="flex items-center self-start md:self-auto">
-            <div className="flex items-center p-1 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200/50 dark:border-slate-700/50 text-xs">
-              <a
-                href="/dashboard/top-orders"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all no-underline"
-              >
-                <Package size={13} />
-                <span>Gallery</span>
-              </a>
-              <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs">
-                <BarChart3 size={13} />
-                <span>Qty Table</span>
-              </span>
-            </div>
+          {/* View Switcher: Gallery / Qty Table (router-driven with search params) */}
+          <div 
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              background: 'var(--color-ui-surface)', 
+              border: '1px solid var(--color-border-light)', 
+              borderRadius: 8, 
+              padding: 3 
+            }}
+          >
+            <ErpSegmentedControl
+              ariaLabel="View Mode"
+              value="qty"
+              onChange={(val) => {
+                if (val === "gallery") {
+                  navigate(galleryPath);
+                }
+              }}
+              options={[
+                { value: "gallery", label: "Gallery", icon: <LayoutGrid size={13} /> },
+                { value: "qty", label: "Qty", icon: <BarChart3 size={13} /> }
+              ]}
+            />
           </div>
-        </div>
-
-        {/* ─── Filter Bar Card (Modern Clean) ─────────────────────────────────────── */}
-        <div className="bg-white dark:bg-slate-900/60 rounded-2xl p-3 shadow-xs border border-slate-200/50 dark:border-slate-800/50 flex flex-wrap items-center justify-between gap-3">
-          <TopOrdersFilterBar
-            periodButtonLabel={selectedPeriodLabel} 
-            {...dataProps} 
-            onReset={dataProps.resetFilters} 
-          />
         </div>
 
         {/* ─── 3 KPI Summary Cards ─────────────────────────────────────────────────── */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           {/* Card 1: Total Volume */}
-          <div className="bg-white dark:bg-slate-900/60 rounded-2xl p-5 shadow-xs border border-slate-200/50 dark:border-slate-800/50 flex flex-col justify-between relative overflow-hidden bg-gradient-to-br from-indigo-500/5 via-transparent to-transparent">
+          <div 
+            className="rounded-lg p-4 flex flex-col justify-between"
+            style={{
+              backgroundColor: 'var(--color-ui-surface)',
+              border: '1px solid var(--color-border-light)',
+            }}
+          >
             <div className="flex items-center justify-between">
-              <span className="text-xs uppercase tracking-wider font-bold text-slate-500 dark:text-slate-400">
+              <span className="text-sm uppercase tracking-wider font-bold" style={{ color: 'var(--color-text-secondary)' }}>
                 Total Volume ({displayYears.length} {displayYears.length === 1 ? 'Year' : 'Years'})
               </span>
-              <div className="w-8 h-8 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-500">
-                <Package size={16} />
-              </div>
+              <Package size={18} style={{ color: 'var(--color-ui-interactive)' }} />
             </div>
 
-            <div className="my-2.5">
+            <div className="my-2">
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-slate-100 font-display">
-                  {fmtQty(grandTotalQty)}
+                <span className="text-4xl font-black tracking-tight font-display" style={{ color: 'var(--color-text-primary)' }}>
+                  {fmtQty(totalVolume)}
                 </span>
-                <span className="text-xs font-semibold text-slate-400">
+                <span className="text-sm font-semibold" style={{ color: 'var(--color-text-tertiary)' }}>
                   pcs
                 </span>
               </div>
             </div>
 
-            <div className="text-xs text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800/60 flex items-center justify-between">
-              <span>Selected Period</span>
-              <span className="font-mono font-semibold text-slate-700 dark:text-slate-300 text-[11px]">
+            <div 
+              className="text-xs pt-2 flex items-center justify-between"
+              style={{ 
+                borderTop: '1px solid var(--color-border-light)',
+                color: 'var(--color-text-tertiary)' 
+              }}
+            >
+              <span>By {dataProps.periodSetup.committed.dateField === 'ordDate' ? 'Order Date' : 'Due Date'}</span>
+              <span className="font-semibold text-xs tabular-nums" style={{ color: 'var(--color-text-secondary)' }}>
                 {displayYears.join(', ') || 'Current'}
               </span>
             </div>
           </div>
 
           {/* Card 2: Average */}
-          <div className="bg-white dark:bg-slate-900/60 rounded-2xl p-5 shadow-xs border border-slate-200/50 dark:border-slate-800/50 flex flex-col justify-between relative overflow-hidden bg-gradient-to-br from-blue-500/5 via-transparent to-transparent">
+          <div 
+            className="rounded-lg p-4 flex flex-col justify-between"
+            style={{
+              backgroundColor: 'var(--color-ui-surface)',
+              border: '1px solid var(--color-border-light)',
+            }}
+          >
             <div className="flex items-center justify-between">
-              <span className="text-xs uppercase tracking-wider font-bold text-slate-500 dark:text-slate-400">
+              <span className="text-sm uppercase tracking-wider font-bold" style={{ color: 'var(--color-text-secondary)' }}>
                 Avg Volume / Item / Year
               </span>
-              <div className="w-8 h-8 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500">
-                <TrendingUp size={16} />
-              </div>
+              <TrendingUp size={18} style={{ color: 'var(--color-ui-interactive)' }} />
             </div>
 
-            <div className="my-2.5">
+            <div className="my-2">
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-slate-100 font-display">
+                <span className="text-4xl font-black tracking-tight font-display" style={{ color: 'var(--color-text-primary)' }}>
                   {fmtQty(avgPerItemPerYear)}
                 </span>
-                <span className="text-xs font-semibold text-slate-400">
+                <span className="text-sm font-semibold" style={{ color: 'var(--color-text-tertiary)' }}>
                   pcs / yr
                 </span>
               </div>
             </div>
 
-            <div className="text-xs text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800/60 flex items-center justify-between">
+            <div 
+              className="text-xs pt-2 flex items-center justify-between"
+              style={{ 
+                borderTop: '1px solid var(--color-border-light)',
+                color: 'var(--color-text-tertiary)' 
+              }}
+            >
               <span>Item Portfolio Count</span>
-              <span className="font-mono font-semibold text-slate-700 dark:text-slate-300 text-[11px]">
-                {items.length.toLocaleString()} Items
+              <span className="font-semibold text-xs tabular-nums" style={{ color: 'var(--color-text-secondary)' }}>
+                {totalSkuCount.toLocaleString()} SKUs
               </span>
             </div>
           </div>
@@ -202,55 +258,84 @@ export default function TopOrdersAnalyticsPage() {
           {/* Card 3: Best Seller */}
           <div 
             onClick={() => bestSellingItem && setPreviewItem(bestSellingItem.item)}
-            className="bg-white dark:bg-slate-900/60 rounded-2xl p-5 shadow-xs border border-slate-200/50 dark:border-slate-800/50 flex flex-col justify-between relative overflow-hidden bg-gradient-to-br from-amber-500/5 via-transparent to-transparent cursor-pointer hover:border-indigo-500/40 hover:shadow-sm transition-all"
+            className="rounded-lg p-4 flex flex-col justify-between cursor-pointer transition-all"
+            style={{
+              backgroundColor: 'var(--color-ui-surface)',
+              border: '1px solid var(--color-border-light)',
+            }}
             title={bestSellingItem ? `Click to inspect ${bestSellingItem.item.itemNo}` : undefined}
           >
             <div className="flex items-center justify-between">
-              <span className="text-xs uppercase tracking-wider font-bold text-amber-600 dark:text-amber-400">
+              <span className="text-sm uppercase tracking-wider font-bold" style={{ color: 'var(--color-rank-1)' }}>
                 Top Best Seller
               </span>
-              <div className="w-8 h-8 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500">
-                <Award size={16} />
-              </div>
+              <Award size={18} style={{ color: 'var(--color-rank-1)' }} />
             </div>
 
-            <div className="my-2.5 flex items-baseline justify-between gap-3">
-              <span className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-slate-100 font-mono">
+            <div className="my-2 flex items-baseline justify-between gap-3">
+              <span className="text-3xl font-black tracking-tight font-display" style={{ color: 'var(--color-text-primary)' }}>
                 {bestSellingItem ? bestSellingItem.item.itemNo : '-'}
               </span>
               {bestSellingItem && (
-                <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 font-mono">
+                <span 
+                  className="text-sm font-bold tabular-nums"
+                  style={{ color: 'var(--color-ui-interactive)' }}
+                >
                   {fmtQty(bestSellingItem.totalQty)} pcs
                 </span>
               )}
             </div>
 
-            <div className="text-xs text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800/60 flex items-center justify-between">
+            <div 
+              className="text-xs pt-2 flex items-center justify-between"
+              style={{ 
+                borderTop: '1px solid var(--color-border-light)',
+                color: 'var(--color-text-tertiary)' 
+              }}
+            >
               <span>Product Type</span>
-              <span className="font-semibold text-indigo-600 dark:text-indigo-400 text-[11px]">
+              <span className="font-semibold text-xs" style={{ color: 'var(--color-ui-interactive)' }}>
                 {bestSellingItem?.item.productTypeLabel || 'Click to Preview'} →
               </span>
             </div>
           </div>
         </div>
 
-        {/* ─── Main Table Section (Clean Frameless & Proportional) ─────────────────── */}
-        <div className={`bg-white dark:bg-slate-900/60 rounded-2xl shadow-xs overflow-hidden flex flex-col border border-slate-200/50 dark:border-slate-800/50 transition-opacity duration-200 ${isFilterLoading || isInitialLoading ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
+        {/* ─── Main Table Section ─────────────────────────────────────────────────── */}
+        <div 
+          className={`rounded-lg overflow-hidden flex flex-col transition-opacity duration-200 ${isFilterLoading || isInitialLoading ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}
+          style={{
+            backgroundColor: 'var(--color-ui-surface)',
+            border: '1px solid var(--color-border-light)',
+          }}
+        >
           {/* Table Header Bar */}
-          <div className="px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800/50 bg-slate-50/70 dark:bg-slate-900/80">
-            <div>
-              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 m-0">
-                Top Item Volume Breakdown ({items.length.toLocaleString()} Items)
+          <div 
+            className="px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+            style={{
+              backgroundColor: 'var(--color-ui-raised)',
+              borderBottom: '1px solid var(--color-border-light)',
+            }}
+          >
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-bold uppercase tracking-wider m-0" style={{ color: 'var(--color-text-primary)' }}>
+                Top Item Volume Breakdown
               </h2>
-              <p className="text-xs text-slate-400 m-0 mt-0.5">
-                Detailed yearly rankings, customer allocations, and portfolio volume contributions
-              </p>
+              <span className="text-xs font-medium" style={{ color: 'var(--color-text-tertiary)' }}>
+                (Showing top {items.length.toLocaleString()} of {totalSkuCount.toLocaleString()} SKUs)
+              </span>
             </div>
 
             <div className="flex items-center gap-3">
               {/* Row Limit Selector */}
-              <div className="flex items-center gap-1 bg-white dark:bg-slate-800 p-1 rounded-xl text-xs border border-slate-200/50 dark:border-slate-700/50">
-                <span className="text-slate-400 px-2 font-medium text-[11px]">Rows:</span>
+              <div 
+                className="flex items-center gap-1 p-0.5 rounded-md text-xs"
+                style={{
+                  backgroundColor: 'var(--color-ui-surface)',
+                  border: '1px solid var(--color-border-light)',
+                }}
+              >
+                <span className="px-2 font-medium text-xs" style={{ color: 'var(--color-text-tertiary)' }}>Rows:</span>
                 {(['50', '100', '250', 'all'] as const).map(limitOpt => {
                   const optVal = limitOpt === 'all' ? 'all' : Number(limitOpt);
                   const isSel = rowLimit === optVal;
@@ -259,11 +344,11 @@ export default function TopOrdersAnalyticsPage() {
                       key={limitOpt}
                       type="button"
                       onClick={() => setRowLimit(optVal)}
-                      className={`px-3 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer border-0 ${
-                        isSel
-                          ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs'
-                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                      }`}
+                      className="px-2.5 py-0.5 rounded text-xs font-semibold transition-all cursor-pointer border-0"
+                      style={{
+                        backgroundColor: isSel ? 'var(--color-ui-interactive)' : 'transparent',
+                        color: isSel ? 'var(--color-text-inverse)' : 'var(--color-text-secondary)',
+                      }}
                     >
                       {limitOpt === 'all' ? 'All' : limitOpt}
                     </button>
@@ -278,7 +363,7 @@ export default function TopOrdersAnalyticsPage() {
             rows={items} 
             loading={isInitialLoading} 
             displayYears={displayYears} 
-            grandTotalQty={grandTotalQty}
+            grandTotalQty={totalVolume}
             onPhotoClick={(item) => setPreviewItem(item)}
           />
         </div>

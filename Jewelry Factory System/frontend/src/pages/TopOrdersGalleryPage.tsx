@@ -25,6 +25,9 @@ export default function TopOrdersGalleryPage() {
     selGroups,
     setSelGroups,
     toggleGroup,
+    salesName,
+    setSalesName,
+    availableSalespersons,
     periodSetup,
     productType,
     setProductType,
@@ -221,6 +224,9 @@ export default function TopOrdersGalleryPage() {
               selGroups={selGroups}
               setSelGroups={setSelGroups}
               toggleGroup={toggleGroup}
+              salesName={salesName}
+              setSalesName={setSalesName}
+              availableSalespersons={availableSalespersons}
               perspectiveMode={perspectiveMode}
               setPerspectiveMode={setPerspectiveMode}
               swapYears={swapYears}

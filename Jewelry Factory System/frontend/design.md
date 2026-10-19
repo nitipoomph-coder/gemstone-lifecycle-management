@@ -44,14 +44,8 @@ Every exception must include a second cue such as text, icon, value, ordering, o
 - Use `--shadow-panel`, `--shadow-dropdown`, `--shadow-floating`, or `--shadow-modal`; do not hardcode shadow colors.
 - Selected tabs, filters, and chips use brand border/text with `--color-ui-selected` or `--color-ui-interactive-soft`.
 - Focus uses `--color-ui-focus-ring` and must remain visible in every theme.
-- Tables remain compact, align numbers right, and use sticky headers when useful.
-- **Modern Analytics Table Standard**:
-  - Enclose data tables in `rounded-2xl` cards with subtle 1px border (`border-slate-200/50 dark:border-slate-800/50`) and soft dividers (`border-b border-slate-100 dark:border-slate-800/40`).
-  - Use generous cell padding (`px-5 py-3.5`) to eliminate cramped text.
-  - Bounded container (`max-w-[1600px] mx-auto p-4 sm:p-6 lg:p-8`) prevents full-bleed edge clinging on 1920px+ monitors.
-  - Cluster numeric columns on the right (`w-28` to `w-32`) and use an informative central column (e.g., Volume Share mini-progress bar) to fill horizontal voids.
-  - Use high-contrast rank badges (Gold `#1`, Silver `#2`, Bronze `#3`) and clean CAD thumbnail previews.
-  - Header integrates View Mode switcher (`Gallery` vs `Qty Table`). Do not add redundant page-level Refresh buttons (the Global Topbar handles refresh via `useTopbarActions`).
+- Tables remain compact, align numbers right, and use sticky headers when useful. Analytics tables follow the wide frame, fixed column sizing, single-value deduplication, and rank token rules defined in DESIGN.md.
+- View switchers live in the filter toolbar and navigate with router state; do not repeat page titles in hero headers or add duplicate refresh buttons.
 - Loading skeletons must match the final content footprint and cover only the content outlet, not the app shell.
 - Use Lucide icons for commands; pair unfamiliar icons with tooltips.
 

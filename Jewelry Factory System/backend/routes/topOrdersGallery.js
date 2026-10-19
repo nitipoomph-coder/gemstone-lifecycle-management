@@ -173,7 +173,7 @@ router.get('/yearly-summary', async (req, res) => {
       const pairClauses = pairs.map((pair, index) => {
         request.input(`cust${index}`, sql.NVarChar, pair.customerCode);
         request.input(`pairStyle${index}`, sql.NVarChar, pair.styleNo);
-        return `(UPPER(LTRIM(RTRIM(ISNULL(h.CustCode, '')))) = @cust${index} AND UPPER(LTRIM(RTRIM(ISNULL(d.ItemNo, '')))) = @pairStyle${index})`;
+        return `(UPPER(LTRIM(RTRIM(ISNULL(h.CustCode, '')))) = @cust${index} AND (UPPER(LTRIM(RTRIM(ISNULL(d.ItemNo, '')))) = @pairStyle${index} OR UPPER(LTRIM(RTRIM(ISNULL(LEFT(d.ItemNo, 8), '')))) = @pairStyle${index}))`;
       }).join(' OR ');
       const startDate = req.query.startDate;
       const endDate = req.query.endDate;
@@ -184,7 +184,7 @@ router.get('/yearly-summary', async (req, res) => {
       const result = await request.query(`
         SELECT
           UPPER(LTRIM(RTRIM(ISNULL(h.CustCode, '')))) AS customerCode,
-          UPPER(LTRIM(RTRIM(ISNULL(d.ItemNo, '')))) AS styleNo,
+          UPPER(LTRIM(RTRIM(ISNULL(LEFT(d.ItemNo, 8), '')))) AS styleNo,
           YEAR(h.OrdDate) AS [year],
           SUM(ISNULL(d.ItemQty, 0)) AS qty,
           SUM(ISNULL(ISNULL(d.ItemExchAmnt, d.ItemAmnt), 0)) AS value,
@@ -199,8 +199,8 @@ router.get('/yearly-summary', async (req, res) => {
           AND ${ORDER_BLOCKLIST}
           AND (h.PONo IS NULL OR UPPER(h.PONo) NOT LIKE '%SAMPLE%')
           AND ISNULL(c.CustStatus, 'Y') = 'Y'
-        GROUP BY UPPER(LTRIM(RTRIM(ISNULL(h.CustCode, '')))), UPPER(LTRIM(RTRIM(ISNULL(d.ItemNo, '')))), YEAR(h.OrdDate)
-        ORDER BY UPPER(LTRIM(RTRIM(ISNULL(h.CustCode, '')))), UPPER(LTRIM(RTRIM(ISNULL(d.ItemNo, '')))), YEAR(h.OrdDate)
+        GROUP BY UPPER(LTRIM(RTRIM(ISNULL(h.CustCode, '')))), UPPER(LTRIM(RTRIM(ISNULL(LEFT(d.ItemNo, 8), '')))), YEAR(h.OrdDate)
+        ORDER BY UPPER(LTRIM(RTRIM(ISNULL(h.CustCode, '')))), UPPER(LTRIM(RTRIM(ISNULL(LEFT(d.ItemNo, 8), '')))), YEAR(h.OrdDate)
       `);
 
       const recordsByPair = new Map();
@@ -254,14 +254,14 @@ router.get('/yearly-summary', async (req, res) => {
       FROM OrdHD h
       INNER JOIN OrdDT d ON d.OrdNo = h.OrdNo
       LEFT JOIN GMCust c ON c.CustCode = h.CustCode
-      WHERE UPPER(LTRIM(RTRIM(ISNULL(d.ItemNo, '')))) IN (${styleParams})
+      WHERE (UPPER(LTRIM(RTRIM(ISNULL(d.ItemNo, '')))) IN (${styleParams}) OR UPPER(LTRIM(RTRIM(ISNULL(LEFT(d.ItemNo, 8), '')))) IN (${styleParams}))
         AND h.OrdDate IS NOT NULL
         AND ${dateClause}
         AND ${ORDER_BLOCKLIST}
         AND (h.PONo IS NULL OR UPPER(h.PONo) NOT LIKE '%SAMPLE%')
         AND ISNULL(c.CustStatus, 'Y') = 'Y'
-      GROUP BY UPPER(LTRIM(RTRIM(ISNULL(d.ItemNo, '')))), YEAR(h.OrdDate)
-      ORDER BY UPPER(LTRIM(RTRIM(ISNULL(d.ItemNo, '')))), YEAR(h.OrdDate)
+      GROUP BY UPPER(LTRIM(RTRIM(ISNULL(LEFT(d.ItemNo, 8), '')))), YEAR(h.OrdDate)
+      ORDER BY UPPER(LTRIM(RTRIM(ISNULL(LEFT(d.ItemNo, 8), '')))), YEAR(h.OrdDate)
     `);
 
     const recordsByStyle = new Map();
@@ -317,7 +317,7 @@ router.get('/:styleNo/yearly-summary', async (req, res) => {
       FROM OrdHD h
       INNER JOIN OrdDT d ON d.OrdNo = h.OrdNo
       LEFT JOIN GMCust c ON c.CustCode = h.CustCode
-      WHERE UPPER(LTRIM(RTRIM(ISNULL(d.ItemNo, '')))) = UPPER(@styleNo)
+      WHERE (UPPER(LTRIM(RTRIM(ISNULL(d.ItemNo, '')))) = UPPER(@styleNo) OR UPPER(LTRIM(RTRIM(ISNULL(LEFT(d.ItemNo, 8), '')))) = UPPER(@styleNo))
         AND h.OrdDate IS NOT NULL
         AND ${dateClause}
         AND ${ORDER_BLOCKLIST}
@@ -401,6 +401,40 @@ function getProductTypeLabel(typeKey) {
   }
 }
 
+// [SALESPERSONS LIST] GET /api/items/salespersons
+let cachedSalespersons = null;
+let cachedSalespersonsTime = 0;
+const SALESPERSON_CACHE_TTL = 10 * 60 * 1000; // 10 minutes cache
+
+router.get('/salespersons', async (req, res) => {
+  try {
+    const now = Date.now();
+    if (cachedSalespersons && (now - cachedSalespersonsTime < SALESPERSON_CACHE_TTL)) {
+      return res.json({ ok: true, salespersons: cachedSalespersons });
+    }
+
+    const pool = await getPool();
+    const result = await pool.request().query(`
+      SELECT DISTINCT LTRIM(RTRIM(SalesName)) AS salesName
+      FROM VW_Web_SalesDashboard
+      WHERE SalesName IS NOT NULL AND LTRIM(RTRIM(SalesName)) <> ''
+      ORDER BY salesName ASC
+    `);
+
+    const salespersons = (result.recordset || [])
+      .map(r => r.salesName)
+      .filter(Boolean);
+
+    cachedSalespersons = salespersons;
+    cachedSalespersonsTime = now;
+
+    res.json({ ok: true, salespersons });
+  } catch (err) {
+    console.error('[API ERROR] /api/items/salespersons:', err.message);
+    res.status(500).json({ ok: false, error: 'Failed to fetch salespersons list' });
+  }
+});
+
 router.get('/top-gallery', async (req, res) => {
   try {
     const years = parseYears(req.query.years);
@@ -415,7 +449,8 @@ router.get('/top-gallery', async (req, res) => {
     const rankBy = String(req.query.rankBy || 'combined').toLowerCase().trim(); // 'combined' | 'base' | 'growth'
     const searchQuery = String(req.query.search || '').toUpperCase().trim();
     const limit = parseInt(req.query.limit || '50', 10);
-    const dateField = req.query.dateField === 'dueDate' ? 'DueDate' : 'OrdDate';
+    // Default date field is DueDate (per user requirement)
+    const dateField = req.query.dateField === 'ordDate' ? 'OrdDate' : 'DueDate';
 
     const pool = await getPool();
     const request = pool.request();
@@ -426,9 +461,16 @@ router.get('/top-gallery', async (req, res) => {
     const wEnd = req.query.wEnd ? parseInt(req.query.wEnd, 10) : null;
     const dateClause = buildDateRangeCondition(dateField, years, months, startDate, endDate, wStart, wEnd);
 
+    const salesNameFilter = String(req.query.salesName || '').trim();
+    let salesCondition = '';
+    if (salesNameFilter && salesNameFilter.toUpperCase() !== 'ALL') {
+      request.input('salesName', sql.NVarChar, salesNameFilter);
+      salesCondition = ' AND LTRIM(RTRIM(ISNULL(SalesName, \'\'))) = @salesName';
+    }
+
     const query = `
       SELECT 
-        UPPER(LTRIM(RTRIM(ISNULL(ItemNo, '')))) AS ItemNo,
+        UPPER(LTRIM(RTRIM(ISNULL(LEFT(ItemNo, 8), '')))) AS ItemNo,
         MAX(ISNULL(ItemDesc, '')) AS ItemDesc,
         MAX(ISNULL(ItemType, '')) AS ItemType,
         UPPER(LTRIM(RTRIM(ISNULL(CustCode, '')))) AS CustCode,
@@ -439,8 +481,9 @@ router.get('/top-gallery', async (req, res) => {
       FROM VW_Web_SalesDashboard
       WHERE ${dateClause}
         AND ItemNo IS NOT NULL AND LTRIM(RTRIM(ItemNo)) <> ''
+        ${salesCondition}
       GROUP BY 
-        UPPER(LTRIM(RTRIM(ISNULL(ItemNo, '')))),
+        UPPER(LTRIM(RTRIM(ISNULL(LEFT(ItemNo, 8), '')))),
         UPPER(LTRIM(RTRIM(ISNULL(CustCode, '')))),
         YEAR(${dateField}),
         MONTH(${dateField})
@@ -645,6 +688,13 @@ router.get('/top-gallery', async (req, res) => {
       ...it,
     }));
 
+    const summaryTotalQty = searchQuery ? itemsList.reduce((s, it) => s + it.totalCombinedQty, 0) : portfolioGrandQty;
+    const summaryTotalAmnt = searchQuery ? itemsList.reduce((s, it) => s + it.totalCombinedAmnt, 0) : portfolioGrandAmnt;
+    const summaryBaseQty = searchQuery ? itemsList.reduce((s, it) => s + it.baseYearQty, 0) : baseYearGrandQty;
+    const summaryBaseAmnt = searchQuery ? itemsList.reduce((s, it) => s + it.baseYearAmnt, 0) : baseYearGrandAmnt;
+    const summaryCompQty = searchQuery ? itemsList.reduce((s, it) => s + it.compareYearQty, 0) : compareYearGrandQty;
+    const summaryCompAmnt = searchQuery ? itemsList.reduce((s, it) => s + it.compareYearAmnt, 0) : compareYearGrandAmnt;
+
     res.json({
       ok: true,
       years,
@@ -652,12 +702,12 @@ router.get('/top-gallery', async (req, res) => {
       compareYear,
       summary: {
         totalItemsCount: itemsList.length,
-        portfolioTotalQty: portfolioGrandQty,
-        portfolioTotalAmnt: portfolioGrandAmnt,
-        baseYearTotalQty: baseYearGrandQty,
-        baseYearTotalAmnt: baseYearGrandAmnt,
-        compareYearTotalQty: compareYearGrandQty,
-        compareYearTotalAmnt: compareYearGrandAmnt,
+        portfolioTotalQty: summaryTotalQty,
+        portfolioTotalAmnt: summaryTotalAmnt,
+        baseYearTotalQty: summaryBaseQty,
+        baseYearTotalAmnt: summaryBaseAmnt,
+        compareYearTotalQty: summaryCompQty,
+        compareYearTotalAmnt: summaryCompAmnt,
       },
       items: rankedItems,
     });

@@ -124,6 +124,18 @@ app.get('/api/photos/ps/:itemNo', (req, res) => {
           break;
         }
       }
+      if (!foundFile && itemNo.length === 8) {
+        for (const suffix of ['A', 'B', 'C', 'D', 'E']) {
+          for (const ext of formats) {
+            const testPath = path.join(baseDir, `${itemNo}${suffix}${ext}`);
+            if (fs.existsSync(testPath)) {
+              foundFile = testPath;
+              break;
+            }
+          }
+          if (foundFile) break;
+        }
+      }
     } catch (e) {
       // Access denied or offline share - skip silently
     }
@@ -161,6 +173,18 @@ app.get('/api/photos/cad/:itemNo', (req, res) => {
         if (fs.existsSync(testPath)) {
           foundFile = testPath;
           break;
+        }
+      }
+      if (!foundFile && itemNo.length === 8) {
+        for (const suffix of ['A', 'B', 'C', 'D', 'E']) {
+          for (const ext of formats) {
+            const testPath = path.join(baseDir, `${itemNo}${suffix}${ext}`);
+            if (fs.existsSync(testPath)) {
+              foundFile = testPath;
+              break;
+            }
+          }
+          if (foundFile) break;
         }
       }
     } catch (e) {

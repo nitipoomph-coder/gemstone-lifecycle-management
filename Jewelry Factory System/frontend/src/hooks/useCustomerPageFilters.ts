@@ -61,35 +61,10 @@ export function useCustomerPageFilters(availableYears: string[], configOverrides
     }
   }, [selGroups, searchParams, setSearchParams]);
 
-  // Calculate dynamic active groups based on data in selectedYears
-  const selectedYears = periodSetup.committed.selectedYears;
+  // All customer groups are active by default across pages
   const dynamicActiveGroups = useMemo(() => {
-    if (!custData || custData.length === 0) return ACTIVE_GROUP_IDS; // fallback while loading
-
-    const groupTotals: Record<string, number> = {};
-    ALL_GROUPS.forEach((g: CustomerGroup) => { groupTotals[g.id] = 0; });
-
-    custData.forEach(customer => {
-      const gId = getCustomerGroupId(customer.id || '');
-      selectedYears.forEach(y => {
-        const yData = customer.monthly?.[y];
-        const yQtyData = customer.monthlyQty?.[y];
-        if (yData) {
-          Object.values(yData).forEach(val => {
-            groupTotals[gId] += Number(val);
-          });
-        }
-        if (yQtyData) {
-          Object.values(yQtyData).forEach(val => {
-            groupTotals[gId] += Number(val);
-          });
-        }
-      });
-    });
-
-    const active = ALL_GROUPS.filter((g: CustomerGroup) => groupTotals[g.id] > 0).map((g: CustomerGroup) => g.id);
-    return active.length > 0 ? active : ACTIVE_GROUP_IDS;
-  }, [custData, selectedYears]);
+    return ALL_GROUP_IDS;
+  }, []);
 
   const toggleGroup = (id: string) => {
     setSelGroups(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);

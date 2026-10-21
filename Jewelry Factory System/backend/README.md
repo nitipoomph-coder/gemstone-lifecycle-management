@@ -33,3 +33,9 @@ Uses `mssql` to maintain connection pools to the SQL Server database.
 The system operates in a mixed mode:
 1. **Legacy SPs**: Some endpoints rely on existing Stored Procedures (e.g., `PC_Show_OrdTrack_Sum_*`) to ensure identical calculations with the old VB.NET system.
 2. **Direct Queries**: Newer analytical dashboards query `OrdHD`/`OrdDT` directly for better performance and flexibility. See `sql/README.md` for index optimization details.
+
+## Runtime Data Files (`/data/`)
+Runtime data files (`audit_logs.json`, `banned_ips.json`, `revoked_tokens.json`, `user_menu_permissions.json`) are stored locally in `backend/data/` and are excluded from git tracking.
+- `user_menu_permissions.example.json`: Template configuration containing default role menu permissions (`ADMIN` and `SALES`). On a fresh checkout, `permissionService` automatically initializes `user_menu_permissions.json` from this template (or internal defaults) if `user_menu_permissions.json` is missing.
+- If custom user menu permissions are needed locally, you can customize `user_menu_permissions.json` or manage permissions via the Admin Users API / UI.
+

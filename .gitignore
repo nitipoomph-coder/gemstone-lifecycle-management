@@ -41,3 +41,9 @@ rewrite-*.js
 temp_*.js
 *.xlsx
 
+# Backend runtime data files
+Jewelry Factory System/backend/data/*.json
+!Jewelry Factory System/backend/data/*.example.json
+Jewelry Factory System/backend/data/*.tmp
+
+

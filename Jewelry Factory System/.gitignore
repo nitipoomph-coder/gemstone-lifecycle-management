@@ -28,3 +28,9 @@ backend/explore-db.js
 backend/test-cust.js
 backend/test-query.js
 backend/test_sp.js
+
+# ─── Runtime Data ─────────────────────────────────────────────────────────────
+backend/data/*.json
+!backend/data/*.example.json
+backend/data/*.tmp
+

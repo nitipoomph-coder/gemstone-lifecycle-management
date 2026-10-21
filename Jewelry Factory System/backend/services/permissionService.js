@@ -41,11 +41,22 @@ class PermissionService {
         const raw = fs.readFileSync(PERMISSIONS_FILE, 'utf8');
         this.permissions = JSON.parse(raw) || {};
       } else {
-        // Initialize with default template
-        this.permissions = {
-          ADMIN: ['*'],
-          SALES: [...DEFAULT_ROLE_MENUS.sales],
-        };
+        const exampleFile = path.join(DATA_DIR, 'user_menu_permissions.example.json');
+        if (fs.existsSync(exampleFile)) {
+          try {
+            const raw = fs.readFileSync(exampleFile, 'utf8');
+            this.permissions = JSON.parse(raw) || {};
+          } catch (err) {
+            this.permissions = null;
+          }
+        }
+        if (!this.permissions || Object.keys(this.permissions).length === 0) {
+          // Initialize with default template
+          this.permissions = {
+            ADMIN: ['*'],
+            SALES: [...DEFAULT_ROLE_MENUS.sales],
+          };
+        }
         this.savePermissionsToDisk();
       }
     } catch (e) {

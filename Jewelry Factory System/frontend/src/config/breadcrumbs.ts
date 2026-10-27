@@ -10,12 +10,18 @@ export interface BreadcrumbItem {
   path?: string;
 }
 
+const CUSTOMER_TAB_LABELS: Record<string, string> = {
+  matrix: 'Customer Report Matrix',
+  trends: 'Order Trends',
+  dashboard: 'Sales Summary',
+};
+
 export const BREADCRUMBS = {
   // ── Overview & Dashboard ──
   DASHBOARD: [
     { label: 'Overview' },
     { label: 'Factory Overview' },
-  ] as BreadcrumbItem[],
+  ],
 
   DASHBOARD_DETAIL: (metricTitle: string): BreadcrumbItem[] => [
     { label: 'Factory Overview', path: '/' },
@@ -23,73 +29,42 @@ export const BREADCRUMBS = {
   ],
 
   // ── Sales Analytics ──
-  SALES_DASHBOARD: [
-    { label: 'Sales Analytics' },
-    { label: 'Sales Dashboard' },
-  ] as BreadcrumbItem[],
-
-  SALES_SUMMARY: [
-    { label: 'Sales Analytics' },
-    { label: 'Sales Summary' },
-  ] as BreadcrumbItem[],
-
-  CUSTOMER_REPORT_MATRIX: [
-    { label: 'Sales Analytics' },
-    { label: 'Customer Report Matrix' },
-  ] as BreadcrumbItem[],
-
-  ORDER_TRENDS: [
-    { label: 'Sales Analytics' },
-    { label: 'Order Trends' },
-  ] as BreadcrumbItem[],
-
   TOP_ORDERS_GALLERY: [
     { label: 'Sales Analytics' },
     { label: 'Top Item Gallery' },
-  ] as BreadcrumbItem[],
-
-  TOP_ORDERS_ANALYTICS: [
-    { label: 'Sales Analytics' },
-    { label: 'Top Items Qty' },
-  ] as BreadcrumbItem[],
+  ],
 
   SALES_CUSTOMER_GROUP_DETAIL: [
     { label: 'Sales Analytics' },
     { label: 'Order Trends', path: '/dashboard/customer/trends' },
     { label: 'Order List' },
-  ] as BreadcrumbItem[],
+  ],
 
   CUSTOMER_DASHBOARD_TAB: (activeTab: string): BreadcrumbItem[] => [
     { label: 'Sales Analytics' },
-    {
-      label: activeTab === 'matrix'
-        ? 'Customer Report Matrix'
-        : activeTab === 'trends'
-        ? 'Order Trends'
-        : 'Sales Summary',
-    },
+    { label: CUSTOMER_TAB_LABELS[activeTab] ?? CUSTOMER_TAB_LABELS.dashboard },
   ],
 
   // ── Production & Orders ──
   PRODUCTION_SUMMARY: [
     { label: 'Production' },
     { label: 'Production Summary' },
-  ] as BreadcrumbItem[],
+  ],
 
   PRODUCTION_FORECAST: [
     { label: 'Production' },
     { label: 'Production Forecast' },
-  ] as BreadcrumbItem[],
+  ],
 
   PO_TRACKER: [
     { label: 'Production' },
     { label: 'PO Tracker' },
-  ] as BreadcrumbItem[],
+  ],
 
   FBE_ORDER_TRACK: [
     { label: 'Production' },
     { label: 'FBE Order Tracker' },
-  ] as BreadcrumbItem[],
+  ],
 
   ORDER_DETAIL: (pageTitle: string): BreadcrumbItem[] => [
     { label: 'Production' },
@@ -107,7 +82,7 @@ export const BREADCRUMBS = {
   VENDOR_PERFORMANCE: [
     { label: 'Subcontract Management' },
     { label: 'Vendor Performance Dashboard' },
-  ] as BreadcrumbItem[],
+  ],
 
   // ── Documents (Procurement, Requisition, Sample) ──
   DOCUMENT: (groupLabel: string, itemLabel: string, docType: string): BreadcrumbItem[] => [
@@ -115,19 +90,9 @@ export const BREADCRUMBS = {
     { label: `${itemLabel} (${docType})` },
   ],
 
-  // ── Security & Audit ──
-  AUDIT_BOM_PRINT: [
-    { label: 'Security & Audit' },
-    { label: 'BOM Print' },
-  ] as BreadcrumbItem[],
-  AUDIT_CCTV_REPORT: [
-    { label: 'Security & Audit' },
-    { label: 'CCTV Report' },
-  ] as BreadcrumbItem[],
-
   // ── Dynamic Placeholder Pages ──
   PLACEHOLDER: (groupLabel: string, displayTitle: string): BreadcrumbItem[] => [
     { label: groupLabel },
     { label: displayTitle },
   ],
-};
+} satisfies Record<string, BreadcrumbItem[] | ((...args: string[]) => BreadcrumbItem[])>;

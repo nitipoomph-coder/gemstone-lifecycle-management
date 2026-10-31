@@ -7,7 +7,7 @@
 
 ## 1. Executive Summary & ภาพรวมระบบ
 
-ระบบเดิมของโรงงาน (PCC Management System) พัฒนาด้วย **VB.NET (Windows Forms)** เชื่อมต่อกับ **Microsoft SQL Server (ฐานข้อมูล `dbGeneration` บนโฮสต์ `CLLDBS`)**
+ระบบเดิมของโรงงาน (PCC Management System) พัฒนาด้วย **VB.NET (Windows Forms)** เชื่อมต่อกับ **Microsoft SQL Server (ฐานข้อมูล `dbGeneration` บนโฮสต์ `<DB_SERVER>`)**
 
 ในส่วนการติดตามคำสั่งซื้อและการผลิต มี 2 หน้าจอหลักที่ทำงานสอดประสานกัน:
 1. **`PC_Face_OrdTrack_Sum` (PO Tracker - Summary):**

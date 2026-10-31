@@ -10,12 +10,12 @@
 * **ประเภทโปรแกรม**: Windows Forms Application (.NET Framework / Visual Basic .NET)
 * **เครื่องมือทำรายงาน**: Crystal Reports 13 (`CrystalDecisions.CrystalReports.Engine`)
 * **ฐานข้อมูลหลัก (Database Server)**:
-  * **Server**: `CLLDBS` (ตามที่ระบุใน `SetConnDB.txt` และ `DataCenter.vb`)
+  * **Server**: `<DB_SERVER>` (ตามที่ระบุใน `SetConnDB.txt` และ `DataCenter.vb`)
   * **Database**: `dbGeneration` (ฐานข้อมูลหลักของกระบวนการผลิตและ Order)
-  * **ฐานข้อมูลสนับสนุนในเครือ**: `CostDB`, `dbEnterprise`, `dbInventory`, `dbChongStock`, `dbTempStock`
+  * **ฐานข้อมูลสนับสนุนในเครือ**: `CostDB`, `dbEnterprise`, `dbInventory`, `dbStock`, `dbTempStock`
 * **การเชื่อมต่อไฟล์ภายนอก**:
-  * โฟลเดอร์รูปภาพสินค้า / ตัวเรือน: `\\CHONGDTS\Chong Photo\...`
-  * โฟลเดอร์คิวงาน PO และไฟล์แนบ: `\\BKKSQL\BKKQueue\...`
+  * โฟลเดอร์รูปภาพสินค้า / ตัวเรือน: `\\<FILE_SERVER>\Photo\...`
+  * โฟลเดอร์คิวงาน PO และไฟล์แนบ: `\\<FILE_SERVER>\Queue\...`
 
 ---
 

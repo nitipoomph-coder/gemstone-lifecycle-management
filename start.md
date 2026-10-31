@@ -1,7 +1,7 @@
 # Jewelry Factory System (ERP) - AI Onboarding Guide
 
 ## 1. Project Overview (ภาพรวมระบบ)
-โปรเจกต์นี้คือการพัฒนาระบบ ERP สำหรับ **บริษัท จงเลิศล้ำ จำกัด** (โรงงานผลิตเครื่องประดับเงินสเตอร์ลิงและทองเหลือง) 
+โปรเจกต์นี้คือการพัฒนาระบบ ERP สำหรับโรงงานผลิตเครื่องประดับเงินสเตอร์ลิงและทองเหลือง 
 เป้าหมายหลักคือการยกระดับ (Modernize) ระบบจาก Windows Forms / Crystal Reports แบบเดิม ให้กลายเป็น **Modern Web Application** ที่มี Interactive Dashboard เพื่อให้ผู้บริหารตรวจสอบสถานะการผลิต, คำสั่งซื้อ (PO), และยอดขายได้แบบ Real-time
 
 ## 2. Tech Stack (เทคโนโลยีที่ใช้)
@@ -11,7 +11,7 @@
 - **Start Project:** รัน `npm run dev` ที่โฟลเดอร์ `Jewelry Factory System` (ระบบใช้ concurrently เพื่อรันทั้งคู่พร้อมกัน)
 
 ## 🛑 กฎเหล็กฐานข้อมูล (CRITICAL — ห้ามละเมิด)
-1. **Database เป็น READ-ONLY 100%** — ห้ามรัน `ALTER`, `CREATE`, `DROP`, `UPDATE`, `INSERT`, `DELETE`, `TRUNCATE` และห้ามแก้ SP / View / Table / Index ทั้ง Production (`192.168.5.40`) และ Test DB
+1. **Database เป็น READ-ONLY 100%** — ห้ามรัน `ALTER`, `CREATE`, `DROP`, `UPDATE`, `INSERT`, `DELETE`, `TRUNCATE` และห้ามแก้ SP / View / Table / Index ทั้ง Production (`<DB_HOST>`) และ Test DB
 2. **ต้องเข้ากันได้กับระบบเดิม (VB.NET) 100%** — ฐานข้อมูลใช้ร่วมกับระบบเก่าอยู่ตลอดเวลา SP `PC_Show_OrdTrack_Sum_*` ต้องรับแค่ 2 params: `@FromDate`, `@ToDate` (ห้ามส่ง `@Status`)
 3. **การกรอง/จัดกลุ่ม/คำนวณ ทำที่ Application Layer เท่านั้น** (Node.js หรือ React) ห้ามแก้ที่ Database
 4. **ข้อยกเว้นที่อนุญาตให้เขียนได้:** ตาราง `system_users` (Auth), ช่อง Remark ใน `OrdDT` ผ่าน PO Tracker Remarks API, และฟิลด์ `BuyName`/`RefDocuNo` ผ่าน Procurement API เท่านั้น

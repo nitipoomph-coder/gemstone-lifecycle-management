@@ -23,7 +23,7 @@
 
 | ประเด็น | ข้อสรุป | หลักฐาน |
 |---|---|---|
-| **PO2** มาจากไหน | = `OrdHD.EXNo` | ข้อมูลจริง: PO 4500683528 → EXNo `STFCoachJULY` ตรงกับ PO2 ในจอเก่า |
+| **PO2** มาจากไหน | = `OrdHD.EXNo` | ตัวอย่างฟิลด์: PO 4500683528 → EXNo `STF_SAMPLE_JULY` ตรงกับ PO2 ในจอเก่า |
 | **Wax** = Wij หรือ Wst | = **`WijQty` → `WijPenQty`** | `production_stages_mapping_log.md` (PWA=Wax=Wij) + PO 4520681070 PWA -3934 = WijPenQty -3934 |
 | Wax Set | = `WstQty` → `WstPenQty` (คนละคอลัมน์กับ Wax) | mapping log ลำดับ 4 (PAU) |
 | ลำดับรูป ↔ กลุ่ม | รูป 1–6 = N008, N044, MLT, N051, N083, General | user confirm |

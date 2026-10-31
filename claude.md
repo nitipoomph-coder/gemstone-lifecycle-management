@@ -5,7 +5,7 @@
 > ### ⚠️ กฎเหล็กความปลอดภัยสูงสุด (CRITICAL POLICY - NEVER VIOLATE)
 > 1. **ห้ามแตะต้อง ดัดแปลง หรือแก้ไขโครงสร้างและข้อมูลใน Database ใดๆ ทั้งสิ้น (READ-ONLY 100%)**:
 >    - ห้ามรันคำสั่ง DDL หรือ DML เด็ดขาด: `ALTER`, `CREATE`, `DROP`, `UPDATE`, `INSERT`, `DELETE`, `TRUNCATE`, `EXEC sp_rename`, ฯลฯ
->    - ห้ามแก้ไข Stored Procedures, Views, Tables, Functions, Triggers หรือ Indexes บน Database โดยเด็ดขาด ทั้งใน Production DB (`192.168.5.40`) และ Test DB
+>    - ห้ามแก้ไข Stored Procedures, Views, Tables, Functions, Triggers หรือ Indexes บน Database โดยเด็ดขาด ทั้งใน Production DB (`<DB_HOST>`) และ Test DB
 > 2. **ต้องรักษา Backward Compatibility กับระบบเดิม (Legacy VB.NET / PCC Management System) 100%**:
 >    - ฐานข้อมูลนี้ถูกใช้งานร่วมกับระบบเดิม (VB.NET) อยู่ตลอดเวลา
 >    - การแก้ไข Stored Procedure ใดๆ (เช่น การเพิ่ม Parameter `@Status`) จะทำให้ระบบเก่าของโรงงานพังทันที (เกิด Parameter count mismatch / OLE DB error)
@@ -24,7 +24,7 @@
 
 ระบบจัดการวงจรชีวิตพลอยและเครื่องประดับ (Gemstone Lifecycle Management) สำหรับโรงงานเครื่องประดับ
 เป็นการ **Modernize** ระบบเดิมที่เขียนด้วย VB.net + SQL Server ให้เป็น Web Application แบบ Full-Stack
-ใช้งานภายในองค์กร (Intranet) เชื่อมต่อฐานข้อมูลจริง (MSSQL — `CLLDBS`) ผ่าน Stored Procedures
+ใช้งานภายในองค์กร (Intranet) เชื่อมต่อฐานข้อมูลจริง (MSSQL — `<DB_SERVER>`) ผ่าน Stored Procedures
 
 ### Business Modules
 
@@ -123,7 +123,7 @@
 
 | Technology      | Details                               |
 |-----------------|---------------------------------------|
-| Microsoft SQL Server | Production: `192.168.5.40` (เดิม: `CLLDBS`) — SQL Server 2012 Enterprise |
+| Microsoft SQL Server | Production: `<DB_HOST>` (เดิม: `<DB_SERVER>`) — SQL Server 2012 Enterprise |
 | Connection      | TCP/IP, Port 1433, No Encryption     |
 | Database        | `dbGeneration` (Order/Production), `dbInventory` (Procurement/Stock) |
 | Key Tables      | `OrdHD`, `OrdDT`, `GMCust`, `GMItemPhoto`, `OrdTrackDT`, `OrdWeekPlanHD` |
@@ -556,8 +556,8 @@ Dashboard/report endpoint details moved to dashboard.md. Sales menu/navigation d
 
 | Method | Endpoint                    | Description                              |
 |--------|-----------------------------|------------------------------------------|
-| GET    | `/api/photos/ps/:itemNo`    | PS Photo (Cost) จาก `\\chongdts\Chong Photo\Cost` |
-| GET    | `/api/photos/cad/:itemNo`   | CAD Photo จาก `\\chongdts\Chong Photo\Mold(CAD)` |
+| GET    | `/api/photos/ps/:itemNo`    | PS Photo (Cost) จาก `\\<FILE_SERVER>\Photo\Cost` |
+| GET    | `/api/photos/cad/:itemNo`   | CAD Photo จาก `\\<FILE_SERVER>\Photo\Mold(CAD)` |
 | GET    | `/api/photos/:itemNo`       | Legacy endpoint (backwards compat)       |
 
 ### Search & System
@@ -610,7 +610,7 @@ Dashboard/report endpoint details moved to dashboard.md. Sales menu/navigation d
 
 ---
 
-## Database: Stored Procedures & Baseline Architecture (Server 192.168.5.40)
+## Database: Stored Procedures & Baseline Architecture (Server <DB_HOST>)
 
 > ⚠️ **STRICT GUARDRAIL**: Database อยู่ในสถานะ **Baseline ดั้งเดิม 100% ห้ามรันสคริปต์แก้ไข/ALTER เด็ดขาด** 
 > ทุก Stored Procedure ต้องรองรับการทำงานร่วมกับระบบเดิม (PCC Management System บน VB.NET) อย่างสมบูรณ์ ห้ามแตะต้อง DB โดยเด็ดขาด
@@ -964,7 +964,7 @@ Inside route handlers, add only short section labels for important boxes/queries
 - **Frontend Service**: `src/services/orderTrackingAPI.ts` -> `getOrderTracking(ordNo, ordLineNo)`
 - **Backend Route**: `backend/routes/orderTracking.js` (`GET /api/order-tracking/track?ordNo=...&ordLineNo=...`)
 - **Photo Bridge Endpoints**:
-  - Primary: `/api/photos/ps/:itemNo` (ภาพถ่ายจริงจาก Chong Photo)
+  - Primary: `/api/photos/ps/:itemNo` (ภาพถ่ายจริงจาก Photo Server)
   - Fallback: `/api/photos/cad/:itemNo` (ภาพเรนเดอร์ CAD)
   - Helper: `src/utils/photoUrl.ts` (`psPhotoUrl`, `attachPhotoFallback`)
 
